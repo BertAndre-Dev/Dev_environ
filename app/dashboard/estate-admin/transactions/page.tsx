@@ -160,7 +160,7 @@ export default function TransactionPage() {
     })();
   }, [dispatch, limit]);
 
-  // 🔹 Refetch transaction history when search or filters change (debounced for search)
+  // 🔹 Refetch transaction history when search or filters change (debounced for search).
   useEffect(() => {
     if (!estateId) return;
     const timer = setTimeout(() => {

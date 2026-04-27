@@ -511,45 +511,58 @@ export default function TransactionPage() {
       header: "Amount (₦)",
       render: (item: any) => item.amount?.toLocaleString() ?? 0,
     },
+    // {
+    //   key: "energyPrice",
+    //   header: "Price (₦/kWh)",
+    //   render: (item: any) => {
+    //     const price = item?.fullResponse?.energyList?.[0]?.price ?? null;
+    //     if (price == null || price === "") return "—";
+    //     const n = Number(price);
+    //     return Number(n) ? n.toLocaleString() : String(price);
+    //   },
+    //   exportValue: (item: any) => {
+    //     const price = item?.fullResponse?.energyList?.[0]?.price ?? "";
+    //     return price == null ? "" : String(price);
+    //   },
+    // },
+   {
+  key: "netEnergyPrice",
+  header: "Price (₦/kWh)",
+  render: (item: any) => {
+    const e = item?.fullResponse?.energyList?.[0];
+
+    const price = Number(e?.price);
+    const taxRate = Number(e?.taxRate ?? e?.tax_rate);
+
+    if (!Number.isFinite(price)) return "—";
+    if (!Number.isFinite(taxRate)) return "—";
+
+    const totalAmount = price * (1 + taxRate / 100);
+
+    if (!Number.isFinite(totalAmount)) return "—";
+
+    return Math.floor(totalAmount)
+  }
+},
     {
-      key: "energyPrice",
-      header: "Price (₦/kWh)",
-      render: (item: any) => {
-        const price = item?.fullResponse?.energyList?.[0]?.price ?? null;
-        if (price == null || price === "") return "—";
-        const n = Number(price);
-        return Number.isFinite(n) ? n.toLocaleString() : String(price);
-      },
-      exportValue: (item: any) => {
-        const price = item?.fullResponse?.energyList?.[0]?.price ?? "";
-        return price == null ? "" : String(price);
-      },
-    },
-    {
-      key: "netEnergyPrice",
-      header: "Net Price (₦/kWh)",
-      render: (item: any) => {
-        const e = item?.fullResponse?.energyList?.[0] ?? null;
-        const priceRaw = e?.price ?? null;
-        const rateRaw = e?.taxRate ?? e?.tax_rate ?? null;
-        const price = Number(priceRaw);
-        const taxRate = Number(rateRaw);
-        if (!Number.isFinite(price)) return "—";
-        if (!Number.isFinite(taxRate)) return "—";
-        const net = price * (1 + taxRate / 100);
-        if (!Number.isFinite(net)) return "—";
-        // Trim trailing zeros (e.g. 401.45, 401, 401.5)
-        return String(Number(net.toFixed(2)));
-      },
-      exportValue: (item: any) => {
-        const e = item?.fullResponse?.energyList?.[0] ?? null;
-        const price = Number(e?.price ?? null);
-        const taxRate = Number(e?.taxRate ?? e?.tax_rate ?? null);
-        if (!Number.isFinite(price) || !Number.isFinite(taxRate)) return "";
-        const net = price * (1 - taxRate / 100);
-        return Number.isFinite(net) ? String(Number(net.toFixed(2))) : "";
-      },
-    },
+  key: "netEnergyPrice",
+  header: "Net Price (₦/kWh)",
+  render: (item: any) => {
+    const e = item?.fullResponse?.energyList?.[0];
+
+    const price = Number(e?.price);
+    const taxRate = Number(e?.taxRate ?? e?.tax_rate);
+
+    if (!Number.isFinite(price)) return "—";
+    if (!Number.isFinite(taxRate)) return "—";
+
+    const net = price * (1 - taxRate / 100);
+
+    if (!Number.isFinite(net)) return "—";
+
+    return Math.floor(net)
+  }
+},
     {
       key: "energyValue",
       header: "Value",
@@ -557,7 +570,7 @@ export default function TransactionPage() {
         const value = item?.fullResponse?.energyList?.[0]?.value ?? null;
         if (value == null || value === "") return "—";
         const vNum = Number(value);
-        return Number.isFinite(vNum) ? String(vNum) : String(value);
+        return Number(vNum) ? String(vNum) : String(value);
       },
       exportValue: (item: any) => {
         const value = item?.fullResponse?.energyList?.[0]?.value ?? "";
@@ -574,7 +587,7 @@ export default function TransactionPage() {
           null;
         if (rate == null || rate === "") return "—";
         const n = Number(rate);
-        return Number.isFinite(n) ? String(n) : String(rate);
+        return Number(n) ? String(n) : String(rate);
       },
       exportValue: (item: any) => {
         const rate =

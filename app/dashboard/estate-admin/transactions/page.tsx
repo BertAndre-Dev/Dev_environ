@@ -557,13 +557,22 @@ export default function TransactionPage() {
         return roundToWhole(totalAmount);
       },
       exportValue: (item: any) => {
-        const e = item?.fullResponse?.energyList?.[0];
-        const raw = e?.price;
-        if (raw == null || raw === "") return "";
-        const n = Number(raw);
-        const roundToWhole = (value: number) =>
+const e = item?.fullResponse?.energyList?.[0];
+
+        const price = Number(e?.price);
+        const taxRate = Number(e?.taxRate ?? e?.tax_rate);
+
+        if (!Number.isFinite(price)) return "—";
+        if (!Number.isFinite(taxRate)) return "—";
+
+        const totalAmount = price * (1 + taxRate / 100);
+
+        if (!Number.isFinite(totalAmount)) return "—";
+        
+         const roundToWhole = (value: number) =>
   Number.isFinite(value) ? Math.round(value) : "—";
- return roundToWhole(Number);
+
+        return roundToWhole(totalAmount);
       },
     },
     // {

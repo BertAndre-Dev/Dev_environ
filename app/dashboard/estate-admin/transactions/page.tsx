@@ -478,6 +478,7 @@ export default function TransactionPage() {
     },
   ];
 
+
   const vendsColumns = [
     {
       key: "createdAt",
@@ -549,8 +550,11 @@ export default function TransactionPage() {
         const totalAmount = price * (1 + taxRate / 100);
 
         if (!Number.isFinite(totalAmount)) return "—";
+        
+         const roundToWhole = (value: number) =>
+  Number.isFinite(value) ? Math.round(value) : "—";
 
-        return Math.floor(totalAmount);
+        return roundToWhole(totalAmount);
       },
       exportValue: (item: any) => {
         const e = item?.fullResponse?.energyList?.[0];

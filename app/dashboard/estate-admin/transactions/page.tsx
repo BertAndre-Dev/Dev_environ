@@ -536,7 +536,7 @@ export default function TransactionPage() {
 
     {
       key: "netEnergyPrice",
-      header: "Price with Tax (₦/kWh)",
+      header: "Price(₦/kWh)",
       render: (item: any) => {
         const e = item?.fullResponse?.energyList?.[0];
 
@@ -581,7 +581,7 @@ export default function TransactionPage() {
     // },
     {
       key: "energyPrice",
-      header: "Price without Tax (₦/kWh)",
+      header: "Net Price(₦/kWh)",
       render: (item: any) => {
         const price = item?.fullResponse?.energyList?.[0]?.price ?? null;
         if (price == null || price === "") return "—";

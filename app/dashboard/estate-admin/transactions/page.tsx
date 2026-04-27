@@ -511,58 +511,59 @@ export default function TransactionPage() {
       header: "Amount (₦)",
       render: (item: any) => item.amount?.toLocaleString() ?? 0,
     },
+    
+    {
+      key: "netEnergyPrice",
+      header: "Price (₦/kWh)",
+      render: (item: any) => {
+        const e = item?.fullResponse?.energyList?.[0];
+
+        const price = Number(e?.price);
+        const taxRate = Number(e?.taxRate ?? e?.tax_rate);
+
+        if (!Number.isFinite(price)) return "—";
+        if (!Number.isFinite(taxRate)) return "—";
+
+        const totalAmount = price * (1 + taxRate / 100);
+
+        if (!Number.isFinite(totalAmount)) return "—";
+
+        return Math.floor(totalAmount);
+      },
+    },
     // {
-    //   key: "energyPrice",
-    //   header: "Price (₦/kWh)",
+    //   key: "netEnergyPrice",
+    //   header: "Net Price (₦/kWh)",
     //   render: (item: any) => {
-    //     const price = item?.fullResponse?.energyList?.[0]?.price ?? null;
-    //     if (price == null || price === "") return "—";
-    //     const n = Number(price);
-    //     return Number(n) ? n.toLocaleString() : String(price);
-    //   },
-    //   exportValue: (item: any) => {
-    //     const price = item?.fullResponse?.energyList?.[0]?.price ?? "";
-    //     return price == null ? "" : String(price);
+    //     const e = item?.fullResponse?.energyList?.[0];
+
+    //     const price = Number(e?.price);
+    //     const taxRate = Number(e?.taxRate ?? e?.tax_rate);
+
+    //     if (!Number.isFinite(price)) return "—";
+    //     if (!Number.isFinite(taxRate)) return "—";
+
+    //     const net = price * (1 - taxRate / 100);
+
+    //     if (!Number.isFinite(net)) return "—";
+
+    //     return Math.floor(net);
     //   },
     // },
-   {
-  key: "netEnergyPrice",
-  header: "Price (₦/kWh)",
-  render: (item: any) => {
-    const e = item?.fullResponse?.energyList?.[0];
-
-    const price = Number(e?.price);
-    const taxRate = Number(e?.taxRate ?? e?.tax_rate);
-
-    if (!Number.isFinite(price)) return "—";
-    if (!Number.isFinite(taxRate)) return "—";
-
-    const totalAmount = price * (1 + taxRate / 100);
-
-    if (!Number.isFinite(totalAmount)) return "—";
-
-    return Math.floor(totalAmount)
-  }
-},
     {
-  key: "netEnergyPrice",
-  header: "Net Price (₦/kWh)",
-  render: (item: any) => {
-    const e = item?.fullResponse?.energyList?.[0];
-
-    const price = Number(e?.price);
-    const taxRate = Number(e?.taxRate ?? e?.tax_rate);
-
-    if (!Number.isFinite(price)) return "—";
-    if (!Number.isFinite(taxRate)) return "—";
-
-    const net = price * (1 - taxRate / 100);
-
-    if (!Number.isFinite(net)) return "—";
-
-    return Math.floor(net)
-  }
-},
+      key: "energyPrice",
+      header: "Price (₦/kWh)",
+      render: (item: any) => {
+        const price = item?.fullResponse?.energyList?.[0]?.price ?? null;
+        if (price == null || price === "") return "—";
+        const n = Number(price);
+        return Number(n) ? n.toLocaleString() : String(price);
+      },
+      exportValue: (item: any) => {
+        const price = item?.fullResponse?.energyList?.[0]?.price ?? "";
+        return price == null ? "" : String(price);
+      },
+    },
     {
       key: "energyValue",
       header: "Value",

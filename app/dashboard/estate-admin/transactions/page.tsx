@@ -536,7 +536,7 @@ export default function TransactionPage() {
         const taxRate = Number(rateRaw);
         if (!Number.isFinite(price)) return "—";
         if (!Number.isFinite(taxRate)) return "—";
-        const net = price * (1 - taxRate / 100);
+        const net = price * (1 + taxRate / 100);
         if (!Number.isFinite(net)) return "—";
         // Trim trailing zeros (e.g. 401.45, 401, 401.5)
         return String(Number(net.toFixed(2)));

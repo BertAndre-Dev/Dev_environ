@@ -242,7 +242,7 @@ export default function ExpenseHeadsPage() {
         </Card>
       </div>
       <ExpensesHeader
-        title="Expenses"
+        title="Expenses Heads"
         estateName={estateName}
         onAddExpense={openAdd}
         actionLabel="Add Expense Head"

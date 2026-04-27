@@ -299,7 +299,7 @@ export default function ExpenseHeadDetailPage() {
   return (
     <div className="space-y-6">
       <ExpensesHeader
-        title={`Expenses - ${headName}`}
+        title={`Expenses Head - ${headName}`}
         estateName={estateName}
         onAddExpense={openAdd}
         actionLabel="Add Expense Entry"

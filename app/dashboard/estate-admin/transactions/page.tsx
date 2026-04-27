@@ -472,6 +472,7 @@ export default function TransactionPage() {
     },
   ];
 
+
   const vendsColumns = [
     {
       key: "createdAt",

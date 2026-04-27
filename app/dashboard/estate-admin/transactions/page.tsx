@@ -409,6 +409,8 @@ export default function TransactionPage() {
       header: "Date",
       render: (item: any) =>
         item.createdAt ? new Date(item.createdAt).toLocaleString() : "-",
+      exportValue: (item: any) =>
+        item.createdAt ? new Date(item.createdAt).toLocaleString() : "",
     },
     {
       key: "user",
@@ -419,16 +421,24 @@ export default function TransactionPage() {
               .filter(Boolean)
               .join(" ") || item.user.email
           : "-",
+      exportValue: (item: any) => {
+        const u = item?.user;
+        if (!u) return "";
+        const name = [u.firstName, u.lastName].filter(Boolean).join(" ").trim();
+        return name || u.email || "";
+      },
     },
     {
       key: "email",
       header: "Email",
       render: (item: any) => item.user?.email ?? "-",
+      exportValue: (item: any) => String(item?.user?.email ?? ""),
     },
     {
       key: "tx_ref",
       header: "Transaction Reference",
       render: (item: any) => item.tx_ref ?? "-",
+      exportValue: (item: any) => String(item?.tx_ref ?? ""),
     },
 
     {
@@ -440,11 +450,15 @@ export default function TransactionPage() {
         ) : (
           <span className="text-red-600 font-medium">Debit</span>
         ),
+      exportValue: (item: any) =>
+        item.type === "credit" ? "Credit" : "Debit",
     },
     {
       key: "amount",
       header: "Amount (₦)",
       render: (item: any) => item.amount?.toLocaleString() ?? 0,
+      exportValue: (item: any) =>
+        item.amount != null ? String(item.amount) : "",
     },
     {
       key: "paymentStatus",
@@ -457,6 +471,10 @@ export default function TransactionPage() {
             {item.paymentStatus || "Pending"}
           </span>
         ),
+      exportValue: (item: any) =>
+        item.paymentStatus === "successful"
+          ? "Successful"
+          : String(item.paymentStatus || "Pending"),
     },
   ];
 
@@ -466,6 +484,8 @@ export default function TransactionPage() {
       header: "Date",
       render: (item: any) =>
         item.createdAt ? new Date(item.createdAt).toLocaleString() : "-",
+      exportValue: (item: any) =>
+        item.createdAt ? new Date(item.createdAt).toLocaleString() : "",
     },
     {
       key: "user",
@@ -510,11 +530,13 @@ export default function TransactionPage() {
       key: "amount",
       header: "Amount (₦)",
       render: (item: any) => item.amount?.toLocaleString() ?? 0,
+      exportValue: (item: any) =>
+        item.amount != null ? String(item.amount) : "",
     },
-    
+
     {
       key: "netEnergyPrice",
-      header: "Price (₦/kWh)",
+      header: "Price with Tax (₦/kWh)",
       render: (item: any) => {
         const e = item?.fullResponse?.energyList?.[0];
 
@@ -528,6 +550,15 @@ export default function TransactionPage() {
 
         if (!Number.isFinite(totalAmount)) return "—";
 
+        return Math.floor(totalAmount);
+      },
+      exportValue: (item: any) => {
+        const e = item?.fullResponse?.energyList?.[0];
+        const price = Number(e?.price);
+        const taxRate = Number(e?.taxRate ?? e?.tax_rate);
+        if (!Number.isFinite(price) || !Number.isFinite(taxRate)) return "";
+        const totalAmount = price * (1 + taxRate / 100);
+        if (!Number.isFinite(totalAmount)) return "";
         return Math.floor(totalAmount);
       },
     },
@@ -606,6 +637,8 @@ export default function TransactionPage() {
       header: "Date",
       render: (item: any) =>
         item.createdAt ? new Date(item.createdAt).toLocaleString() : "-",
+      exportValue: (item: any) =>
+        item.createdAt ? new Date(item.createdAt).toLocaleString() : "",
     },
     {
       key: "user",
@@ -616,36 +649,50 @@ export default function TransactionPage() {
               .filter(Boolean)
               .join(" ") || item.user.email
           : "-",
+      exportValue: (item: any) => {
+        const u = item?.user;
+        if (!u) return "";
+        const name = [u.firstName, u.lastName].filter(Boolean).join(" ").trim();
+        return name || u.email || "";
+      },
     },
     {
       key: "email",
       header: "Email",
       render: (item: any) => item.user?.email ?? "-",
+      exportValue: (item: any) => String(item?.user?.email ?? ""),
     },
     {
       key: "frequency",
       header: "Frequency",
       render: (item: any) => item.frequency ?? "-",
+      exportValue: (item: any) => String(item.frequency ?? ""),
     },
     {
-      key: "Start Date",
+      key: "startDate",
       header: "Start Date",
       render: (item: any) => item.startDate ?? "-",
+      exportValue: (item: any) => String(item.startDate ?? ""),
     },
     {
-      key: "Next Due Date",
+      key: "nextDueDate",
       header: "Next Due Date",
       render: (item: any) => item.nextDueDate ?? "-",
+      exportValue: (item: any) => String(item.nextDueDate ?? ""),
     },
     {
       key: "bill",
       header: "Bill",
       render: (item: any) => item.bill?.name ?? "-",
+      exportValue: (item: any) =>
+        String(item.bill?.name ?? item.billName ?? ""),
     },
     {
       key: "amountPaid",
       header: "Amount (₦)",
       render: (item: any) => item.amountPaid?.toLocaleString() ?? 0,
+      exportValue: (item: any) =>
+        item.amountPaid != null ? String(item.amountPaid) : "",
     },
     {
       key: "status",
@@ -655,6 +702,7 @@ export default function TransactionPage() {
           {item.status ?? "-"}
         </span>
       ),
+      exportValue: (item: any) => String(item.status ?? ""),
     },
   ];
 

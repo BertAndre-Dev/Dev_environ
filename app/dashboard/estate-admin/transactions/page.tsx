@@ -561,7 +561,9 @@ export default function TransactionPage() {
         const raw = e?.price;
         if (raw == null || raw === "") return "";
         const n = Number(raw);
-        return Number.isFinite(n) ? String(n) : String(raw);
+        const roundToWhole = (value: number) =>
+  Number.isFinite(value) ? Math.round(value) : "—";
+ return roundToWhole(Number);
       },
     },
     // {
@@ -593,13 +595,10 @@ export default function TransactionPage() {
         return Number(n) ? n.toLocaleString() : String(price);
       },
       exportValue: (item: any) => {
-        const e = item?.fullResponse?.energyList?.[0];
-        const price = Number(e?.price);
-        const taxRate = Number(e?.taxRate ?? e?.tax_rate);
-        if (!Number.isFinite(price) || !Number.isFinite(taxRate)) return "";
-        const net = price * (1 - taxRate / 100);
-        if (!Number.isFinite(net)) return "";
-        return String(Math.floor(net));
+       const price = item?.fullResponse?.energyList?.[0]?.price ?? null;
+        if (price == null || price === "") return "—";
+        const n = Number(price);
+        return Number(n) ? n.toLocaleString() : String(price);
       },
     },
     {

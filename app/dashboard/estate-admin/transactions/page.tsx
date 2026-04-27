@@ -589,16 +589,24 @@ export default function TransactionPage() {
       key: "energyPrice",
       header: "Net Price(₦/kWh)",
       render: (item: any) => {
-        const price = item?.fullResponse?.energyList?.[0]?.price ?? null;
+        const price = item?.fullResponse?.energyList?.[0]?.price;
         if (price == null || price === "") return "—";
+    
         const n = Number(price);
-        return Number(n) ? n.toLocaleString() : String(price);
+        if (!Number.isFinite(n)) return "—";
+    
+        // UI formatting only
+        return n.toLocaleString();
       },
       exportValue: (item: any) => {
-       const price = item?.fullResponse?.energyList?.[0]?.price ?? null;
-        if (price == null || price === "") return "—";
+        const price = item?.fullResponse?.energyList?.[0]?.price;
+        if (price == null || price === "") return "";
+    
         const n = Number(price);
-        return Number(n) ? n.toLocaleString() : String(price);
+        if (!Number.isFinite(n)) return "";
+    
+        // clean export value (rounded, no commas)
+        return String(Math.round(n));
       },
     },
     {

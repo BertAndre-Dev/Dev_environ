@@ -490,7 +490,10 @@ export default function TransactionPage() {
         const email = (item?.user?.email ?? "").toString();
         if (!email) return "-";
         return (
-          <span className="inline-block max-w-[180px] truncate align-bottom" title={email}>
+          <span
+            className="inline-block max-w-[180px] truncate align-bottom"
+            title={email}
+          >
             {email}
           </span>
         );
@@ -509,6 +512,45 @@ export default function TransactionPage() {
       render: (item: any) => item.amount?.toLocaleString() ?? 0,
     },
     {
+      key: "energyPrice",
+      header: "Price (₦/kWh)",
+      render: (item: any) => {
+        const price = item?.fullResponse?.energyList?.[0]?.price ?? null;
+        if (price == null || price === "") return "—";
+        const n = Number(price);
+        return Number.isFinite(n) ? n.toLocaleString() : String(price);
+      },
+      exportValue: (item: any) => {
+        const price = item?.fullResponse?.energyList?.[0]?.price ?? "";
+        return price == null ? "" : String(price);
+      },
+    },
+    {
+      key: "netEnergyPrice",
+      header: "Net Price (₦/kWh)",
+      render: (item: any) => {
+        const e = item?.fullResponse?.energyList?.[0] ?? null;
+        const priceRaw = e?.price ?? null;
+        const rateRaw = e?.taxRate ?? e?.tax_rate ?? null;
+        const price = Number(priceRaw);
+        const taxRate = Number(rateRaw);
+        if (!Number.isFinite(price)) return "—";
+        if (!Number.isFinite(taxRate)) return "—";
+        const net = price * (1 - taxRate / 100);
+        if (!Number.isFinite(net)) return "—";
+        // Trim trailing zeros (e.g. 401.45, 401, 401.5)
+        return String(Number(net.toFixed(2)));
+      },
+      exportValue: (item: any) => {
+        const e = item?.fullResponse?.energyList?.[0] ?? null;
+        const price = Number(e?.price ?? null);
+        const taxRate = Number(e?.taxRate ?? e?.tax_rate ?? null);
+        if (!Number.isFinite(price) || !Number.isFinite(taxRate)) return "";
+        const net = price * (1 - taxRate / 100);
+        return Number.isFinite(net) ? String(Number(net.toFixed(2))) : "";
+      },
+    },
+    {
       key: "energyValue",
       header: "Value",
       render: (item: any) => {
@@ -523,19 +565,6 @@ export default function TransactionPage() {
       },
     },
     {
-      key: "energyUnit",
-      header: "Unit",
-      render: (item: any) => {
-        const unit = item?.fullResponse?.energyList?.[0]?.unit ?? null;
-        const u = String(unit ?? "").trim();
-        return u || "—";
-      },
-      exportValue: (item: any) => {
-        const unit = item?.fullResponse?.energyList?.[0]?.unit ?? "";
-        return String(unit ?? "").trim();
-      },
-    },
-    {
       key: "taxRate",
       header: "Tax Rate (%)",
       render: (item: any) => {
@@ -545,7 +574,7 @@ export default function TransactionPage() {
           null;
         if (rate == null || rate === "") return "—";
         const n = Number(rate);
-        return Number.isFinite(n) ? n.toFixed(2) : String(rate);
+        return Number.isFinite(n) ? String(n) : String(rate);
       },
       exportValue: (item: any) => {
         const rate =
@@ -553,47 +582,6 @@ export default function TransactionPage() {
           item?.fullResponse?.energyList?.[0]?.tax_rate ??
           "";
         return rate == null ? "" : String(rate);
-      },
-    },
-    {
-      key: "netRate",
-      header: "Net Amount (₦)",
-      render: (item: any) => {
-        const e = item?.fullResponse?.energyList?.[0] ?? null;
-        const amountRaw = item?.amount ?? e?.amount ?? null;
-        const taxAmountRaw = e?.taxAmount ?? null;
-        const taxRateRaw = e?.taxRate ?? e?.tax_rate ?? null;
-
-        const amount = Number(amountRaw);
-        if (!Number.isFinite(amount)) return "—";
-
-        let taxAmount = Number(taxAmountRaw);
-        if (!Number.isFinite(taxAmount)) {
-          const taxRate = Number(taxRateRaw);
-          taxAmount = Number.isFinite(taxRate) ? (amount * taxRate) / 100 : 0;
-        }
-
-        const netAmount = amount - taxAmount;
-        if (!Number.isFinite(netAmount)) return "—";
-        return netAmount.toLocaleString();
-      },
-      exportValue: (item: any) => {
-        const e = item?.fullResponse?.energyList?.[0] ?? null;
-        const amountRaw = item?.amount ?? e?.amount ?? null;
-        const taxAmountRaw = e?.taxAmount ?? null;
-        const taxRateRaw = e?.taxRate ?? e?.tax_rate ?? null;
-
-        const amount = Number(amountRaw);
-        if (!Number.isFinite(amount)) return "";
-
-        let taxAmount = Number(taxAmountRaw);
-        if (!Number.isFinite(taxAmount)) {
-          const taxRate = Number(taxRateRaw);
-          taxAmount = Number.isFinite(taxRate) ? (amount * taxRate) / 100 : 0;
-        }
-
-        const netAmount = amount - taxAmount;
-        return Number.isFinite(netAmount) ? String(netAmount) : "";
       },
     },
   ];
@@ -726,7 +714,9 @@ export default function TransactionPage() {
             <Table
               columns={columns}
               data={transactions}
-              emptyMessage={loading ? "Loading transactions..." : "No transactions found."}
+              emptyMessage={
+                loading ? "Loading transactions..." : "No transactions found."
+              }
               showPagination
               paginationInfo={{
                 total: pagination?.total || transactions.length || 0,
@@ -773,7 +763,9 @@ export default function TransactionPage() {
             <Table
               columns={vendsColumns}
               data={vendsData}
-              emptyMessage={loadingVends ? "Loading vends..." : "No vends found."}
+              emptyMessage={
+                loadingVends ? "Loading vends..." : "No vends found."
+              }
               enableDateRangeFilter
               startDate={vendsStartDate}
               endDate={vendsEndDate}

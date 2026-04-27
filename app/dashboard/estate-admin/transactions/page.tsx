@@ -23,18 +23,18 @@ import { HistoryTransactionsTab } from "./components/HistoryTransactionsTab";
 import { VendsTab } from "./components/VendsTab";
 import { PaidBillsTab } from "./components/PaidBillsTab";
 
-interface TransactionData {
-  walletId: string;
-  type: string;
-  amount: number;
-  description: string;
-  userId: string;
-  id?: string;
-  paymentStatus?: string;
-  tx_ref?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
+// interface TransactionData {
+//   walletId: string;
+//   type: string;
+//   amount: number;
+//   description: string;
+//   userId: string;
+//   id?: string;
+//   paymentStatus?: string;
+//   tx_ref?: string;
+//   createdAt?: string;
+//   updatedAt?: string;
+// }
 
 export default function TransactionPage() {
   const dispatch = useDispatch<AppDispatch>();

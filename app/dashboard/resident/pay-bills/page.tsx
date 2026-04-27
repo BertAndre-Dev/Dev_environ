@@ -14,6 +14,7 @@ import {
   createTransaction,
   initializePayment,
 } from "@/redux/slice/resident/transaction/transaction";
+import { createBillPaymentPin } from "@/redux/slice/resident/set-pin/set-pin";
 
 import FundWalletModal from "@/components/resident/transaction/fund-wallet-modal/page";
 import type { WalletData } from "@/redux/slice/resident/wallet-mgt/wallet-mgt-slice";
@@ -29,6 +30,7 @@ export default function PayBillsPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState<string>("");
   const [residentType, setResidentType] = useState<string | null>(null);
+  const [hasBillPaymentPin, setHasBillPaymentPin] = useState<boolean>(false);
 
   const wallet = useSelector(
     (state: RootState) => state.wallet.wallet,
@@ -48,6 +50,7 @@ export default function PayBillsPage() {
         const userEmail = userRes?.data?.email;
         const rType =
           userRes?.data?.residentType ?? userRes?.data?.resident_type ?? null;
+        const billPaymentPinHash = userRes?.data?.billPaymentPinHash ?? null;
 
         if (!id) {
           toast.warning("No user found.");
@@ -57,6 +60,7 @@ export default function PayBillsPage() {
         setUserId(id);
         setEmail(userEmail || "");
         setResidentType(rType ?? null);
+        setHasBillPaymentPin(Boolean(billPaymentPinHash));
 
         // Fetch wallet
         await dispatch(getWallet(id)).unwrap();
@@ -141,8 +145,18 @@ export default function PayBillsPage() {
     }
   };
 
+  const handleSubmitBillPin = async (pin: string) => {
+    await dispatch(createBillPaymentPin({ pin })).unwrap();
+    setHasBillPaymentPin(true);
+  };
+
   return (
     <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Pay Bills</h1>
+      <p className="text-sm text-muted-foreground">
+        Pay your bills securely and conveniently.
+      </p>
+      <div className="flex flex-col gap-4">
       <ResidentWalletCard
         wallet={wallet}
         isOwner={isOwner}
@@ -156,7 +170,14 @@ export default function PayBillsPage() {
         onCreateWalletClick={handleCreateWalletClick}
       />
 
-      <SetUpPinCard />
+      <div className="flex flex-col gap-4">
+        
+      </div>
+
+
+      </div>
+
+      {!hasBillPaymentPin && <SetUpPinCard onSubmitPin={handleSubmitBillPin} />}
 
       <FundWalletModal
         visible={open}

@@ -16,6 +16,7 @@ import type { InvitedTenantItem } from "@/redux/slice/resident/invited-tenants/i
 import { deleteUser } from "@/redux/slice/admin/user-mgt/user";
 import type { RootState, AppDispatch } from "@/redux/store";
 import { toast } from "react-toastify";
+import Loader from "@/components/ui/Loader";
 
 const PAGE_SIZE = 10;
 
@@ -208,7 +209,7 @@ export default function ResidentUserPage() {
             data={tenants}
             emptyMessage={
               tenantsStatus === "isLoading"
-                ? "Loading tenants..."
+                ? <Loader label="Loading tenants..." />
                 : "You have not invited any tenants yet."
             }
             enableDateRangeFilter

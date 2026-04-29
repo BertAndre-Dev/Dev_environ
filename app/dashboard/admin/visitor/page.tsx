@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import AdminVisitorForm from "@/components/admin/visitor-form/page";
 import DeleteModal from "@/components/resident/delete-modal/page";
+import Loader from "@/components/ui/Loader";
 
 export default function AdminVisitorManagement() {
   const dispatch = useDispatch<AppDispatch>();
@@ -555,7 +556,9 @@ export default function AdminVisitorManagement() {
         <Table
           columns={columns}
           data={filteredVisitors}
-          emptyMessage={loading ? "Loading visitors..." : "No visitors found."}
+          emptyMessage={
+            loading ? <Loader label="Loading visitors..." /> : "No visitors found."
+          }
           enableDateRangeFilter
           startDate={startDate}
           endDate={endDate}

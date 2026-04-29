@@ -13,6 +13,7 @@ import { getAllEstateMeter } from "@/redux/slice/admin/meter-mgt/meter-mgt";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import AssignMeterForm from "@/components/admin/meter-form/page";
 import { IoSpeedometerOutline } from "react-icons/io5";
+import Loader from "@/components/ui/Loader";
 
 interface VendorData {
   name: string;
@@ -292,7 +293,7 @@ export default function AdminMeterManagement() {
           columns={columns}
           data={allAdminMeters || []}
           emptyMessage={
-            loading ? "Loading estate meters..." : "No meter found."
+            loading ? <Loader label="Loading estate meters..." /> : "No meter found."
           }
           showPagination
           // enableSearch

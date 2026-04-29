@@ -31,6 +31,7 @@ import { RootState, AppDispatch } from "@/redux/store";
 import { useEffect, useState } from "react";
 import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
+import Loader from "@/components/ui/Loader";
 
 interface BillData {
   createdAt?: string;
@@ -605,7 +606,7 @@ export default function BillPage() {
           <Table
             columns={columns}
             data={filteredBills}
-            emptyMessage={loading ? "Loading bills..." : "No bills found."}
+            emptyMessage={loading ? <Loader label="Loading bills..." /> : "No bills found."}
             enableDateRangeFilter
             startDate={billsStartDate}
             endDate={billsEndDate}
@@ -711,7 +712,7 @@ export default function BillPage() {
               emptyMessage={
                 assignAddressId
                   ? loadingAssigned
-                    ? "Loading assigned bills..."
+                    ? <Loader label="Loading assigned bills..." />
                     : "No bills assigned to this address."
                   : "Select an address to view assigned bills."
               }

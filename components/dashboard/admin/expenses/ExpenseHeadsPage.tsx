@@ -244,7 +244,6 @@ export default function ExpenseHeadsPage() {
       {/* Stats Card */}
       <div className="grid grid-cols-1">
         <ExpensesHeader
-        showImage
           title="Expenses Heads"
           estateName={estateName}
           onAddExpense={openAdd}

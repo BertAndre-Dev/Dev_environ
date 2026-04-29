@@ -1,11 +1,27 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Calendar } from "lucide-react";
 import {
   IsoLinkedRangeEnd,
   IsoLinkedRangeStart,
 } from "@/components/ui/iso-date-picker";
+
+function toIsoDateUTC(d: Date): string {
+  return new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
+  )
+    .toISOString()
+    .slice(0, 10);
+}
+
+function getLastNDaysRangeIsoUTC(days: number): { fromDate: string; toDate: string } {
+  const now = new Date();
+  const to = new Date(now);
+  const from = new Date(now);
+  from.setUTCDate(from.getUTCDate() - days);
+  return { fromDate: toIsoDateUTC(from), toDate: toIsoDateUTC(to) };
+}
 
 interface TransactionsFilterBarProps {
   fromDate: string | null;
@@ -38,6 +54,22 @@ export const TransactionsFilterBar: React.FC<TransactionsFilterBarProps> = ({
   searchFieldLabel = "Estate",
   showTypeFilter = true,
 }) => {
+  const hasInitializedDefaultRange = useRef(false);
+
+  useEffect(() => {
+    if (hasInitializedDefaultRange.current) return;
+    if (fromDate || toDate) return;
+
+    hasInitializedDefaultRange.current = true;
+    const range = getLastNDaysRangeIsoUTC(30);
+    onFiltersChange({
+      fromDate: range.fromDate,
+      toDate: range.toDate,
+      estate,
+      type,
+    });
+  }, [fromDate, toDate, onFiltersChange, estate, type]);
+
   const handleFromDateChange = (iso: string) => {
     onFiltersChange({
       fromDate: iso || null,
@@ -85,7 +117,7 @@ export const TransactionsFilterBar: React.FC<TransactionsFilterBarProps> = ({
     <div className="bg-white p-4 rounded-lg border flex flex-wrap gap-3 items-center">
       <div className="flex items-center gap-2">
         <Calendar
-          className="h-4 w-4 shrink-0 text-muted-foreground"
+          className="h-4 w-4 shrink-0 text-muted-foreground cursor-pointer"
           aria-hidden
         />
         <IsoLinkedRangeStart

@@ -101,9 +101,12 @@ export default function ExpenseHeadDetailPage() {
   const [viewItem, setViewItem] = useState<ExpenseEntry | null>(null);
 
   const resolvedHead = useMemo(() => {
-    const slug = String(expenseName || "").trim();
-    if (!slug) return null;
-    return heads.find((h) => slugify(h.name ?? "") === slug) ?? null;
+    const key = String(expenseName || "").trim();
+    if (!key) return null;
+    const byId = heads.find((h) => getId(h) === key) ?? null;
+    if (byId) return byId;
+
+    return heads.find((h) => slugify(h.name ?? "") === key) ?? null;
   }, [heads, expenseName]);
 
   const headId = getId(resolvedHead);
@@ -299,7 +302,7 @@ export default function ExpenseHeadDetailPage() {
   return (
     <div className="space-y-6">
       <ExpensesHeader
-        title={`Expenses - ${headName}`}
+        title={`Expenses Head - ${headName}`}
         estateName={estateName}
         onAddExpense={openAdd}
         actionLabel="Add Expense Entry"

@@ -113,7 +113,7 @@ export function AddExpenseModal({
                       onChange={(e) =>
                         onDraftChange(row.id, "description", e.target.value)
                       }
-                      placeholder="fixing of disel gen"
+                      placeholder="fixing of generator"
                     />
                   </div>
 

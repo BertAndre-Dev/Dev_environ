@@ -193,53 +193,10 @@ function DateRangeDropdown({
   );
 }
 
-function FilterDropdown({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string;
-  options: ReportTableFilterOption[];
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const selectedLabel = options.find((o) => o.value === value)?.label ?? label;
-
-  return (
-    <PillDropdown
-      icon={<Calendar className="h-4 w-4 text-muted-foreground" />}
-      label={selectedLabel}
-    >
-      {(close) => (
-        <div className="min-w-[180px] rounded-xl border border-border bg-white py-1 shadow-xl">
-          {options.map((o) => (
-            <button
-              key={o.value}
-              onClick={() => {
-                onChange(o.value);
-                close();
-              }}
-              className={`w-full px-4 py-2 text-left text-sm hover:bg-muted/40 cursor-pointer ${
-                value === o.value ? "font-semibold text-primary" : ""
-              }`}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </PillDropdown>
-  );
-}
-
 export function ReportTable({
   columnLabel,
   rows,
   summaryRows,
-  filterLabel,
-  filterOptions,
-  filterValue,
   onFilterChange,
   startDate,
   endDate,
@@ -275,13 +232,6 @@ export function ReportTable({
           startDate={startDate}
           endDate={endDate}
           onChange={onDateRangeChange}
-        />
-
-        <FilterDropdown
-          label={filterLabel}
-          options={filterOptions}
-          value={filterValue}
-          onChange={onFilterChange}
         />
 
         <button

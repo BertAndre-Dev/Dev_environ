@@ -22,10 +22,11 @@ export async function POST(req: Request) {
         subject: "New Book Demo Request",
       },
     ],
-    // NOTE: SendGrid requires this sender to be a verified sender/domain.
-    // If you see 401/403 or 'from address does not match a verified Sender Identity',
-    // verify this address in SendGrid or update it to a verified one.
     from: { email: "sales@bertahub.com" },
+    reply_to: {
+      email: body?.email ?? "sales@bertahub.com",
+      name: body?.name ?? "",
+    },
     content: [
       {
         type: "text/plain",

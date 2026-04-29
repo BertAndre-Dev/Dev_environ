@@ -28,7 +28,7 @@ interface PaginationInfo {
 interface TableProps<T> {
   columns: Column<T>[];
   data: T[];
-  emptyMessage?: string;
+  emptyMessage?: React.ReactNode;
   onRowClick?: (item: T) => void;
   showPagination?: boolean;
   paginationInfo?: PaginationInfo;
@@ -43,6 +43,11 @@ interface TableProps<T> {
   endDate?: string;
   /** Called when date range changes. Dates are YYYY-MM-DD or empty string when cleared. */
   onDateRangeChange?: (range: { startDate: string; endDate: string }) => void;
+  /**
+   * Auto-initialize the date range filter when empty.
+   * Default: 30 (last 30 days). Set to 0/undefined to disable.
+   */
+  defaultDateRangeDays?: number;
   /** Show an Export button that downloads table data as CSV. */
   enableExport?: boolean;
   /** Base name for the downloaded file (e.g. "transactions"). Default "export". */
@@ -73,6 +78,7 @@ export default function Table<T extends { id?: string }>({
   startDate,
   endDate,
   onDateRangeChange,
+  defaultDateRangeDays = 30,
   enableExport = false,
   exportFileName = "export",
   onExportRequest,
@@ -148,6 +154,7 @@ export default function Table<T extends { id?: string }>({
   const isEndControlled = endDate !== undefined;
   const [internalStartDate, setInternalStartDate] = React.useState(startDate ?? "");
   const [internalEndDate, setInternalEndDate] = React.useState(endDate ?? "");
+  const didInitDefaultRangeRef = React.useRef(false);
 
   React.useEffect(() => {
     if (isStartControlled) setInternalStartDate(startDate ?? "");
@@ -160,6 +167,37 @@ export default function Table<T extends { id?: string }>({
   const effectiveStartDate = isStartControlled ? startDate ?? "" : internalStartDate;
   const effectiveEndDate = isEndControlled ? endDate ?? "" : internalEndDate;
   const showDateReset = Boolean(effectiveStartDate && effectiveEndDate);
+
+  React.useEffect(() => {
+    if (!enableDateRangeFilter) return;
+    if (!onDateRangeChange) return;
+    if (!defaultDateRangeDays) return;
+    if (didInitDefaultRangeRef.current) return;
+    if (effectiveStartDate || effectiveEndDate) return;
+
+    didInitDefaultRangeRef.current = true;
+    const now = new Date();
+    const end = new Date(now);
+    const start = new Date(now);
+    start.setUTCDate(start.getUTCDate() - defaultDateRangeDays);
+    const toIso = (d: Date) =>
+      new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
+        .toISOString()
+        .slice(0, 10);
+    const range = { startDate: toIso(start), endDate: toIso(end) };
+
+    if (!isStartControlled) setInternalStartDate(range.startDate);
+    if (!isEndControlled) setInternalEndDate(range.endDate);
+    onDateRangeChange(range);
+  }, [
+    defaultDateRangeDays,
+    effectiveEndDate,
+    effectiveStartDate,
+    enableDateRangeFilter,
+    isEndControlled,
+    isStartControlled,
+    onDateRangeChange,
+  ]);
 
   return (
     <div className="overflow-hidden border rounded-lg">

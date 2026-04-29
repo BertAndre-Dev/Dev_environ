@@ -41,10 +41,13 @@ function normalizeEstate(user: any): { estateId: string; estateName: string } {
       ? rawEstateId
       : rawEstateId?._id || rawEstateId?.id || "";
 
-  const estateFromId = (rawEstateId as { name?: string } | undefined)?.name ?? "";
-  const estateFromObj = (user?.estate as { name?: string } | undefined)?.name ?? "";
+  const estateFromId =
+    (rawEstateId as { name?: string } | undefined)?.name ?? "";
+  const estateFromObj =
+    (user?.estate as { name?: string } | undefined)?.name ?? "";
   const fallbackEstateName = (user?.estateName as string) ?? "";
-  const estateName = estateFromId || estateFromObj || fallbackEstateName || "Estate";
+  const estateName =
+    estateFromId || estateFromObj || fallbackEstateName || "Estate";
 
   return { estateId, estateName };
 }
@@ -66,7 +69,9 @@ export default function ExpenseHeadsPage() {
   const items = useSelector((s: RootState) => selectExpenseHeads(s));
   const loading = useSelector((s: RootState) => selectExpenseHeadsLoading(s));
   const error = useSelector((s: RootState) => selectExpenseHeadsError(s));
-  const pagination = useSelector((s: RootState) => selectExpenseHeadsPagination(s));
+  const pagination = useSelector((s: RootState) =>
+    selectExpenseHeadsPagination(s),
+  );
 
   const [estateId, setEstateId] = useState<string>("");
   const [estateName, setEstateName] = useState("Estate");
@@ -191,7 +196,9 @@ export default function ExpenseHeadsPage() {
         await dispatch(updateExpenseHead({ id, name, description })).unwrap();
         toast.success("Expense head updated.");
       } else {
-        await dispatch(createExpenseHead({ estateId, name, description })).unwrap();
+        await dispatch(
+          createExpenseHead({ estateId, name, description }),
+        ).unwrap();
         toast.success("Expense head created.");
       }
       setModalOpen(false);
@@ -236,17 +243,18 @@ export default function ExpenseHeadsPage() {
     <div className="space-y-6">
       {/* Stats Card */}
       <div className="grid grid-cols-1">
+        <ExpensesHeader
+        showImage
+          title="Expenses Heads"
+          estateName={estateName}
+          onAddExpense={openAdd}
+          actionLabel="Add Expense Head"
+        />
         <Card className="p-6">
           <p className="text-sm text-muted-foreground">Total Expenses</p>
           <p className="font-heading text-2xl font-bold">{total}</p>
         </Card>
       </div>
-      <ExpensesHeader
-        title="Expenses"
-        estateName={estateName}
-        onAddExpense={openAdd}
-        actionLabel="Add Expense Head"
-      />
 
       <ExpensesFiltersBar
         startDate={startDate}
@@ -297,4 +305,3 @@ export default function ExpenseHeadsPage() {
     </div>
   );
 }
-

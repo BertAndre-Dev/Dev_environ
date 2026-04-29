@@ -10,7 +10,10 @@ const inputClassName =
 
 /** Shown next to every date field for consistent affordance. */
 const datePickerIcon = (
-  <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+  <Calendar
+    className="h-4 w-4 shrink-0 text-muted-foreground cursor-pointer"
+    aria-hidden
+  />
 );
 
 export function parseIsoToDate(value: string | undefined | null): Date | null {
@@ -42,8 +45,6 @@ export type IsoDatePickerProps = {
   maxDate?: string;
   disabled?: boolean;
   className?: string;
-  /** @deprecated use ariaLabel */
-  "aria-label"?: string;
   ariaLabel?: string;
 };
 
@@ -56,10 +57,9 @@ export function IsoDatePicker({
   maxDate,
   disabled,
   className,
-  "aria-label": ariaLabelKebab,
   ariaLabel,
-}: IsoDatePickerProps) {
-  const aria = ariaLabel ?? ariaLabelKebab;
+}: Readonly<IsoDatePickerProps>) {
+  const aria = ariaLabel;
   return (
     <DatePicker
       id={id}
@@ -74,6 +74,7 @@ export function IsoDatePicker({
       wrapperClassName="w-full"
       showPopperArrow={false}
       showIcon
+      toggleCalendarOnIconClick
       icon={datePickerIcon}
       ariaLabel={aria}
     />
@@ -132,6 +133,7 @@ export function IsoLinkedRangeStart({
       wrapperClassName="w-full"
       showPopperArrow={false}
       showIcon
+      toggleCalendarOnIconClick
       icon={datePickerIcon}
       ariaLabel={ariaLabel}
     />
@@ -168,6 +170,7 @@ export function IsoLinkedRangeEnd({
       wrapperClassName="w-full"
       showPopperArrow={false}
       showIcon
+      toggleCalendarOnIconClick
       icon={datePickerIcon}
       ariaLabel={ariaLabel}
     />
@@ -186,7 +189,7 @@ export function IsoDateRangePicker({
   endAriaLabel,
   disabled,
   className,
-}: IsoDateRangePickerProps) {
+}: Readonly<IsoDateRangePickerProps>) {
   return (
     <>
       <IsoLinkedRangeStart

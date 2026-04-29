@@ -14,6 +14,7 @@ import walletSliceReducer from '@/redux/slice/resident/wallet-mgt/wallet-mgt-sli
 import estateAdminWalletSliceReducer from '@/redux/slice/estate-admin/wallet-mgt/wallet-mgt-slice';
 import transactionSliceReducer from '@/redux/slice/resident/transaction/transaction-slice';
 import estateAdminTransactionSliceReducer from '@/redux/slice/estate-admin/transaction/transaction-slice';
+import residentBillPinSliceReducer from '@/redux/slice/resident/set-pin/set-pin-slice';
 import fundWalletSliceReducer from '@/redux/slice/estate-admin/fund-wallet/fund-wallet-slice';
 import adminMeterSliceReducer from '@/redux/slice/admin/meter-mgt/meter-mgt-slice';
 import residentMeterSliceReducer from '@/redux/slice/resident/meter-mgt/meter-mgt-slice';
@@ -99,6 +100,7 @@ export const store = configureStore({
         adminBill: persistedBillReducer,
         residentBill: persistedResidentBillReducer,
         wallet: persistedWalletSliceReducer,
+        residentBillPin: residentBillPinSliceReducer,
         estateAdminWallet: persistedEstateAdminWalletSliceReducer,
         residentTransaction: persistedTransactionSliceReducer,
         estateAdminTransaction: persistedEstateAdminTransactionSliceReducer,

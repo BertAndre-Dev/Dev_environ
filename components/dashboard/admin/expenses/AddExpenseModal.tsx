@@ -58,7 +58,7 @@ export function AddExpenseModal({
 }: Readonly<AddExpenseModalProps>) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Expense</DialogTitle>
         </DialogHeader>
@@ -117,7 +117,7 @@ export function AddExpenseModal({
                       onChange={(e) =>
                         onDraftChange(row.id, "description", e.target.value)
                       }
-                      placeholder="fixing of disel gen"
+                      placeholder="fixing of generator"
                     />
                   </div>
 

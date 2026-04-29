@@ -24,17 +24,19 @@ export function ExpenseHeadCard({
 }: Readonly<ExpenseHeadCardProps>) {
   const router = useRouter();
   const slug = slugify(item.name ?? "");
+  const id = item.id ?? item._id;
+  const href = id ? `/dashboard/admin/expenses/${id}` : `/dashboard/admin/expenses/${slug}`;
 
   return (
     <Card
       role="button"
       tabIndex={0}
       className="relative overflow-hidden p-6 hover:shadow-md transition-shadow cursor-pointer"
-      onClick={() => router.push(`/dashboard/admin/expenses/${slug}`)}
+      onClick={() => router.push(href)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          router.push(`/dashboard/admin/expenses/${slug}`);
+          router.push(href);
         }
       }}
     >

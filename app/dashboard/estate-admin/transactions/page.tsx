@@ -1,7 +1,5 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
   verifyTransaction,
@@ -14,11 +12,16 @@ import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
 import { useEffect, useState, useMemo } from "react";
 import { toast } from "react-toastify";
-import Table from "@/components/tables/list/page";
+import { type EstateTransactionsFilters } from "@/components/estate-admin/transactions-filter-bar";
+import { TransactionsPageHeader } from "./components/TransactionsPageHeader";
+import { TransactionsSearchCard } from "./components/TransactionsSearchCard";
 import {
-  TransactionsFilterBar,
-  type EstateTransactionsFilters,
-} from "@/components/estate-admin/transactions-filter-bar";
+  TransactionsTabsCard,
+  type TransactionsActiveTab,
+} from "./components/TransactionsTabsCard";
+import { HistoryTransactionsTab } from "./components/HistoryTransactionsTab";
+import { VendsTab } from "./components/VendsTab";
+import { PaidBillsTab } from "./components/PaidBillsTab";
 
 interface TransactionData {
   walletId: string;
@@ -41,9 +44,7 @@ export default function TransactionPage() {
   const [email, setEmail] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
   const [limit] = useState(10);
-  const [activeTab, setActiveTab] = useState<
-    "history" | "vends" | "paid-bills"
-  >("vends");
+  const [activeTab, setActiveTab] = useState<TransactionsActiveTab>("vends");
   const [vendsData, setVendsData] = useState<any[]>([]);
   const [vendsPagination, setVendsPagination] = useState<{
     total: number;
@@ -160,7 +161,7 @@ export default function TransactionPage() {
     })();
   }, [dispatch, limit]);
 
-  // 🔹 Refetch transaction history when search or filters change (debounced for search)
+  // 🔹 Refetch transaction history when search or filters change (debounced for search).
   useEffect(() => {
     if (!estateId) return;
     const timer = setTimeout(() => {
@@ -333,12 +334,6 @@ export default function TransactionPage() {
       ? "No paid bills match the selected filters."
       : "No paid bills found.";
 
-  // const totalBills = paidBillsData.reduce((sum: number, item: any) => sum + (item.amountPaid ?? 0), 0);
-  // 🔹 Counts instead of amounts for stats (precomputed so they are available immediately)
-  // const totalTransactionsCount =
-  //   pagination?.total || transactions.length || 0;
-  // const totalBillsCount = totalBills;
-
   // 🔹 Automatically verify transaction when redirected back
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -450,8 +445,7 @@ export default function TransactionPage() {
         ) : (
           <span className="text-red-600 font-medium">Debit</span>
         ),
-      exportValue: (item: any) =>
-        item.type === "credit" ? "Credit" : "Debit",
+      exportValue: (item: any) => (item.type === "credit" ? "Credit" : "Debit"),
     },
     {
       key: "amount",
@@ -536,7 +530,7 @@ export default function TransactionPage() {
 
     {
       key: "netEnergyPrice",
-      header: "Price with Tax (₦/kWh)",
+      header: "Price(₦/kWh)",
       render: (item: any) => {
         const e = item?.fullResponse?.energyList?.[0];
 
@@ -550,52 +544,47 @@ export default function TransactionPage() {
 
         if (!Number.isFinite(totalAmount)) return "—";
 
-        return Math.floor(totalAmount);
+        const roundToWhole = (value: number) =>
+          Number.isFinite(value) ? Math.round(value) : "—";
+
+        return roundToWhole(totalAmount);
       },
       exportValue: (item: any) => {
         const e = item?.fullResponse?.energyList?.[0];
-        const raw = e?.price;
-        if (raw == null || raw === "") return "";
-        const n = Number(raw);
-        return Number.isFinite(n) ? String(n) : String(raw);
-      },
-    },
-    // {
-    //   key: "netEnergyPrice",
-    //   header: "Net Price (₦/kWh)",
-    //   render: (item: any) => {
-    //     const e = item?.fullResponse?.energyList?.[0];
 
-    //     const price = Number(e?.price);
-    //     const taxRate = Number(e?.taxRate ?? e?.tax_rate);
-
-    //     if (!Number.isFinite(price)) return "—";
-    //     if (!Number.isFinite(taxRate)) return "—";
-
-    //     const net = price * (1 - taxRate / 100);
-
-    //     if (!Number.isFinite(net)) return "—";
-
-    //     return Math.floor(net);
-    //   },
-    // },
-    {
-      key: "energyPrice",
-      header: "Price without Tax (₦/kWh)",
-      render: (item: any) => {
-        const price = item?.fullResponse?.energyList?.[0]?.price ?? null;
-        if (price == null || price === "") return "—";
-        const n = Number(price);
-        return Number(n) ? n.toLocaleString() : String(price);
-      },
-      exportValue: (item: any) => {
-        const e = item?.fullResponse?.energyList?.[0];
         const price = Number(e?.price);
         const taxRate = Number(e?.taxRate ?? e?.tax_rate);
-        if (!Number.isFinite(price) || !Number.isFinite(taxRate)) return "";
-        const net = price * (1 - taxRate / 100);
-        if (!Number.isFinite(net)) return "";
-        return String(Math.floor(net));
+
+        if (!Number.isFinite(price)) return "—";
+        if (!Number.isFinite(taxRate)) return "—";
+
+        const totalAmount = price * (1 + taxRate / 100);
+
+        if (!Number.isFinite(totalAmount)) return "—";
+
+        const roundToWhole = (value: number) =>
+          Number.isFinite(value) ? Math.round(value) : "—";
+
+        return roundToWhole(totalAmount);
+      },
+    },
+    {
+      key: "energyPrice",
+      header: "Net Price(₦/kWh)",
+      render: (item: any) => {
+        const price = item?.fullResponse?.energyList?.[0]?.price;
+        if (price == null || price === "") return "—";
+        const n = Number(price);
+        if (!Number.isFinite(n)) return "—"
+        return n.toLocaleString();
+      },
+      exportValue: (item: any) => {
+        const price = item?.fullResponse?.energyList?.[0]?.price;
+        if (price == null || price === "") return "";
+        const n = Number(price);
+        if (!Number.isFinite(n)) return "";
+        // clean export value (rounded, no commas)
+        return String(Math.round(n));
       },
     },
     {
@@ -711,246 +700,133 @@ export default function TransactionPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-heading text-3xl font-bold">Transactions</h1>
-        <p className="text-muted-foreground mt-1">
-          Welcome back! Here's is an overview on{" "}
-          <span className="text-[18px] font-bold underline uppercase text-black">
-            {estateName}
-          </span>
-          .
-        </p>
-      </div>
-
-      {/* Stats – show counts (quantities) instead of amounts */}
-      {/* <TransactionStatsBar
-        primary={{
-          label: "Total Transactions",
-          value: totalTransactionsCount.toLocaleString(),
-          // trend: "5.2% this month",
-        }}
-        stats={[
-          { label: "Total Vends", value: totalVends.toLocaleString() },
-          { label: "Total Bills", value: totalBillsCount.toLocaleString() },
-          {
-            label: "Pending Bills",
-            value: pendingBillsCount.toLocaleString(),
-          },
-        ]}
-      /> */}
-
-      {/* Filter bar – Date range, Filter by Type, Filter by Status, Export (Figma) */}
-      <Card className="p-4">
-        <div className="mt-3">
-          <input
-            type="text"
-            placeholder="Search transactions by resident name or email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full max-w-sm px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+      <TransactionsPageHeader estateName={estateName} />
+      <TransactionsSearchCard search={search} onSearchChange={setSearch} />
+      <TransactionsTabsCard
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        history={
+          <HistoryTransactionsTab
+            columns={columns}
+            data={transactions}
+            emptyMessage={
+              loading ? "Loading transactions..." : "No transactions found."
+            }
+            showPagination
+            paginationInfo={{
+              total: pagination?.total || transactions.length || 0,
+              current: pagination?.currentPage || currentPage,
+              pageSize: pagination?.pageSize || limit,
+            }}
+            onPageChange={handlePageChange}
+            currentPage={currentPage}
+            totalPages={pagination?.totalPages || 1}
+            onExportRequest={
+              estateId
+                ? async () => {
+                    const res = await dispatch(
+                      getEstateTransactionHistory({
+                        estateId,
+                        page: 1,
+                        limit: 50000,
+                      }),
+                    ).unwrap();
+                    return res?.data ?? [];
+                  }
+                : undefined
+            }
           />
-        </div>
-      </Card>
-
-      {/* Tabs: Transaction History | Estate Vends | Paid Bills */}
-      <Card className="p-4">
-        <div className="flex gap-2 border-b border-border overflow-x-auto mb-4">
-          {[
-            // { id: "history" as const, label: "Transaction History" },
-            { id: "vends" as const, label: "Estate Vends" },
-            { id: "paid-bills" as const, label: "Paid Bills" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-3 text-sm font-medium cursor-pointer border-b-2 transition-colors whitespace-nowrap ${
-                activeTab === tab.id
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {activeTab === "history" && (
-          <>
-            <Table
-              columns={columns}
-              data={transactions}
-              emptyMessage={
-                loading ? "Loading transactions..." : "No transactions found."
-              }
-              showPagination
-              paginationInfo={{
-                total: pagination?.total || transactions.length || 0,
-                current: pagination?.currentPage || currentPage,
-                pageSize: pagination?.pageSize || limit,
-              }}
-              onPageChange={handlePageChange}
-              enableExport
-              exportFileName="transactions"
-              onExportRequest={
-                estateId
-                  ? async () => {
-                      const res = await dispatch(
-                        getEstateTransactionHistory({
-                          estateId,
-                          page: 1,
-                          limit: 50000,
-                        }),
-                      ).unwrap();
-                      return res?.data ?? [];
-                    }
-                  : undefined
-              }
-            />
-            <div className="flex justify-end items-center gap-2 mt-4">
-              <Button
-                disabled={currentPage === 1}
-                onClick={() => handlePageChange(currentPage - 1)}
-              >
-                Prev
-              </Button>
-              <Button
-                disabled={currentPage >= (pagination?.totalPages || 1)}
-                onClick={() => handlePageChange(currentPage + 1)}
-              >
-                Next
-              </Button>
-            </div>
-          </>
-        )}
-
-        {activeTab === "vends" && (
-          <>
-            <Table
-              columns={vendsColumns}
-              data={vendsData}
-              emptyMessage={
-                loadingVends ? "Loading vends..." : "No vends found."
-              }
-              enableDateRangeFilter
-              startDate={vendsStartDate}
-              endDate={vendsEndDate}
-              onDateRangeChange={({ startDate, endDate }) => {
-                setVendsStartDate(startDate);
-                setVendsEndDate(endDate);
-                setVendsPage(1);
-              }}
-              showPagination
-              paginationInfo={{
-                total: vendsPagination?.total ?? 0,
-                current: vendsPagination?.page ?? vendsPage,
-                pageSize: vendsPagination?.limit ?? limit,
-              }}
-              onPageChange={(p) => setVendsPage(p)}
-              enableExport
-              exportFileName="vends"
-              onExportRequest={
-                estateId
-                  ? async () => {
-                      const res = await dispatch(
-                        getEstateVends({
-                          estateId,
-                          page: 1,
-                          limit: 50000,
-                          startDate:
-                            vendsStartDate && vendsEndDate
-                              ? vendsStartDate
-                              : undefined,
-                          endDate:
-                            vendsStartDate && vendsEndDate
-                              ? vendsEndDate
-                              : undefined,
-                        }),
-                      ).unwrap();
-                      return res?.data ?? [];
-                    }
-                  : undefined
-              }
-            />
-            {/* <div className="flex justify-end items-center gap-2 mt-4">
-              <Button
-                disabled={vendsPage === 1}
-                onClick={() => setVendsPage((p) => p - 1)}
-              >
-                Prev
-              </Button>
-              <Button
-                disabled={
-                  (vendsPagination?.pages ?? 1) <= 1 ||
-                  vendsPage >= (vendsPagination?.pages ?? 1)
-                }
-                onClick={() => setVendsPage((p) => p + 1)}
-              >
-                Next
-              </Button>
-            </div> */}
-          </>
-        )}
-
-        {activeTab === "paid-bills" && (
-          <>
-            <TransactionsFilterBar
-              frequency={filterFrequency}
-              bill={filterBill}
-              status={filterBillStatus}
-              onFiltersChange={handlePaidBillsFiltersChange}
-              frequencyOptions={paidBillsFrequencyOptions}
-              billOptions={paidBillsBillOptions}
-              visible={true}
-            />
-            <div className="mt-4">
-              <Table
-                columns={paidBillsColumns}
-                data={paginatedPaidBills}
-                emptyMessage={paidBillsEmptyMessage}
-                enableDateRangeFilter
-                startDate={paidBillsStartDate}
-                endDate={paidBillsEndDate}
-                onDateRangeChange={({ startDate, endDate }) => {
-                  setPaidBillsStartDate(startDate);
-                  setPaidBillsEndDate(endDate);
-                  setPaidBillsPage(1);
-                }}
-                showPagination
-                paginationInfo={{
-                  total: filteredPaidBills.length,
-                  current: paidBillsPage,
-                  pageSize: paidBillsPageSize,
-                }}
-                onPageChange={(p) => setPaidBillsPage(p)}
-                enableExport
-                exportFileName="paid-bills"
-                onExportRequest={
-                  filteredPaidBills.length > 0
-                    ? async () => filteredPaidBills
-                    : undefined
-                }
-              />
-            </div>
-            <div className="flex justify-end items-center gap-2 mt-4">
-              <Button
-                disabled={paidBillsPage === 1}
-                onClick={() => setPaidBillsPage((p) => p - 1)}
-              >
-                Prev
-              </Button>
-              <Button
-                disabled={
-                  paidBillsTotalPages <= 1 ||
-                  paidBillsPage >= paidBillsTotalPages
-                }
-                onClick={() => setPaidBillsPage((p) => p + 1)}
-              >
-                Next
-              </Button>
-            </div>
-          </>
-        )}
-      </Card>
+        }
+        vends={
+          <VendsTab
+            columns={vendsColumns}
+            data={vendsData}
+            emptyMessage={loadingVends ? "Loading vends..." : "No vends found."}
+            startDate={vendsStartDate}
+            endDate={vendsEndDate}
+            onDateRangeChange={({
+              startDate,
+              endDate,
+            }: {
+              startDate: string;
+              endDate: string;
+            }) => {
+              setVendsStartDate(startDate);
+              setVendsEndDate(endDate);
+              setVendsPage(1);
+            }}
+            paginationInfo={{
+              total: vendsPagination?.total ?? 0,
+              current: vendsPagination?.page ?? vendsPage,
+              pageSize: vendsPagination?.limit ?? limit,
+            }}
+            onPageChange={(p: number) => setVendsPage(p)}
+            onExportRequest={
+              estateId
+                ? async () => {
+                    const res = await dispatch(
+                      getEstateVends({
+                        estateId,
+                        page: 1,
+                        limit: 50000,
+                        startDate:
+                          vendsStartDate && vendsEndDate
+                            ? vendsStartDate
+                            : undefined,
+                        endDate:
+                          vendsStartDate && vendsEndDate
+                            ? vendsEndDate
+                            : undefined,
+                      }),
+                    ).unwrap();
+                    return res?.data ?? [];
+                  }
+                : undefined
+            }
+          />
+        }
+        paidBills={
+          <PaidBillsTab
+            frequency={filterFrequency}
+            bill={filterBill}
+            status={filterBillStatus}
+            onFiltersChange={handlePaidBillsFiltersChange}
+            frequencyOptions={paidBillsFrequencyOptions}
+            billOptions={paidBillsBillOptions}
+            data={paginatedPaidBills}
+            columns={paidBillsColumns}
+            emptyMessage={paidBillsEmptyMessage}
+            startDate={paidBillsStartDate}
+            endDate={paidBillsEndDate}
+            onDateRangeChange={({
+              startDate,
+              endDate,
+            }: {
+              startDate: string;
+              endDate: string;
+            }) => {
+              setPaidBillsStartDate(startDate);
+              setPaidBillsEndDate(endDate);
+              setPaidBillsPage(1);
+            }}
+            paginationInfo={{
+              total: filteredPaidBills.length,
+              current: paidBillsPage,
+              pageSize: paidBillsPageSize,
+            }}
+            onPageChange={(p: number) => setPaidBillsPage(p)}
+            currentPage={paidBillsPage}
+            totalPages={paidBillsTotalPages}
+            onPrev={() => setPaidBillsPage((p) => p - 1)}
+            onNext={() => setPaidBillsPage((p) => p + 1)}
+            onExportRequest={
+              filteredPaidBills.length > 0
+                ? async () => filteredPaidBills
+                : undefined
+            }
+          />
+        }
+      />
     </div>
   );
 }

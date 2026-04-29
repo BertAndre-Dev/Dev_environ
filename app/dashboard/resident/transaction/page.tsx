@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import FundWalletModal from "@/components/resident/transaction/fund-wallet-modal/page";
 import WithdrawModal from "@/components/resident/transaction/withdraw-modal/page";
@@ -18,9 +18,6 @@ import {
   initializePayment,
   verifyTransaction,
   getTransactionHistory,
-  generateTxRef,
-  transferFundsResident,
-  requestResidentOwnerWithdrawalOtp,
 } from "@/redux/slice/resident/transaction/transaction";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
@@ -29,6 +26,8 @@ import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import Table from "@/components/tables/list/page";
 import type { WalletData } from "@/redux/slice/resident/wallet-mgt/wallet-mgt-slice";
+import Loader from "@/components/ui/Loader";
+import { ResidentWalletCard } from "@/components/resident/wallet/ResidentWalletCard";
 
 interface TransactionData {
   walletId: string;
@@ -56,7 +55,6 @@ export default function TransactionPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState<string>("");
   const [residentType, setResidentType] = useState<string | null>(null);
-  const [transId, setTransId] = useState<string>("");
   const [ownerEstateId, setOwnerEstateId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [limit] = useState(10);
@@ -429,111 +427,17 @@ export default function TransactionPage() {
 
   return (
     <div className="space-y-6">
-      <Card className="p-4 md:p-6 shadow-md">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">My Wallet</CardTitle>
-        </CardHeader>
-
-        <CardContent>
-          {wallet ? (
-            <div className="space-y-4">
-              {/* Owner: show available + withdrawable like estate admin */}
-              {isOwner ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="flex flex-col justify-center items-center w-full min-h-[120px] border border-[#CCCCCC] rounded-lg p-4">
-                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      Total Wallet Balance
-                      <span
-                        className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-muted text-muted-foreground text-xs cursor-help"
-                        title="You can only withdraw from this balance."
-                      >
-                        i
-                      </span>
-                    </p>
-                    <p className="text-2xl md:text-3xl font-bold mt-1 text-primary">
-                      {formatNaira(wallet?.balance ?? 0)}
-                    </p>
-                  </div>
-                  <div className="flex flex-col justify-center items-center w-full min-h-[120px] border border-[#CCCCCC] rounded-lg p-4">
-                    <p className="text-sm text-muted-foreground">
-                      Available Wallet Balance
-                    </p>
-                    <p className="text-2xl md:text-3xl font-bold mt-1">
-                      {formatNaira(wallet?.availableBalance ?? wallet?.balance ?? 0)}
-                    </p>
-                  </div>
-                  <div className="flex flex-col justify-center items-center w-full min-h-[120px] border border-[#CCCCCC] rounded-lg p-4">
-                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      Withdrawable Wallet Balance
-                      <span
-                        className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-muted text-muted-foreground text-xs cursor-help"
-                        title="You can only withdraw from this balance."
-                      >
-                        i
-                      </span>
-                    </p>
-                    <p className="text-2xl md:text-3xl font-bold mt-1 text-primary">
-                      {formatNaira(wallet?.withdrawableBalance ?? 0)}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col md:flex-row gap-5 md:gap-0 items-start md:items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Wallet Balance</p>
-                    <p className="text-4xl font-bold mt-1">
-                      {formatNaira(wallet?.balance ?? 0)}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
-                <Button onClick={handleOpenModal} size="lg" className="px-6 w-full md:w-1/3">
-                  Fund Wallet
-                </Button>
-                {isOwner && (
-                  <>
-                    <Button
-                      onClick={handleOpenWithdrawModal}
-                      size="lg"
-                      variant="outline"
-                      className="px-6 w-full md:w-1/3"
-                    >
-                      Withdraw
-                    </Button>
-                    <Button
-                      onClick={handleOpenTransferToBalanceModal}
-                      size="lg"
-                      variant="secondary"
-                      className="px-6 w-full md:w-1/3"
-                      title={
-                        (wallet?.withdrawableBalance ?? 0) <= 0
-                          ? "No withdrawable balance to transfer"
-                          : "Move withdrawable balance to your main balance"
-                      }
-                    >
-                      Transfer to Balance
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
-          ) : (
-            <Button
-              onClick={handleCreateWalletClick}
-              disabled={
-                createWalletState === "isLoading" ||
-                (isOwner && createWalletModalOpen)
-              }
-            >
-              {createWalletState === "isLoading"
-                ? "Creating wallet..."
-                : "Create Wallet"}
-            </Button>
-          )}
-        </CardContent>
-      </Card>
+      <ResidentWalletCard
+        wallet={wallet}
+        isOwner={isOwner}
+        formatNaira={formatNaira}
+        createWalletState={String(createWalletState)}
+        createWalletModalOpen={createWalletModalOpen}
+        onFundWalletClick={handleOpenModal}
+        onWithdrawClick={handleOpenWithdrawModal}
+        onTransferToBalanceClick={handleOpenTransferToBalanceModal}
+        onCreateWalletClick={handleCreateWalletClick}
+      />
 
       {/* Transactions Table */}
       <Card className="p-4">
@@ -542,7 +446,9 @@ export default function TransactionPage() {
           columns={columns}
           data={transactions}
           emptyMessage={
-            loading ? "Loading transactions..." : "No transactions found."
+            loading
+              ? <Loader label="Loading transactions..." />
+              : "No transactions found."
           }
           showPagination
           paginationInfo={{

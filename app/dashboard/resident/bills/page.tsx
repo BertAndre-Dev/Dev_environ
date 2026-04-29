@@ -17,6 +17,7 @@ import { normalizeAddresses, type AddressOption } from "@/lib/address";
 import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
+import Loader from "@/components/ui/Loader";
 
 interface BillData {
   id?: string;
@@ -187,7 +188,9 @@ export default function BillPage() {
       {/* Payable bills - cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {loading ? (
-          <p className="text-muted-foreground">Loading bills...</p>
+          <div className="py-12">
+            <Loader label="Loading bills..." />
+          </div>
         ) : payableBills.length === 0 ? (
           <p className="text-muted-foreground">
             No payable bills for this estate.
@@ -224,7 +227,7 @@ export default function BillPage() {
           data={paidBills || []}
           emptyMessage={
             loading
-              ? "Loading paid bills..."
+              ? <Loader label="Loading paid bills..." />
               : "You haven't paid any bills yet."
           }
           showPagination

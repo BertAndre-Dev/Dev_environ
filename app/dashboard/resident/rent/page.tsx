@@ -38,6 +38,7 @@ import {
   Banknote,
 } from "lucide-react";
 import type { RootState, AppDispatch } from "@/redux/store";
+import Loader from "@/components/ui/Loader";
 
 const PAGE_SIZE = 10;
 
@@ -475,7 +476,9 @@ export default function ResidentRentPage() {
         <Table
           columns={columns}
           data={list}
-          emptyMessage={loading ? "Loading rents..." : "No rent records found."}
+          emptyMessage={
+            loading ? <Loader label="Loading rents..." /> : "No rent records found."
+          }
           enableDateRangeFilter
           startDate={startDate}
           endDate={endDate}

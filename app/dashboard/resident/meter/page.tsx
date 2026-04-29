@@ -15,6 +15,7 @@ import SwitchAddress from "@/components/resident/switch-address/page";
 import VendPower from "@/components/resident/vend-power/page";
 import Table from "@/components/tables/list/page";
 import type { EnergyListItem } from "@/redux/slice/resident/meter-mgt/meter-mgt-slice";
+import Loader from "@/components/ui/Loader";
 
 export default function ResidentMeter() {
   const dispatch = useDispatch<AppDispatch>();
@@ -248,7 +249,9 @@ export default function ResidentMeter() {
             columns={vendColumns}
             data={meterVendHistory || []}
             emptyMessage={
-              loading ? "Loading Vend History..." : "No vend history available."
+              loading
+                ? <Loader label="Loading vend history..." />
+                : "No vend history available."
             }
             showPagination
             paginationInfo={{

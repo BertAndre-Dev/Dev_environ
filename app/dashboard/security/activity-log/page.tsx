@@ -15,6 +15,7 @@ import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getAllVisitors } from "@/redux/slice/security/visitor/visitor";
 import type { SecurityVisitorItem } from "@/redux/slice/security/visitor/visitor-slice";
 import Table from "@/components/tables/list/page";
+import Loader from "@/components/ui/Loader";
 
 function formatDate(dateString: string) {
   const d = new Date(dateString);
@@ -215,7 +216,9 @@ export default function ActivityLogPage() {
             columns={columns}
             data={filtered}
             emptyMessage={
-              loading ? "Loading visitors..." : "No visitors found."
+              loading
+                ? <Loader label="Loading visitors..." />
+                : "No visitors found."
             }
             showPagination={!!pagination && (pagination.total > pagination.limit || (pagination.totalPages ?? 1) > 1)}
             paginationInfo={

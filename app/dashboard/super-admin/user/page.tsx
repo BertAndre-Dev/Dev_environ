@@ -32,6 +32,7 @@ import { useEffect, useState } from "react";
 import Modal from "@/components/modal/page";
 import InviteUserForm from "@/components/super-admin/user-form/page";
 import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
+import Loader from "@/components/ui/Loader";
 
 interface SuperAdminUserData {
   id?: string;
@@ -349,7 +350,9 @@ export default function SuperAdminUserPage() {
           columns={columns}
           data={allSuperAdminUsers}
           emptyMessage={
-            loading ? "Loading users..." : "No users found for this estate"
+            loading
+              ? <Loader label="Loading users..." />
+              : "No users found for this estate"
           }
           enableDateRangeFilter
           startDate={startDate}

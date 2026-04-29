@@ -59,10 +59,13 @@ function normalizeEstate(user: any): { estateId: string; estateName: string } {
       ? rawEstateId
       : rawEstateId?._id || rawEstateId?.id || "";
 
-  const estateFromId = (rawEstateId as { name?: string } | undefined)?.name ?? "";
-  const estateFromObj = (user?.estate as { name?: string } | undefined)?.name ?? "";
+  const estateFromId =
+    (rawEstateId as { name?: string } | undefined)?.name ?? "";
+  const estateFromObj =
+    (user?.estate as { name?: string } | undefined)?.name ?? "";
   const fallbackEstateName = (user?.estateName as string) ?? "";
-  const estateName = estateFromId || estateFromObj || fallbackEstateName || "Estate";
+  const estateName =
+    estateFromId || estateFromObj || fallbackEstateName || "Estate";
   return { estateId, estateName };
 }
 
@@ -71,8 +74,12 @@ export default function ExpenseHeadDetailPage() {
   const params = useParams<{ expenseName: string }>();
   const expenseName = params?.expenseName ?? "";
 
-  const heads = useSelector((s: RootState) => selectExpenseHeads(s)) as ExpenseHead[];
-  const entries = useSelector((s: RootState) => selectExpenseEntries(s)) as ExpenseEntry[];
+  const heads = useSelector((s: RootState) =>
+    selectExpenseHeads(s),
+  ) as ExpenseHead[];
+  const entries = useSelector((s: RootState) =>
+    selectExpenseEntries(s),
+  ) as ExpenseEntry[];
   const loading = useSelector((s: RootState) => selectExpenseEntriesLoading(s));
   const pagination = useSelector((s: RootState) =>
     selectExpenseEntriesPagination(s),
@@ -200,7 +207,9 @@ export default function ExpenseHeadDetailPage() {
     field: "description" | "amount" | "documentNumber",
     value: string,
   ) => {
-    setDrafts((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
+    setDrafts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)),
+    );
   };
 
   const addDraft = () => setDrafts((prev) => [...prev, createDraftEntry()]);
@@ -219,14 +228,21 @@ export default function ExpenseHeadDetailPage() {
     }));
 
     for (const [idx, e] of entriesPayload.entries()) {
-      if (!e.description) return toast.warning(`Description is required for entry ${idx + 1}.`);
-      if (!e.documentNumber) return toast.warning(`Reference number is required for entry ${idx + 1}.`);
-      if (!e.amount || Number.isNaN(e.amount)) return toast.warning(`Amount is required for entry ${idx + 1}.`);
+      if (!e.description)
+        return toast.warning(`Description is required for entry ${idx + 1}.`);
+      if (!e.documentNumber)
+        return toast.warning(
+          `Reference number is required for entry ${idx + 1}.`,
+        );
+      if (!e.amount || Number.isNaN(e.amount))
+        return toast.warning(`Amount is required for entry ${idx + 1}.`);
     }
 
     setSaving(true);
     try {
-      await dispatch(createExpenseEntries({ entries: entriesPayload })).unwrap();
+      await dispatch(
+        createExpenseEntries({ entries: entriesPayload }),
+      ).unwrap();
       toast.success("Expense entries created.");
       closeAdd();
       setPage(1);
@@ -263,10 +279,13 @@ export default function ExpenseHeadDetailPage() {
     const id = getId(editing);
     if (!id) return;
     if (!headId) return toast.error("Expense head not resolved.");
-    if (!formDescription.trim()) return toast.warning("Description is required.");
+    if (!formDescription.trim())
+      return toast.warning("Description is required.");
     const amount = Number(formAmount);
-    if (!formAmount || Number.isNaN(amount)) return toast.warning("Amount is required.");
-    if (!formDocumentNumber.trim()) return toast.warning("Reference number is required.");
+    if (!formAmount || Number.isNaN(amount))
+      return toast.warning("Amount is required.");
+    if (!formDocumentNumber.trim())
+      return toast.warning("Reference number is required.");
 
     setSaving(true);
     try {
@@ -302,6 +321,7 @@ export default function ExpenseHeadDetailPage() {
   return (
     <div className="space-y-6">
       <ExpensesHeader
+        showImage
         title={`Expenses Head - ${headName}`}
         estateName={estateName}
         onAddExpense={openAdd}
@@ -377,4 +397,3 @@ export default function ExpenseHeadDetailPage() {
     </div>
   );
 }
-

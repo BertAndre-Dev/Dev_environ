@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
 import { iniviteUser } from "@/redux/slice/auth-mgt/auth-mgt"; // keep name you used
+import { getCompanies } from "@/redux/slice/super-admin/company-mgt/company";
 import { toast } from "react-toastify";
 import type { AppDispatch, RootState } from "@/redux/store";
 
@@ -18,6 +19,7 @@ type InviteUserFormProps = {
 
 interface InviteUserFormData {
   estateId: string;
+  companyId: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -27,8 +29,10 @@ interface InviteUserFormData {
 // ✅ FIXED: Correct React.FC syntax
 const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
   const dispatch = useDispatch<AppDispatch>();
+  const [inviteScope, setInviteScope] = useState<"estate" | "company">("estate");
   const [formData, setFormData] = useState<InviteUserFormData>({
     estateId: "",
+    companyId: "",
     firstName: "",
     lastName: "",
     email: "",
@@ -36,7 +40,9 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
   });
 
   const [estates, setEstates] = useState<any[]>([]);
+  const [companies, setCompanies] = useState<any[]>([]);
   const [loadingEstates, setLoadingEstates] = useState(false);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // ✅ FIXED: Properly select estate slice
@@ -74,14 +80,38 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch]);
 
+  useEffect(() => {
+    const loadCompanies = async () => {
+      setLoadingCompanies(true);
+      try {
+        const res: any = await dispatch(
+          getCompanies({ page: 1, limit: 200 }),
+        ).unwrap();
+        const data = res?.data ?? [];
+        setCompanies(Array.isArray(data) ? data : []);
+      } catch {
+        toast.error("Failed to fetch companies");
+      } finally {
+        setLoadingCompanies(false);
+      }
+    };
+    loadCompanies();
+  }, [dispatch]);
+
   const roleOptions = [
     { value: "estate admin", label: "Estate Admin" },
     { value: "admin", label: "Admin" },
+    { value: "company", label: "Company" },
   ];
 
   const estateOptions = estates.map((est: any) => ({
     value: est.id ?? est._id,
     label: est.name,
+  }));
+
+  const companyOptions = companies.map((c: any) => ({
+    value: c.id ?? c._id,
+    label: c.name,
   }));
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,6 +125,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
   const resetForm = () =>
     setFormData({
       estateId: "",
+      companyId: "",
       firstName: "",
       lastName: "",
       email: "",
@@ -104,22 +135,35 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.estateId) return toast.error("Please select an estate.");
     if (!formData.role) return toast.error("Please select a role.");
     if (!formData.email) return toast.error("Please provide an email.");
     if (!formData.firstName) return toast.error("Please provide first name.");
     if (!formData.lastName) return toast.error("Please provide last name.");
+    if (inviteScope === "estate" && !formData.estateId?.trim()) {
+      return toast.error("Please select an estate.");
+    }
+    if (inviteScope === "company" && !formData.companyId?.trim()) {
+      return toast.error("Please select a company.");
+    }
 
     setSubmitting(true);
     try {
+      const estateId = formData.estateId?.trim();
+      const companyId = formData.companyId?.trim();
       const payload = {
-        ...formData,
-        residentType: "owner",
+        ...(inviteScope === "estate" && estateId ? { estateId } : {}),
+        ...(inviteScope === "company" && companyId ? { companyId } : {}),
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        role: formData.role,
+        residentType: null,
         addressIds: [] as string[],
       };
       const res = await dispatch(iniviteUser(payload) as any).unwrap();
       toast.success(res?.message || "User invited successfully");
       resetForm();
+      setInviteScope("estate");
       close();
     } catch (err: any) {
       const message =
@@ -187,19 +231,69 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
         <form onSubmit={handleSubmit} className="space-y-8">
           {renderTextFields()}
 
-          <div>
-            <Label>Estate</Label>
-            <Select
-              options={estateOptions}
-              value={
-                estateOptions.find((o) => o.value === formData.estateId) ?? null
-              }
-              onChange={(opt) => handleSelectChange("estateId", opt)}
-              isLoading={loadingEstates}
-              placeholder="Select estate"
-              isClearable
-            />
+          <div className="space-y-3">
+            <Label>Invite admin to</Label>
+            <div className="flex items-center gap-6">
+              <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                <input
+                  type="radio"
+                  name="inviteScope"
+                  value="estate"
+                  checked={inviteScope === "estate"}
+                  onChange={() => {
+                    setInviteScope("estate");
+                    setFormData((p) => ({ ...p, companyId: "" }));
+                  }}
+                />
+                Estate
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                <input
+                  type="radio"
+                  name="inviteScope"
+                  value="company"
+                  checked={inviteScope === "company"}
+                  onChange={() => {
+                    setInviteScope("company");
+                    setFormData((p) => ({ ...p, estateId: "" }));
+                  }}
+                />
+                Company
+              </label>
+            </div>
           </div>
+
+          {inviteScope === "estate" ? (
+            <div>
+              <Label>Estate</Label>
+              <Select
+                options={estateOptions}
+                value={
+                  estateOptions.find((o) => o.value === formData.estateId) ??
+                  null
+                }
+                onChange={(opt) => handleSelectChange("estateId", opt)}
+                isLoading={loadingEstates}
+                placeholder="Select estate"
+                isClearable
+              />
+            </div>
+          ) : (
+            <div>
+              <Label>Company</Label>
+              <Select
+                options={companyOptions}
+                value={
+                  companyOptions.find((o) => o.value === formData.companyId) ??
+                  null
+                }
+                onChange={(opt) => handleSelectChange("companyId", opt)}
+                isLoading={loadingCompanies}
+                placeholder="Select company"
+                isClearable
+              />
+            </div>
+          )}
 
           <div>
             <Label>Role</Label>

@@ -12,6 +12,7 @@ export const getAllUsersByEstate = createAsyncThunk(
       search,
       startDate,
       endDate,
+      role,
     }: {
       estateId: string | { id?: string; _id?: string };
       page?: number;
@@ -19,6 +20,7 @@ export const getAllUsersByEstate = createAsyncThunk(
       search?: string;
       startDate?: string;
       endDate?: string;
+      role?: string;
     },
     { rejectWithValue },
   ) => {
@@ -37,6 +39,7 @@ export const getAllUsersByEstate = createAsyncThunk(
       const params = new URLSearchParams();
       if (page != null) params.set("page", String(page));
       if (limit != null) params.set("limit", String(limit));
+      params.set("role", role?.trim() || "resident");
       if (search?.trim()) params.set("search", search.trim());
       if (startDate) params.set("startDate", startDate);
       if (endDate) params.set("endDate", endDate);
@@ -44,6 +47,61 @@ export const getAllUsersByEstate = createAsyncThunk(
       const suffix = query ? "?" + query : "";
       const res = await axiosInstance.get(
         `/api/v1/user-mgt/estate/${estateIdValue}` + suffix,
+      );
+      return res.data;
+    } catch (error: any) {
+      return rejectWithValue({
+        message: error?.response?.data?.message || "Failed to fetch users",
+      });
+    }
+  },
+);
+
+// get all users by company (with pagination)
+export const getAllUsersByCompany = createAsyncThunk(
+  "super-admin-user/getAllUsersByCompany",
+  async (
+    {
+      companyId,
+      page = 1,
+      limit = 10,
+      search,
+      startDate,
+      endDate,
+    }: {
+      companyId: string | { id?: string; _id?: string };
+      page?: number;
+      limit?: number;
+      search?: string;
+      startDate?: string;
+      endDate?: string;
+    },
+    { rejectWithValue },
+  ) => {
+    try {
+      const normalizedCompanyId =
+        typeof companyId === "string"
+          ? companyId
+          : companyId?._id || companyId?.id || "";
+      const companyIdValue = String(normalizedCompanyId).trim();
+      if (!companyIdValue) {
+        return rejectWithValue({
+          message: "Please select a valid company.",
+        });
+      }
+
+      const params = new URLSearchParams();
+      if (page != null) params.set("page", String(page));
+      if (limit != null) params.set("limit", String(limit));
+      if (search?.trim()) params.set("search", search.trim());
+      if (startDate) params.set("startDate", startDate);
+      if (endDate) params.set("endDate", endDate);
+      const query = params.toString();
+      const suffix = query ? "?" + query : "";
+
+      // NOTE: mirrors estate endpoint shape
+      const res = await axiosInstance.get(
+        `/api/v1/user-mgt/company/${companyIdValue}` + suffix,
       );
       return res.data;
     } catch (error: any) {

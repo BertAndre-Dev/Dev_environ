@@ -20,17 +20,20 @@ type InviteUserFormProps = {
 
 interface InviteUserFormData {
   estateId: string;
+  companyId: string;
   firstName: string;
   lastName: string;
   email: string;
-  role: "resident" | "security" | "";
-  residentType: string;
+  role: "resident" | "security" | "company" | "staff" | "";
+  residentType: string | null;
   addressIds: string[];
 }
 
 const roleOptions = [
   { label: "Resident", value: "resident" },
+  { label: "Staff", value: "staff" },
   { label: "Security", value: "security" },
+  { label: "Company", value: "company" },
 ];
 
 // Admins can only invite residents as OWNERS. Tenants must be invited by owners.
@@ -41,11 +44,12 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
 
   const [formData, setFormData] = useState<InviteUserFormData>({
     estateId: "",
+    companyId: "",
     firstName: "",
     lastName: "",
     email: "",
     role: "",
-    residentType: "",
+    residentType: null,
     addressIds: [],
   });
 
@@ -69,20 +73,38 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
             ? rawEstateId
             : rawEstateId?._id || rawEstateId?.id || "";
 
-        if (!estateId) {
-          return toast.error("No estate linked to your account.");
-        }
+        const rawCompanyId = (data as any)?.companyId as
+          | string
+          | { id?: string; _id?: string }
+          | undefined;
+        const companyId =
+          typeof rawCompanyId === "string"
+            ? rawCompanyId
+            : rawCompanyId?._id ||
+              rawCompanyId?.id ||
+              (data as any)?.company?._id ||
+              (data as any)?.company?.id ||
+              "";
 
-        setFormData((prev) => ({ ...prev, estateId }));
+        // Stash whatever ids we found so submit can validate later.
+        setFormData((prev) => ({ ...prev, estateId, companyId }));
+
+        if (!estateId) {
+          toast.error("No estate linked to your account.");
+          return;
+        }
 
         const fieldRes = await dispatch(getFieldByEstate(estateId)).unwrap();
         const fields = fieldRes?.data || [];
-        if (!fields.length) return toast.error("No address fields configured.");
+        if (!fields.length) {
+          toast.error("No address fields configured.");
+          return;
+        }
 
         const primaryFieldId = fields[0].id;
 
         const entryRes = await dispatch(
-          getEntriesByField({ fieldId: primaryFieldId, page: 1, limit: 200 })
+          getEntriesByField({ fieldId: primaryFieldId, page: 1, limit: 200 }),
         ).unwrap();
 
         const entries = entryRes?.data || [];
@@ -116,6 +138,10 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!formData.estateId) {
+      return toast.error("No estate linked to your account.");
+    }
+
     if (!formData.role) {
       return toast.error("Please select a role");
     }
@@ -126,8 +152,13 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
       }
     }
 
+    // companyId is optional on the invite endpoint — only include it when we
+    // actually resolved one for the signed-in admin. This prevents sending
+    // empty/null ids which trigger backend ObjectId cast errors.
+    const trimmedCompanyId = formData.companyId?.trim();
     const payload = {
       estateId: formData.estateId,
+      ...(trimmedCompanyId ? { companyId: trimmedCompanyId } : {}),
       firstName: formData.firstName,
       lastName: formData.lastName,
       email: formData.email,
@@ -186,7 +217,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
                 setFormData((prev) => ({
                   ...prev,
                   role,
-                  residentType: role === "resident" ? prev.residentType : "",
+                  residentType: role === "resident" ? prev.residentType ?? "owner" : null,
                   addressIds: role === "resident" ? prev.addressIds : [],
                 }));
               }}

@@ -1,16 +1,30 @@
-import { FiSettings, FiUsers, FiMapPin, FiLogOut } from "react-icons/fi";
+import { FiSettings, FiMapPin, FiLogOut } from "react-icons/fi";
 import { BsBuildings } from "react-icons/bs";
 import { IoSpeedometerOutline } from "react-icons/io5";
-import { GrTransaction } from "react-icons/gr";
-import { LuReceipt } from "react-icons/lu";
 import {
-  LayoutDashboard,
-  Wrench,
-  Bell,
-  Store,
+  ArrowLeftRight,
+  Banknote,
   BarChart,
-  MessageCircle,
-  Map as MapIcon,
+  Bell,
+  CarFront,
+  ClipboardList,
+  CircleDollarSign,
+  CreditCard,
+  Armchair,
+  Hammer,
+  History,
+  Home,
+  Inbox,
+  Building2,
+  MessagesSquare,
+  Package,
+  Store,
+  UserCheck,
+  UserCog,
+  UserPlus,
+  UsersRound,
+  Wallet,
+  Wrench,
 } from "lucide-react";
 
 export const superAdminNav = [
@@ -20,25 +34,30 @@ export const superAdminNav = [
   //   path: "/dashboard/super-admin/dashboard",
   // },
   {
+    label: "Transactions",
+    icon: ArrowLeftRight,
+    path: "/dashboard/super-admin/transactions",
+  },
+  {
+    label: "User Management",
+    icon: UserCog,
+    path: "/dashboard/super-admin/user",
+  },
+  {
     label: "Estate Management",
     icon: BsBuildings,
     path: "/dashboard/super-admin/estate",
   },
   {
-    label: "Market Place",
-    icon: Store,
-    path: "/dashboard/super-admin/marketplace",
+    label: "Company Management",
+    icon: Building2,
+    path: "/dashboard/super-admin/company",
   },
   //   {
   //     label: "Address Management",
   //     icon: BsBuildings,
   //     path: "/dashboard/super-admin/address",
   //   },
-  {
-    label: "User Management",
-    icon: FiUsers,
-    path: "/dashboard/super-admin/user",
-  },
   // {
   //   label: "Bills Management",
   //   icon: LuReceipt,
@@ -50,13 +69,13 @@ export const superAdminNav = [
     path: "/dashboard/super-admin/meter",
   },
   {
-    label: "Transactions",
-    icon: GrTransaction,
-    path: "/dashboard/super-admin/transactions",
+    label: "Market Place",
+    icon: Store,
+    path: "/dashboard/super-admin/marketplace",
   },
   {
     label: "Contact Support Inbox",
-    icon: MessageCircle,
+    icon: Inbox,
     path: "/dashboard/super-admin/chat",
   },
   //   {
@@ -64,6 +83,108 @@ export const superAdminNav = [
   //     icon: FiUsers,
   //     path: "/dashboard/super-admin/visitors",
   //   },
+  {
+    label: "Settings",
+    icon: FiSettings,
+    path: "/dashboard/settings",
+  },
+  {
+    label: "Logout",
+    icon: FiLogOut,
+    // path: "/auth/logout"
+  },
+];
+
+export const staffNav = [
+  {
+    label: "Maintenance Requests",
+    icon: Hammer,
+    path: "/dashboard/staff/maintenance",
+    moduleKey: "complaints",
+  },
+  {
+    label: "Community Chat",
+    icon: MessagesSquare,
+    path: "/dashboard/staff/community",
+    moduleKey: "chat",
+  },
+  {
+    label: "Announcements",
+    icon: Bell,
+    path: "/dashboard/staff/announcements",
+    moduleKey: "announcements",
+  },
+  {
+    label: "Settings",
+    icon: FiSettings,
+    path: "/dashboard/staff/settings",
+  },
+  {
+    label: "Logout",
+    icon: FiLogOut,
+  },
+];
+
+export const companyNav = [
+  {
+    label: "Transactions",
+    icon: ArrowLeftRight,
+    path: "/dashboard/company/transactions",
+    moduleKey: "transactions",
+  },
+  {
+    label: "Wallet",
+    icon: Wallet,
+    path: "/dashboard/company/wallet",
+    moduleKey: "wallet",
+  },
+  {
+    label: "User Management",
+    icon: UserCog,
+    path: "/dashboard/company/users",
+    moduleKey: "users",
+  },
+  {
+    label: "Estate Management",
+    icon: BsBuildings,
+    path: "/dashboard/company/estate",
+    moduleKey: "estate",
+  },
+  {
+    label: "Asset Management",
+    icon: Building2,
+    path: "/dashboard/company/asset",
+    moduleKey: "asset",
+  },
+  {
+    label: "Asset Maintenance",
+    icon: Wrench,
+    path: "/dashboard/company/asset-mgt",
+    moduleKey: "asset-maintenance",
+  },
+  {
+    label: "Expenses",
+    icon: CircleDollarSign,
+    path: "/dashboard/company/expenses",
+    moduleKey: "expense",
+  },
+  {
+    label: "Operations Reporting",
+    icon: ClipboardList,
+    path: "/dashboard/company/operations",
+    moduleKey: "operations-reporting",
+  },
+  {
+    label: "Report",
+    icon: BarChart,
+    path: "/dashboard/company/reports",
+    moduleKey: "reporting",
+  },
+  // {
+  //   label: "Community Chat",
+  //   icon: MessagesSquare,
+  //   path: "/dashboard/company/community",
+  // },
   {
     label: "Settings",
     icon: FiSettings,
@@ -86,13 +207,13 @@ export const adminNav = [
   },
   {
     label: "User Management",
-    icon: FiUsers,
+    icon: UserCog,
     path: "/dashboard/admin/user",
     moduleKey: "users",
   },
   {
     label: "Bills Management",
-    icon: LuReceipt,
+    icon: Banknote,
     path: "/dashboard/admin/bills",
     module: "bills",
     moduleKey: "bills",
@@ -106,21 +227,21 @@ export const adminNav = [
   },
   {
     label: "Visitors Management",
-    icon: FiUsers,
+    icon: UserPlus,
     path: "/dashboard/admin/visitor",
     module: "visitor",
     moduleKey: "visitor",
   },
   {
     label: "Expenses",
-    icon: LuReceipt,
+    icon: CircleDollarSign,
     path: "/dashboard/admin/expenses",
     moduleKey: "expense",
     module: "expense",
   },
   {
     label: "Maintenance Requests",
-    icon: Wrench,
+    icon: Hammer,
     path: "/dashboard/admin/maintenance",
     module: "complaints",
     moduleKey: "complaints",
@@ -133,9 +254,28 @@ export const adminNav = [
     moduleKey: "announcements",
   },
   {
-    label: "Contact Support",
-    icon: MessageCircle,
-    path: "/dashboard/admin/support",
+    label: "Asset Management",
+    icon: Package,
+    path: "/dashboard/admin/asset",
+    moduleKey: "asset",
+  },
+  {
+    label: "Asset Maintenance",
+    icon: Wrench,
+    path: "/dashboard/admin/asset-maintenance",
+    moduleKey: "asset-maintenance",
+  },
+  {
+    label: "Operations Reporting",
+    icon: ClipboardList,
+    path: "/dashboard/admin/operations-reporting",
+    moduleKey: "operations-reporting",
+  },
+  {
+    label: "Community Chat",
+    icon: MessagesSquare,
+    path: "/dashboard/admin/community",
+    moduleKey: "chat",
   },
   { label: "Settings", icon: FiSettings, path: "/dashboard/settings" },
   { label: "Logout", icon: FiLogOut },
@@ -144,7 +284,7 @@ export const adminNav = [
 export const securityNav = [
   {
     label: "Visitor Management",
-    icon: LayoutDashboard,
+    icon: UserCheck,
     path: "/dashboard/security/visitor-management",
     moduleKey: "visitor",
   },
@@ -155,7 +295,7 @@ export const securityNav = [
   // },
   {
     label: "Activity Log",
-    icon: GrTransaction,
+    icon: History,
     path: "/dashboard/security/activity-log",
   },
   // {
@@ -170,26 +310,8 @@ export const securityNav = [
 export const residentNav = [
   // { label: "Overview", icon: FiHome, path: "/dashboard/resident/dashboard" },
   {
-    label: "Tenant Management",
-    icon: FiUsers,
-    path: "/dashboard/resident/user",
-    moduleKey: "users",
-  },
-  {
-    label: "Rent Management",
-    icon: LuReceipt,
-    path: "/dashboard/resident/rent",
-    moduleKey: "rent",
-  },
-  // {
-  //   label: "Bills",
-  //   icon: LuReceipt,
-  //   path: "/dashboard/resident/pay-bills",
-  //   moduleKey: "bills",
-  // },
-  {
     label: "Bills Management",
-    icon: LuReceipt,
+    icon: ClipboardList,
     path: "/dashboard/resident/bills",
     moduleKey: "bills",
   },
@@ -201,13 +323,25 @@ export const residentNav = [
   },
   {
     label: "Wallet",
-    icon: GrTransaction,
+    icon: Wallet,
     path: "/dashboard/resident/transaction",
     moduleKey: "wallet",
   },
   {
+    label: "Tenant Management",
+    icon: UsersRound,
+    path: "/dashboard/resident/user",
+    moduleKey: "users",
+  },
+  {
+    label: "Rent Management",
+    icon: Home,
+    path: "/dashboard/resident/rent",
+    moduleKey: "rent",
+  },
+  {
     label: "Visitor Management",
-    icon: FiUsers,
+    icon: CarFront,
     path: "/dashboard/resident/visitor",
     moduleKey: "visitor",
   },
@@ -217,16 +351,23 @@ export const residentNav = [
     path: "/dashboard/resident/maintenance",
     moduleKey: "complaints",
   },
+  // {
+  //   label: "Asset Management",
+  //   icon: Armchair,
+  //   path: "/dashboard/resident/asset",
+  //   moduleKey: "asset",
+  // },
+  {
+    label: "Pay Bills",
+    icon: Banknote,
+    path: "/dashboard/resident/pay-bills",
+    moduleKey: "bills",
+  },
   {
     label: "Marketplace",
     icon: Store,
     path: "/dashboard/resident/marketplace",
     moduleKey: "marketplace",
-  },
-  {
-    label: "Nearby Places",
-    icon: MapIcon,
-    path: "/dashboard/resident/map",
   },
   {
     label: "Announcements",
@@ -235,9 +376,10 @@ export const residentNav = [
     moduleKey: "announcements",
   },
   {
-    label: "Contact Support",
-    icon: MessageCircle,
-    path: "/dashboard/resident/support",
+    label: "Community Chat",
+    icon: MessagesSquare,
+    path: "/dashboard/resident/community",
+    moduleKey: "chat",
   },
   { label: "Settings", icon: FiSettings, path: "/dashboard/settings" },
   { label: "Logout", icon: FiLogOut },
@@ -251,28 +393,29 @@ export const estateAdminNav = [
   // },
   {
     label: "Transactions",
-    icon: GrTransaction,
+    icon: ArrowLeftRight,
     path: "/dashboard/estate-admin/transactions",
     module: "transactions",
     moduleKey: "transactions",
   },
   {
     label: "Wallet",
-    icon: LuReceipt,
+    icon: Wallet,
     path: "/dashboard/estate-admin/wallet",
     module: "wallet",
     moduleKey: "wallet",
+  },
+  {
+    label: "Community Chat",
+    icon: MessagesSquare,
+    path: "/dashboard/estate-admin/chat",
+    moduleKey: "chat",
   },
   {
     label: "Reports",
     icon: BarChart,
     path: "/dashboard/estate-admin/reports",
     moduleKey: "reporting",
-  },
-  {
-    label: "Contact Support",
-    icon: MessageCircle,
-    path: "/dashboard/estate-admin/support",
   },
   { label: "Settings", icon: FiSettings, path: "/dashboard/settings" },
   { label: "Logout", icon: FiLogOut },

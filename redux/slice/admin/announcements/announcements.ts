@@ -23,6 +23,13 @@ export interface AnnouncementItem {
   priority?: string;
   createdAt?: string;
   updatedAt?: string;
+  /** Public URL of the uploaded image (JPEG, PNG, WebP, GIF) */
+  image?: string;
+  imageUrl?: string;
+  /** Public URL of the uploaded attachment (PDF, DOCX, etc.) */
+  file?: string;
+  fileUrl?: string;
+  fileName?: string;
 }
 
 export interface CreateAnnouncementPayload {
@@ -37,6 +44,10 @@ export interface CreateAnnouncementPayload {
   priority?: string;
   /** When true, send immediately; schedule field is ignored. */
   sendNow?: boolean;
+  /** Optional image data URL, e.g. `data:image/png;base64,...` (JPEG, PNG, WebP, GIF) up to 5MB. */
+  image?: string | null;
+  /** Optional attachment data URL, e.g. `data:application/pdf;base64,...` up to 10MB. */
+  file?: string | null;
 }
 
 export interface UpdateAnnouncementPayload {
@@ -51,6 +62,34 @@ export interface UpdateAnnouncementPayload {
   isPinned?: boolean;
   priority?: string;
   sendNow?: boolean;
+  image?: string | null;
+  file?: string | null;
+}
+
+type AnnouncementRequestBody = Record<string, unknown>;
+
+/**
+ * Strip `undefined` / `null` / empty-string / empty-array entries so unset
+ * optional fields are never sent to the backend.
+ */
+function compactPayload(
+  payload: Record<string, unknown>,
+): Record<string, unknown> {
+  const cleaned: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(payload)) {
+    if (value === undefined || value === null) continue;
+    if (typeof value === "string" && value.trim() === "") continue;
+    if (Array.isArray(value) && value.length === 0) continue;
+    cleaned[key] = value;
+  }
+  return cleaned;
+}
+
+/** Build JSON request body; image/file are sent as data URLs in the payload. */
+function buildAnnouncementRequest(
+  payload: Record<string, unknown>,
+): AnnouncementRequestBody {
+  return compactPayload(payload);
 }
 
 export interface AnnouncementsListResponse {
@@ -118,15 +157,17 @@ export const getAnnouncementStats = createAsyncThunk(
   },
 );
 
-/** Create announcement. POST /api/v1/estates/announcements */
+/** Create announcement. POST /api/v1/estates/announcements (application/json) */
 export const createAnnouncement = createAsyncThunk(
   "admin-announcements/createAnnouncement",
   async (payload: CreateAnnouncementPayload, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.post(
-        "/api/v1/estates/announcements",
-        payload,
+      const body = buildAnnouncementRequest(
+        payload as unknown as Record<string, unknown>,
       );
+      const res = await axiosInstance.post("/api/v1/estates/announcements", body, {
+        headers: { "Content-Type": "application/json" },
+      });
       return res.data;
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
@@ -156,16 +197,20 @@ export const getAnnouncementById = createAsyncThunk(
   },
 );
 
-/** Update announcement. PUT /api/v1/estates/announcements/:id (allowed when &lt; 1 hour since posted) */
+/** Update announcement. PUT /api/v1/estates/announcements/:id (application/json, allowed when < 1 hour since posted) */
 export const updateAnnouncement = createAsyncThunk(
   "admin-announcements/updateAnnouncement",
   async (payload: UpdateAnnouncementPayload, { rejectWithValue }) => {
     try {
-      const { id, ...body } = payload;
+      const { id, ...rest } = payload;
       if (!id) throw new Error("Announcement id is required");
+      const body = buildAnnouncementRequest(
+        rest as unknown as Record<string, unknown>,
+      );
       const res = await axiosInstance.put(
         `/api/v1/estates/announcements/${id}`,
         body,
+        { headers: { "Content-Type": "application/json" } },
       );
       return res.data;
     } catch (error: unknown) {

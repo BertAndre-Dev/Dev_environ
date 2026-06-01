@@ -31,11 +31,13 @@ import { useEffect, useState } from "react";
 import Modal from "@/components/modal/page";
 import EstateForm from "@/components/super-admin/estate-form/page";
 import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
+import Loader from "@/components/ui/Loader";
 
 type EstateTableRow = Omit<EstateData, "modules"> & {
   id?: string;
   modules?: string[];
   createdAt?: string | number | Date;
+  visitorVerificationMode?: string;
 };
 
 export default function EstatePage() {
@@ -59,18 +61,6 @@ export default function EstatePage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  // Fetch estates on mount
-  useEffect(() => {
-    dispatch(
-      getAllEstates({ page: 1, limit: Number(pagination?.pageSize) || 10 }),
-    )
-      .unwrap()
-      .catch(() => {
-        toast.error("Failed to fetch estates");
-      });
-  }, [dispatch]);
-
-  // Refetch on date range changes (only apply when both are selected)
   useEffect(() => {
     const shouldApplyDate = Boolean(startDate && endDate);
     dispatch(
@@ -168,6 +158,22 @@ export default function EstatePage() {
     { key: "state", header: "State" },
     { key: "country", header: "Country" },
     {
+      key: "visitorVerificationMode",
+      header: "Visitor Verification",
+      render: (item: EstateTableRow) => {
+        const v = item.visitorVerificationMode;
+        const label =
+          v === "VIEW_AND_VERIFY"
+            ? "View and verify"
+            : v === "VERIFY_ONLY"
+              ? "Verify only"
+              : v === "VIEW_ONLY"
+                ? "View only"
+                : "—";
+        return <span className="font-medium">{label}</span>;
+      },
+    },
+    {
       key: "isActive",
       header: "Status",
       render: (item: EstateTableRow) => (
@@ -237,7 +243,19 @@ export default function EstatePage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="relative">
+      {loading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
+          <Loader label="Loading estates..." />
+        </div>
+      )}
+
+      <div
+        className={[
+          "space-y-6",
+          loading ? "blur-sm opacity-60 pointer-events-none select-none" : "",
+        ].join(" ")}
+      >
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -264,7 +282,7 @@ export default function EstatePage() {
           const stats = [
             {
               label: "Total Estates",
-              value: estates?.length || 0,
+              value: pagination?.total || 0,
               icon: Building2,
               color: "bg-[#D0DFF280]",
             },
@@ -326,7 +344,7 @@ export default function EstatePage() {
         <Table
           columns={columns}
           data={allEstates}
-          emptyMessage={loading ? "Loading estates..." : "No estates found"}
+          emptyMessage="No estates found"
           enableDateRangeFilter
           startDate={startDate}
           endDate={endDate}
@@ -371,6 +389,7 @@ export default function EstatePage() {
       {open && (
         <Modal visible={open} onClose={handleCloseModal}>
           <EstateForm
+            estateId={selectedEstate?.id}
             initialData={
               selectedEstate
                 ? {
@@ -380,6 +399,8 @@ export default function EstatePage() {
                     state: selectedEstate.state,
                     country: selectedEstate.country,
                     modules: selectedEstate.modules ?? [],
+                    visitorVerificationMode:
+                      (selectedEstate as any).visitorVerificationMode,
                   }
                 : null
             }
@@ -387,6 +408,7 @@ export default function EstatePage() {
           />
         </Modal>
       )}
+      </div>
     </div>
   );
 }

@@ -30,6 +30,10 @@ import {
 } from "@/redux/slice/admin/expense-head/expense-head-slice";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { Card } from "@/components/ui/card";
+import Loader from "@/components/ui/Loader";
+import Pagination from "@/components/pagination/page";
+
+const PAGE_SIZE = 12;
 
 function normalizeEstate(user: any): { estateId: string; estateName: string } {
   const rawEstateId = user?.estateId as
@@ -79,6 +83,7 @@ export default function ExpenseHeadsPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ExpenseHead | null>(null);
@@ -107,19 +112,23 @@ export default function ExpenseHeadsPage() {
   }, [dispatch]);
 
   useEffect(() => {
+    setPage(1);
+  }, [estateId, startDate, endDate]);
+
+  useEffect(() => {
     if (!estateId) return;
     dispatch(
       fetchExpenseHeads({
         estateId,
-        page: 1,
-        limit: 100,
+        page,
+        limit: PAGE_SIZE,
         startDate: toIsoIfPresent(startDate),
         endDate: toIsoIfPresent(endDate),
       }),
     )
       .unwrap()
       .catch(() => toast.error("Failed to fetch expense heads."));
-  }, [dispatch, estateId, startDate, endDate]);
+  }, [dispatch, estateId, startDate, endDate, page]);
 
   useEffect(() => {
     if (error) toast.error(error);
@@ -213,14 +222,18 @@ export default function ExpenseHeadsPage() {
 
   const total = pagination?.total ?? items.length ?? 0;
 
+  const paginationInfo = {
+    total: pagination?.total ?? items.length ?? 0,
+    current: pagination?.currentPage ?? page,
+    pageSize: pagination?.pageSize ?? PAGE_SIZE,
+  };
+
+  const handlePageChange = (nextPage: number) => {
+    setPage(nextPage);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const content = useMemo(() => {
-    if (loading) {
-      return (
-        <p className="text-muted-foreground py-10 text-center md:col-span-2 xl:col-span-3">
-          Loading expense heads...
-        </p>
-      );
-    }
     if (filtered.length === 0) {
       return (
         <p className="text-muted-foreground py-10 text-center md:col-span-2 xl:col-span-3 rounded-lg border border-border bg-muted/20">
@@ -237,71 +250,88 @@ export default function ExpenseHeadsPage() {
         onDelete={handleDelete}
       />
     ));
-  }, [filtered, handleDelete, handleView, loading]);
+  }, [filtered, handleDelete, handleView]);
 
   return (
-    <div className="space-y-6">
-      {/* Stats Card */}
-      <div className="grid grid-cols-1">
-        <ExpensesHeader
-          showImage
-          title="Expenses Heads"
-          estateName={estateName}
-          onAddExpense={openAdd}
-          actionLabel="Add Expense Head"
+    <div className="relative">
+      {loading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
+          <Loader label="Loading expense heads..." />
+        </div>
+      )}
+
+      <div
+        className={`space-y-6${loading ? " blur-sm opacity-60 pointer-events-none select-none" : ""}`}
+      >
+        {/* Stats Card */}
+        <div className="grid grid-cols-1">
+          <ExpensesHeader
+            showImage
+            title="Expenses Heads"
+            estateName={estateName}
+            onAddExpense={openAdd}
+            actionLabel="Add Expense Head"
+          />
+          <Card className="p-6">
+            <p className="text-sm text-muted-foreground">Total Expenses</p>
+            <p className="font-heading text-2xl font-bold">{total}</p>
+          </Card>
+        </div>
+
+        <ExpensesFiltersBar
+          startDate={startDate}
+          endDate={endDate}
+          search={search}
+          onStartDateChange={(v) => setStartDate(v)}
+          onEndDateChange={(v) => setEndDate(v)}
+          onResetDates={() => {
+            setStartDate("");
+            setEndDate("");
+          }}
+          onSearchChange={setSearch}
         />
-        <Card className="p-6">
-          <p className="text-sm text-muted-foreground">Total Expenses</p>
-          <p className="font-heading text-2xl font-bold">{total}</p>
-        </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {content}
+        </div>
+
+        <Pagination
+          paginationInfo={paginationInfo}
+          onPageChange={handlePageChange}
+          disabled={loading}
+          itemLabel="expense heads"
+        />
+
+        <ExpenseHeadModal
+          open={modalOpen}
+          saving={saving}
+          title={editing ? "Edit Expense Head" : "Add Expense Head"}
+          submitLabel={editing ? "Update" : "Add"}
+          values={modalValues}
+          onOpenChange={(open) => {
+            setModalOpen(open);
+            if (!open) {
+              setEditing(null);
+              setModalValues({ name: "", description: "" });
+            }
+          }}
+          onChange={setModalValues}
+          onSubmit={handleSubmit}
+        />
+
+        <ViewExpenseHeadModal
+          open={viewOpen}
+          loading={viewLoading}
+          item={viewItem}
+          onOpenChange={(open) => {
+            setViewOpen(open);
+            if (!open) {
+              setViewItem(null);
+              setViewLoading(false);
+            }
+          }}
+        />
       </div>
-
-      <ExpensesFiltersBar
-        startDate={startDate}
-        endDate={endDate}
-        search={search}
-        onStartDateChange={(v) => setStartDate(v)}
-        onEndDateChange={(v) => setEndDate(v)}
-        onResetDates={() => {
-          setStartDate("");
-          setEndDate("");
-        }}
-        onSearchChange={setSearch}
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {content}
-      </div>
-
-      <ExpenseHeadModal
-        open={modalOpen}
-        saving={saving}
-        title={editing ? "Edit Expense Head" : "Add Expense Head"}
-        submitLabel={editing ? "Update" : "Add"}
-        values={modalValues}
-        onOpenChange={(open) => {
-          setModalOpen(open);
-          if (!open) {
-            setEditing(null);
-            setModalValues({ name: "", description: "" });
-          }
-        }}
-        onChange={setModalValues}
-        onSubmit={handleSubmit}
-      />
-
-      <ViewExpenseHeadModal
-        open={viewOpen}
-        loading={viewLoading}
-        item={viewItem}
-        onOpenChange={(open) => {
-          setViewOpen(open);
-          if (!open) {
-            setViewItem(null);
-            setViewLoading(false);
-          }
-        }}
-      />
     </div>
   );
 }

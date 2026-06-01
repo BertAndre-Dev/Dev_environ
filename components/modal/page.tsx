@@ -3,14 +3,22 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import Image from "next/image";
 
 interface ModalProps {
   visible: boolean;
   children: React.ReactNode;
   onClose: () => void;
+  /** Optional: override modal panel classes (width, padding, etc). */
+  contentClassName?: string;
 }
 
-const Modal: React.FC<ModalProps> = ({ visible, children, onClose }) => {
+const Modal: React.FC<ModalProps> = ({
+  visible,
+  children,
+  onClose,
+  contentClassName,
+}) => {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -38,20 +46,10 @@ const Modal: React.FC<ModalProps> = ({ visible, children, onClose }) => {
           onClick={(e) => e.target === e.currentTarget && onClose()}
         >
           <motion.div
-            className="
-              bg-white
-              w-full md:w-[45%]
-              rounded-xl
-              shadow-xl
-              p-5
-              overflow-y-auto
-              overflow-x-hidden
-              max-h-[70vh]
-              flex
-              flex-col
-              relative
-              min-w-0
-            "
+            className={[
+              "bg-white rounded-xl shadow-xl p-5 overflow-y-auto overflow-x-hidden max-h-[70vh] flex flex-col relative min-w-0 w-full",
+              contentClassName ?? "md:w-[45%]",
+            ].join(" ")}
             initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
@@ -77,9 +75,27 @@ const Modal: React.FC<ModalProps> = ({ visible, children, onClose }) => {
               "
               aria-label="Close modal"
             >
-              <X className="w-5 h-5 text-gray-600" />
+              <X
+                className="w-5 h-5 text-gray-600 cursor-pointer"
+                aria-label="Close modal"
+                onClick={onClose}
+              />
             </button>
-            <div className="w-full min-w-0 break-words">{children}</div>
+            <div className="relative w-full min-w-0">
+              {/* subtle center watermark */}
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <Image
+                  src="/chat-Logo.svg"
+                  alt=""
+                  aria-hidden="true"
+                  width={320}
+                  height={120}
+                  className="hidden sm:block w-[160px] md:w-[200px] lg:w-[240px] h-auto object-contain opacity-[0.035] blur-[0.2px]"
+                />
+              </div>
+
+              <div className="relative z-10 wrap-break-word">{children}</div>
+            </div>
           </motion.div>
         </motion.div>
       )}

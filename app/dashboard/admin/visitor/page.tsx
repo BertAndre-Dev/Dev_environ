@@ -6,7 +6,7 @@ import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import { toast } from "react-toastify";
 import { RootState, AppDispatch } from "@/redux/store";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getVisitorsByEstate,
@@ -17,6 +17,7 @@ import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
   CheckCircle,
   Eye,
+  QrCode,
   ShieldCheck,
   ShieldCheckIcon,
   Trash2,
@@ -26,6 +27,27 @@ import {
 import AdminVisitorForm from "@/components/admin/visitor-form/page";
 import DeleteModal from "@/components/resident/delete-modal/page";
 import Loader from "@/components/ui/Loader";
+import {
+  VisitorQrCodeModal,
+  type QrCodeVisitor,
+} from "@/components/resident/visitor-management/VisitorQrCodeModal";
+import { formatAddressEntryLabel } from "@/lib/address";
+
+const PAGE_LIMIT = 10;
+
+/** Example dates for empty inputs (display only; not sent until the user picks a range). */
+function getDateRangePlaceholders(): { start: string; end: string } {
+  const now = new Date();
+  const start = new Date(now);
+  start.setUTCDate(start.getUTCDate() - 30);
+  const toIso = (d: Date) =>
+    new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
+      .toISOString()
+      .slice(0, 10);
+  return { start: toIso(start), end: toIso(now) };
+}
+
+const DATE_RANGE_PLACEHOLDERS = getDateRangePlaceholders();
 
 export default function AdminVisitorManagement() {
   const dispatch = useDispatch<AppDispatch>();
@@ -41,6 +63,9 @@ export default function AdminVisitorManagement() {
     lastName?: string;
   } | null>(null);
   const [visitorToDelete, setVisitorToDelete] = useState<any | null>(null);
+  const [qrCodeVisitor, setQrCodeVisitor] = useState<QrCodeVisitor | null>(
+    null,
+  );
 
   const { visitors, pagination, loading } = useSelector((state: RootState) => {
     const visitorState = state.visitor;
@@ -70,7 +95,24 @@ export default function AdminVisitorManagement() {
     );
   });
 
-  // Fetch user + visitors
+  const fetchVisitors = useCallback(
+    async (page = 1) => {
+      if (!estateId) return;
+      const shouldApplyDate = Boolean(startDate && endDate);
+      await dispatch(
+        getVisitorsByEstate({
+          estateId,
+          page,
+          limit: PAGE_LIMIT,
+          startDate: shouldApplyDate ? startDate : undefined,
+          endDate: shouldApplyDate ? endDate : undefined,
+        }),
+      ).unwrap();
+    },
+    [dispatch, estateId, startDate, endDate],
+  );
+
+  // Bootstrap signed-in user and estate only (no visitor fetch here).
   useEffect(() => {
     (async () => {
       try {
@@ -100,48 +142,21 @@ export default function AdminVisitorManagement() {
         }
 
         setEstateId(foundEstateId);
-
-        await dispatch(
-          getVisitorsByEstate({ estateId: foundEstateId, page: 1, limit: 10 }),
-        ).unwrap();
       } catch (error: any) {
         toast.error(error?.message);
       }
     })();
   }, [dispatch]);
 
-  // Refetch visitors when date range changes (only apply when both are selected)
+  // Single fetch when estate or date range changes.
   useEffect(() => {
     if (!estateId) return;
-    const shouldApplyDate = Boolean(startDate && endDate);
-    dispatch(
-      getVisitorsByEstate({
-        estateId,
-        page: 1,
-        limit: pagination.limit,
-        startDate: shouldApplyDate ? startDate : undefined,
-        endDate: shouldApplyDate ? endDate : undefined,
-      }),
-    )
-      .unwrap()
-      .catch(() => toast.error("Failed to fetch visitors"));
-  }, [dispatch, estateId, startDate, endDate, pagination.limit]);
+    fetchVisitors(1).catch(() => toast.error("Failed to fetch visitors"));
+  }, [estateId, fetchVisitors]);
 
-  // Pagination handler
   const handlePageChange = async (page: number) => {
-    if (!estateId) return;
-
     try {
-      const shouldApplyDate = Boolean(startDate && endDate);
-      await dispatch(
-        getVisitorsByEstate({
-          estateId,
-          page,
-          limit: pagination.limit,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
-        }),
-      ).unwrap();
+      await fetchVisitors(page);
     } catch {
       toast.error("Failed to change page");
     }
@@ -164,33 +179,16 @@ export default function AdminVisitorManagement() {
       ).unwrap();
       toast.success(res.message);
       setVerifyModalVisitor(null);
-      if (estateId) {
-        await dispatch(
-          getVisitorsByEstate({
-            estateId,
-            page: pagination.page,
-            limit: pagination.limit,
-          }),
-        );
-      }
+      await fetchVisitors(pagination.page);
     } catch (error: any) {
       toast.error(error?.message);
     }
   };
 
   const refreshVisitors = () => {
-    if (estateId) {
-      const shouldApplyDate = Boolean(startDate && endDate);
-      dispatch(
-        getVisitorsByEstate({
-          estateId,
-          page: pagination.page,
-          limit: pagination.limit,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
-        }),
-      );
-    }
+    fetchVisitors(pagination.page).catch(() =>
+      toast.error("Failed to fetch visitors"),
+    );
   };
 
   const handleOpenDeleteModal = (visitor: any, e?: React.MouseEvent) => {
@@ -210,53 +208,6 @@ export default function AdminVisitorManagement() {
     } catch (err: any) {
       toast.error(err?.message || "Failed to delete visitor");
     }
-  };
-
-  const formatVisitorAddress = (data: Record<string, unknown>) => {
-    const toStr = (v: unknown) => {
-      const s =
-        typeof v === "string" || typeof v === "number" ? String(v).trim() : "";
-      return s;
-    };
-
-    const block = toStr(data.block);
-    const street = toStr(data.street);
-    const unit = toStr(data.unit);
-    const flat = toStr(data.flat);
-    const apartment = toStr(data.apartment);
-    const houseNumber = toStr(data.houseNumber);
-    const number = toStr(data.number);
-
-    const unitLikeValue = unit || flat || apartment || houseNumber || number || "";
-    const unitLikeKey = unit
-      ? "unit"
-      : flat
-        ? "flat"
-        : apartment
-          ? "apartment"
-          : houseNumber
-            ? "houseNumber"
-            : number
-              ? "number"
-              : "";
-
-    if (block && unitLikeValue) {
-      const base = `block ${block}, ${unitLikeKey} ${unitLikeValue}`;
-      return street ? `${base} (${street})` : base;
-    }
-    if (block) {
-      const base = `block ${block}`;
-      return street ? `${base} (${street})` : base;
-    }
-
-    const pairs = Object.entries(data)
-      .map(([k, v]) => {
-        const sv = toStr(v);
-        return sv ? `${k}: ${sv}` : "";
-      })
-      .filter(Boolean);
-
-    return pairs.join(" • ");
   };
 
   const columns = [
@@ -298,20 +249,34 @@ export default function AdminVisitorManagement() {
       ),
     },
     {
+      header: "Visit Type",
+      key: "visitingType",
+      render: (item: any) => {
+        if (!item.visitingType) return <span className="text-gray-500 text-xs">—</span>;
+        return (
+          <span
+            className={`px-2 py-1 rounded text-xs font-semibold ${
+              item.visitingType === "LONG_VISIT"
+                ? "bg-blue-100 text-blue-700"
+                : "bg-gray-100 text-gray-700"
+            }`}
+          >
+            {item.visitingType === "LONG_VISIT" ? "Long Visit" : "Short Visit"}
+          </span>
+        );
+      },
+    },
+    {
       header: "Address",
       key: "address",
       render: (item: any) => {
         if (!item.addressId?.data) {
           return <span className="text-gray-500 text-xs">No address</span>;
         }
-        const label = formatVisitorAddress(
+        const label = formatAddressEntryLabel(
           item.addressId.data as Record<string, unknown>,
         );
-        return (
-          <div className="text-xs">
-            {label || "N/A"}
-          </div>
-        );
+        return <div className="text-xs">{label || "N/A"}</div>;
       },
     },
     {
@@ -396,6 +361,22 @@ export default function AdminVisitorManagement() {
           <Button
             variant="ghost"
             size="sm"
+            disabled={!item.qrCodeDataUrl}
+            onClick={(e) => {
+              e.stopPropagation();
+              setQrCodeVisitor(item as QrCodeVisitor);
+            }}
+            className="flex items-center gap-1 text-blue-600 hover:bg-blue-50 cursor-pointer disabled:opacity-50"
+            title={
+              item.qrCodeDataUrl ? "View QR code" : "QR code not available"
+            }
+          >
+            <QrCode className="w-4 h-4" />
+            <span className="text-xs">QR Code</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={(e) => handleOpenDeleteModal(item, e)}
             className="flex items-center gap-1 text-destructive hover:bg-destructive/10 cursor-pointer"
             title="Delete visitor"
@@ -408,7 +389,19 @@ export default function AdminVisitorManagement() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="relative">
+      {loading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
+          <Loader label="Loading visitors..." />
+        </div>
+      )}
+
+      <div
+        className={[
+          "space-y-6",
+          loading ? "blur-sm opacity-60 pointer-events-none select-none" : "",
+        ].join(" ")}
+      >
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="font-heading text-3xl font-bold">
@@ -438,7 +431,7 @@ export default function AdminVisitorManagement() {
           const stats = [
             {
               label: "Total Visitors",
-              value: filteredVisitors?.length || 0,
+              value: pagination?.total ?? 0,
               icon: UserPlus2,
               color: "bg-[#FEE6D480]",
             },
@@ -552,16 +545,23 @@ export default function AdminVisitorManagement() {
         onConfirm={handleConfirmDelete}
       />
 
+      <VisitorQrCodeModal
+        open={!!qrCodeVisitor}
+        visitor={qrCodeVisitor}
+        onClose={() => setQrCodeVisitor(null)}
+      />
+
       <Card className="p-4">
         <Table
           columns={columns}
           data={filteredVisitors}
-          emptyMessage={
-            loading ? <Loader label="Loading visitors..." /> : "No visitors found."
-          }
+          emptyMessage="No visitors found."
           enableDateRangeFilter
+          defaultDateRangeDays={0}
           startDate={startDate}
           endDate={endDate}
+          startDatePlaceholder={DATE_RANGE_PLACEHOLDERS.start}
+          endDatePlaceholder={DATE_RANGE_PLACEHOLDERS.end}
           onDateRangeChange={({ startDate, endDate }) => {
             setStartDate(startDate);
             setEndDate(endDate);
@@ -594,6 +594,7 @@ export default function AdminVisitorManagement() {
           }
         />
       </Card>
+      </div>
     </div>
   );
 }

@@ -12,7 +12,6 @@ import {
   Power,
   PowerOff,
   Trash2,
-  User2,
   UsersRound,
   Search,
 } from "lucide-react";
@@ -28,11 +27,26 @@ import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/sup
 import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Modal from "@/components/modal/page";
 import InviteUserForm from "@/components/super-admin/user-form/page";
 import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import Loader from "@/components/ui/Loader";
+import { UserStatusModal } from "./components/UserStatusModal";
+import {
+  DEFAULT_ESTATE_USER_ROLE,
+  ESTATE_USER_ROLE_FILTER_OPTIONS,
+  type EstateUserRoleFilter,
+} from "@/lib/estate-user-roles";
+
+interface UserAddress {
+  id: string;
+  data?: {
+    block?: string;
+    apartment?: string;
+    [key: string]: unknown;
+  };
+}
 
 interface SuperAdminUserData {
   id?: string;
@@ -47,8 +61,53 @@ interface SuperAdminUserData {
   role: string;
   image?: string;
   isActive?: boolean;
+  serviceCharge?: boolean;
+  invitationStatus?: string;
   createdAt?: string;
   updatedAt?: string;
+  residentType?: string | null;
+  addressIds?: UserAddress[];
+  serviceChargesPaidForAddresses?: string[];
+}
+
+function formatAddressLabel(data?: UserAddress["data"]) {
+  if (!data) return "";
+  const parts: string[] = [];
+  if (data.block) parts.push(`Block ${data.block}`);
+  if (data.apartment) parts.push(`Apt ${data.apartment}`);
+  return parts.join(", ");
+}
+
+function resolvePaidAddressLabels(item: SuperAdminUserData): string[] {
+  const paidIds = item.serviceChargesPaidForAddresses || [];
+  if (!paidIds.length) return [];
+  const addressMap = new Map<string, UserAddress["data"]>(
+    (item.addressIds || []).map((a) => [a.id, a.data]),
+  );
+  return paidIds.map((id) => {
+    const data = addressMap.get(id);
+    return formatAddressLabel(data) || id;
+  });
+}
+
+function formatUserDate(value?: string) {
+  if (!value) return "—";
+  const d = new Date(value);
+  return Number.isNaN(d.getTime())
+    ? "—"
+    : d.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+}
+
+function formatInvitationStatus(value?: string) {
+  if (!value) return "—";
+  return value
+    .split(/[\s_-]+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
 }
 
 interface EstateOption {
@@ -72,16 +131,18 @@ export default function SuperAdminUserPage() {
     },
   );
 
-  const { allEstates } = useSelector((state: RootState) => {
+  const { allEstates, estateLoading } = useSelector((state: RootState) => {
     const estateState = state.estate as any;
     const data = estateState.allEstates?.data || [];
     const pagination = estateState.allEstates?.pagination || {};
     return {
       allEstates: Array.isArray(data) ? data : [],
       pagination,
-      loading: estateState.loading || false,
+      estateLoading: Boolean(estateState.loading),
     };
   });
+
+  const pageLoading = estateLoading || loading;
 
   const [open, setOpen] = useState(false);
   const [selectedEstate, setSelectedEstate] = useState<EstateOption | null>(
@@ -89,9 +150,17 @@ export default function SuperAdminUserPage() {
   );
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [roleFilter, setRoleFilter] = useState<EstateUserRoleFilter>(
+    DEFAULT_ESTATE_USER_ROLE,
+  );
   const [selectedUser, setSelectedUser] = useState<SuperAdminUserData | null>(
     null,
   );
+  const [statusItem, setStatusItem] = useState<SuperAdminUserData | null>(null);
+  const [statusMode, setStatusMode] = useState<"suspend" | "activate">(
+    "suspend",
+  );
+  const [statusSubmitting, setStatusSubmitting] = useState(false);
 
   // ✅ Map estates for dropdown
   const estateOptions: EstateOption[] =
@@ -105,6 +174,26 @@ export default function SuperAdminUserPage() {
         };
       })
       .filter((x): x is EstateOption => Boolean(x)) || [];
+
+  const pageSize = Number(pagination?.pageSize) || 10;
+
+  const fetchUsers = useCallback(
+    (page = 1) => {
+      if (!selectedEstate?.value) return Promise.resolve();
+      const shouldApplyDate = Boolean(startDate && endDate);
+      return dispatch(
+        getAllUsersByEstate({
+          estateId: selectedEstate.value,
+          page,
+          limit: pageSize,
+          role: roleFilter,
+          startDate: shouldApplyDate ? startDate : undefined,
+          endDate: shouldApplyDate ? endDate : undefined,
+        }),
+      ).unwrap();
+    },
+    [dispatch, selectedEstate?.value, pageSize, roleFilter, startDate, endDate],
+  );
 
   // ✅ Fetch all estates on mount
   useEffect(() => {
@@ -124,21 +213,11 @@ export default function SuperAdminUserPage() {
 
   // ✅ Fetch users for the selected estate
   useEffect(() => {
-    if (selectedEstate?.value) {
-      const shouldApplyDate = Boolean(startDate && endDate);
-      dispatch(
-        getAllUsersByEstate({
-          estateId: selectedEstate.value,
-          page: 1,
-          limit: Number(pagination?.pageSize) || 10,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
-        }),
-      )
-        .unwrap()
-        .catch(() => toast.error("Failed to fetch users for selected estate"));
-    }
-  }, [selectedEstate, dispatch, startDate, endDate]);
+    if (!selectedEstate?.value) return;
+    fetchUsers(1).catch(() =>
+      toast.error("Failed to fetch users for selected estate"),
+    );
+  }, [selectedEstate?.value, fetchUsers]);
 
   const handleEstateModal = (user?: SuperAdminUserData) => {
     setSelectedUser(user || null);
@@ -150,27 +229,46 @@ export default function SuperAdminUserPage() {
     setSelectedUser(null);
   };
 
-  const handleToggleStatus = async (user: SuperAdminUserData) => {
+  const closeStatusModal = () => {
+    if (statusSubmitting) return;
+    setStatusItem(null);
+  };
+
+  const openSuspendModal = (user: SuperAdminUserData) => {
+    setStatusItem(user);
+    setStatusMode("suspend");
+  };
+
+  const openActivateModal = (user: SuperAdminUserData) => {
+    setStatusItem(user);
+    setStatusMode("activate");
+  };
+
+  const userDisplayName = (user: SuperAdminUserData) =>
+    `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() ||
+    user.email ||
+    "this user";
+
+  const handleConfirmStatus = async () => {
+    const user = statusItem;
+    if (!user?.id) return;
+    setStatusSubmitting(true);
     try {
-      if (!user.id) return;
-      if (user.isActive) {
+      if (statusMode === "suspend") {
         await dispatch(suspendUser(user.id)).unwrap();
-        toast.info(`${user.firstName} has been suspended.`);
+        toast.info(`${user.firstName ?? "User"} has been suspended.`);
       } else {
         await dispatch(activateUser(user.id)).unwrap();
-        toast.success(`${user.firstName} has been activated.`);
+        toast.success(`${user.firstName ?? "User"} has been activated.`);
       }
-
-      if (selectedEstate?.value)
-        await dispatch(
-          getAllUsersByEstate({
-            estateId: selectedEstate.value,
-            page: 1,
-            limit: Number(pagination?.pageSize) || 10,
-          }),
-        ).unwrap();
+      closeStatusModal();
+      if (selectedEstate?.value) {
+        await fetchUsers(1);
+      }
     } catch (err: any) {
       toast.error(err?.message || "Failed to update user status.");
+    } finally {
+      setStatusSubmitting(false);
     }
   };
 
@@ -182,23 +280,70 @@ export default function SuperAdminUserPage() {
       onConfirm: async () => {
         await dispatch(deleteUser(id)).unwrap();
         toast.success(`${name} deleted successfully!`);
-        if (selectedEstate?.value)
-          await dispatch(
-            getAllUsersByEstate({
-              estateId: selectedEstate.value,
-              page: 1,
-              limit: Number(pagination?.pageSize) || 10,
-            }),
-          ).unwrap();
+        if (selectedEstate?.value) await fetchUsers(1);
       },
     });
   };
 
   const columns = [
+    {
+      key: "createdAt",
+      header: "Created",
+      render: (item: SuperAdminUserData) => formatUserDate(item.createdAt),
+      exportValue: (item: SuperAdminUserData) =>
+        item.createdAt ? String(item.createdAt) : "",
+    },
     { key: "firstName", header: "First Name" },
     { key: "lastName", header: "Last Name" },
     { key: "email", header: "Email" },
     { key: "role", header: "Role" },
+    {
+      key: "residentType",
+      header: "Resident Type",
+      render: (item: SuperAdminUserData) => {
+        const value = item.residentType;
+        if (!value) return "—";
+        return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+      },
+      exportValue: (item: SuperAdminUserData) => item.residentType || "",
+    },
+    {
+      key: "serviceCharge",
+      header: "Service charge",
+      render: (item: SuperAdminUserData) => String(Boolean(item.serviceCharge)),
+      exportValue: (item: SuperAdminUserData) =>
+        String(Boolean(item.serviceCharge)),
+    },
+    {
+      key: "serviceChargesPaidForAddresses",
+      header: "Service Charges Paid (Addresses)",
+      render: (item: SuperAdminUserData) => {
+        const labels = resolvePaidAddressLabels(item);
+        if (!labels.length) return "—";
+        return (
+          <div className="flex flex-col gap-0.5 max-w-[220px]">
+            {labels.map((label) => (
+              <span
+                key={label}
+                className="text-xs px-2 py-0.5 rounded-md bg-green-100 text-green-700 w-fit"
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+        );
+      },
+      exportValue: (item: SuperAdminUserData) =>
+        resolvePaidAddressLabels(item).join("; "),
+    },
+    {
+      key: "invitationStatus",
+      header: "Invitation",
+      render: (item: SuperAdminUserData) =>
+        formatInvitationStatus(item.invitationStatus),
+      exportValue: (item: SuperAdminUserData) =>
+        formatInvitationStatus(item.invitationStatus),
+    },
     {
       key: "isActive",
       header: "Status",
@@ -232,7 +377,8 @@ export default function SuperAdminUserPage() {
               variant="ghost"
               className="cursor-pointer"
               size="sm"
-              onClick={() => handleToggleStatus(item)}
+              onClick={() => openSuspendModal(item)}
+              title="Suspend user"
             >
               <PowerOff className="w-4 h-4 text-red-600" />
             </Button>
@@ -241,7 +387,8 @@ export default function SuperAdminUserPage() {
               variant="ghost"
               className="cursor-pointer"
               size="sm"
-              onClick={() => handleToggleStatus(item)}
+              onClick={() => openActivateModal(item)}
+              title="Activate user"
             >
               <Power className="w-4 h-4 text-green-600" />
             </Button>
@@ -260,157 +407,180 @@ export default function SuperAdminUserPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="font-heading text-3xl font-bold">User Management</h1>
-          <p className="text-muted-foreground mt-1">Manage Users</p>
+    <div className="relative">
+      {pageLoading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
+          <Loader label="Loading users..." />
         </div>
+      )}
 
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          {/* ✅ Estate Dropdown */}
-          <div className="w-48">
-            <Select
-              options={estateOptions}
-              placeholder="Filter by estate"
-              value={selectedEstate}
-              onChange={(option) => setSelectedEstate(option)}
-              isSearchable
-              className="rounded-full"
-            />
+      <div
+        className={[
+          "space-y-6",
+          pageLoading
+            ? "blur-sm opacity-60 pointer-events-none select-none"
+            : "",
+        ].join(" ")}
+      >
+        {/* Header */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between flex-wrap gap-4">
+          <div className="flex flex-col gap-2">
+            <h1 className="font-heading text-3xl font-bold">User Management</h1>
+            <p className="text-muted-foreground mt-1">Manage Users</p>
+            <div className="w-48">
+              <Select
+                options={ESTATE_USER_ROLE_FILTER_OPTIONS}
+                placeholder="Filter by role"
+                value={ESTATE_USER_ROLE_FILTER_OPTIONS.find(
+                  (o) => o.value === roleFilter,
+                )}
+                onChange={(option) =>
+                  setRoleFilter(
+                    (option?.value as EstateUserRoleFilter) ??
+                      DEFAULT_ESTATE_USER_ROLE,
+                  )
+                }
+                isSearchable={false}
+                styles={{
+                  control: (base) => ({ ...base, cursor: "pointer" }),
+                  option: (base) => ({ ...base, cursor: "pointer" }),
+                  dropdownIndicator: (base) => ({ ...base, cursor: "pointer" }),
+                }}
+              />
+            </div>
           </div>
 
-          <Button
-            onClick={() => handleEstateModal()}
-            className="flex items-center gap-2 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            Invite Admins
-          </Button>
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            {/* ✅ Estate Dropdown */}
+            <div className="w-48">
+              <Select
+                options={estateOptions}
+                placeholder="Filter by estate"
+                value={selectedEstate}
+                onChange={(option) => setSelectedEstate(option)}
+                isSearchable
+                className="rounded-full"
+              />
+            </div>
+
+            <Button
+              onClick={() => handleEstateModal()}
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              Invite Admins
+            </Button>
+          </div>
         </div>
-      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {(() => {
-          const users = allSuperAdminUsers as SuperAdminUserData[];
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 gap-4">
+          {(() => {
+            const stats = [
+              {
+                label: "Total Users",
+                value: pagination?.total ?? 0,
+                icon: UsersRound,
+                color: "bg-[#FEE6D480]",
+              },
+            ];
 
-          const stats = [
-            {
-              label: "Total Residents",
-              value: users?.filter((e) => e.role === "resident")?.length || 0,
-              icon: User2,
-              color: "bg-[#D0DFF280]",
-            },
-            {
-              label: "Total Admins",
-              value: users?.filter((e) => e.role === "admin")?.length || 0,
-              icon: UsersRound,
-              color: "bg-[#FEE6D480]",
-            },
-          ];
-
-          return stats.map((stat, i) => {
-            const Icon = stat.icon;
-            return (
-              <Card key={i} className="p-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      {stat.label}
-                    </p>
-                    <p className="font-heading text-2xl font-bold mt-2">
-                      {stat.value}
-                    </p>
+            return stats.map((stat, i) => {
+              const Icon = stat.icon;
+              return (
+                <Card key={i} className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        {stat.label}
+                      </p>
+                      <p className="font-heading text-2xl font-bold mt-2">
+                        {stat.value}
+                      </p>
+                    </div>
+                    <div className={`p-3 rounded-lg ${stat.color}`}>
+                      <Icon className="w-6 h-6" />
+                    </div>
                   </div>
-                  <div className={`p-3 rounded-lg ${stat.color}`}>
-                    <Icon className="w-6 h-6" />
-                  </div>
-                </div>
-              </Card>
-            );
-          });
-        })()}
-      </div>
+                </Card>
+              );
+            });
+          })()}
+        </div>
 
-      <div className="bg-white p-4 rounded-lg">
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            placeholder="Search by users by name or email"
-            className="w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+        <div className="bg-white p-4 rounded-lg">
+          <div className="relative w-full max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              placeholder="Search by users by name or email"
+              className="w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+        </div>
+
+        {/* Users Table */}
+        <Card className="p-4">
+          <Table
+            columns={columns}
+            data={allSuperAdminUsers}
+            emptyMessage="No users found for this estate"
+            enableDateRangeFilter
+            startDate={startDate}
+            endDate={endDate}
+            onDateRangeChange={({ startDate, endDate }) => {
+              setStartDate(startDate);
+              setEndDate(endDate);
+            }}
+            showPagination={true}
+            paginationInfo={{
+              total: pagination?.total || 0,
+              current: Number(pagination?.currentPage) || 1,
+              pageSize: Number(pagination?.pageSize) || 10,
+            }}
+            onPageChange={(page) => {
+              fetchUsers(page).catch(() =>
+                toast.error("Failed to change page"),
+              );
+            }}
+            enableExport
+            exportFileName="users"
+            onExportRequest={
+              selectedEstate?.value
+                ? async () => {
+                    const shouldApplyDate = Boolean(startDate && endDate);
+                    const res = await dispatch(
+                      getAllUsersByEstate({
+                        estateId: selectedEstate.value,
+                        page: 1,
+                        limit: 50000,
+                        role: roleFilter,
+                        startDate: shouldApplyDate ? startDate : undefined,
+                        endDate: shouldApplyDate ? endDate : undefined,
+                      }),
+                    ).unwrap();
+                    return res?.data ?? [];
+                  }
+                : undefined
+            }
           />
-        </div>
-      </div>
+        </Card>
 
-      {/* Users Table */}
-      <Card className="p-4">
-        <Table
-          columns={columns}
-          data={allSuperAdminUsers}
-          emptyMessage={
-            loading
-              ? <Loader label="Loading users..." />
-              : "No users found for this estate"
-          }
-          enableDateRangeFilter
-          startDate={startDate}
-          endDate={endDate}
-          onDateRangeChange={({ startDate, endDate }) => {
-            setStartDate(startDate);
-            setEndDate(endDate);
-          }}
-          showPagination={true}
-          paginationInfo={{
-            total: pagination?.total || 0,
-            current: Number(pagination?.currentPage) || 1,
-            pageSize: Number(pagination?.pageSize) || 10,
-          }}
-          onPageChange={(page) => {
-            if (!selectedEstate?.value) return; // ✅ Prevent null access
-            const shouldApplyDate = Boolean(startDate && endDate);
+        {/* User Edit Modal */}
+        {open && (
+          <Modal visible={open} onClose={handleCloseModal}>
+            <InviteUserForm close={handleCloseModal} />
+          </Modal>
+        )}
 
-            dispatch(
-              getAllUsersByEstate({
-                estateId: selectedEstate.value,
-                page,
-                limit: Number(pagination?.pageSize) || 10,
-                startDate: shouldApplyDate ? startDate : undefined,
-                endDate: shouldApplyDate ? endDate : undefined,
-              }),
-            )
-              .unwrap()
-              .catch(() => toast.error("Failed to change page"));
-          }}
-          enableExport
-          exportFileName="users"
-          onExportRequest={
-            selectedEstate?.value
-              ? async () => {
-                  const shouldApplyDate = Boolean(startDate && endDate);
-                  const res = await dispatch(
-                    getAllUsersByEstate({
-                      estateId: selectedEstate.value,
-                      page: 1,
-                      limit: 50000,
-                      startDate: shouldApplyDate ? startDate : undefined,
-                      endDate: shouldApplyDate ? endDate : undefined,
-                    }),
-                  ).unwrap();
-                  return res?.data ?? [];
-                }
-              : undefined
-          }
+        <UserStatusModal
+          visible={Boolean(statusItem)}
+          onClose={closeStatusModal}
+          userName={statusItem ? userDisplayName(statusItem) : "this user"}
+          mode={statusMode}
+          loading={statusSubmitting}
+          onConfirm={handleConfirmStatus}
         />
-      </Card>
-
-      {/* User Edit Modal */}
-      {open && (
-        <Modal visible={open} onClose={handleCloseModal}>
-          <InviteUserForm close={handleCloseModal} />
-        </Modal>
-      )}
+      </div>
     </div>
   );
 }

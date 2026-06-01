@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Props = {
@@ -18,59 +19,167 @@ const EMPTY_PIN = (): string[] => Array(PIN_LENGTH).fill("");
 
 // ─── Sub-component: PinInputRow ───────────────────────────────────────────────
 
-interface PinInputRowProps {
+export interface PinInputRowProps {
   label: string;
   digits: string[];
-  inputRefs: React.MutableRefObject<Array<HTMLInputElement | null>>;
-  onDigitChange: (idx: number, val: string) => void;
-  onDigitKeyDown: (
-    e: React.KeyboardEvent<HTMLInputElement>,
-    idx: number,
-  ) => void;
+  onChange: (next: string[]) => void;
   hasError?: boolean;
   autoFocusFirst?: boolean;
+  /** Omit the label row (e.g. authorise-PIN step where the parent shows the title). */
+  hideLabel?: boolean;
 }
 
-function PinInputRow({
+export function PinInputRow({
   label,
   digits,
-  inputRefs,
-  onDigitChange,
-  onDigitKeyDown,
+  onChange,
   hasError = false,
   autoFocusFirst = false,
+  hideLabel = false,
 }: PinInputRowProps) {
+  const refs = useRef<Array<HTMLInputElement | null>>([]);
+
+  useEffect(() => {
+    if (autoFocusFirst) {
+      // Small delay so the element is painted before focus
+      const t = setTimeout(() => refs.current[0]?.focus(), 60);
+      return () => clearTimeout(t);
+    }
+  }, [autoFocusFirst]);
+
   const baseClass =
-    "w-[60px] h-[64px] rounded-xl border text-center text-xl font-medium outline-none transition-all duration-150 caret-transparent";
+    "w-[60px] h-[64px] rounded-xl border text-center text-xl font-medium outline-none transition-all duration-150 caret-transparent select-none";
   const normalClass =
     "border-border bg-muted/50 text-foreground focus:border-blue-500 focus:bg-background focus:ring-2 focus:ring-blue-500/20";
   const errorClass =
     "border-red-400 bg-red-50 text-red-600 focus:ring-2 focus:ring-red-300";
 
+  function focusAt(idx: number) {
+    refs.current[Math.max(0, Math.min(PIN_LENGTH - 1, idx))]?.focus();
+  }
+
+  function handleKeyDown(
+    e: React.KeyboardEvent<HTMLInputElement>,
+    idx: number,
+  ) {
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      if (digits[idx]) {
+        // Clear current cell
+        const next = [...digits];
+        next[idx] = "";
+        onChange(next);
+      } else {
+        // Move back and clear previous
+        const prev = idx - 1;
+        if (prev >= 0) {
+          const next = [...digits];
+          next[prev] = "";
+          onChange(next);
+          focusAt(prev);
+        }
+      }
+      return;
+    }
+
+    if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      focusAt(idx - 1);
+      return;
+    }
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      focusAt(idx + 1);
+      return;
+    }
+
+    // Digit keys — handle here instead of onChange to avoid double-fire
+    if (/^\d$/.test(e.key)) {
+      e.preventDefault();
+      const next = [...digits];
+      next[idx] = e.key;
+      onChange(next);
+      // Advance focus
+      focusAt(idx + 1);
+      return;
+    }
+
+    // Block everything else (letters, symbols, etc.)
+    if (e.key.length === 1) e.preventDefault();
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>, idx: number) {
+    // This fires on mobile/autofill — strip non-digits and take last char
+    const raw = e.target.value.replace(/\D/g, "");
+    if (!raw) return;
+
+    if (raw.length > 1) {
+      // Handle paste into a single cell — fill across cells
+      const chars = raw.slice(0, PIN_LENGTH - idx).split("");
+      const next = [...digits];
+      chars.forEach((ch, i) => {
+        if (idx + i < PIN_LENGTH) next[idx + i] = ch;
+      });
+      onChange(next);
+      focusAt(Math.min(idx + chars.length, PIN_LENGTH - 1));
+      return;
+    }
+
+    const next = [...digits];
+    next[idx] = raw;
+    onChange(next);
+    focusAt(idx + 1);
+  }
+
+  function handlePaste(
+    e: React.ClipboardEvent<HTMLInputElement>,
+    startIdx: number,
+  ) {
+    e.preventDefault();
+    const pasted = e.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, PIN_LENGTH);
+    if (!pasted) return;
+    const next = [...digits];
+    pasted.split("").forEach((ch, i) => {
+      if (startIdx + i < PIN_LENGTH) next[startIdx + i] = ch;
+    });
+    onChange(next);
+    focusAt(Math.min(startIdx + pasted.length, PIN_LENGTH - 1));
+  }
+
+  function handleFocus(e: React.FocusEvent<HTMLInputElement>) {
+    // Select all so the next keydown replaces the digit cleanly
+    e.target.select();
+  }
+
   return (
     <div className="space-y-3">
-      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-        {label}
-      </p>
+      {!hideLabel ? (
+        <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+          {label}
+        </p>
+      ) : null}
       <div className="flex gap-3">
         {digits.map((d, idx) => (
           <input
             key={idx}
             ref={(el) => {
-              inputRefs.current[idx] = el;
-              // Auto-focus first box when the confirm row appears
-              if (autoFocusFirst && idx === 0 && el) {
-                setTimeout(() => el.focus(), 50);
-              }
+              refs.current[idx] = el;
             }}
             type="password"
             inputMode="numeric"
-            maxLength={1}
+            // Value is always 1 char or empty — never let React blank it mid-type
             value={d}
+            maxLength={2} // allow 2 so onChange sees old+new on mobile
             aria-label={`${label} digit ${idx + 1}`}
             className={`${baseClass} ${hasError ? errorClass : normalClass}`}
-            onChange={(e) => onDigitChange(idx, e.target.value)}
-            onKeyDown={(e) => onDigitKeyDown(e, idx)}
+            onChange={(e) => handleChange(e, idx)}
+            onKeyDown={(e) => handleKeyDown(e, idx)}
+            onPaste={(e) => handlePaste(e, idx)}
+            onFocus={handleFocus}
+            autoComplete="one-time-code"
           />
         ))}
       </div>
@@ -82,7 +191,7 @@ function PinInputRow({
 
 export function SetUpPinCard({
   title = "Set Up PIN",
-  description = "Set up a transaction PIN to securely and seamlessly pay for airtime, data, and bills.",
+  description = "Set up a transaction PIN to securely and seamlessly pay for airtime, data, and other bills.",
   submitLabel = "Submit",
   onSubmitPin,
 }: Readonly<Props>) {
@@ -90,9 +199,6 @@ export function SetUpPinCard({
   const [confirmPin, setConfirmPin] = useState<string[]>(EMPTY_PIN());
   const [submitting, setSubmitting] = useState(false);
   const [mismatch, setMismatch] = useState(false);
-
-  const pinRefs = useRef<Array<HTMLInputElement | null>>([]);
-  const confirmRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   const pinValue = pin.join("");
   const confirmValue = confirmPin.join("");
@@ -104,58 +210,6 @@ export function SetUpPinCard({
   useEffect(() => {
     setMismatch(confirmComplete ? pinValue !== confirmValue : false);
   }, [pinValue, confirmValue, confirmComplete]);
-
-  // ── PIN handlers — defined inline so they always close over fresh state ──
-
-  function handlePinChange(idx: number, raw: string) {
-    const val = raw.slice(-1);
-    if (val && !/^\d$/.test(val)) return;
-    const next = [...pin];
-    next[idx] = val;
-    setPin(next);
-    if (val) pinRefs.current[idx + 1]?.focus();
-  }
-
-  function handlePinKeyDown(
-    e: React.KeyboardEvent<HTMLInputElement>,
-    idx: number,
-  ) {
-    if (e.key !== "Backspace") return;
-    if (pin[idx]) {
-      const next = [...pin];
-      next[idx] = "";
-      setPin(next);
-    } else {
-      pinRefs.current[idx - 1]?.focus();
-    }
-  }
-
-  // ── Confirm handlers — same pattern, separate state ───────────────────────
-
-  function handleConfirmChange(idx: number, raw: string) {
-    const val = raw.slice(-1);
-    if (val && !/^\d$/.test(val)) return;
-    const next = [...confirmPin];
-    next[idx] = val;
-    setConfirmPin(next);
-    if (val) confirmRefs.current[idx + 1]?.focus();
-  }
-
-  function handleConfirmKeyDown(
-    e: React.KeyboardEvent<HTMLInputElement>,
-    idx: number,
-  ) {
-    if (e.key !== "Backspace") return;
-    if (confirmPin[idx]) {
-      const next = [...confirmPin];
-      next[idx] = "";
-      setConfirmPin(next);
-    } else {
-      confirmRefs.current[idx - 1]?.focus();
-    }
-  }
-
-  // ── Submit ────────────────────────────────────────────────────────────────
 
   async function handleSubmit() {
     if (!onSubmitPin) return;
@@ -170,7 +224,6 @@ export function SetUpPinCard({
       setPin(EMPTY_PIN());
       setConfirmPin(EMPTY_PIN());
       setMismatch(false);
-      pinRefs.current[0]?.focus();
     } catch (err: any) {
       toast.error(
         err?.message ?? err?.payload?.message ?? "Failed to set PIN.",
@@ -181,7 +234,7 @@ export function SetUpPinCard({
   }
 
   return (
-    <Card className="p-8 w-full text-center">
+    <Card className="p-8 w-full text-center overflow-y-auto">
       <div className="mb-8 max-w-xs mx-auto">
         <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
         <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
@@ -190,29 +243,19 @@ export function SetUpPinCard({
       </div>
 
       <div className="space-y-6 max-w-xs mx-auto">
-        <PinInputRow
-          label="Enter PIN"
-          digits={pin}
-          inputRefs={pinRefs}
-          onDigitChange={handlePinChange}
-          onDigitKeyDown={handlePinKeyDown}
-        />
+        <PinInputRow label="Enter PIN" digits={pin} onChange={setPin} />
 
         {pinComplete && (
           <>
             <hr className="border-border" />
-
             <div className="animate-in fade-in slide-in-from-top-2 duration-200">
               <PinInputRow
                 label="Confirm PIN"
                 digits={confirmPin}
-                inputRefs={confirmRefs}
-                onDigitChange={handleConfirmChange}
-                onDigitKeyDown={handleConfirmKeyDown}
+                onChange={setConfirmPin}
                 hasError={mismatch}
                 autoFocusFirst
               />
-
               {mismatch && (
                 <p className="mt-2 text-xs text-red-500 animate-in fade-in duration-150">
                   PINs do not match. Please re-enter.

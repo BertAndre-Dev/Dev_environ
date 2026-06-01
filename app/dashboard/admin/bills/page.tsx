@@ -480,13 +480,34 @@ export default function BillPage() {
     },
   );
 
+  const pageLoading =
+    activeTab === "create" ? loading : loadingAssigned;
+
   return (
-    <div className="space-y-6">
+    <div className="relative">
+      {pageLoading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
+          <Loader
+            label={
+              activeTab === "create"
+                ? "Loading bills..."
+                : "Loading assigned bills..."
+            }
+          />
+        </div>
+      )}
+
+      <div
+        className={[
+          "space-y-6",
+          pageLoading ? "blur-sm opacity-60 pointer-events-none select-none" : "",
+        ].join(" ")}
+      >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="font-heading text-3xl font-bold">Bills Management</h1>
           <p className="text-muted-foreground mt-1">
-            Welcome back! Here's is an overview on{" "}
+            Create, track, and manage estate bills and payments in{" "}
             <span className="text-[18px] font-bold underline uppercase text-black">
               {estateName}
             </span>
@@ -526,13 +547,13 @@ export default function BillPage() {
           const stats = [
             {
               label: "Total Bills",
-              value: allBills?.length || 0,
+              value: pagination?.total ?? 0,
               icon: ScrollText,
               color: "bg-[#D0DFF280]",
             },
             {
               label: "Total Assigned Bills",
-              value: assignedBills?.length || 0,
+              value: assignedPagination?.total ?? 0,
               icon: ScrollText,
               color: "bg-[#D0DFF280]",
             },
@@ -606,7 +627,7 @@ export default function BillPage() {
           <Table
             columns={columns}
             data={filteredBills}
-            emptyMessage={loading ? <Loader label="Loading bills..." /> : "No bills found."}
+            emptyMessage="No bills found."
             enableDateRangeFilter
             startDate={billsStartDate}
             endDate={billsEndDate}
@@ -711,9 +732,7 @@ export default function BillPage() {
               data={filteredAssignedBills}
               emptyMessage={
                 assignAddressId
-                  ? loadingAssigned
-                    ? <Loader label="Loading assigned bills..." />
-                    : "No bills assigned to this address."
+                  ? "No bills assigned to this address."
                   : "Select an address to view assigned bills."
               }
               enableDateRangeFilter
@@ -808,6 +827,7 @@ export default function BillPage() {
         onConfirm={handleSuspendConfirm}
         loading={suspendSubmitting}
       />
+      </div>
     </div>
   );
 }

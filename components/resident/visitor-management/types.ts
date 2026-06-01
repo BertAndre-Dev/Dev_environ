@@ -1,3 +1,5 @@
+export type VisitingType = "SHORT_VISIT" | "LONG_VISIT";
+
 export interface ResidentVisitorData {
   id: string;
   visitorCode: string;
@@ -13,5 +15,28 @@ export interface ResidentVisitorData {
   addressId?: string | { id: string; data?: Record<string, unknown> } | null;
   estateId?: unknown;
   residentId?: unknown;
+  visitingType?: VisitingType;
+  visitStartDate?: string | null;
+  visitEndDate?: string | null;
+  validFrom?: string | null;
+  validUntil?: string | null;
+  qrCodeDataUrl?: string;
+  qrCodeGenerated?: boolean;
+  inviteLink?: string;
+  inviteToken?: string;
+  verificationCode?: string;
+}
+
+export interface ResidentOccupantData {
+  id: string;
+  occupantCode?: string;
+  firstName?: string;
+  lastName?: string;
+  relationship?: string;
+  addressId?: string | { id: string; data?: Record<string, unknown> } | null;
+  estateId?: unknown;
+  residentId?: unknown;
+  createdAt?: string;
+  updatedAt?: string;
 }
 

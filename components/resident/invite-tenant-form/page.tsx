@@ -264,6 +264,14 @@ import { inviteTenant } from "@/redux/slice/resident/invite-tenant/invite-tenant
 import type { AppDispatch, RootState } from "@/redux/store";
 import { useDispatch, useSelector } from "react-redux";
 
+type IdLike = string | { id?: string; _id?: string } | null | undefined;
+
+function extractId(value: IdLike): string {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  return value._id ?? value.id ?? "";
+}
+
 type InviteTenantFormProps = {
   readonly close: () => void;
 };
@@ -312,25 +320,34 @@ export default function InviteTenantForm({ close }: InviteTenantFormProps) {
     });
   })();
 
-  const loading = ownerAddressesStatus === "isLoading";
+  const loading =
+    ownerAddressesStatus === "isLoading" || ownerAddressesStatus === "idle";
+
+  useEffect(() => {
+    if (
+      ownerAddressesStatus === "succeeded" &&
+      !formData.addressId &&
+      entryOptions.length > 0
+    ) {
+      setFormData((prev) => ({ ...prev, addressId: entryOptions[0].value }));
+    }
+  }, [ownerAddressesStatus, entryOptions, formData.addressId]);
 
   useEffect(() => {
     const load = async () => {
       try {
         const userRes = await dispatch(getSignedInUser()).unwrap();
-        const rawEstate = userRes?.data?.estateId ?? userRes?.data?.estate;
+        const userData = (userRes?.data ?? userRes) as Record<string, unknown>;
 
-        let estateId = "";
-        if (typeof rawEstate === "string") {
-          estateId = rawEstate;
-        } else if (rawEstate && typeof rawEstate === "object") {
-          estateId = (rawEstate as { id?: string }).id ?? "";
-        }
+        const estateId = extractId(
+          (userData.estateId as IdLike) ?? (userData.estate as IdLike),
+        );
 
         if (!estateId) {
           toast.error("No estate linked to your account.");
           return;
         }
+
         setFormData((prev) => ({ ...prev, estateId }));
 
         await dispatch(

@@ -3,6 +3,8 @@ import axiosInstance from "@/utils/axiosInstance";
 
 // Visitor management thunks for resident
 
+export type VisitingType = "SHORT_VISIT" | "LONG_VISIT";
+
 export interface CreateVisitorData {
   firstName: string;
   lastName: string;
@@ -11,6 +13,9 @@ export interface CreateVisitorData {
   residentId: string;
   estateId: string;
   addressId: string;
+  visitingType: VisitingType;
+  visitStartDate: string | null;
+  visitEndDate: string | null;
 }
 
 export interface UpdateVisitorData {
@@ -21,6 +26,9 @@ export interface UpdateVisitorData {
   residentId?: string;
   estateId?: string;
   addressId?: string;
+  visitingType?: VisitingType;
+  visitStartDate?: string | null;
+  visitEndDate?: string | null;
 }
 
 export interface GetVisitorsByResidentParams {
@@ -51,7 +59,9 @@ export const createVisitor = createAsyncThunk(
   "residentVisitor/createVisitor",
   async (data: CreateVisitorData, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.post("/api/v1/visitor-mgt", data);
+      const res = await axiosInstance.post("/api/v1/visitor-mgt", {
+        visitors: [data],
+      });
       return res.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data || { message: "Failed to create visitor" });

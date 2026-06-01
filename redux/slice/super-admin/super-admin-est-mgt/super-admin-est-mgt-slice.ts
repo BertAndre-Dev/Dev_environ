@@ -4,7 +4,7 @@ import {
   activateEstate,
   createEstate,
   deleteEstate,
-  fetchAvailableModules,
+  fetchEstateModules,
   getAllEstates,
   getEstate,
   suspendEstate,
@@ -20,6 +20,7 @@ export interface EstateDetails {
   country?: string;
   isActive?: boolean;
   modules?: string[];
+  visitorVerificationMode?: string;
   createdAt?: string;
   updatedAt?: string;
   id?: string;
@@ -86,23 +87,23 @@ const estateSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchAvailableModules.pending, (state) => {
+      .addCase(fetchEstateModules.pending, (state) => {
         state.modulesLoading = true;
         state.modulesError = null;
       })
-      .addCase(fetchAvailableModules.fulfilled, (state, action) => {
+      .addCase(fetchEstateModules.fulfilled, (state, action) => {
         state.modulesLoading = false;
         state.modulesError = null;
         state.availableModules = Array.isArray(action.payload?.data)
           ? action.payload.data
           : [];
       })
-      .addCase(fetchAvailableModules.rejected, (state, action) => {
+      .addCase(fetchEstateModules.rejected, (state, action) => {
         state.modulesLoading = false;
         const payload = action.payload as { message?: string } | undefined;
         state.modulesError =
           payload?.message ||
-          (action.error?.message ?? "Failed to load modules");
+          (action.error?.message ?? "Failed to load estate modules");
         state.availableModules = [];
       });
 

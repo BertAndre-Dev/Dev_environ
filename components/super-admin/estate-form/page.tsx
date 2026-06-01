@@ -11,37 +11,39 @@ import { CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CountryDropdown, RegionDropdown } from "react-country-region-selector"
 import { cn } from "@/lib/utils"
 import type { AppDispatch } from "@/redux/store"
-import { fetchAvailableModules } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt"
+import { fetchEstateModules } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt"
 import type { EstateData } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt"
-import {
-  selectAvailableModules,
-  selectModulesError,
-  selectModulesLoading,
-} from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt-slice"
-
-const MODULE_LABELS: Record<string, string> = {
-  bills: "Bills",
-  rent: "Rent Management",
-  meter: "Meter Management",
-  marketplace: "Marketplace",
-  visitor: "Visitor Management",
-  complaints: "Complaints",
-  announcements: "Announcements",
-  wallet: "Wallet",
-  transactions: "Transactions",
-  comments: "Comments",
-}
+import { VisitorVerificationMode } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt"
+import { getCompanyModules } from "@/redux/slice/super-admin/company-mgt/company"
+import { labelForEstateModule } from "@/lib/estate-module-labels"
+import { selectAvailableModules as selectEstateEnabledModules } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt-slice"
+import type { RootState } from "@/redux/store"
 
 interface EstateFormProps {
   initialData?: EstateData | null
+  estateId?: string
   onSubmit: (data: EstateData) => void
 }
 
-export default function EstateForm({ initialData = null, onSubmit }: EstateFormProps) {
+export default function EstateForm({
+  initialData = null,
+  estateId,
+  onSubmit,
+}: EstateFormProps) {
   const dispatch = useDispatch<AppDispatch>()
-  const availableModules = useSelector(selectAvailableModules)
-  const modulesLoading = useSelector(selectModulesLoading)
-  const modulesError = useSelector(selectModulesError)
+  const { availableModules, modulesLoading, modulesError } = useSelector(
+    (state: RootState) => {
+      const companyState = state.superAdminCompany
+      return {
+        availableModules: (companyState?.modules ?? []) as string[],
+        modulesLoading: companyState?.getModulesStatus === "isLoading",
+        modulesError:
+          companyState?.getModulesStatus === "failed"
+            ? companyState?.error ?? "Failed to load modules"
+            : null,
+      }
+    },
+  )
 
   const [formData, setFormData] = useState<EstateData>({
     name: "",
@@ -50,11 +52,24 @@ export default function EstateForm({ initialData = null, onSubmit }: EstateFormP
     state: "",
     country: "",
     modules: [],
+    visitorVerificationMode: VisitorVerificationMode.VIEW_AND_VERIFY,
   })
 
   useEffect(() => {
-    dispatch(fetchAvailableModules())
+    dispatch(getCompanyModules())
   }, [dispatch])
+
+  useEffect(() => {
+    if (!estateId) return
+    dispatch(fetchEstateModules(estateId))
+  }, [dispatch, estateId])
+
+  const estateEnabledModules = useSelector(selectEstateEnabledModules)
+
+  useEffect(() => {
+    if (!estateId || !estateEnabledModules.length) return
+    setFormData((prev) => ({ ...prev, modules: [...estateEnabledModules] }))
+  }, [estateId, estateEnabledModules])
 
   useEffect(() => {
     if (initialData) {
@@ -65,6 +80,9 @@ export default function EstateForm({ initialData = null, onSubmit }: EstateFormP
         state: initialData.state,
         country: initialData.country,
         modules: Array.isArray(initialData.modules) ? [...initialData.modules] : [],
+        visitorVerificationMode:
+          initialData.visitorVerificationMode ??
+          VisitorVerificationMode.VIEW_AND_VERIFY,
       })
     } else {
       setFormData({
@@ -74,6 +92,7 @@ export default function EstateForm({ initialData = null, onSubmit }: EstateFormP
         state: "",
         country: "",
         modules: [],
+        visitorVerificationMode: VisitorVerificationMode.VIEW_AND_VERIFY,
       })
     }
   }, [initialData])
@@ -107,7 +126,7 @@ export default function EstateForm({ initialData = null, onSubmit }: EstateFormP
   ]
 
   return (
-    <form onSubmit={handleSubmit} className="p-8">
+    <form onSubmit={handleSubmit}>
       <CardHeader>
           <CardTitle className="text-lg font-semibold pb-4">
             {initialData ? "Update Estate" : "Create New Estate"}
@@ -149,6 +168,36 @@ export default function EstateForm({ initialData = null, onSubmit }: EstateFormP
             </div>
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="visitorVerificationMode">
+              Visitor Verification Mode
+            </Label>
+            <select
+              id="visitorVerificationMode"
+              name="visitorVerificationMode"
+              title="Visitor verification mode"
+              value={
+                formData.visitorVerificationMode ??
+                VisitorVerificationMode.VIEW_AND_VERIFY
+              }
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  visitorVerificationMode: e.target.value as VisitorVerificationMode,
+                }))
+              }
+              className="w-full border border-input rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+            >
+              <option value={VisitorVerificationMode.VIEW_AND_VERIFY}>
+                View and verify
+              </option>
+              <option value={VisitorVerificationMode.VERIFY_ONLY}>
+                Verify only
+              </option>
+              <option value={VisitorVerificationMode.VIEW_ONLY}>View only</option>
+            </select>
+          </div>
+
           <div className="space-y-3">
             <Label>Modules</Label>
             <p className="text-sm text-muted-foreground">
@@ -157,10 +206,12 @@ export default function EstateForm({ initialData = null, onSubmit }: EstateFormP
             {modulesLoading ? (
               <div className="flex items-center gap-2 rounded-md border border-border px-3 py-6 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Loading modules…
+                Loading available modules…
               </div>
             ) : modulesError ? (
               <p className="text-sm text-destructive">{modulesError}</p>
+            ) : availableModules.length === 0 ? (
+              <p className="text-sm text-destructive">No modules are available.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {availableModules.map((key) => {
@@ -177,7 +228,7 @@ export default function EstateForm({ initialData = null, onSubmit }: EstateFormP
                           : "border-border bg-background hover:bg-muted/50 text-foreground",
                       )}
                     >
-                      {MODULE_LABELS[key] ?? key}
+                      {labelForEstateModule(key)}
                     </button>
                   )
                 })}
@@ -189,7 +240,12 @@ export default function EstateForm({ initialData = null, onSubmit }: EstateFormP
             <Button
               type="submit"
               className="w-full cursor-pointer"
-              disabled={modulesLoading || Boolean(modulesError) || availableModules.length === 0}
+              disabled={
+                modulesLoading ||
+                Boolean(modulesError) ||
+                availableModules.length === 0 ||
+                formData.modules.length === 0
+              }
             >
               {initialData ? "Update" : "Create Estate"}
             </Button>

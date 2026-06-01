@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { Menu, X, LogOut, Bell, Search, MessageCircle } from "lucide-react";
+import { Menu, X, LogOut, Bell, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   adminNav,
@@ -13,6 +13,8 @@ import {
   securityNav,
   residentNav,
   estateAdminNav,
+  companyNav,
+  staffNav,
 } from "@/data/page";
 import { AppDispatch, RootState } from "@/redux/store";
 import {
@@ -23,6 +25,10 @@ import {
 } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { clearCsrfToken, ensureCsrfToken } from "@/utils/csrf";
+import { disconnectSocket } from "@/lib/socket";
+import { CommunityChatSocketProvider } from "@/components/providers/CommunityChatSocketProvider";
+import { WalletRequiredAlert } from "@/components/wallet/WalletRequiredAlert";
+import { filterNavItemsByEstateModules } from "@/lib/nav-module-filter";
 import Image from "next/image";
 
 export default function DashboardLayout({
@@ -41,6 +47,7 @@ export default function DashboardLayout({
   const hasFetchedUser = useRef(false);
   const [user, setUser] = useState<any>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // 🔹 Handle sidebar state based on screen size (collapsed on mobile, expanded on desktop)
@@ -57,6 +64,21 @@ export default function DashboardLayout({
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Close mobile drawer when crossing sm so it does not stay open on desktop
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(min-width: 640px)");
+    const onChange = () => {
+      if (mq.matches) setMobileSidebarOpen(false);
+    };
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    setMobileSidebarOpen(false);
+  }, [pathname]);
 
   // 🔹 Load user from sessionStorage (per-tab) or redirect if missing
   useEffect(() => {
@@ -139,6 +161,7 @@ export default function DashboardLayout({
   // 🔹 Sign out handler (logoutLocally already clears auth & user from localStorage)
   const handleSignOut = () => {
     clearCsrfToken();
+    disconnectSocket();
     dispatch(logoutLocally());
     toast.success("Signed out successfully");
     router.push("/auth/login");
@@ -152,13 +175,17 @@ export default function DashboardLayout({
     let navItems =
       role === "super admin"
         ? superAdminNav
-        : role === "admin"
-          ? adminNav
-          : role === "estate admin"
-            ? estateAdminNav
-            : role === "resident"
-              ? residentNav
-              : securityNav;
+        : role === "company"
+          ? companyNav
+          : role === "admin"
+            ? adminNav
+            : role === "estate admin"
+              ? estateAdminNav
+              : role === "resident"
+                ? residentNav
+                : role === "staff"
+                  ? staffNav
+                  : securityNav;
 
     // Residents: hide Tenant Management for residentType=Tenant (owners only)
     if (role === "resident") {
@@ -174,77 +201,27 @@ export default function DashboardLayout({
       }
     }
 
-    // Hardcode "Contact Support" entry (not dependent on module access)
-    const rolesWithSupport = new Set(["admin", "resident", "estate admin"]);
-    if (rolesWithSupport.has(role)) {
-      const supportPath =
-        role === "admin"
-          ? "/dashboard/admin/support"
-          : role === "resident"
-            ? "/dashboard/resident/support"
-            : role === "estate admin"
-              ? "/dashboard/estate-admin/support"
-              : "/dashboard/security/support";
-
-      const alreadyHasSupport =
-        navItems.some((item) => item.label === "Contact Support") ||
-        navItems.some((item) => item.path === supportPath);
-
-      if (!alreadyHasSupport) {
-        const supportItem = {
-          label: "Contact Support",
-          icon: MessageCircle,
-          path: supportPath,
-        };
-
-        const settingsIdx = navItems.findIndex((i) => i.label === "Settings");
-        if (settingsIdx >= 0) {
-          navItems = [
-            ...navItems.slice(0, settingsIdx),
-            supportItem,
-            ...navItems.slice(settingsIdx),
-          ];
-        } else {
-          navItems = [...navItems, supportItem];
-        }
-      }
-    }
-
-    // Roles with module-scoped sidebar items.
-    // IMPORTANT: super admin is excluded above (fully hardcoded).
-    const rolesWithModules = new Set(["admin", "resident", "security", "estate admin"]);
+    // Sidebar modules come from the API (`estateModules`); super admin nav is fixed.
+    const rolesWithModules = new Set([
+      "admin",
+      "resident",
+      "security",
+      "estate admin",
+      "staff",
+      "company",
+    ]);
     if (rolesWithModules.has(role)) {
-      const staticLabels = new Set<string>([
-        "Settings",
-        "Contact Support",
-        "Nearby Places",
-        "Logout",
-      ]);
-      if (role === "security") staticLabels.add("Activity Log");
-
-      navItems = navItems.filter((item) => {
-        if (staticLabels.has(item.label)) return true;
-        if (!Array.isArray(estateModules) || estateModules.length === 0) return false;
-
-        const key =
-          (item as { moduleKey?: string; module?: string }).moduleKey ??
-          (item as { moduleKey?: string; module?: string }).module;
-        if (!key) return false;
-
-        // API uses "expense"; older nav data used "expenses" — accept either
-        if (key === "expense" || key === "expenses") {
-          return (
-            estateModules.includes("expense") ||
-            estateModules.includes("expenses")
-          );
-        }
-        return estateModules.includes(key);
+      navItems = filterNavItemsByEstateModules(navItems, estateModules, {
+        role,
       });
     }
 
+    const isNavPathActive = (itemPath: string) =>
+      pathname === itemPath || pathname.startsWith(`${itemPath}/`);
+
     return navItems.map((item, i) => {
       const Icon = item.icon;
-      const active = item.path ? pathname.startsWith(item.path) : false;
+      const active = item.path ? isNavPathActive(item.path) : false;
 
       // Render Logout as a button so it can trigger sign out logic
       if (item.label === "Logout") {
@@ -293,25 +270,45 @@ export default function DashboardLayout({
     );
   }
 
+  const toggleMobileSidebar = () => {
+    setMobileSidebarOpen((open) => {
+      const next = !open;
+      if (next) setSidebarOpen(true);
+      return next;
+    });
+  };
+
   return (
     <div className="flex h-screen bg-background text-foreground overflow-hidden">
-      {/* Sidebar */}
+      {mobileSidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close menu"
+          className="fixed inset-0 z-40 bg-black/50 sm:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar: off-canvas below sm, docked from sm up */}
       <aside
-        className={`fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300 z-40 ${
-          sidebarOpen ? "w-64" : "w-20"
-        }`}
+        className={`fixed left-0 top-0 z-50 h-screen border-r border-sidebar-border bg-sidebar transition-transform duration-300 ease-out sm:z-40 sm:transition-[width,transform] sm:duration-300 w-64 sm:translate-x-0 ${
+          mobileSidebarOpen
+            ? "max-sm:translate-x-0 max-sm:shadow-xl"
+            : "max-sm:pointer-events-none max-sm:-translate-x-full"
+        } ${sidebarOpen ? "sm:w-64" : "sm:w-20"}`}
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between pl-6 border-b border-sidebar-border">
+          <div className="flex items-center justify-between pl-6 border-b border-sidebar-border py-2">
             <div
               className={`flex items-center ${!sidebarOpen && "justify-center w-full"}`}
             >
               <Image
                 src="/logo.svg"
                 alt="BertaHub"
-                width={100}
-                height={100}
+                width={200}
+                height={200}
+                className="h-16 w-auto max-w-full object-contain"
               />
             </div>
           </div>
@@ -357,53 +354,83 @@ export default function DashboardLayout({
 
       {/* Main */}
       <main
-        className={`flex-1 overflow-auto transition-all duration-300 ${sidebarOpen ? "ml-64" : "ml-20"}`}
+        className={`flex-1 overflow-auto transition-all duration-300 ml-0 ${sidebarOpen ? "sm:ml-64" : "sm:ml-20"}`}
       >
         {/* Topbar */}
         <header className="sticky top-0 bg-background border-b border-border z-30">
-          <div className="flex items-center justify-between px-6 py-8">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-muted rounded-lg transition-colors"
-            >
-              {sidebarOpen ? (
-                <X className="w-5 h-5" />
-              ) : (
-                <Menu className="w-5 h-5" />
-              )}
-            </button>
-
-            <div className="flex items-center gap-4">
-              <div className="hidden md:flex items-center gap-2 bg-muted px-4 py-2 rounded-lg">
-                <Search className="w-4 h-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="bg-transparent outline-none text-sm w-48"
+          <div className="flex items-center justify-between gap-3 px-6 py-5 md:py-5.5">
+            <div className="flex min-w-0 flex-1 items-center gap-3 sm:flex-initial">
+              <div className="shrink-0 sm:hidden">
+                <Image
+                  src="/logo.svg"
+                  alt="BertaHub"
+                  width={250}
+                  height={100}
+                  className="h-16 w-auto max-w-[11rem] object-contain object-left"
+                  priority
                 />
               </div>
               <button
-                title="Notifications"
-                className="p-2 hover:bg-muted rounded-lg transition-colors relative"
+                type="button"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="hidden sm:inline-flex items-center justify-center rounded-lg p-2 transition-colors hover:bg-muted"
               >
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-accent rounded-full" />
+                {sidebarOpen ? (
+                  <X className="h-5 w-5 cursor-pointer" />
+                ) : (
+                  <Menu className="h-5 w-5 cursor-pointer" />
+                )}
+              </button>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2 sm:gap-4">
+              <div className="hidden items-center gap-2 rounded-lg bg-muted px-4 py-2 md:flex">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  className="w-48 bg-transparent text-sm outline-none"
+                />
+              </div>
+              <button
+                type="button"
+                title="Notifications"
+                className="relative rounded-lg p-2 transition-colors hover:bg-muted"
+              >
+                <Bell className="h-5 w-5" />
+                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-accent" />
+              </button>
+              <button
+                type="button"
+                title="Open menu"
+                onClick={toggleMobileSidebar}
+                className="inline-flex items-center justify-center rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:hidden"
+              >
+                {mobileSidebarOpen ? (
+                  <X className="h-5 w-5" />
+                ) : (
+                  <Menu className="h-5 w-5" />
+                )}
               </button>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleSignOut}
-                className="text-muted-foreground hover:text-foreground"
+                className="hidden text-muted-foreground hover:text-foreground sm:inline-flex"
               >
-                <LogOut className="w-5 h-5" />
+                <LogOut className="h-5 w-5" />
               </Button>
             </div>
           </div>
         </header>
 
+        <WalletRequiredAlert />
+
         {/* Page Content */}
         <Suspense fallback={<div>Loading...</div>}>
-          <div className="p-4 md:p-6">{children}</div>
+          <CommunityChatSocketProvider>
+            <div className="p-4 md:p-6">{children}</div>
+          </CommunityChatSocketProvider>
         </Suspense>
       </main>
     </div>

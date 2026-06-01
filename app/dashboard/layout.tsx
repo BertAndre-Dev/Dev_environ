@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { Menu, X, LogOut, Bell, Search, MessageCircle } from "lucide-react";
+import { Menu, X, LogOut, Bell, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   adminNav,
@@ -28,6 +28,7 @@ import { clearCsrfToken, ensureCsrfToken } from "@/utils/csrf";
 import { disconnectSocket } from "@/lib/socket";
 import { CommunityChatSocketProvider } from "@/components/providers/CommunityChatSocketProvider";
 import { WalletRequiredAlert } from "@/components/wallet/WalletRequiredAlert";
+import { filterNavItemsByEstateModules } from "@/lib/nav-module-filter";
 import Image from "next/image";
 
 export default function DashboardLayout({
@@ -200,97 +201,18 @@ export default function DashboardLayout({
       }
     }
 
-    // Hardcode "Contact Support" entry (not dependent on module access)
-    const rolesWithSupport = new Set([
-      "admin",
-      "resident",
-      "estate admin",
-      "staff",
-    ]);
-    if (rolesWithSupport.has(role)) {
-      const supportPath =
-        role === "admin"
-          ? "/dashboard/admin/support"
-          : role === "resident"
-            ? "/dashboard/resident/support"
-            : role === "estate admin"
-              ? "/dashboard/estate-admin/chat"
-              : role === "staff"
-                ? "/dashboard/staff/support"
-                : "/dashboard/security/support";
-
-      const alreadyHasSupport =
-        navItems.some((item) => item.label === "Contact Support") ||
-        navItems.some((item) => item.path === supportPath);
-
-      if (!alreadyHasSupport) {
-        const supportItem = {
-          label: "Contact Support",
-          icon: MessageCircle,
-          path: supportPath,
-        };
-
-        const settingsIdx = navItems.findIndex((i) => i.label === "Settings");
-        if (settingsIdx >= 0) {
-          navItems = [
-            ...navItems.slice(0, settingsIdx),
-            supportItem,
-            ...navItems.slice(settingsIdx),
-          ];
-        } else {
-          navItems = [...navItems, supportItem];
-        }
-      }
-    }
-
-    // Roles with module-scoped sidebar items.
-    // IMPORTANT: super admin is excluded above (fully hardcoded).
+    // Sidebar modules come from the API (`estateModules`); super admin nav is fixed.
     const rolesWithModules = new Set([
       "admin",
       "resident",
       "security",
       "estate admin",
       "staff",
+      "company",
     ]);
     if (rolesWithModules.has(role)) {
-      const staticLabels = new Set<string>([
-        "Settings",
-        "Contact Support",
-        "Community Chat",
-        "Pay Bills",
-        "Nearby Places",
-        "Asset Management",
-        "Asset Maintenance",
-        "Maintenance",
-        "Operations Reporting",
-        "Logout",
-      ]);
-      if (role === "security") staticLabels.add("Activity Log");
-
-      navItems = navItems.filter((item) => {
-        if (staticLabels.has(item.label)) return true;
-        if (!Array.isArray(estateModules) || estateModules.length === 0)
-          return false;
-
-        const key =
-          (item as { moduleKey?: string; module?: string }).moduleKey ??
-          (item as { moduleKey?: string; module?: string }).module;
-        if (!key) return false;
-
-        // API uses "expense"; older nav data used "expenses" — accept either
-        if (key === "expense" || key === "expenses") {
-          return (
-            estateModules.includes("expense") ||
-            estateModules.includes("expenses")
-          );
-        }
-        if (key === "asset" || key === "assets") {
-          return (
-            estateModules.includes("asset") ||
-            estateModules.includes("assets")
-          );
-        }
-        return estateModules.includes(key);
+      navItems = filterNavItemsByEstateModules(navItems, estateModules, {
+        role,
       });
     }
 

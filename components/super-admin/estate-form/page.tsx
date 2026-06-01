@@ -14,40 +14,10 @@ import type { AppDispatch } from "@/redux/store"
 import { fetchEstateModules } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt"
 import type { EstateData } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt"
 import { VisitorVerificationMode } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt"
-import {
-  selectAvailableModules,
-  selectModulesError,
-  selectModulesLoading,
-} from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt-slice"
-
-const ALL_MODULE_KEYS = [
-  "bills",
-  "rent",
-  "meter",
-  "marketplace",
-  "visitor",
-  "complaints",
-  "announcements",
-  "wallet",
-  "transactions",
-  "comments",
-  "asset",
-] as const
-
-const MODULE_LABELS: Record<string, string> = {
-  bills: "Bills",
-  rent: "Rent Management",
-  meter: "Meter Management",
-  marketplace: "Marketplace",
-  visitor: "Visitor Management",
-  complaints: "Complaints",
-  announcements: "Announcements",
-  wallet: "Wallet",
-  transactions: "Transactions",
-  comments: "Comments",
-  asset: "Asset Management",
-  assets: "Asset Management",
-}
+import { getCompanyModules } from "@/redux/slice/super-admin/company-mgt/company"
+import { labelForEstateModule } from "@/lib/estate-module-labels"
+import { selectAvailableModules as selectEstateEnabledModules } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt-slice"
+import type { RootState } from "@/redux/store"
 
 interface EstateFormProps {
   initialData?: EstateData | null
@@ -61,10 +31,19 @@ export default function EstateForm({
   onSubmit,
 }: EstateFormProps) {
   const dispatch = useDispatch<AppDispatch>()
-  const estateModules = useSelector(selectAvailableModules)
-  const modulesLoading = useSelector(selectModulesLoading)
-  const modulesError = useSelector(selectModulesError)
-  const moduleOptions = ALL_MODULE_KEYS as unknown as string[]
+  const { availableModules, modulesLoading, modulesError } = useSelector(
+    (state: RootState) => {
+      const companyState = state.superAdminCompany
+      return {
+        availableModules: (companyState?.modules ?? []) as string[],
+        modulesLoading: companyState?.getModulesStatus === "isLoading",
+        modulesError:
+          companyState?.getModulesStatus === "failed"
+            ? companyState?.error ?? "Failed to load modules"
+            : null,
+      }
+    },
+  )
 
   const [formData, setFormData] = useState<EstateData>({
     name: "",
@@ -77,17 +56,20 @@ export default function EstateForm({
   })
 
   useEffect(() => {
-    if (estateId) {
-      dispatch(fetchEstateModules(estateId))
-    }
-  }, [dispatch, estateId])
+    dispatch(getCompanyModules())
+  }, [dispatch])
 
   useEffect(() => {
-    if (!estateId || modulesLoading || modulesError) return
-    if (estateModules.length > 0) {
-      setFormData((prev) => ({ ...prev, modules: [...estateModules] }))
-    }
-  }, [estateId, estateModules, modulesLoading, modulesError])
+    if (!estateId) return
+    dispatch(fetchEstateModules(estateId))
+  }, [dispatch, estateId])
+
+  const estateEnabledModules = useSelector(selectEstateEnabledModules)
+
+  useEffect(() => {
+    if (!estateId || !estateEnabledModules.length) return
+    setFormData((prev) => ({ ...prev, modules: [...estateEnabledModules] }))
+  }, [estateId, estateEnabledModules])
 
   useEffect(() => {
     if (initialData) {
@@ -221,16 +203,18 @@ export default function EstateForm({
             <p className="text-sm text-muted-foreground">
               Select one or more features enabled for this estate.
             </p>
-            {estateId && modulesLoading ? (
+            {modulesLoading ? (
               <div className="flex items-center gap-2 rounded-md border border-border px-3 py-6 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Loading modules…
+                Loading available modules…
               </div>
-            ) : estateId && modulesError ? (
+            ) : modulesError ? (
               <p className="text-sm text-destructive">{modulesError}</p>
+            ) : availableModules.length === 0 ? (
+              <p className="text-sm text-destructive">No modules are available.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {moduleOptions.map((key) => {
+                {availableModules.map((key) => {
                   const selected = formData.modules.includes(key)
                   return (
                     <button
@@ -244,7 +228,7 @@ export default function EstateForm({
                           : "border-border bg-background hover:bg-muted/50 text-foreground",
                       )}
                     >
-                      {MODULE_LABELS[key] ?? key}
+                      {labelForEstateModule(key)}
                     </button>
                   )
                 })}
@@ -257,8 +241,9 @@ export default function EstateForm({
               type="submit"
               className="w-full cursor-pointer"
               disabled={
-                (Boolean(estateId) && modulesLoading) ||
-                Boolean(estateId && modulesError) ||
+                modulesLoading ||
+                Boolean(modulesError) ||
+                availableModules.length === 0 ||
                 formData.modules.length === 0
               }
             >

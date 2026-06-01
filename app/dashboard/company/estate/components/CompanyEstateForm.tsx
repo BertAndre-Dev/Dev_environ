@@ -10,31 +10,18 @@ import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CountryDropdown, RegionDropdown } from "react-country-region-selector";
 import { cn } from "@/lib/utils";
-import type { AppDispatch, RootState } from "@/redux/store";
-import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
+import { labelForEstateModule } from "@/lib/estate-module-labels";
+import type { AppDispatch } from "@/redux/store";
 import {
   type EstateData,
   VisitorVerificationMode,
+  fetchCompanyEstateModules,
 } from "@/redux/slice/company/estate-mgt/company-estate";
-
-const MODULE_LABELS: Record<string, string> = {
-  bills: "Bills",
-  rent: "Rent Management",
-  meter: "Meter Management",
-  marketplace: "Marketplace",
-  visitor: "Visitor Management",
-  complaints: "Complaints",
-  announcements: "Announcements",
-  wallet: "Wallet",
-  transactions: "Transactions",
-  comments: "Comments",
-  asset: "Asset Management",
-  assets: "Asset Management",
-  expense: "Expense",
-  reporting: "Reporting",
-  users: "Users",
-  address: "Address",
-};
+import {
+  selectCompanyAvailableModules,
+  selectCompanyModulesError,
+  selectCompanyModulesLoading,
+} from "@/redux/slice/company/estate-mgt/company-estate-slice";
 
 type Props = {
   initialData?: EstateData | null;
@@ -47,14 +34,9 @@ export default function CompanyEstateForm({
 }: Readonly<Props>) {
   const dispatch = useDispatch<AppDispatch>();
 
-  const { companyModules, modulesLoading } = useSelector((state: RootState) => {
-    const user = state.auth.user as { modules?: unknown } | null;
-    const modules = Array.isArray(user?.modules) ? (user!.modules as string[]) : [];
-    return {
-      companyModules: modules,
-      modulesLoading: state.auth.getSignedInUserStatus === "isLoading",
-    };
-  });
+  const availableModules = useSelector(selectCompanyAvailableModules);
+  const modulesLoading = useSelector(selectCompanyModulesLoading);
+  const modulesError = useSelector(selectCompanyModulesError);
 
   const [formData, setFormData] = useState<EstateData>(() => ({
     name: initialData?.name ?? "",
@@ -68,10 +50,23 @@ export default function CompanyEstateForm({
   }));
 
   useEffect(() => {
-    if (companyModules.length === 0) {
-      dispatch(getSignedInUser());
+    dispatch(fetchCompanyEstateModules());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        name: initialData.name,
+        address: initialData.address,
+        city: initialData.city,
+        state: initialData.state,
+        country: initialData.country,
+        modules: Array.isArray(initialData.modules) ? [...initialData.modules] : [],
+        visitorVerificationMode:
+          initialData.visitorVerificationMode ?? VisitorVerificationMode.VIEW_AND_VERIFY,
+      });
     }
-  }, [dispatch, companyModules.length]);
+  }, [initialData]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -104,7 +99,7 @@ export default function CompanyEstateForm({
   const selectedModules = formData.modules ?? [];
 
   return (
-    <form onSubmit={handleSubmit} >
+    <form onSubmit={handleSubmit}>
       <CardHeader>
         <CardTitle className="text-lg font-semibold pb-4">
           {initialData ? "Update Estate" : "Create New Estate"}
@@ -175,21 +170,23 @@ export default function CompanyEstateForm({
         <div className="space-y-3">
           <Label>Modules</Label>
           <p className="text-sm text-muted-foreground">
-            Choose which of your company&apos;s modules to enable for this estate.
+            Select one or more modules to enable for this estate.
           </p>
 
-          {modulesLoading && companyModules.length === 0 ? (
+          {modulesLoading ? (
             <div className="flex items-center gap-2 rounded-md border border-border px-3 py-6 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Loading your company&apos;s modules…
+              Loading available modules…
             </div>
-          ) : companyModules.length === 0 ? (
+          ) : modulesError ? (
+            <p className="text-sm text-destructive">{modulesError}</p>
+          ) : availableModules.length === 0 ? (
             <p className="text-sm text-destructive">
-              Your company has no modules assigned. Please contact the super admin.
+              No modules are available. Please contact support.
             </p>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {companyModules.map((key) => {
+              {availableModules.map((key) => {
                 const selected = selectedModules.includes(key);
                 return (
                   <button
@@ -203,7 +200,7 @@ export default function CompanyEstateForm({
                         : "border-border bg-background hover:bg-muted/50 text-foreground",
                     )}
                   >
-                    {MODULE_LABELS[key] ?? key}
+                    {labelForEstateModule(key)}
                   </button>
                 );
               })}
@@ -215,7 +212,12 @@ export default function CompanyEstateForm({
           <Button
             type="submit"
             className="w-full cursor-pointer"
-            disabled={companyModules.length === 0 || selectedModules.length === 0}
+            disabled={
+              modulesLoading ||
+              Boolean(modulesError) ||
+              availableModules.length === 0 ||
+              selectedModules.length === 0
+            }
           >
             {initialData ? "Update" : "Create Estate"}
           </Button>

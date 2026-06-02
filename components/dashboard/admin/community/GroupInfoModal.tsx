@@ -60,7 +60,7 @@ function displayName(u: EstateUserRow): string {
 type Props = Readonly<{
   open: boolean;
   onClose: () => void;
-  group: CommunityChatGroup;
+  group: CommunityChatGroup | null;
   members: CommunityMember[];
   memberTotal?: number;
   onDeleteGroup?: () => void | Promise<void>;
@@ -107,9 +107,9 @@ export function GroupInfoModal({
   const dispatch = useDispatch<AppDispatch>();
   const [editing, setEditing] = useState(false);
   const resolvedMemberTotal =
-    memberTotal ?? group.memberCount ?? members.length;
-  const [editName, setEditName] = useState(group.name);
-  const [editAbout, setEditAbout] = useState(group.about);
+    memberTotal ?? group?.memberCount ?? members.length;
+  const [editName, setEditName] = useState(group?.name ?? "");
+  const [editAbout, setEditAbout] = useState(group?.about ?? "");
   const [roleToAdd, setRoleToAdd] = useState<ChatGroupRoleToAdd>("RESIDENT");
 
   const [estateSearchInput, setEstateSearchInput] = useState("");
@@ -133,26 +133,26 @@ export function GroupInfoModal({
       setEditing(false);
       return;
     }
-    setEditName(group.name);
-    setEditAbout(group.about);
+    setEditName(group?.name ?? "");
+    setEditAbout(group?.about ?? "");
     setEstateSearchInput("");
     setDebouncedEstateSearch("");
     setEstateUsers([]);
     setEstateUsersPage(1);
     setEstateUsersTotalPages(1);
     setSelectedIdsToAdd([]);
-  }, [open, group.name, group.about]);
+  }, [open, group?.name, group?.about]);
 
   const idsInGroup = useMemo(() => {
     const s = new Set<string>();
-    group.memberUsers?.forEach((m) => s.add(m.id));
-    group.memberIds?.forEach((id) => {
+    group?.memberUsers?.forEach((m) => s.add(m.id));
+    group?.memberIds?.forEach((id) => {
       const v = typeof id === "string" ? id : String(id);
       if (OBJECT_ID_RE.test(v)) s.add(v);
     });
     members.forEach((m) => s.add(m.id));
     return s;
-  }, [group.memberUsers, group.memberIds, members]);
+  }, [group?.memberUsers, group?.memberIds, members]);
 
   const fetchEstateUsers = useCallback(
     async (page: number, append: boolean) => {
@@ -274,6 +274,36 @@ export function GroupInfoModal({
   };
 
   if (!open) return null;
+
+  if (!group) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex cursor-pointer items-center justify-center bg-black/50 p-4"
+        onClick={(e) => e.target === e.currentTarget && onClose()}
+      >
+        <div
+          className="relative w-full max-w-lg cursor-default rounded-xl bg-card p-6 shadow-xl"
+          role="dialog"
+          aria-labelledby="group-info-title"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-4 top-4 flex size-9 cursor-pointer items-center justify-center rounded-full bg-muted text-foreground transition-colors hover:bg-muted/80"
+            aria-label="Close"
+          >
+            <X className="size-5" />
+          </button>
+
+          <h2 id="group-info-title" className="text-lg font-bold">
+            Group Info
+          </h2>
+          <p className="mt-4 text-sm text-muted-foreground">Loading…</p>
+        </div>
+      </div>
+    );
+  }
 
   const showBusy =
     detailLoading || updateLoading || membersActionLoading;

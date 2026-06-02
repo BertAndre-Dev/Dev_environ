@@ -23,7 +23,7 @@ import {
   selectEstateModules,
   selectUserRole,
 } from "@/redux/slice/auth-mgt/auth-mgt-slice";
-import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
+import { getSignedInUser, signOut } from "@/redux/slice/auth-mgt/auth-mgt";
 import { clearCsrfToken, ensureCsrfToken } from "@/utils/csrf";
 import { disconnectSocket } from "@/lib/socket";
 import { CommunityChatSocketProvider } from "@/components/providers/CommunityChatSocketProvider";
@@ -49,6 +49,7 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [signingOut, setSigningOut] = useState(false);
 
   // 🔹 Handle sidebar state based on screen size (collapsed on mobile, expanded on desktop)
   useEffect(() => {
@@ -158,13 +159,26 @@ export default function DashboardLayout({
     });
   }, [token]);
 
-  // 🔹 Sign out handler (logoutLocally already clears auth & user from localStorage)
-  const handleSignOut = () => {
-    clearCsrfToken();
-    disconnectSocket();
-    dispatch(logoutLocally());
-    toast.success("Signed out successfully");
-    router.push("/auth/login");
+  // 🔹 Sign out: revoke tokens on server, then clear client session
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    const email =
+      (typeof user?.email === "string" && user.email) ||
+      (typeof reduxUser?.email === "string" && reduxUser.email) ||
+      undefined;
+    try {
+      await dispatch(signOut(email ? { email } : undefined)).unwrap();
+    } catch {
+      // Still clear local session if the API is unreachable or already signed out
+    } finally {
+      clearCsrfToken();
+      disconnectSocket();
+      dispatch(logoutLocally());
+      setSigningOut(false);
+      toast.success("Signed out successfully");
+      router.push("/auth/login");
+    }
   };
 
   // 🔹 Choose navigation items based on role
@@ -228,8 +242,10 @@ export default function DashboardLayout({
         return (
           <button
             key={i}
+            type="button"
+            disabled={signingOut}
             onClick={handleSignOut}
-            className={`flex items-center w-full gap-3 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-muted/50`}
+            className={`flex items-center w-full gap-3 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-muted/50 disabled:opacity-50`}
           >
             <Icon className="w-4 h-4 text-[#D31510]" />
             {sidebarOpen && (
@@ -415,6 +431,7 @@ export default function DashboardLayout({
               <Button
                 variant="ghost"
                 size="sm"
+                disabled={signingOut}
                 onClick={handleSignOut}
                 className="hidden text-muted-foreground hover:text-foreground sm:inline-flex"
               >

@@ -63,8 +63,8 @@ import companyExpenseEntrySliceReducer from "@/redux/slice/company/expense-entry
 import companyTransactionSliceReducer from "@/redux/slice/company/transaction/company-transaction-slice";
 import companyWalletSliceReducer from "@/redux/slice/company/wallet-mgt/company-wallet-mgt-slice";
 import chatSliceReducer from "@/redux/slice/chat/chat-slice";
-import estateAdminChatSliceReducer from "@/redux/slice/estate-admin/chat/estate-admin-chat-slice";
 import communityGroupSliceReducer from "@/redux/slice/community-group/community-group-slice";
+import estateAdminCommunityGroupSliceReducer from "@/redux/slice/estate-admin/community-group/community-group-slice";
 import mapsSliceReducer from "@/redux/slice/maps/maps-slice";
 import { mapsApi } from "@/redux/api/mapsApi";
 import residentBillsPaymentSliceReducer from "@/redux/slice/resident/bills-payment/bills-payment-slice";
@@ -288,8 +288,8 @@ export const store = configureStore({
     adminExpenseEntry: persistedAdminExpenseEntrySliceReducer,
     estateAdminFinancialReport: estateAdminFinancialReportSliceReducer,
     chat: chatSliceReducer,
-    estateAdminChat: estateAdminChatSliceReducer,
     communityGroup: communityGroupSliceReducer,
+    estateAdminCommunityGroup: estateAdminCommunityGroupSliceReducer,
     maps: mapsSliceReducer,
     staffUserProfile: persistedStaffUserProfileSliceReducer,
     staffSupport: staffSupportSliceReducer,

@@ -115,17 +115,20 @@ interface EstateOption {
   value: string;
 }
 
+/** Estates for filter dropdown — not tied to user table page size. */
+const ESTATE_FILTER_FETCH_LIMIT = 500;
+
 export default function SuperAdminUserPage() {
   const dispatch = useDispatch<AppDispatch>();
 
-  const { allSuperAdminUsers, pagination, loading } = useSelector(
+  const { allSuperAdminUsers, userPagination, loading } = useSelector(
     (state: RootState) => {
       const userState = state.superAdminUser as any;
       const data = userState.allSuperAdminUsers?.data || [];
-      const pagination = userState.allSuperAdminUsers?.pagination || {};
+      const userPagination = userState.allSuperAdminUsers?.pagination || {};
       return {
         allSuperAdminUsers: Array.isArray(data) ? data : [],
-        pagination,
+        userPagination,
         loading: userState.getAllUsersByEstateState === "isLoading",
       };
     },
@@ -134,10 +137,8 @@ export default function SuperAdminUserPage() {
   const { allEstates, estateLoading } = useSelector((state: RootState) => {
     const estateState = state.estate as any;
     const data = estateState.allEstates?.data || [];
-    const pagination = estateState.allEstates?.pagination || {};
     return {
       allEstates: Array.isArray(data) ? data : [],
-      pagination,
       estateLoading: Boolean(estateState.loading),
     };
   });
@@ -175,7 +176,7 @@ export default function SuperAdminUserPage() {
       })
       .filter((x): x is EstateOption => Boolean(x)) || [];
 
-  const pageSize = Number(pagination?.pageSize) || 10;
+  const pageSize = Number(userPagination?.pageSize) || 10;
 
   const fetchUsers = useCallback(
     (page = 1) => {
@@ -195,10 +196,10 @@ export default function SuperAdminUserPage() {
     [dispatch, selectedEstate?.value, pageSize, roleFilter, startDate, endDate],
   );
 
-  // ✅ Fetch all estates on mount
+  // ✅ Fetch estates for filter dropdown (high limit — not user table page size)
   useEffect(() => {
     dispatch(
-      getAllEstates({ page: 1, limit: Number(pagination?.pageSize) || 10 }),
+      getAllEstates({ page: 1, limit: ESTATE_FILTER_FETCH_LIMIT }),
     )
       .unwrap()
       .catch(() => toast.error("Failed to fetch estates"));
@@ -479,7 +480,7 @@ export default function SuperAdminUserPage() {
             const stats = [
               {
                 label: "Total Users",
-                value: pagination?.total ?? 0,
+                value: userPagination?.total ?? 0,
                 icon: UsersRound,
                 color: "bg-[#FEE6D480]",
               },
@@ -533,9 +534,9 @@ export default function SuperAdminUserPage() {
             }}
             showPagination={true}
             paginationInfo={{
-              total: pagination?.total || 0,
-              current: Number(pagination?.currentPage) || 1,
-              pageSize: Number(pagination?.pageSize) || 10,
+              total: userPagination?.total || 0,
+              current: Number(userPagination?.currentPage) || 1,
+              pageSize: Number(userPagination?.pageSize) || 10,
             }}
             onPageChange={(page) => {
               fetchUsers(page).catch(() =>

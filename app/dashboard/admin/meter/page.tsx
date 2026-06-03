@@ -9,7 +9,10 @@ import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "lucide-react";
-import { getAllEstateMeter } from "@/redux/slice/admin/meter-mgt/meter-mgt";
+import {
+  getAllEstateMeter,
+  getVendingStatsByEstate,
+} from "@/redux/slice/admin/meter-mgt/meter-mgt";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import AssignMeterForm from "@/components/admin/meter-form/page";
 import { IoSpeedometerOutline } from "react-icons/io5";
@@ -46,6 +49,13 @@ interface AdminMeterData {
 
 const PAGE_LIMIT = 10;
 
+/** Placeholder until estate-wide usage API is wired. */
+const HARDCODED_TOTAL_ENERGY_KWH = 12_450;
+
+function formatPurchasedAmount(amount: number): string {
+  return `₦${amount.toLocaleString()}`;
+}
+
 export default function AdminMeterManagement() {
   const dispatch = useDispatch<AppDispatch>();
   const [open, setOpen] = useState(false);
@@ -63,11 +73,19 @@ export default function AdminMeterManagement() {
         allAdminMeters: adminMeterState?.allAdminMeters?.data || [],
         pagination: adminMeterState?.allAdminMeters?.pagination || {},
         loading:
-          adminMeterState.getAllEstateMeter === "isLoading" ||
-          adminMeterState.getMeter === "isLoading",
+          adminMeterState.getAllEstateMeterState === "isLoading" ||
+          adminMeterState.getMeterState === "isLoading",
       };
     },
   );
+
+  const vendingStats = useSelector(
+    (state: RootState) => state.adminMeter.vendingStatsByEstate,
+  );
+  const vendingStatsLoading =
+    useSelector(
+      (state: RootState) => state.adminMeter.getVendingStatsByEstateState,
+    ) === "isLoading";
 
   const fetchMeters = useCallback(
     async (page = 1) => {
@@ -126,9 +144,21 @@ export default function AdminMeterManagement() {
     fetchMeters(1).catch((error: any) => toast.error(error?.message));
   }, [estateId, fetchMeters]);
 
+  useEffect(() => {
+    if (!estateId) return;
+    dispatch(getVendingStatsByEstate({ estateId })).catch((error: any) =>
+      toast.error(error?.message ?? "Failed to load vending statistics."),
+    );
+  }, [dispatch, estateId]);
+
   const handleRefresh = async () => {
     try {
-      await fetchMeters(Number(pagination?.currentPage) || 1);
+      await Promise.all([
+        fetchMeters(Number(pagination?.currentPage) || 1),
+        estateId
+          ? dispatch(getVendingStatsByEstate({ estateId })).unwrap()
+          : Promise.resolve(),
+      ]);
     } catch (error: any) {
       toast.error(error?.message);
     }
@@ -247,39 +277,47 @@ export default function AdminMeterManagement() {
       </div>
 
       {/* Stats Card */}
-      <div className="grid grid-cols-1 gap-4">
-        {(() => {
-          const stats = [
-            {
-              label: "Total Meters",
-              value: pagination?.total ?? 0,
-              icon: IoSpeedometerOutline,
-              color: "bg-[#FEE6D480]",
-            },
-          ];
+      <Card className="p-6 md:p-8 shadow-md">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0 shrink-0">
+            <p className="text-sm text-muted-foreground">Total Meters</p>
+            <p className="font-heading text-4xl font-bold mt-2 tabular-nums tracking-tight">
+              {pagination?.total ?? 0}
+            </p>
+          </div>
 
-          return stats.map((stat, i) => {
-            const Icon = stat.icon;
-            return (
-              <Card key={i} className="p-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      {stat.label}
-                    </p>
-                    <p className="font-heading text-2xl font-bold mt-2">
-                      {stat.value}
-                    </p>
-                  </div>
-                  <div className={`p-3 rounded-lg ${stat.color}`}>
-                    <Icon className="w-6 h-6" />
-                  </div>
-                </div>
-              </Card>
-            );
-          });
-        })()}
-      </div>
+          <div className="flex flex-1 items-stretch rounded-xl border border-border bg-muted/40 max-w-2xl">
+            <div className="flex flex-1 flex-col justify-center p-4 text-center sm:text-left">
+              <p className="text-sm text-muted-foreground">
+                Total Energy Consumed
+              </p>
+              <p className="text-lg font-semibold tabular-nums mt-1">
+                {HARDCODED_TOTAL_ENERGY_KWH.toLocaleString()} kWh
+              </p>
+            </div>
+            <div
+              className="w-px shrink-0 self-stretch bg-border my-4"
+              aria-hidden
+            />
+            <div className="flex flex-1 flex-col justify-center p-4 text-center sm:text-left">
+              <p className="text-sm text-muted-foreground">
+                Total Amount Purchased
+              </p>
+              <p className="text-lg font-semibold tabular-nums mt-1">
+                {vendingStatsLoading
+                  ? "—"
+                  : formatPurchasedAmount(
+                      Number(vendingStats?.totalAmount) || 0,
+                    )}
+              </p>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-lg bg-[#FEE6D480] shrink-0 self-start xl:self-center">
+            <IoSpeedometerOutline className="w-6 h-6" />
+          </div>
+        </div>
+      </Card>
 
       {/* Search */}
       <Card className="p-4">

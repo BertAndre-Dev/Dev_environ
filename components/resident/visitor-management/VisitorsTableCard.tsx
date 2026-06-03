@@ -126,7 +126,7 @@ export function VisitorsTableCard({
         key: "actions",
         header: "Actions",
         render: (item: ResidentVisitorData) => (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col items-center gap-2">
             <Button
               className="cursor-pointer"
               variant="outline"
@@ -141,7 +141,7 @@ export function VisitorsTableCard({
             <Button
               variant="outline"
               size="sm"
-              className="cursor-pointer text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+              className="cursor-pointer text-blue-600 hover:bg-blue-200 disabled:opacity-50"
               disabled={!item.qrCodeDataUrl}
               onClick={(e) => {
                 e.stopPropagation();

@@ -36,7 +36,7 @@ function formatMeterBalance(balance: number | null | undefined): string {
 }
 
 function formatPurchasedAmount(amount: number): string {
-  return `N${amount.toLocaleString()}`;
+  return `₦${amount.toLocaleString()}`;
 }
 
 export default function ResidentMeter() {

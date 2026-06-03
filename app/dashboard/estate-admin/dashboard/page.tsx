@@ -686,7 +686,7 @@ import { Select } from "@/components/ui/select";
 import TransactionsChart from "@/components/charts/transactions-chart";
 import BillsOverview from "@/components/charts/bills-overview";
 import OccupancyDistribution from "@/components/charts/occupancy-distribution";
-import BillsBreakdownCard from "@/components/charts/bills-breakdown-card";
+import { BillsStatusDonutCard } from "@/components/charts/bills-status-donut-card";
 import MeterStatusPie from "@/components/charts/meter-status-pie";
 import MeterTrendChart from "@/components/charts/meter-trend-chart";
 import MeterCreditSummary from "@/components/charts/meter-credit-summary";
@@ -761,11 +761,12 @@ export default function DummyDashboard() {
     { name: "Security", value: 1500000, fill: "#10b981" },
   ];
 
-  const billsBreakdownData = billsOverviewData.map((b) => ({
-    name: b.name,
-    value: b.value,
-    amount: formatNaira(b.value),
-  }));
+  const billsStatusData = {
+    total: 75,
+    paid: 20,
+    pending: 20,
+    overdue: 20,
+  };
 
   const meterAssignmentPieData = [
     { name: "Assigned", value: 80 },
@@ -865,9 +866,9 @@ export default function DummyDashboard() {
         <VendingTrendChart data={withdrawalsData} />
       </Card> */}
 
-      {/* Breakdown + Occupancy */}
+      {/* Bills status + Occupancy */}
       <div className="grid lg:grid-cols-2 gap-6">
-        <BillsBreakdownCard title="Bills" data={billsBreakdownData} />
+        <BillsStatusDonutCard title="Bills" data={billsStatusData} />
         <OccupancyDistribution
           totalResidents={5000}
           occupiedPercentage={65}

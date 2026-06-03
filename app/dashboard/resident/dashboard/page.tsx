@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   TrendingUp,
@@ -12,9 +12,19 @@ import {
 import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import BillsOverview from "@/components/charts/bills-overview";
+import { PowerUsageCard } from "@/components/charts/power-usage-card";
 import TransactionsChart from "@/components/charts/transactions-chart";
+import SwitchAddress from "@/components/resident/switch-address/page";
+import { normalizeAddresses, type AddressOption } from "@/lib/address";
+import {
+  mapMeterUsageToPowerUsage,
+} from "@/lib/power-usage-chart";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
-import { getMeterByAddress } from "@/redux/slice/resident/meter-mgt/meter-mgt";
+import {
+  getMeterByAddress,
+  getMeterUsage,
+  type MeterUsageRange,
+} from "@/redux/slice/resident/meter-mgt/meter-mgt";
 import {
   getResidentDashboardBills,
   getResidentDashboardTransactions,
@@ -27,18 +37,30 @@ import type { RootState, AppDispatch } from "@/redux/store";
 import { toast } from "react-toastify";
 
 const formatNaira = (n: number) => `N${Number(n).toLocaleString()}`;
-const BILLS_CHART_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"];
+const USAGE_RANGE_OPTIONS: { label: string; value: MeterUsageRange }[] = [
+  { label: "Daily", value: "daily" },
+  { label: "Weekly", value: "weekly" },
+  { label: "Monthly", value: "monthly" },
+  { label: "Yearly", value: "yearly" },
+];
 
 export default function ResidentDashboard() {
   const dispatch = useDispatch<AppDispatch>();
   const [userId, setUserId] = useState<string | null>(null);
-  const [addressId, setAddressId] = useState<string | null>(null);
+  const [addressOptions, setAddressOptions] = useState<AddressOption[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [usageRange, setUsageRange] = useState<MeterUsageRange>("yearly");
 
   const residentDashboard = useSelector(
-    (state: RootState) => (state as any).residentDashboardAnalytics
+    (state: RootState) => state.residentDashboardAnalytics,
   );
-  const residentMeter = useSelector((state: RootState) => (state as any).residentMeter);
-  const meter = residentMeter?.meter ?? null;
+  const residentMeterState = useSelector(
+    (state: RootState) => state.residentMeter,
+  );
+  const meter = residentMeterState?.residentMeter ?? null;
+  const meterUsage = residentMeterState?.meterUsage ?? null;
+  const meterUsageLoading = residentMeterState?.getMeterUsageState === "isLoading";
+  const meterLoading = residentMeterState?.getMeterByAddressState === "isLoading";
 
   const bills = residentDashboard?.bills ?? [];
   const transactions = residentDashboard?.transactions ?? [];
@@ -55,14 +77,15 @@ export default function ResidentDashboard() {
         const user = userRes?.data;
         if (!user) return;
         const uId = user.id ?? "";
-        const rawAddressId = user.addressId;
-        const aId =
-          typeof rawAddressId === "string"
-            ? rawAddressId
-            : (rawAddressId as { id?: string })?.id ?? null;
         setUserId(uId);
-        setAddressId(aId);
-        if (aId) dispatch(getMeterByAddress({ addressId: aId }));
+
+        const addresses = normalizeAddresses(user);
+        if (addresses.length === 0) {
+          toast.warning("No address attached to your account.");
+          return;
+        }
+        setAddressOptions(addresses);
+        setSelectedAddressId((prev) => prev ?? addresses[0].id);
       } catch (err: unknown) {
         const e = err as { message?: string };
         toast.error(e?.message ?? "Failed to load user.");
@@ -71,41 +94,73 @@ export default function ResidentDashboard() {
   }, [dispatch]);
 
   useEffect(() => {
+    if (!selectedAddressId) return;
+    dispatch(getMeterByAddress({ addressId: selectedAddressId })).catch(
+      (err: unknown) => {
+        const e = err as { message?: string };
+        toast.error(e?.message ?? "Failed to load meter for this address.");
+      },
+    );
+  }, [selectedAddressId, dispatch]);
+
+  useEffect(() => {
     if (!userId) return;
-    dispatch(getResidentDashboardBills({ residentId: userId })).catch((err: unknown) => {
-      const e = err as { message?: string };
-      toast.error(e?.message ?? "Failed to load bills.");
-    });
-    dispatch(getResidentDashboardTransactions({ userId })).catch((err: unknown) => {
-      const e = err as { message?: string };
-      toast.error(e?.message ?? "Failed to load transactions.");
-    });
+    dispatch(getResidentDashboardBills({ residentId: userId })).catch(
+      (err: unknown) => {
+        const e = err as { message?: string };
+        toast.error(e?.message ?? "Failed to load bills.");
+      },
+    );
+    dispatch(getResidentDashboardTransactions({ userId })).catch(
+      (err: unknown) => {
+        const e = err as { message?: string };
+        toast.error(e?.message ?? "Failed to load transactions.");
+      },
+    );
   }, [userId, dispatch]);
 
   useEffect(() => {
     const meterNumber = meter?.meterNumber;
     if (!meterNumber) return;
-    dispatch(getResidentDashboardVendHistory({ meterNumber })).catch((err: unknown) => {
+    dispatch(
+      getResidentDashboardVendHistory({ meterNumber }),
+    ).catch((err: unknown) => {
       const e = err as { message?: string };
       toast.error(e?.message ?? "Failed to load vending history.");
     });
   }, [meter?.meterNumber, dispatch]);
 
+  useEffect(() => {
+    const meterNumber = meter?.meterNumber;
+    if (!meterNumber) return;
+    dispatch(getMeterUsage({ meterNumber, range: usageRange })).catch(
+      (err: unknown) => {
+        const e = err as { message?: string };
+        toast.error(e?.message ?? "Failed to load power usage.");
+      },
+    );
+  }, [meter?.meterNumber, usageRange, dispatch]);
+
+  const handleAddressChange = useCallback((addressId: string) => {
+    setSelectedAddressId(addressId);
+  }, []);
+
   const stats = useMemo(() => {
     const totalBills = bills.length;
     const paidBills = bills.filter(
       (b: ResidentBillItem) =>
-        (b.status ?? "").toLowerCase() === "paid" || Number(b.amountPaid ?? 0) > 0
+        (b.status ?? "").toLowerCase() === "paid" ||
+        Number(b.amountPaid ?? 0) > 0,
     ).length;
     const totalTx = transactions.length;
     const totalTxAmount = transactions.reduce(
       (sum: number, t: ResidentTransactionItem) => sum + Number(t.amount ?? 0),
-      0
+      0,
     );
     const totalVend = vending.length;
     const totalVendAmount = vending.reduce(
       (sum: number, v: ResidentVendItem) => sum + Number(v.amount ?? 0),
-      0
+      0,
     );
     return [
       {
@@ -143,7 +198,8 @@ export default function ResidentDashboard() {
     const byStatus: Record<string, number> = {};
     bills.forEach((b: ResidentBillItem) => {
       const status = (b.status ?? "Other").toLowerCase();
-      const key = status === "paid" ? "Paid" : status === "pending" ? "Pending" : "Other";
+      const key =
+        status === "paid" ? "Paid" : status === "pending" ? "Pending" : "Other";
       byStatus[key] = (byStatus[key] ?? 0) + 1;
     });
     if (Object.keys(byStatus).length === 0) return [];
@@ -186,15 +242,37 @@ export default function ResidentDashboard() {
       }));
   }, [vending]);
 
-  const [chartView, setChartView] = useState<"bills" | "transactions" | "vending">("bills");
+  const powerUsage = useMemo(
+    () => mapMeterUsageToPowerUsage(meterUsage),
+    [meterUsage],
+  );
+
+  const vendingLoading = residentDashboard?.vendingStatus === "isLoading";
+
+  const [chartView, setChartView] = useState<"bills" | "transactions" | "vending">(
+    "bills",
+  );
   const estateOptions = useMemo(() => [{ label: "My data", value: "me" }], []);
+
+  const powerUsageLoading =
+    Boolean(meter?.meterNumber) &&
+    (meterUsageLoading || (meterLoading && !meterUsage));
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="font-heading text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Welcome back! Here&apos;s your overview.</p>
+        <p className="text-muted-foreground mt-1">
+          Welcome back! Here&apos;s your overview.
+        </p>
       </div>
+
+      <SwitchAddress
+        addresses={addressOptions}
+        value={selectedAddressId}
+        onChange={handleAddressChange}
+        className="p-4"
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat) => {
@@ -210,16 +288,53 @@ export default function ResidentDashboard() {
                   {stat.change}
                 </div>
               </div>
-              <p className="text-muted-foreground font-medium text-base mb-1 mt-2">{stat.title}</p>
+              <p className="text-muted-foreground font-medium text-base mb-1 mt-2">
+                {stat.title}
+              </p>
               <p className="font-heading text-3xl font-bold">{stat.value}</p>
             </Card>
           );
         })}
       </div>
 
+      <div className="space-y-3">
+        {meter?.meterNumber ? (
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+            <label
+              htmlFor="usage-range-select"
+              className="text-sm font-medium text-muted-foreground shrink-0"
+            >
+              Usage period
+            </label>
+            <Select
+              id="usage-range-select"
+              options={USAGE_RANGE_OPTIONS}
+              value={usageRange}
+              onChange={(e) => setUsageRange(e.target.value as MeterUsageRange)}
+              className="w-full max-w-xs"
+            />
+          </div>
+        ) : null}
+        <PowerUsageCard
+          data={powerUsage.points}
+          totalUsageKwh={powerUsage.totalKwh}
+          loading={powerUsageLoading}
+          emptyMessage={
+            !selectedAddressId
+              ? "Add an address to your account to see power usage."
+              : !meter?.meterNumber
+                ? "No meter linked to this address. Link your meter on the Meter page."
+                : "No power usage data for this period."
+          }
+        />
+      </div>
+
       <div className="space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <label htmlFor="resident-chart-select" className="text-sm font-medium text-muted-foreground">
+          <label
+            htmlFor="resident-chart-select"
+            className="text-sm font-medium text-muted-foreground"
+          >
             Chart to display
           </label>
           <Select
@@ -240,7 +355,9 @@ export default function ResidentDashboard() {
           {chartView === "bills" && (
             <Card className="p-4">
               {loading && billsChartData.length === 0 ? (
-                <p className="text-muted-foreground text-sm py-8 text-center">Loading bills...</p>
+                <p className="text-muted-foreground text-sm py-8 text-center">
+                  Loading bills...
+                </p>
               ) : billsChartData.length === 0 ? (
                 <p className="text-muted-foreground text-sm py-8 text-center">
                   No bills data to display

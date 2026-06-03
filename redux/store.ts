@@ -33,6 +33,7 @@ import billsAnalyticsSliceReducer from "@/redux/slice/estate-admin/bills-analyti
 import meterAnalyticsSliceReducer from "@/redux/slice/estate-admin/meter-analytics/meter-analytics-slice";
 import superAdminBillsAnalyticsSliceReducer from "@/redux/slice/super-admin/super-admin-bills-analytics/super-admin-bills-analytics-slice";
 import adminDashboardAnalyticsSliceReducer from "@/redux/slice/admin/dashboard-analytics/admin-dashboard-analytics-slice";
+import adminUserAnalyticsSliceReducer from "@/redux/slice/admin/user-analytics/user-analytics-slice";
 import residentDashboardAnalyticsSliceReducer from "@/redux/slice/resident/dashboard-analytics/resident-dashboard-analytics-slice";
 import residentInviteTenantSliceReducer from "@/redux/slice/resident/invite-tenant/invite-tenant-slice";
 import residentAddressOptionsSliceReducer from "@/redux/slice/resident/address-options/resident-address-options-slice";
@@ -258,6 +259,7 @@ export const store = configureStore({
     estateAdminMeterAnalytics: meterAnalyticsSliceReducer,
     superAdminBillsAnalytics: superAdminBillsAnalyticsSliceReducer,
     adminDashboardAnalytics: adminDashboardAnalyticsSliceReducer,
+    adminUserAnalytics: adminUserAnalyticsSliceReducer,
     residentDashboardAnalytics: residentDashboardAnalyticsSliceReducer,
     residentInviteTenant: residentInviteTenantSliceReducer,
     residentAddressOptions: residentAddressOptionsSliceReducer,

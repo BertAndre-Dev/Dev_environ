@@ -1,10 +1,14 @@
 import { createSlice } from "@reduxjs/toolkit";
 import {
   getMeterByAddress,
+  getMeterUsage,
   vendPower,
   reconnectMeter,
   disconnectMeter,
-  getMeterVendHistory
+  getMeterVendHistory,
+  getVendingStatsByAddress,
+  type MeterUsageData,
+  type VendingStatsByAddressData,
 } from "./meter-mgt";
 
 interface VendorData {
@@ -27,8 +31,10 @@ export interface ResidentMeterData {
   isAssigned: boolean;
   estateId: string;
   lastCredit: number;
+  balance?: number;
+  lastTokenKwh?: number;
   createdAt: string;
-  addressId: string;
+  addressId: string | { id: string; data?: Record<string, string> };
   vendorData: VendorData;
   currentTariff?: {
     price?: number;
@@ -91,12 +97,16 @@ export interface EnergyListItem {
 
 export interface ResidentMeterState {
   getMeterByAddressState: "idle" | "isLoading" | "succeeded" | "failed";
+  getMeterUsageState: "idle" | "isLoading" | "succeeded" | "failed";
   vendPowerState: "idle" | "isLoading" | "succeeded" | "failed";
   reconnectMeterState: "idle" | "isLoading" | "succeeded" | "failed";
   disconnectMeterState: "idle" | "isLoading" | "succeeded" | "failed";
   getMeterVendHistoryState: "idle" | "isLoading" | "succeeded" | "failed";
+  getVendingStatsByAddressState: "idle" | "isLoading" | "succeeded" | "failed";
   status: "idle" | "isLoading" | "succeeded" | "failed";
   residentMeter: ResidentMeterData | null;
+  meterUsage: MeterUsageData | null;
+  vendingStatsByAddress: VendingStatsByAddressData | null;
   allResidentMeters: ResidentMeterResponse | null;
   meterVendHistory: MeterVendHistoryResponse | null;
   error: string | null;
@@ -104,12 +114,16 @@ export interface ResidentMeterState {
 
 const initialState: ResidentMeterState = {
   getMeterByAddressState: "idle",
+  getMeterUsageState: "idle",
   vendPowerState: "idle",
   reconnectMeterState: "idle",
   disconnectMeterState: "idle",
   getMeterVendHistoryState: "idle",
+  getVendingStatsByAddressState: "idle",
   status: "idle",
   residentMeter: null,
+  meterUsage: null,
+  vendingStatsByAddress: null,
   allResidentMeters: null,
   meterVendHistory: null,
   error: null,
@@ -131,6 +145,7 @@ const residentMeterSlice = createSlice({
     builder
       .addCase(getMeterByAddress.pending, (state) => {
         state.getMeterByAddressState = "isLoading";
+        state.meterUsage = null;
       })
       .addCase(getMeterByAddress.fulfilled, (state, action) => {
         state.getMeterByAddressState = "succeeded";
@@ -138,8 +153,25 @@ const residentMeterSlice = createSlice({
       })
       .addCase(getMeterByAddress.rejected, (state, action) => {
         state.getMeterByAddressState = "failed";
+        state.residentMeter = null;
+        state.meterUsage = null;
         const apiMessage = (action.payload as { message?: string } | null)?.message;
         state.error = apiMessage || action.error.message || "Failed to fetch meter";
+      });
+
+    builder
+      .addCase(getMeterUsage.pending, (state) => {
+        state.getMeterUsageState = "isLoading";
+      })
+      .addCase(getMeterUsage.fulfilled, (state, action) => {
+        state.getMeterUsageState = "succeeded";
+        state.meterUsage = action.payload?.data ?? null;
+      })
+      .addCase(getMeterUsage.rejected, (state, action) => {
+        state.getMeterUsageState = "failed";
+        state.meterUsage = null;
+        const apiMessage = (action.payload as { message?: string } | null)?.message;
+        state.error = apiMessage || action.error.message || "Failed to fetch meter usage";
       });
 
     // ✅ GET METER BY ADDRESS
@@ -170,6 +202,25 @@ const residentMeterSlice = createSlice({
         state.status = "failed";
         state.error = action.error.message || "Failed to fetch bills for estate";
     });
+
+    builder
+      .addCase(getVendingStatsByAddress.pending, (state) => {
+        state.getVendingStatsByAddressState = "isLoading";
+        state.vendingStatsByAddress = null;
+      })
+      .addCase(getVendingStatsByAddress.fulfilled, (state, action) => {
+        state.getVendingStatsByAddressState = "succeeded";
+        state.vendingStatsByAddress = action.payload?.data ?? null;
+      })
+      .addCase(getVendingStatsByAddress.rejected, (state, action) => {
+        state.getVendingStatsByAddressState = "failed";
+        state.vendingStatsByAddress = null;
+        const apiMessage = (action.payload as { message?: string } | null)?.message;
+        state.error =
+          apiMessage ||
+          action.error.message ||
+          "Failed to fetch vending statistics";
+      });
 
     // ✅ VEND POWER
     builder

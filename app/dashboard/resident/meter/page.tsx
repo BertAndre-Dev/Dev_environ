@@ -1,13 +1,19 @@
 'use client';
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/modal/page";
 import { toast } from "react-toastify";
 import { RootState, AppDispatch } from "@/redux/store";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { getMeterByAddress, reconnectMeter, disconnectMeter, getMeterVendHistory } from "@/redux/slice/resident/meter-mgt/meter-mgt";
+import {
+  getMeterByAddress,
+  reconnectMeter,
+  disconnectMeter,
+  getMeterVendHistory,
+  getVendingStatsByAddress,
+} from "@/redux/slice/resident/meter-mgt/meter-mgt";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { normalizeAddresses } from "@/lib/address";
 import SwitchAddress from "@/components/resident/switch-address/page";
@@ -16,6 +22,22 @@ import Table from "@/components/tables/list/page";
 import type { EnergyListItem } from "@/redux/slice/resident/meter-mgt/meter-mgt-slice";
 import Loader from "@/components/ui/Loader";
 import { CopyButton } from "@/components/ui/copy-button";
+
+/** Placeholder until consumption totals API is wired */
+const HARDCODED_TOTAL_ENERGY_CONSUMED_KWH = 28_000;
+
+function formatMeterBalance(balance: number | null | undefined): string {
+  const n = Number(balance);
+  if (!Number.isFinite(n)) return "0";
+  return n.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+}
+
+function formatPurchasedAmount(amount: number): string {
+  return `N${amount.toLocaleString()}`;
+}
 
 export default function ResidentMeter() {
   const dispatch = useDispatch<AppDispatch>();
@@ -35,6 +57,13 @@ export default function ResidentMeter() {
   })
 
   const meter = useSelector((state: RootState) => state.residentMeter.residentMeter);
+  const vendingStats = useSelector(
+    (state: RootState) => state.residentMeter.vendingStatsByAddress,
+  );
+  const vendingStatsLoading =
+    useSelector(
+      (state: RootState) => state.residentMeter.getVendingStatsByAddressState,
+    ) === "isLoading";
 
   // Load user and normalize addresses (addressIds for owners, addressId for tenants)
   useEffect(() => {
@@ -75,6 +104,14 @@ export default function ResidentMeter() {
     })();
   }, [dispatch, selectedAddressId]);
 
+  useEffect(() => {
+    if (!selectedAddressId) return;
+    dispatch(getVendingStatsByAddress({ addressId: selectedAddressId })).catch(
+      (error: { message?: string }) => {
+        toast.error(error?.message ?? "Failed to load purchase total.");
+      },
+    );
+  }, [dispatch, selectedAddressId]);
 
   useEffect(() => {
     if (meter?.meterNumber) {
@@ -92,7 +129,12 @@ export default function ResidentMeter() {
   const handleRefresh = async () => {
     if (!selectedAddressId) return;
     try {
-      await dispatch(getMeterByAddress({ addressId: selectedAddressId })).unwrap();
+      await Promise.all([
+        dispatch(getMeterByAddress({ addressId: selectedAddressId })).unwrap(),
+        dispatch(
+          getVendingStatsByAddress({ addressId: selectedAddressId }),
+        ).unwrap(),
+      ]);
     } catch (error: any) {
       const message = error?.message ?? "Failed to refresh meter";
       toast.error(message);
@@ -203,36 +245,65 @@ export default function ResidentMeter() {
         onChange={handleAddressChange}
       />
 
-      <Card className="p-6 shadow-md">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">My Meter</CardTitle>
-        </CardHeader>
+      <Card className="p-6 md:p-8 shadow-md">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0 shrink-0">
+            <h2 className="text-xl font-semibold tracking-tight">My Meter</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Current Energy Balance
+            </p>
+            <p className="text-4xl font-bold mt-2 tabular-nums tracking-tight">
+              {formatMeterBalance(meter?.balance)}{" "}
+              <span className="text-3xl font-bold">kWh</span>
+            </p>
+          </div>
 
-        <CardContent>
-          <div className="flex  items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Meter Balance</p>
-              <p className="text-4xl font-bold mt-1">
-                ₦{meter?.lastCredit?.toLocaleString() ?? 0}
+          <div className="flex flex-1 items-stretch rounded-xl border border-border bg-muted/40 max-w-2xl">
+            <div className="flex flex-1 flex-col justify-center p-4 text-center sm:text-left">
+              <p className="text-sm text-muted-foreground">
+                Total Energy Consumed
+              </p>
+              <p className="text-lg font-semibold tabular-nums mt-1">
+                {HARDCODED_TOTAL_ENERGY_CONSUMED_KWH.toLocaleString()} kWh
               </p>
             </div>
-
-            <div className="flex flex-col md:flex-row items-center gap-5">
-              <Button onClick={handleOpenModal} size="lg" className="w-full md:w-auto px-6">
-                Buy Power
-              </Button>
-
-              <Button 
-                onClick={handleToggleMeter} 
-                size="lg" 
-                className="w-full md:w-auto px-6 capitalize"
-                variant={meter?.isActive ? "destructive" : "default"}
-              >
-                {meter?.isActive ? "Disconnect Meter" : "Reconnect Meter"}
-              </Button>
+            <div
+              className="w-px shrink-0 self-stretch bg-border my-4"
+              aria-hidden
+            />
+            <div className="flex flex-1 flex-col justify-center p-4 text-center sm:text-left">
+              <p className="text-sm text-muted-foreground">
+                Total Amount Purchased
+              </p>
+              <p className="text-lg font-semibold tabular-nums mt-1">
+                {vendingStatsLoading
+                  ? "—"
+                  : formatPurchasedAmount(
+                      Number(vendingStats?.totalAmount) || 0,
+                    )}
+              </p>
             </div>
           </div>
-        </CardContent>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+            <Button
+              onClick={handleOpenModal}
+              size="lg"
+              className="w-full sm:w-auto px-8 text-white hover:opacity-90"
+              style={{ backgroundColor: "#0150AC" }}
+            >
+              Buy Power
+            </Button>
+            <Button
+              onClick={handleToggleMeter}
+              size="lg"
+              className="w-full sm:w-auto px-8"
+              variant={meter?.isActive ? "destructive" : "default"}
+            >
+              {meter?.isActive ? "Disconnect Meter" : "Reconnect Meter"}
+            </Button>
+          </div>
+        </div>
       </Card>
 
 

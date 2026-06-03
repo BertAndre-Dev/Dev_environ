@@ -1,4 +1,4 @@
-import { FiSettings, FiMapPin, FiLogOut } from "react-icons/fi";
+import { FiSettings, FiMapPin, FiLogOut, FiHome } from "react-icons/fi";
 import { BsBuildings } from "react-icons/bs";
 import { IoSpeedometerOutline } from "react-icons/io5";
 import {
@@ -196,7 +196,7 @@ export const companyNav = [
 ];
 
 export const adminNav = [
-  // { label: "Overview", icon: FiHome, path: "/dashboard/admin/overview" },
+  { label: "Overview", icon: FiHome, path: "/dashboard/admin/overview" },
   {
     label: "Address Management",
     icon: FiMapPin,
@@ -384,11 +384,11 @@ export const residentNav = [
 ];
 
 export const estateAdminNav = [
-  // {
-  //   label: "Overview",
-  //   icon: FiHome,
-  //   path: "/dashboard/estate-admin/dashboard",
-  // },
+  {
+    label: "Overview",
+    icon: FiHome,
+    path: "/dashboard/estate-admin/dashboard",
+  },
   {
     label: "Transactions",
     icon: ArrowLeftRight,

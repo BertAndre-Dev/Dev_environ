@@ -137,7 +137,6 @@ export function VisitorsTableCard({
               }}
             >
               <Eye className="w-4 h-4 mr-1" />
-              View
             </Button>
             <Button
               variant="outline"
@@ -153,7 +152,6 @@ export function VisitorsTableCard({
               }
             >
               <QrCode className="w-4 h-4 mr-1" />
-              View QR Code
             </Button>
             <Button
               variant="outline"
@@ -165,7 +163,6 @@ export function VisitorsTableCard({
               }}
             >
               <Edit className="w-4 h-4 mr-1 cursor-pointer" />
-              Edit
             </Button>
             <Button
               variant="outline"

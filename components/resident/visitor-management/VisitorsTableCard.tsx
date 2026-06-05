@@ -195,6 +195,7 @@ export function VisitorsTableCard({
             : "You haven't created any visitors yet."
         }
         enableDateRangeFilter
+        defaultDateRangeDays={0}
         startDate={startDate}
         endDate={endDate}
         onDateRangeChange={onDateRangeChange}

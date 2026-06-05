@@ -491,6 +491,7 @@ export default function ResidentRentPage() {
             data={list}
             emptyMessage="No rent records found."
             enableDateRangeFilter
+            defaultDateRangeDays={0}
             startDate={startDate}
             endDate={endDate}
             onDateRangeChange={({ startDate, endDate }) => {

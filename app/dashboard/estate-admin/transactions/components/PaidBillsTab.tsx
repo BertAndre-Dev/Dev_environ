@@ -26,6 +26,8 @@ type Props = {
   onPrev: () => void;
   onNext: () => void;
   onExportRequest?: () => Promise<any[]>;
+  /** Set to 0 to require manual date selection (no last-N-days default). */
+  defaultDateRangeDays?: number;
 };
 
 export function PaidBillsTab({
@@ -48,6 +50,7 @@ export function PaidBillsTab({
   onPrev,
   onNext,
   onExportRequest,
+  defaultDateRangeDays,
 }: Readonly<Props>) {
   return (
     <>
@@ -67,6 +70,7 @@ export function PaidBillsTab({
           data={data}
           emptyMessage={emptyMessage}
           enableDateRangeFilter
+          defaultDateRangeDays={defaultDateRangeDays}
           startDate={startDate}
           endDate={endDate}
           onDateRangeChange={onDateRangeChange}

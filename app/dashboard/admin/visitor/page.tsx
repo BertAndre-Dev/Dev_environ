@@ -32,21 +32,9 @@ import {
   type QrCodeVisitor,
 } from "@/components/resident/visitor-management/VisitorQrCodeModal";
 import { formatAddressEntryLabel } from "@/lib/address";
+import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 
 const PAGE_LIMIT = 10;
-
-/** Example dates for empty inputs (display only; not sent until the user picks a range). */
-function getDateRangePlaceholders(): { start: string; end: string } {
-  const now = new Date();
-  const start = new Date(now);
-  start.setUTCDate(start.getUTCDate() - 30);
-  const toIso = (d: Date) =>
-    new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
-      .toISOString()
-      .slice(0, 10);
-  return { start: toIso(start), end: toIso(now) };
-}
-
 const DATE_RANGE_PLACEHOLDERS = getDateRangePlaceholders();
 
 export default function AdminVisitorManagement() {

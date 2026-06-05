@@ -475,6 +475,7 @@ export default function SuperAdminCompanyPage() {
               setPage(1);
             }}
             enableDateRangeFilter
+            defaultDateRangeDays={0}
             startDate={startDate}
             endDate={endDate}
             onDateRangeChange={({ startDate, endDate }) => {

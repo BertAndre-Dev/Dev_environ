@@ -740,6 +740,7 @@ export default function TransactionPage() {
             columns={vendsColumns}
             data={vendsData}
             emptyMessage={loadingVends ? "Loading vends..." : "No vends found."}
+            defaultDateRangeDays={0}
             startDate={vendsStartDate}
             endDate={vendsEndDate}
             onDateRangeChange={({
@@ -785,6 +786,7 @@ export default function TransactionPage() {
         }
         paidBills={
           <PaidBillsTab
+            defaultDateRangeDays={0}
             frequency={filterFrequency}
             bill={filterBill}
             status={filterBillStatus}

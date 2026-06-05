@@ -526,6 +526,7 @@ export default function SuperAdminUserPage() {
             data={allSuperAdminUsers}
             emptyMessage="No users found for this estate"
             enableDateRangeFilter
+            defaultDateRangeDays={0}
             startDate={startDate}
             endDate={endDate}
             onDateRangeChange={({ startDate, endDate }) => {

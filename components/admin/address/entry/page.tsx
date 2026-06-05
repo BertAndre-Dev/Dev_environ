@@ -394,6 +394,7 @@ export default function EntryPage() {
           data={mappedEntries}
           emptyMessage={loading ? "Loading entries..." : "No entries found."}
           enableDateRangeFilter
+          defaultDateRangeDays={0}
           startDate={startDate}
           endDate={endDate}
           onDateRangeChange={({ startDate, endDate }) => {

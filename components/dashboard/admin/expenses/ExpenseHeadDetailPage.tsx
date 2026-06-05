@@ -363,6 +363,7 @@ export default function ExpenseHeadDetailPage() {
         startDate={startDate}
         endDate={endDate}
         search={search}
+        defaultDateRangeDays={0}
         onStartDateChange={(v) => setStartDate(v)}
         onEndDateChange={(v) => setEndDate(v)}
         onResetDates={() => {

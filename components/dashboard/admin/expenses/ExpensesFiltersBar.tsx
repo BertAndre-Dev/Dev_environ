@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 
 import { Card } from "@/components/ui/card";
+import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,6 +19,7 @@ export interface ExpensesFiltersBarProps {
   onEndDateChange: (value: string) => void;
   onResetDates: () => void;
   onSearchChange: (value: string) => void;
+  defaultDateRangeDays?: number;
 }
 
 export function ExpensesFiltersBar({
@@ -28,10 +30,14 @@ export function ExpensesFiltersBar({
   onEndDateChange,
   onResetDates,
   onSearchChange,
+  defaultDateRangeDays = 30,
 }: Readonly<ExpensesFiltersBarProps>) {
   const didInitDefaultRangeRef = useRef(false);
+  const exampleDateRange = useMemo(() => getDateRangePlaceholders(), []);
+  const showExamplePlaceholders = !defaultDateRangeDays;
 
   useEffect(() => {
+    if (!defaultDateRangeDays) return;
     if (didInitDefaultRangeRef.current) return;
     if (startDate || endDate) return;
 
@@ -40,7 +46,7 @@ export function ExpensesFiltersBar({
     const now = new Date();
     const end = new Date(now);
     const start = new Date(now);
-    start.setUTCDate(start.getUTCDate() - 30);
+    start.setUTCDate(start.getUTCDate() - defaultDateRangeDays);
 
     const toIso = (d: Date) =>
       new Date(
@@ -51,7 +57,13 @@ export function ExpensesFiltersBar({
 
     onStartDateChange(toIso(start));
     onEndDateChange(toIso(end));
-  }, [startDate, endDate, onStartDateChange, onEndDateChange]);
+  }, [
+    defaultDateRangeDays,
+    startDate,
+    endDate,
+    onStartDateChange,
+    onEndDateChange,
+  ]);
 
   return (
     <Card className="mt-0 p-4">
@@ -66,6 +78,9 @@ export function ExpensesFiltersBar({
               startDate={startDate}
               endDate={endDate}
               onStartChange={onStartDateChange}
+              placeholder={
+                showExamplePlaceholders ? exampleDateRange.start : undefined
+              }
             />
           </div>
           <div className="flex items-center gap-2">
@@ -77,6 +92,9 @@ export function ExpensesFiltersBar({
               startDate={startDate}
               endDate={endDate}
               onEndChange={onEndDateChange}
+              placeholder={
+                showExamplePlaceholders ? exampleDateRange.end : undefined
+              }
             />
           </div>
           {startDate && endDate && (

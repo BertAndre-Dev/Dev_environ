@@ -12,11 +12,17 @@ import {
 import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import BillsOverview from "@/components/charts/bills-overview";
+import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
 import TransactionsChart from "@/components/charts/transactions-chart";
+import type { EnergyConsumptionPeriod } from "@/lib/energy-consumption-chart";
 import SwitchAddress from "@/components/resident/switch-address/page";
 import { normalizeAddresses, type AddressOption } from "@/lib/address";
+import { parseResidentEstate } from "@/app/dashboard/resident/asset/lib/estate";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
-import { getMeterByAddress } from "@/redux/slice/resident/meter-mgt/meter-mgt";
+import {
+  getMeterByAddress,
+  getResidentEnergyConsumptionChart,
+} from "@/redux/slice/resident/meter-mgt/meter-mgt";
 import {
   getResidentDashboardBills,
   getResidentDashboardTransactions,
@@ -33,6 +39,7 @@ const formatNaira = (n: number) => `N${Number(n).toLocaleString()}`;
 export default function ResidentDashboard() {
   const dispatch = useDispatch<AppDispatch>();
   const [userId, setUserId] = useState<string | null>(null);
+  const [estateId, setEstateId] = useState<string | null>(null);
   const [addressOptions, setAddressOptions] = useState<AddressOption[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
 
@@ -60,6 +67,11 @@ export default function ResidentDashboard() {
         if (!user) return;
         const uId = user.id ?? "";
         setUserId(uId);
+
+        const estate = parseResidentEstate(
+          user as Record<string, unknown>,
+        );
+        setEstateId(estate?.id ?? null);
 
         const addresses = normalizeAddresses(user);
         if (addresses.length === 0) {
@@ -112,58 +124,80 @@ export default function ResidentDashboard() {
     });
   }, [meter?.meterNumber, dispatch]);
 
+  const [energyPeriod, setEnergyPeriod] =
+    useState<EnergyConsumptionPeriod>("weekly");
+
+  useEffect(() => {
+    if (!estateId || !selectedAddressId) return;
+    dispatch(
+      getResidentEnergyConsumptionChart({
+        estateId,
+        addressId: selectedAddressId,
+        period: energyPeriod,
+      }),
+    ).catch((err: unknown) => {
+      const e = err as { message?: string };
+      toast.error(e?.message ?? "Failed to load energy consumption chart.");
+    });
+  }, [estateId, selectedAddressId, energyPeriod, dispatch]);
+
+  const energyConsumptionData =
+    residentMeterState?.energyConsumptionChart ?? [];
+  const energyChartLoading =
+    residentMeterState?.getEnergyConsumptionChartState === "isLoading";
+
   const handleAddressChange = useCallback((addressId: string) => {
     setSelectedAddressId(addressId);
   }, []);
 
-  const stats = useMemo(() => {
-    const totalBills = bills.length;
-    const paidBills = bills.filter(
-      (b: ResidentBillItem) =>
-        (b.status ?? "").toLowerCase() === "paid" ||
-        Number(b.amountPaid ?? 0) > 0,
-    ).length;
-    const totalTx = transactions.length;
-    const totalTxAmount = transactions.reduce(
-      (sum: number, t: ResidentTransactionItem) => sum + Number(t.amount ?? 0),
-      0,
-    );
-    const totalVend = vending.length;
-    const totalVendAmount = vending.reduce(
-      (sum: number, v: ResidentVendItem) => sum + Number(v.amount ?? 0),
-      0,
-    );
-    return [
-      {
-        title: "My bills",
-        value: String(totalBills),
-        change: `${paidBills} paid`,
-        icon: FileText,
-        color: "bg-[#E6F4EA] text-[#007A4D]",
-      },
-      {
-        title: "Transactions",
-        value: String(totalTx),
-        change: formatNaira(totalTxAmount),
-        icon: DollarSign,
-        color: "bg-[#D0DFF280] text-[#0150AC]",
-      },
-      {
-        title: "Vending",
-        value: String(totalVend),
-        change: formatNaira(totalVendAmount),
-        icon: Zap,
-        color: "bg-[#FEE6D480] text-[#B45309]",
-      },
-      {
-        title: "Trend",
-        change: "This period",
-        value: totalBills + totalTx + totalVend ? "Active" : "—",
-        icon: TrendingUp,
-        color: "bg-[#FFF4E5] text-[#FF8A00]",
-      },
-    ];
-  }, [bills, transactions, vending]);
+  // const stats = useMemo(() => {
+  //   const totalBills = bills.length;
+  //   const paidBills = bills.filter(
+  //     (b: ResidentBillItem) =>
+  //       (b.status ?? "").toLowerCase() === "paid" ||
+  //       Number(b.amountPaid ?? 0) > 0,
+  //   ).length;
+  //   const totalTx = transactions.length;
+  //   const totalTxAmount = transactions.reduce(
+  //     (sum: number, t: ResidentTransactionItem) => sum + Number(t.amount ?? 0),
+  //     0,
+  //   );
+  //   const totalVend = vending.length;
+  //   const totalVendAmount = vending.reduce(
+  //     (sum: number, v: ResidentVendItem) => sum + Number(v.amount ?? 0),
+  //     0,
+  //   );
+  //   return [
+  //     {
+  //       title: "My bills",
+  //       value: String(totalBills),
+  //       change: `${paidBills} paid`,
+  //       icon: FileText,
+  //       color: "bg-[#E6F4EA] text-[#007A4D]",
+  //     },
+  //     {
+  //       title: "Transactions",
+  //       value: String(totalTx),
+  //       change: formatNaira(totalTxAmount),
+  //       icon: DollarSign,
+  //       color: "bg-[#D0DFF280] text-[#0150AC]",
+  //     },
+  //     {
+  //       title: "Vending",
+  //       value: String(totalVend),
+  //       change: formatNaira(totalVendAmount),
+  //       icon: Zap,
+  //       color: "bg-[#FEE6D480] text-[#B45309]",
+  //     },
+  //     {
+  //       title: "Trend",
+  //       change: "This period",
+  //       value: totalBills + totalTx + totalVend ? "Active" : "—",
+  //       icon: TrendingUp,
+  //       color: "bg-[#FFF4E5] text-[#FF8A00]",
+  //     },
+  //   ];
+  // }, [bills, transactions, vending]);
 
   const billsChartData = useMemo(() => {
     const byStatus: Record<string, number> = {};
@@ -236,7 +270,7 @@ export default function ResidentDashboard() {
         className="p-4"
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
@@ -257,7 +291,21 @@ export default function ResidentDashboard() {
             </Card>
           );
         })}
-      </div>
+      </div> */}
+
+      <EnergyConsumptionOverTimeCard
+        data={energyConsumptionData}
+        loading={energyChartLoading}
+        period={energyPeriod}
+        onPeriodChange={setEnergyPeriod}
+        emptyMessage={
+          !estateId
+            ? "Your account is not linked to an estate."
+            : !selectedAddressId
+              ? "Select an address to view energy consumption."
+              : "No vending data for this period yet."
+        }
+      />
 
       <div className="space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

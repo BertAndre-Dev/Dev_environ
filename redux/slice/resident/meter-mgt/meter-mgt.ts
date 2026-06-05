@@ -1,18 +1,21 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import {
+  mapVendAnalyticsToEnergyConsumption,
+  type EnergyConsumptionDataPoint,
+  type EnergyConsumptionPeriod,
+  type VendAnalyticsChartResponse,
+} from "@/lib/energy-consumption-chart";
 
 interface VendData {
-    meterNumber: string;
-    amount: number;
-    walletId: string;
-};
-
+  meterNumber: string;
+  amount: number;
+  walletId: string;
+}
 
 interface ResidentMeterData {
-    meterNumber: string;
-};
-
-
+  meterNumber: string;
+}
 
 /** POST /api/v1/meters/tariff — body: { meterNumber: string } */
 export const getMeterTariff = createAsyncThunk(
@@ -30,35 +33,29 @@ export const getMeterTariff = createAsyncThunk(
 );
 
 export const getMeterByAddress = createAsyncThunk(
-    "meter-mgt/getMeterByAddress",
-    async (
-        {
-            addressId,
-        }: { addressId: string},
-        { rejectWithValue }
-    ) => {
-        try {
-            const res = await axiosInstance.get(
-                `/api/v1/meters/address/${addressId}`
-            );
-            return res.data;
-        } catch (error: any) {
-            return rejectWithValue(error.response?.data);
-        }
+  "meter-mgt/getMeterByAddress",
+  async ({ addressId }: { addressId: string }, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.get(
+        `/api/v1/meters/address/${addressId}`,
+      );
+      return res.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data);
     }
+  },
 );
 
-
 export const vendPower = createAsyncThunk(
-    "meter-mgt/vendPower",
-    async (data: VendData, { rejectWithValue }) => {
-        try {
-            const res = await axiosInstance.post("/api/v1/meters/vend", data);
-            return res.data;
-        } catch (error: any) {
-            return rejectWithValue(error.response?.data);
-        }
+  "meter-mgt/vendPower",
+  async (data: VendData, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.post("/api/v1/meters/vend", data);
+      return res.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data);
     }
+  },
 );
 export const disconnectMeter = createAsyncThunk(
   "meter-mgt/disconnectMeter",
@@ -87,7 +84,6 @@ export const reconnectMeter = createAsyncThunk(
     }
   },
 );
-
 
 export type MeterUsageRange =
   | "daily"
@@ -148,8 +144,7 @@ export const getMeterUsage = createAsyncThunk(
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
       return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to fetch meter usage.",
+        message: err?.response?.data?.message || "Failed to fetch meter usage.",
       });
     }
   },
@@ -172,10 +167,7 @@ export interface VendingStatsByAddressResponse {
 /** GET /analytics/meters/vending/by-address?addressId= */
 export const getVendingStatsByAddress = createAsyncThunk(
   "meter-mgt/getVendingStatsByAddress",
-  async (
-    { addressId }: { addressId: string },
-    { rejectWithValue },
-  ) => {
+  async ({ addressId }: { addressId: string }, { rejectWithValue }) => {
     try {
       const res = await axiosInstance.get<VendingStatsByAddressResponse>(
         "/analytics/meters/vending/by-address",
@@ -186,8 +178,86 @@ export const getVendingStatsByAddress = createAsyncThunk(
       const err = error as { response?: { data?: { message?: string } } };
       return rejectWithValue({
         message:
+          err?.response?.data?.message || "Failed to fetch vending statistics.",
+      });
+    }
+  },
+);
+
+export type { VendAnalyticsChartResponse };
+
+/** GET /api/v1/meters/estate/{estateId}/vend-analytics/chart */
+export const getEstateVendAnalyticsChart = createAsyncThunk(
+  "meter-mgt/getEstateVendAnalyticsChart",
+  async (
+    {
+      estateId,
+      addressId,
+      period = "weekly",
+      metric,
+    }: {
+      estateId: string;
+      addressId: string;
+      period?: EnergyConsumptionPeriod | "yearly";
+      metric: "value" | "unit";
+    },
+    { rejectWithValue },
+  ) => {
+    try {
+      const res = await axiosInstance.get<VendAnalyticsChartResponse>(
+        `/api/v1/meters/estate/${estateId}/vend-analytics/chart`,
+        { params: { period, metric, addressId } },
+      );
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue({
+        message:
           err?.response?.data?.message ||
-          "Failed to fetch vending statistics.",
+          "Failed to fetch vend analytics chart.",
+      });
+    }
+  },
+);
+
+/** Fetches amount + units series and merges for the energy consumption chart. */
+export const getResidentEnergyConsumptionChart = createAsyncThunk(
+  "meter-mgt/getResidentEnergyConsumptionChart",
+  async (
+    {
+      estateId,
+      addressId,
+      period = "weekly",
+    }: {
+      estateId: string;
+      addressId: string;
+      period?: EnergyConsumptionPeriod;
+    },
+    { rejectWithValue },
+  ) => {
+    try {
+      const [amountRes, unitsRes] = await Promise.all([
+        axiosInstance.get<VendAnalyticsChartResponse>(
+          `/api/v1/meters/estate/${estateId}/vend-analytics/chart`,
+          { params: { period, metric: "value", addressId } },
+        ),
+        axiosInstance.get<VendAnalyticsChartResponse>(
+          `/api/v1/meters/estate/${estateId}/vend-analytics/chart`,
+          { params: { period, metric: "unit", addressId } },
+        ),
+      ]);
+
+      return mapVendAnalyticsToEnergyConsumption(
+        amountRes.data,
+        unitsRes.data,
+        addressId,
+      ) satisfies EnergyConsumptionDataPoint[];
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ||
+          "Failed to fetch energy consumption chart.",
       });
     }
   },
@@ -196,18 +266,23 @@ export const getVendingStatsByAddress = createAsyncThunk(
 export const getMeterVendHistory = createAsyncThunk(
   "meter-mgt/getMeterVendHistory",
   async (
-    { meterNumber, page = 1, limit = 10 }: { meterNumber: string; page?: number; limit?: number },
-    { rejectWithValue }
+    {
+      meterNumber,
+      page = 1,
+      limit = 10,
+    }: { meterNumber: string; page?: number; limit?: number },
+    { rejectWithValue },
   ) => {
     try {
       const res = await axiosInstance.get(
-        `/api/v1/meters/vend-history/${meterNumber}?page=${page}&limit=${limit}`
+        `/api/v1/meters/vend-history/${meterNumber}?page=${page}&limit=${limit}`,
       );
       return res.data;
     } catch (error: any) {
       return rejectWithValue({
-        message: error?.response?.data?.message || "Failed to fetch vend history",
+        message:
+          error?.response?.data?.message || "Failed to fetch vend history",
       });
     }
-  }
+  },
 );

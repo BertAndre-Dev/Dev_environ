@@ -7,9 +7,11 @@ import {
   disconnectMeter,
   getMeterVendHistory,
   getVendingStatsByAddress,
+  getResidentEnergyConsumptionChart,
   type MeterUsageData,
   type VendingStatsByAddressData,
 } from "./meter-mgt";
+import type { EnergyConsumptionDataPoint } from "@/lib/energy-consumption-chart";
 
 interface VendorData {
   name: string;
@@ -103,9 +105,11 @@ export interface ResidentMeterState {
   disconnectMeterState: "idle" | "isLoading" | "succeeded" | "failed";
   getMeterVendHistoryState: "idle" | "isLoading" | "succeeded" | "failed";
   getVendingStatsByAddressState: "idle" | "isLoading" | "succeeded" | "failed";
+  getEnergyConsumptionChartState: "idle" | "isLoading" | "succeeded" | "failed";
   status: "idle" | "isLoading" | "succeeded" | "failed";
   residentMeter: ResidentMeterData | null;
   meterUsage: MeterUsageData | null;
+  energyConsumptionChart: EnergyConsumptionDataPoint[];
   vendingStatsByAddress: VendingStatsByAddressData | null;
   allResidentMeters: ResidentMeterResponse | null;
   meterVendHistory: MeterVendHistoryResponse | null;
@@ -120,9 +124,11 @@ const initialState: ResidentMeterState = {
   disconnectMeterState: "idle",
   getMeterVendHistoryState: "idle",
   getVendingStatsByAddressState: "idle",
+  getEnergyConsumptionChartState: "idle",
   status: "idle",
   residentMeter: null,
   meterUsage: null,
+  energyConsumptionChart: [],
   vendingStatsByAddress: null,
   allResidentMeters: null,
   meterVendHistory: null,
@@ -146,6 +152,7 @@ const residentMeterSlice = createSlice({
       .addCase(getMeterByAddress.pending, (state) => {
         state.getMeterByAddressState = "isLoading";
         state.meterUsage = null;
+        state.energyConsumptionChart = [];
       })
       .addCase(getMeterByAddress.fulfilled, (state, action) => {
         state.getMeterByAddressState = "succeeded";
@@ -202,6 +209,24 @@ const residentMeterSlice = createSlice({
         state.status = "failed";
         state.error = action.error.message || "Failed to fetch bills for estate";
     });
+
+    builder
+      .addCase(getResidentEnergyConsumptionChart.pending, (state) => {
+        state.getEnergyConsumptionChartState = "isLoading";
+      })
+      .addCase(getResidentEnergyConsumptionChart.fulfilled, (state, action) => {
+        state.getEnergyConsumptionChartState = "succeeded";
+        state.energyConsumptionChart = action.payload ?? [];
+      })
+      .addCase(getResidentEnergyConsumptionChart.rejected, (state, action) => {
+        state.getEnergyConsumptionChartState = "failed";
+        state.energyConsumptionChart = [];
+        const apiMessage = (action.payload as { message?: string } | null)?.message;
+        state.error =
+          apiMessage ||
+          action.error.message ||
+          "Failed to fetch energy consumption chart";
+      });
 
     builder
       .addCase(getVendingStatsByAddress.pending, (state) => {

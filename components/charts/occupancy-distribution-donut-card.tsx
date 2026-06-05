@@ -154,7 +154,7 @@ export function OccupancyDistributionDonutCard({
   return (
     <Card
       className={cn(
-        "mt-0 gap-0 overflow-hidden rounded-xl border border-border bg-card p-0 shadow-sm",
+        "mt-0 gap-0 overflow-hidden rounded-xl border border-border bg-card p-0 shadow-sm ",
         className,
       )}
     >
@@ -164,7 +164,7 @@ export function OccupancyDistributionDonutCard({
         </h2>
       </div>
 
-      <div className="px-6 py-6">
+      <div className="px-6 py-6 flex flex-col items-center justify-center">
         {loading ? (
           <div className="flex h-[220px] items-center justify-center text-sm text-muted-foreground">
             Loading…

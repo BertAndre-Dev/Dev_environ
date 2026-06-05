@@ -13,7 +13,10 @@ import {
 import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import BillsOverview from "@/components/charts/bills-overview";
+import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
+import { TransactionSummaryCard } from "@/components/charts/transaction-summary-card";
 import TransactionsChart from "@/components/charts/transactions-chart";
+import type { EnergyConsumptionPeriod } from "@/lib/energy-consumption-chart";
 import MeterStatusPie from "@/components/charts/meter-status-pie";
 import MeterTrendChart from "@/components/charts/meter-trend-chart";
 import {
@@ -21,8 +24,16 @@ import {
   type OccupancyDistributionData,
 } from "@/components/charts/occupancy-distribution-donut-card";
 import { mapResidentTypeBreakdownToChartData } from "@/lib/resident-type-breakdown-chart";
-import { extractEstateIdFromUser, extractEstateNameFromUser } from "@/lib/user-id";
+import {
+  extractEstateIdFromUser,
+  extractEstateNameFromUser,
+} from "@/lib/user-id";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
+import {
+  getAdminEnergyConsumptionAddressOptions,
+  getAdminEnergyConsumptionChart,
+} from "@/redux/slice/admin/energy-consumption/admin-energy-consumption";
+import { getAdminTransactionSummary } from "@/redux/slice/admin/transaction-summary/admin-transaction-summary";
 import { getResidentTypeBreakdown } from "@/redux/slice/admin/user-analytics/user-analytics";
 import type { AppDispatch, RootState } from "@/redux/store";
 
@@ -39,12 +50,37 @@ export default function AdminOverview() {
   const [chartView, setChartView] = useState("bills");
   const [estateId, setEstateId] = useState<string | null>(null);
   const [estateName, setEstateName] = useState("Estate");
+  const [energyPeriod, setEnergyPeriod] =
+    useState<EnergyConsumptionPeriod>("weekly");
+  const [selectedAddressId, setSelectedAddressId] = useState("all");
 
   const { residentTypeBreakdown, residentTypeLoading } = useSelector(
     (state: RootState) => ({
       residentTypeBreakdown: state.adminUserAnalytics.residentTypeBreakdown,
       residentTypeLoading:
         state.adminUserAnalytics.residentTypeBreakdownStatus === "isLoading",
+    }),
+  );
+
+  const {
+    energyConsumptionChart,
+    energyAddressOptions,
+    energyChartLoading,
+    energyAddressOptionsLoading,
+  } = useSelector((state: RootState) => ({
+    energyConsumptionChart: state.adminEnergyConsumption.chart,
+    energyAddressOptions: state.adminEnergyConsumption.addressOptions,
+    energyChartLoading:
+      state.adminEnergyConsumption.chartStatus === "isLoading",
+    energyAddressOptionsLoading:
+      state.adminEnergyConsumption.addressOptionsStatus === "isLoading",
+  }));
+
+  const { transactionSummary, transactionSummaryLoading } = useSelector(
+    (state: RootState) => ({
+      transactionSummary: state.adminTransactionSummary.summary,
+      transactionSummaryLoading:
+        state.adminTransactionSummary.status === "isLoading",
     }),
   );
 
@@ -82,6 +118,56 @@ export default function AdminOverview() {
         typeof (err as { message?: string }).message === "string"
           ? (err as { message: string }).message
           : "Failed to load resident breakdown.";
+      toast.error(msg);
+    });
+  }, [dispatch, estateId]);
+
+  useEffect(() => {
+    if (!estateId) return;
+    dispatch(getAdminEnergyConsumptionAddressOptions({ estateId })).catch(
+      (err: unknown) => {
+        const msg =
+          err &&
+          typeof err === "object" &&
+          "message" in err &&
+          typeof (err as { message?: string }).message === "string"
+            ? (err as { message: string }).message
+            : "Failed to load address options.";
+        toast.error(msg);
+      },
+    );
+  }, [dispatch, estateId]);
+
+  useEffect(() => {
+    if (!estateId) return;
+    dispatch(
+      getAdminEnergyConsumptionChart({
+        estateId,
+        period: energyPeriod,
+        addressId: selectedAddressId,
+      }),
+    ).catch((err: unknown) => {
+      const msg =
+        err &&
+        typeof err === "object" &&
+        "message" in err &&
+        typeof (err as { message?: string }).message === "string"
+          ? (err as { message: string }).message
+          : "Failed to load energy consumption chart.";
+      toast.error(msg);
+    });
+  }, [dispatch, estateId, energyPeriod, selectedAddressId]);
+
+  useEffect(() => {
+    if (!estateId) return;
+    dispatch(getAdminTransactionSummary({ estateId })).catch((err: unknown) => {
+      const msg =
+        err &&
+        typeof err === "object" &&
+        "message" in err &&
+        typeof (err as { message?: string }).message === "string"
+          ? (err as { message: string }).message
+          : "Failed to load transaction summary.";
       toast.error(msg);
     });
   }, [dispatch, estateId]);
@@ -207,7 +293,34 @@ export default function AdminOverview() {
           loading={residentTypeLoading}
           emptyMessage="No resident data to display"
         />
+        <TransactionSummaryCard
+          data={transactionSummary}
+          loading={transactionSummaryLoading}
+          emptyMessage={
+            !estateId
+              ? "No estate linked to your account."
+              : "No transaction data to display."
+          }
+        />
       </div>
+
+      <EnergyConsumptionOverTimeCard
+        data={energyConsumptionChart}
+        loading={energyChartLoading}
+        period={energyPeriod}
+        onPeriodChange={setEnergyPeriod}
+        showAddressFilter
+        addressOptions={energyAddressOptions}
+        addressValue={selectedAddressId}
+        onAddressChange={setSelectedAddressId}
+        addressFilterLabel="Address"
+        addressFilterLoading={energyAddressOptionsLoading}
+        emptyMessage={
+          !estateId
+            ? "No estate linked to your account."
+            : "No vending data for this period yet."
+        }
+      />
 
       {/* Chart Selector */}
       <div className="space-y-4">
@@ -258,10 +371,7 @@ export default function AdminOverview() {
               title="Meter Assignment"
               data={meterAssignmentData}
             />
-            <MeterTrendChart
-              title="Meter Trend"
-              data={meterTrendData}
-            />
+            <MeterTrendChart title="Meter Trend" data={meterTrendData} />
           </div>
         )}
       </div>

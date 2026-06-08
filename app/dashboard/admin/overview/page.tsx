@@ -263,7 +263,7 @@ export default function AdminOverview() {
       </div>
 
       {/* Stats */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
@@ -282,7 +282,7 @@ export default function AdminOverview() {
             </Card>
           );
         })}
-      </div>
+      </div> */}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <OccupancyDistributionDonutCard

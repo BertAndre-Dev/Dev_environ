@@ -176,10 +176,10 @@ function FilterSelect({
 }
 
 export function EnergyConsumptionOverTimeCard({
-  title = "Energy Consumption Over Time",
+  title = "Vending Data Over Time",
   data,
   loading = false,
-  emptyMessage = "No energy consumption data to display",
+  emptyMessage = "No vending data to display",
   className,
   period: controlledPeriod,
   onPeriodChange,

@@ -304,6 +304,16 @@ export default function AdminOverview() {
         />
       </div>
 
+       <TransactionSummaryCard
+          data={transactionSummary}
+          loading={transactionSummaryLoading}
+          emptyMessage={
+            !estateId
+              ? "No estate linked to your account."
+              : "No transaction data to display."
+          }
+        />
+
       <EnergyConsumptionOverTimeCard
         data={energyConsumptionChart}
         loading={energyChartLoading}
@@ -322,59 +332,6 @@ export default function AdminOverview() {
         }
       />
 
-      {/* Chart Selector */}
-      <div className="space-y-4">
-        <Select
-          options={[
-            { label: "Bills overview", value: "bills" },
-            { label: "Transaction trend", value: "transactions" },
-            { label: "Meter", value: "meter" },
-          ]}
-          value={chartView}
-          onChange={(e) => setChartView(e.target.value)}
-          className="max-w-xs"
-        />
-
-        {/* Charts */}
-        {chartView === "bills" && (
-          <Card className="p-4">
-            <BillsOverview title="Bills" data={billsChartData} />
-          </Card>
-        )}
-
-        {chartView === "transactions" && (
-          <>
-            <TransactionsChart
-              title="Transaction trend"
-              data={transactionTrendData}
-              estateOptions={estateOptions}
-            />
-
-            <div className="grid md:grid-cols-2 gap-4 mt-4">
-              <TransactionsChart
-                title="Credit vs Debit"
-                data={transactionTypeData}
-                estateOptions={estateOptions}
-              />
-              <TransactionsChart
-                title="Charge breakdown"
-                data={chargeBreakdownData}
-                estateOptions={estateOptions}
-              />
-            </div>
-          </>
-        )}
-
-        {chartView === "meter" && (
-          <div className="grid md:grid-cols-2 gap-6">
-            <MeterStatusPie
-              title="Meter Assignment"
-              data={meterAssignmentData}
-            />
-            <MeterTrendChart title="Meter Trend" data={meterTrendData} />
-          </div>
-        )}
-      </div>
     </div>
   );
 }

@@ -100,14 +100,15 @@ export interface MeterUsagePoint {
 export interface MeterUsageData {
   meterNumber: string;
   range: string;
-  source?: string;
+  source?: string | null;
   unit?: string;
-  onlineStatus?: number;
+  onlineStatus?: number | null;
   totalUsage: number;
   from?: string;
   to?: string;
   currentReading?: number;
   points: MeterUsagePoint[];
+  hint?: string;
 }
 
 export interface MeterUsageResponse {
@@ -116,13 +117,62 @@ export interface MeterUsageResponse {
   data: MeterUsageData;
 }
 
+/** Backend may return 4xx/5xx with a structured body when usage history is empty. */
+function parseMeterUsageResponse(value: unknown): MeterUsageResponse | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const data = record.data;
+  if (!data || typeof data !== "object") return null;
+  const meterData = data as Record<string, unknown>;
+  if (
+    typeof meterData.meterNumber !== "string" ||
+    !Array.isArray(meterData.points)
+  ) {
+    return null;
+  }
+
+  return {
+    success: Boolean(record.success),
+    message:
+      typeof record.message === "string"
+        ? record.message
+        : "Meter usage response",
+    data: {
+      meterNumber: meterData.meterNumber,
+      range: typeof meterData.range === "string" ? meterData.range : "",
+      source:
+        typeof meterData.source === "string" ? meterData.source : undefined,
+      unit: typeof meterData.unit === "string" ? meterData.unit : undefined,
+      onlineStatus:
+        typeof meterData.onlineStatus === "number"
+          ? meterData.onlineStatus
+          : undefined,
+      totalUsage: Number(meterData.totalUsage) || 0,
+      from: typeof meterData.from === "string" ? meterData.from : undefined,
+      to: typeof meterData.to === "string" ? meterData.to : undefined,
+      currentReading:
+        typeof meterData.currentReading === "number"
+          ? meterData.currentReading
+          : undefined,
+      points: meterData.points.map((point) => {
+        const p = point as Record<string, unknown>;
+        return {
+          time: typeof p.time === "string" ? p.time : "",
+          usageKwh: Number(p.usageKwh) || 0,
+        };
+      }),
+      hint: typeof meterData.hint === "string" ? meterData.hint : undefined,
+    },
+  };
+}
+
 /** GET /api/v1/meters/usage/{meterNumber}?range=&refresh= */
 export const getMeterUsage = createAsyncThunk(
   "meter-mgt/getMeterUsage",
   async (
     {
       meterNumber,
-      range = "yearly",
+      range = "daily",
       refresh,
     }: {
       meterNumber: string;
@@ -138,14 +188,40 @@ export const getMeterUsage = createAsyncThunk(
       }
       const res = await axiosInstance.get<MeterUsageResponse>(
         `/api/v1/meters/usage/${encodeURIComponent(meterNumber)}`,
-        { params },
+        {
+          params,
+          // API returns 500 with a JSON body when no history exists (Swagger shows this too).
+          validateStatus: (status) =>
+            (status >= 200 && status < 300) || status === 500,
+        },
       );
-      return res.data;
-    } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
+
+      const parsed =
+        parseMeterUsageResponse(res.data) ??
+        parseMeterUsageResponse(
+          (res.data as { data?: unknown } | undefined)?.data,
+        );
+      if (parsed) return parsed;
+
       return rejectWithValue({
-        message: err?.response?.data?.message || "Failed to fetch meter usage.",
+        message: "Unexpected meter usage response.",
       });
+    } catch (error: unknown) {
+      const err = error as {
+        response?: { data?: unknown; status?: number };
+      };
+      const parsed = parseMeterUsageResponse(err?.response?.data);
+      if (parsed) return parsed;
+
+      const message =
+        err?.response?.data &&
+        typeof err.response.data === "object" &&
+        "message" in err.response.data &&
+        typeof (err.response.data as { message?: string }).message === "string"
+          ? (err.response.data as { message: string }).message
+          : "Failed to fetch meter usage.";
+
+      return rejectWithValue({ message });
     }
   },
 );

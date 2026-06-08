@@ -58,7 +58,7 @@ export default function ResidentMeter() {
     null,
   );
   const [walletId, setWalletId] = useState<string | null>(null);
-  const [usageRange, setUsageRange] = useState<MeterUsageRange>("yearly");
+  const [usageRange, setUsageRange] = useState<MeterUsageRange>("daily");
   const { meterVendHistory, pagination, loading } = useSelector(
     (state: RootState) => {
       const vendState = state.residentMeter as any;
@@ -77,6 +77,9 @@ export default function ResidentMeter() {
   );
   const meterUsage = useSelector(
     (state: RootState) => state.residentMeter.meterUsage,
+  );
+  const meterUsageMessage = useSelector(
+    (state: RootState) => state.residentMeter.meterUsageMessage,
   );
   const meterUsageLoading =
     useSelector(
@@ -398,7 +401,9 @@ export default function ResidentMeter() {
               ? "Add an address to your account to see power usage."
               : !meter?.meterNumber
                 ? "No meter linked to this address."
-                : "No power usage data for this period. The meter may be offline or have no history yet."
+                : meterUsageMessage ||
+                  meterUsage?.hint ||
+                  "No power usage data for this period. The meter may be offline or have no history yet."
           }
         />
       </div>

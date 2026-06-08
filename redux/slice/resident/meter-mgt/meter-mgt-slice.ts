@@ -109,6 +109,7 @@ export interface ResidentMeterState {
   status: "idle" | "isLoading" | "succeeded" | "failed";
   residentMeter: ResidentMeterData | null;
   meterUsage: MeterUsageData | null;
+  meterUsageMessage: string | null;
   energyConsumptionChart: EnergyConsumptionDataPoint[];
   vendingStatsByAddress: VendingStatsByAddressData | null;
   allResidentMeters: ResidentMeterResponse | null;
@@ -128,6 +129,7 @@ const initialState: ResidentMeterState = {
   status: "idle",
   residentMeter: null,
   meterUsage: null,
+  meterUsageMessage: null,
   energyConsumptionChart: [],
   vendingStatsByAddress: null,
   allResidentMeters: null,
@@ -152,6 +154,7 @@ const residentMeterSlice = createSlice({
       .addCase(getMeterByAddress.pending, (state) => {
         state.getMeterByAddressState = "isLoading";
         state.meterUsage = null;
+        state.meterUsageMessage = null;
         state.energyConsumptionChart = [];
       })
       .addCase(getMeterByAddress.fulfilled, (state, action) => {
@@ -162,6 +165,7 @@ const residentMeterSlice = createSlice({
         state.getMeterByAddressState = "failed";
         state.residentMeter = null;
         state.meterUsage = null;
+        state.meterUsageMessage = null;
         const apiMessage = (action.payload as { message?: string } | null)?.message;
         state.error = apiMessage || action.error.message || "Failed to fetch meter";
       });
@@ -173,10 +177,12 @@ const residentMeterSlice = createSlice({
       .addCase(getMeterUsage.fulfilled, (state, action) => {
         state.getMeterUsageState = "succeeded";
         state.meterUsage = action.payload?.data ?? null;
+        state.meterUsageMessage = action.payload?.message ?? null;
       })
       .addCase(getMeterUsage.rejected, (state, action) => {
         state.getMeterUsageState = "failed";
         state.meterUsage = null;
+        state.meterUsageMessage = null;
         const apiMessage = (action.payload as { message?: string } | null)?.message;
         state.error = apiMessage || action.error.message || "Failed to fetch meter usage";
       });

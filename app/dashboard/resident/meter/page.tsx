@@ -1,13 +1,24 @@
-'use client';
+"use client";
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
+import { PowerUsageCard } from "@/components/charts/power-usage-card";
+import { mapMeterUsageToPowerUsage } from "@/lib/power-usage-chart";
 import Modal from "@/components/modal/page";
 import { toast } from "react-toastify";
 import { RootState, AppDispatch } from "@/redux/store";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { getMeterByAddress, reconnectMeter, disconnectMeter, getMeterVendHistory } from "@/redux/slice/resident/meter-mgt/meter-mgt";
+import {
+  getMeterByAddress,
+  reconnectMeter,
+  disconnectMeter,
+  getMeterVendHistory,
+  getMeterUsage,
+  getVendingStatsByAddress,
+  type MeterUsageRange,
+} from "@/redux/slice/resident/meter-mgt/meter-mgt";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { normalizeAddresses } from "@/lib/address";
 import SwitchAddress from "@/components/resident/switch-address/page";
@@ -17,24 +28,74 @@ import type { EnergyListItem } from "@/redux/slice/resident/meter-mgt/meter-mgt-
 import Loader from "@/components/ui/Loader";
 import { CopyButton } from "@/components/ui/copy-button";
 
+const USAGE_RANGE_OPTIONS: { label: string; value: MeterUsageRange }[] = [
+  { label: "Daily", value: "daily" },
+  { label: "Weekly", value: "weekly" },
+  { label: "Monthly", value: "monthly" },
+  { label: "Yearly", value: "yearly" },
+];
+
+function formatMeterBalance(balance: number | null | undefined): string {
+  const n = Number(balance);
+  if (!Number.isFinite(n)) return "0";
+  return n.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+}
+
+function formatPurchasedAmount(amount: number): string {
+  return `₦${amount.toLocaleString()}`;
+}
+
 export default function ResidentMeter() {
   const dispatch = useDispatch<AppDispatch>();
   const [open, setOpen] = useState(false);
-  const [addressOptions, setAddressOptions] = useState<{ id: string; data?: Record<string, string> }[]>([]);
-  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [addressOptions, setAddressOptions] = useState<
+    { id: string; data?: Record<string, string> }[]
+  >([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
+    null,
+  );
   const [walletId, setWalletId] = useState<string | null>(null);
-  const { meterVendHistory, pagination, loading } = useSelector((state: RootState) => {
-    const vendState = state.residentMeter as any
-    const data = vendState.meterVendHistory?.data || []
-    const pagination = vendState.meterVendHistory?.pagination || {}
-    return {
-      meterVendHistory: Array.isArray(data) ? data : [],
-      pagination,
-      loading: vendState.loading || false,
-    }
-  })
+  const [usageRange, setUsageRange] = useState<MeterUsageRange>("daily");
+  const { meterVendHistory, pagination, loading } = useSelector(
+    (state: RootState) => {
+      const vendState = state.residentMeter as any;
+      const data = vendState.meterVendHistory?.data || [];
+      const pagination = vendState.meterVendHistory?.pagination || {};
+      return {
+        meterVendHistory: Array.isArray(data) ? data : [],
+        pagination,
+        loading: vendState.loading || false,
+      };
+    },
+  );
 
-  const meter = useSelector((state: RootState) => state.residentMeter.residentMeter);
+  const meter = useSelector(
+    (state: RootState) => state.residentMeter.residentMeter,
+  );
+  const meterUsage = useSelector(
+    (state: RootState) => state.residentMeter.meterUsage,
+  );
+  const meterUsageMessage = useSelector(
+    (state: RootState) => state.residentMeter.meterUsageMessage,
+  );
+  const meterUsageLoading =
+    useSelector(
+      (state: RootState) => state.residentMeter.getMeterUsageState,
+    ) === "isLoading";
+  const meterLoading =
+    useSelector(
+      (state: RootState) => state.residentMeter.getMeterByAddressState,
+    ) === "isLoading";
+  const vendingStats = useSelector(
+    (state: RootState) => state.residentMeter.vendingStatsByAddress,
+  );
+  const vendingStatsLoading =
+    useSelector(
+      (state: RootState) => state.residentMeter.getVendingStatsByAddressState,
+    ) === "isLoading";
 
   // Load user and normalize addresses (addressIds for owners, addressId for tenants)
   useEffect(() => {
@@ -67,7 +128,9 @@ export default function ResidentMeter() {
     if (!selectedAddressId) return;
     (async () => {
       try {
-        await dispatch(getMeterByAddress({ addressId: selectedAddressId })).unwrap();
+        await dispatch(
+          getMeterByAddress({ addressId: selectedAddressId }),
+        ).unwrap();
       } catch (error: any) {
         const message = error?.message ?? "Failed to fetch meter";
         toast.error(message);
@@ -75,6 +138,14 @@ export default function ResidentMeter() {
     })();
   }, [dispatch, selectedAddressId]);
 
+  useEffect(() => {
+    if (!selectedAddressId) return;
+    dispatch(getVendingStatsByAddress({ addressId: selectedAddressId })).catch(
+      (error: { message?: string }) => {
+        toast.error(error?.message ?? "Failed to load purchase total.");
+      },
+    );
+  }, [dispatch, selectedAddressId]);
 
   useEffect(() => {
     if (meter?.meterNumber) {
@@ -83,23 +154,59 @@ export default function ResidentMeter() {
           meterNumber: meter.meterNumber,
           page: 1,
           limit: 10,
-        })
+        }),
       );
     }
-  }, [meter?.meterNumber]);
+  }, [meter?.meterNumber, dispatch]);
 
+  useEffect(() => {
+    const meterNumber = meter?.meterNumber;
+    if (!meterNumber) return;
+    dispatch(getMeterUsage({ meterNumber, range: usageRange })).catch(
+      (error: { message?: string }) => {
+        toast.error(error?.message ?? "Failed to load power usage.");
+      },
+    );
+  }, [meter?.meterNumber, usageRange, dispatch]);
+
+  const powerUsage = useMemo(
+    () => mapMeterUsageToPowerUsage(meterUsage),
+    [meterUsage],
+  );
+
+  const powerUsageLoading =
+    Boolean(meter?.meterNumber) &&
+    (meterUsageLoading || (meterLoading && !meterUsage));
 
   const handleRefresh = async () => {
     if (!selectedAddressId) return;
     try {
-      await dispatch(getMeterByAddress({ addressId: selectedAddressId })).unwrap();
+      const tasks: Promise<unknown>[] = [
+        dispatch(getMeterByAddress({ addressId: selectedAddressId })).unwrap(),
+        dispatch(
+          getVendingStatsByAddress({ addressId: selectedAddressId }),
+        ).unwrap(),
+      ];
+      if (meter?.meterNumber) {
+        tasks.push(
+          dispatch(
+            getMeterUsage({
+              meterNumber: meter.meterNumber,
+              range: usageRange,
+              refresh: true,
+            }),
+          ).unwrap(),
+        );
+      }
+      await Promise.all(tasks);
     } catch (error: any) {
       const message = error?.message ?? "Failed to refresh meter";
       toast.error(message);
     }
   };
 
-  const handleAddressChange = (addressId: string) => setSelectedAddressId(addressId);
+  const handleAddressChange = (addressId: string) =>
+    setSelectedAddressId(addressId);
 
   const handleOpenModal = () => setOpen((prev) => !prev);
 
@@ -109,11 +216,15 @@ export default function ResidentMeter() {
     try {
       if (meter.isActive) {
         // Disconnect
-        await dispatch(disconnectMeter({ meterNumber: meter.meterNumber })).unwrap();
+        await dispatch(
+          disconnectMeter({ meterNumber: meter.meterNumber }),
+        ).unwrap();
         toast.success("Meter disconnected successfully");
       } else {
         // Reconnect
-        await dispatch(reconnectMeter({ meterNumber: meter.meterNumber })).unwrap();
+        await dispatch(
+          reconnectMeter({ meterNumber: meter.meterNumber }),
+        ).unwrap();
         toast.success("Meter reconnected successfully");
       }
       // Refresh meter data after toggling
@@ -123,7 +234,6 @@ export default function ResidentMeter() {
     }
   };
 
-
   const handleVendPageChange = (newPage: number) => {
     if (!meter?.meterNumber) return;
     dispatch(
@@ -131,7 +241,7 @@ export default function ResidentMeter() {
         meterNumber: meter.meterNumber,
         page: newPage,
         limit: Number(pagination?.limit) || 10,
-      })
+      }),
     );
   };
 
@@ -193,8 +303,6 @@ export default function ResidentMeter() {
     },
   ];
 
-
-
   return (
     <div className="space-y-6">
       <SwitchAddress
@@ -203,74 +311,140 @@ export default function ResidentMeter() {
         onChange={handleAddressChange}
       />
 
-      <Card className="p-6 shadow-md">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">My Meter</CardTitle>
-        </CardHeader>
+      <Card className="p-6 md:p-8 shadow-md">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0 shrink-0">
+            <h2 className="text-xl font-semibold tracking-tight">My Meter</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Current Energy Balance
+            </p>
+            <p className="text-4xl font-bold mt-2 tabular-nums tracking-tight">
+              {formatMeterBalance(meter?.balance)}{" "}
+              <span className="text-3xl font-bold">kWh</span>
+            </p>
+          </div>
 
-        <CardContent>
-          <div className="flex  items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Meter Balance</p>
-              <p className="text-4xl font-bold mt-1">
-                ₦{meter?.lastCredit?.toLocaleString() ?? 0}
+          <div className="flex flex-1 items-stretch rounded-xl border border-border bg-muted/40 max-w-2xl">
+            <div className="flex flex-1 flex-col justify-center p-4 text-center sm:text-left">
+              <p className="text-sm text-muted-foreground">
+                Total Energy Consumed
+              </p>
+              <p className="text-lg font-semibold tabular-nums mt-1">
+                {powerUsageLoading
+                  ? "—"
+                  : `${powerUsage.totalKwh.toLocaleString()} kWh`}
               </p>
             </div>
-
-            <div className="flex flex-col md:flex-row items-center gap-5">
-              <Button onClick={handleOpenModal} size="lg" className="w-full md:w-auto px-6">
-                Buy Power
-              </Button>
-
-              <Button 
-                onClick={handleToggleMeter} 
-                size="lg" 
-                className="w-full md:w-auto px-6 capitalize"
-                variant={meter?.isActive ? "destructive" : "default"}
-              >
-                {meter?.isActive ? "Disconnect Meter" : "Reconnect Meter"}
-              </Button>
+            <div
+              className="w-px shrink-0 self-stretch bg-border my-4"
+              aria-hidden
+            />
+            <div className="flex flex-1 flex-col justify-center p-4 text-center sm:text-left">
+              <p className="text-sm text-muted-foreground">
+                Total Amount Purchased
+              </p>
+              <p className="text-lg font-semibold tabular-nums mt-1">
+                {vendingStatsLoading
+                  ? "—"
+                  : formatPurchasedAmount(
+                      Number(vendingStats?.totalAmount) || 0,
+                    )}
+              </p>
             </div>
           </div>
-        </CardContent>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+            <Button
+              onClick={handleOpenModal}
+              size="lg"
+              className="w-full sm:w-auto px-8 text-white hover:opacity-90"
+              style={{ backgroundColor: "#0150AC" }}
+            >
+              Buy Power
+            </Button>
+            <Button
+              onClick={handleToggleMeter}
+              size="lg"
+              className="w-full sm:w-auto px-8"
+              variant={meter?.isActive ? "destructive" : "default"}
+            >
+              {meter?.isActive ? "Disconnect Meter" : "Reconnect Meter"}
+            </Button>
+          </div>
+        </div>
       </Card>
 
+      <div className="space-y-3 bg-white p-4 rounded-md">
+        {meter?.meterNumber ? (
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+            <label
+              htmlFor="meter-usage-range-select"
+              className="text-sm font-medium text-muted-foreground shrink-0"
+            >
+              Usage period
+            </label>
+            <Select
+              id="meter-usage-range-select"
+              options={USAGE_RANGE_OPTIONS}
+              value={usageRange}
+              onChange={(e) => setUsageRange(e.target.value as MeterUsageRange)}
+              className="w-full max-w-30"
+            />
+          </div>
+        ) : null}
+        <PowerUsageCard
+          data={powerUsage.points}
+          totalUsageKwh={powerUsage.totalKwh}
+          loading={powerUsageLoading}
+          emptyMessage={
+            !selectedAddressId
+              ? "Add an address to your account to see power usage."
+              : !meter?.meterNumber
+                ? "No meter linked to this address."
+                : meterUsageMessage ||
+                  meterUsage?.hint ||
+                  "No power usage data for this period. The meter may be offline or have no history yet."
+          }
+        />
+      </div>
 
       <Card className="p-4">
-          <h2 className="font-semibold mb-4">Vend History</h2>
-          <Table
-            columns={vendColumns}
-            data={meterVendHistory || []}
-            emptyMessage={
-              loading
-                ? <Loader label="Loading vend history..." />
-                : "No vend history available."
-            }
-            showPagination
-            paginationInfo={{
-              total: pagination?.total ?? meterVendHistory.length ?? 0,
-              current: Number(pagination?.page) || 1,
-              pageSize: Number(pagination?.limit) || 10,
-            }}
-            onPageChange={handleVendPageChange}
-            enableExport
-            exportFileName="meter-vend-history"
-            onExportRequest={
-              meter?.meterNumber
-                ? async () => {
-                    const res = await dispatch(
-                      getMeterVendHistory({
-                        meterNumber: meter.meterNumber,
-                        page: 1,
-                        limit: 50000,
-                      }),
-                    ).unwrap();
-                    return res?.data ?? [];
-                  }
-                : undefined
-            }
-          />
-        </Card>
+        <h2 className="font-semibold mb-4">Vend History</h2>
+        <Table
+          columns={vendColumns}
+          data={meterVendHistory || []}
+          emptyMessage={
+            loading ? (
+              <Loader label="Loading vend history..." />
+            ) : (
+              "No vend history available."
+            )
+          }
+          showPagination
+          paginationInfo={{
+            total: pagination?.total ?? meterVendHistory.length ?? 0,
+            current: Number(pagination?.page) || 1,
+            pageSize: Number(pagination?.limit) || 10,
+          }}
+          onPageChange={handleVendPageChange}
+          enableExport
+          exportFileName="meter-vend-history"
+          onExportRequest={
+            meter?.meterNumber
+              ? async () => {
+                  const res = await dispatch(
+                    getMeterVendHistory({
+                      meterNumber: meter.meterNumber,
+                      page: 1,
+                      limit: 50000,
+                    }),
+                  ).unwrap();
+                  return res?.data ?? [];
+                }
+              : undefined
+          }
+        />
+      </Card>
 
       {open && meter && walletId && selectedAddressId && (
         <Modal visible={open} onClose={handleOpenModal}>

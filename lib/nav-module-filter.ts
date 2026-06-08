@@ -1,5 +1,9 @@
 /** Sidebar labels always shown (not gated by estate modules). */
-export const NAV_ALWAYS_VISIBLE_LABELS = new Set(["Settings", "Logout"]);
+export const NAV_ALWAYS_VISIBLE_LABELS = new Set([
+  "Overview",
+  "Settings",
+  "Logout",
+]);
 
 /** Security role pages that are not estate modules. */
 export const NAV_SECURITY_STATIC_LABELS = new Set(["Activity Log"]);

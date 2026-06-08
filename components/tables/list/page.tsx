@@ -7,6 +7,7 @@ import {
   IsoLinkedRangeStart,
 } from "@/components/ui/iso-date-picker";
 import { Download } from "lucide-react";
+import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 
 interface Column<T> {
   key: keyof T | string;
@@ -173,6 +174,13 @@ export default function Table<T extends { id?: string }>({
   const effectiveStartDate = isStartControlled ? startDate ?? "" : internalStartDate;
   const effectiveEndDate = isEndControlled ? endDate ?? "" : internalEndDate;
   const showDateReset = Boolean(effectiveStartDate && effectiveEndDate);
+  const exampleDateRange = React.useMemo(() => getDateRangePlaceholders(), []);
+  const effectiveStartPlaceholder =
+    startDatePlaceholder ??
+    (!defaultDateRangeDays ? exampleDateRange.start : undefined);
+  const effectiveEndPlaceholder =
+    endDatePlaceholder ??
+    (!defaultDateRangeDays ? exampleDateRange.end : undefined);
 
   React.useEffect(() => {
     if (!enableDateRangeFilter) return;
@@ -230,7 +238,7 @@ export default function Table<T extends { id?: string }>({
                     });
                   }}
                   ariaLabel="Start date"
-                  placeholder={startDatePlaceholder}
+                  placeholder={effectiveStartPlaceholder}
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -252,7 +260,7 @@ export default function Table<T extends { id?: string }>({
                     });
                   }}
                   ariaLabel="End date"
-                  placeholder={endDatePlaceholder}
+                  placeholder={effectiveEndPlaceholder}
                 />
               </div>
               {showDateReset && (

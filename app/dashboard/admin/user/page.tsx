@@ -26,6 +26,7 @@ import {
   ESTATE_USER_ROLE_FILTER_OPTIONS,
   type EstateUserRoleFilter,
 } from "@/lib/estate-user-roles";
+import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 
 interface AdminUserData {
   id?: string;
@@ -50,18 +51,6 @@ interface AdminUserData {
 interface EstateOption {
   label: string;
   value: string;
-}
-
-/** Example dates for empty inputs (display only; not sent until the user picks a range). */
-function getDateRangePlaceholders(): { start: string; end: string } {
-  const now = new Date();
-  const start = new Date(now);
-  start.setUTCDate(start.getUTCDate() - 30);
-  const toIso = (d: Date) =>
-    new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
-      .toISOString()
-      .slice(0, 10);
-  return { start: toIso(start), end: toIso(now) };
 }
 
 const DATE_RANGE_PLACEHOLDERS = getDateRangePlaceholders();

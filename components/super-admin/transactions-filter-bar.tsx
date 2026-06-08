@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { Calendar } from "lucide-react";
 import {
   IsoLinkedRangeEnd,
   IsoLinkedRangeStart,
 } from "@/components/ui/iso-date-picker";
+import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 
 function toIsoDateUTC(d: Date): string {
   return new Date(
@@ -43,6 +44,11 @@ interface TransactionsFilterBarProps {
   showTypeFilter?: boolean;
   /** Whether to show the text search/estate input. Default: true */
   showSearchInput?: boolean;
+  /**
+   * Auto-initialize the date range when empty.
+   * Default: 30 (last 30 days). Set to 0 to disable.
+   */
+  defaultDateRangeDays?: number;
 }
 
 export const TransactionsFilterBar: React.FC<TransactionsFilterBarProps> = ({
@@ -56,22 +62,33 @@ export const TransactionsFilterBar: React.FC<TransactionsFilterBarProps> = ({
   searchFieldLabel = "Estate",
   showTypeFilter = true,
   showSearchInput = true,
+  defaultDateRangeDays = 30,
 }) => {
   const hasInitializedDefaultRange = useRef(false);
+  const exampleDateRange = useMemo(() => getDateRangePlaceholders(), []);
+  const showExamplePlaceholders = !defaultDateRangeDays;
 
   useEffect(() => {
+    if (!defaultDateRangeDays) return;
     if (hasInitializedDefaultRange.current) return;
     if (fromDate || toDate) return;
 
     hasInitializedDefaultRange.current = true;
-    const range = getLastNDaysRangeIsoUTC(30);
+    const range = getLastNDaysRangeIsoUTC(defaultDateRangeDays);
     onFiltersChange({
       fromDate: range.fromDate,
       toDate: range.toDate,
       estate,
       type,
     });
-  }, [fromDate, toDate, onFiltersChange, estate, type]);
+  }, [
+    defaultDateRangeDays,
+    fromDate,
+    toDate,
+    onFiltersChange,
+    estate,
+    type,
+  ]);
 
   const handleFromDateChange = (iso: string) => {
     onFiltersChange({
@@ -129,6 +146,9 @@ export const TransactionsFilterBar: React.FC<TransactionsFilterBarProps> = ({
           onStartChange={handleFromDateChange}
           className="px-3 py-2 border rounded-lg text-sm cursor-pointer min-w-[140px]"
           ariaLabel="From Date"
+          placeholder={
+            showExamplePlaceholders ? exampleDateRange.start : undefined
+          }
         />
         <span className="text-sm text-muted-foreground">to</span>
         <IsoLinkedRangeEnd
@@ -137,6 +157,9 @@ export const TransactionsFilterBar: React.FC<TransactionsFilterBarProps> = ({
           onEndChange={handleToDateChange}
           className="px-3 py-2 border rounded-lg text-sm cursor-pointer min-w-[140px]"
           ariaLabel="To Date"
+          placeholder={
+            showExamplePlaceholders ? exampleDateRange.end : undefined
+          }
         />
       </div>
 

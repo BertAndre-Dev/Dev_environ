@@ -2,7 +2,9 @@ import { createSlice } from "@reduxjs/toolkit";
 import {
     assignMeterToAddress,
     getAllEstateMeter,
-    getMeter
+    getMeter,
+    getVendingStatsByEstate,
+    type VendingStatsByEstateData,
 } from './meter-mgt';
 
 
@@ -53,9 +55,11 @@ export interface AdminMeterState {
     assignMeterToAddressState: "idle" | "isLoading" | "succeeded" | "failed";
     getAllEstateMeterState: "idle" | "isLoading" | "succeeded" | "failed";
     getMeterState: "idle" | "isLoading" | "succeeded" | "failed";
+    getVendingStatsByEstateState: "idle" | "isLoading" | "succeeded" | "failed";
     status: "idle" | "isLoading" | "succeeded" | "failed";
     adminMeter: AdminMeterData | null;
     allAdminMeters: AdminMeterResponse | null;
+    vendingStatsByEstate: VendingStatsByEstateData | null;
     error: string | null;
 }
 
@@ -64,9 +68,11 @@ const initialState: AdminMeterState = {
     assignMeterToAddressState: "idle",
     getAllEstateMeterState: "idle",
     getMeterState: "idle",
+    getVendingStatsByEstateState: "idle",
     status: "idle",
     adminMeter: null,
     allAdminMeters: null,
+    vendingStatsByEstate: null,
     error: null,
 }
 
@@ -158,6 +164,24 @@ const adminMeterSlice = createSlice({
                 state.getAllEstateMeterState = "failed";
                 state.status = "failed";
                 state.error = action.error.message || "Failed to fetch estate meters";
+            });
+
+        builder
+            .addCase(getVendingStatsByEstate.pending, (state) => {
+                state.getVendingStatsByEstateState = "isLoading";
+                state.vendingStatsByEstate = null;
+            })
+            .addCase(getVendingStatsByEstate.fulfilled, (state, action) => {
+                state.getVendingStatsByEstateState = "succeeded";
+                state.vendingStatsByEstate = action.payload?.data ?? null;
+            })
+            .addCase(getVendingStatsByEstate.rejected, (state, action) => {
+                state.getVendingStatsByEstateState = "failed";
+                state.vendingStatsByEstate = null;
+                state.error =
+                    (action.payload as { message?: string } | undefined)?.message ||
+                    action.error.message ||
+                    "Failed to fetch vending statistics";
             });
         
     },

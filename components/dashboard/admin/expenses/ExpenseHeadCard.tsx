@@ -45,7 +45,7 @@ export function ExpenseHeadCard({
         }
       }}
     >
-      <div className="absolute right-4 top-4 flex items-center gap-2">
+      <div className="absolute right-4 top-0 flex items-center gap-2">
         <button
           type="button"
           className="h-10 w-10 rounded-full bg-white/90 shadow-sm grid place-items-center hover:bg-muted cursor-pointer"

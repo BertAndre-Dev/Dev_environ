@@ -126,7 +126,7 @@ export function VisitorsTableCard({
         key: "actions",
         header: "Actions",
         render: (item: ResidentVisitorData) => (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col items-center gap-2">
             <Button
               className="cursor-pointer"
               variant="outline"
@@ -137,12 +137,11 @@ export function VisitorsTableCard({
               }}
             >
               <Eye className="w-4 h-4 mr-1" />
-              View
             </Button>
             <Button
               variant="outline"
               size="sm"
-              className="cursor-pointer text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+              className="cursor-pointer text-blue-600 hover:bg-blue-200 disabled:opacity-50"
               disabled={!item.qrCodeDataUrl}
               onClick={(e) => {
                 e.stopPropagation();
@@ -153,7 +152,6 @@ export function VisitorsTableCard({
               }
             >
               <QrCode className="w-4 h-4 mr-1" />
-              View QR Code
             </Button>
             <Button
               variant="outline"
@@ -165,7 +163,6 @@ export function VisitorsTableCard({
               }}
             >
               <Edit className="w-4 h-4 mr-1 cursor-pointer" />
-              Edit
             </Button>
             <Button
               variant="outline"
@@ -198,6 +195,7 @@ export function VisitorsTableCard({
             : "You haven't created any visitors yet."
         }
         enableDateRangeFilter
+        defaultDateRangeDays={0}
         startDate={startDate}
         endDate={endDate}
         onDateRangeChange={onDateRangeChange}

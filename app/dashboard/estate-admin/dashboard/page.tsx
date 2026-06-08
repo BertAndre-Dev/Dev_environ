@@ -679,26 +679,141 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { toast } from "react-toastify";
 import { TrendingUp, Users, FileText, DollarSign } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
+import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
 import TransactionsChart from "@/components/charts/transactions-chart";
 import BillsOverview from "@/components/charts/bills-overview";
 import OccupancyDistribution from "@/components/charts/occupancy-distribution";
-import BillsBreakdownCard from "@/components/charts/bills-breakdown-card";
+import { BillsStatusDonutCard } from "@/components/charts/bills-status-donut-card";
+import { TransactionSummaryCard } from "@/components/charts/transaction-summary-card";
 import MeterStatusPie from "@/components/charts/meter-status-pie";
 import MeterTrendChart from "@/components/charts/meter-trend-chart";
 import MeterCreditSummary from "@/components/charts/meter-credit-summary";
 import { VendingTrendChart } from "../../super-admin/dashboard/components";
+import type { EnergyConsumptionPeriod } from "@/lib/energy-consumption-chart";
+import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
+import {
+  getEstateAdminEnergyConsumptionAddressOptions,
+  getEstateAdminEnergyConsumptionChart,
+} from "@/redux/slice/estate-admin/energy-consumption/estate-admin-energy-consumption";
+import { getEstateAdminTransactionSummary } from "@/redux/slice/estate-admin/transaction-summary/estate-admin-transaction-summary";
+import { extractEstateIdFromUser, extractEstateNameFromUser } from "@/lib/user-id";
+import type { AppDispatch, RootState } from "@/redux/store";
 
 const formatNaira = (n: number) => `${n.toLocaleString()}`;
 
 export default function DummyDashboard() {
+  const dispatch = useDispatch<AppDispatch>();
   const [transactionChartView, setTransactionChartView] = useState("revenue");
   const [meterChartView, setMeterChartView] = useState("assignment");
+  const [estateId, setEstateId] = useState<string | null>(null);
+  const [estateName, setEstateName] = useState("Sunshine Estate");
+  const [energyPeriod, setEnergyPeriod] =
+    useState<EnergyConsumptionPeriod>("weekly");
+  const [selectedAddressId, setSelectedAddressId] = useState("all");
 
-  const estateName = "Sunshine Estate";
+  const { transactionSummary, transactionSummaryLoading } = useSelector(
+    (state: RootState) => ({
+      transactionSummary: state.estateAdminTransactionSummary.summary,
+      transactionSummaryLoading:
+        state.estateAdminTransactionSummary.status === "isLoading",
+    }),
+  );
+
+  const {
+    energyConsumptionChart,
+    energyAddressOptions,
+    energyChartLoading,
+    energyAddressOptionsLoading,
+  } = useSelector((state: RootState) => ({
+    energyConsumptionChart: state.estateAdminEnergyConsumption.chart,
+    energyAddressOptions: state.estateAdminEnergyConsumption.addressOptions,
+    energyChartLoading:
+      state.estateAdminEnergyConsumption.chartStatus === "isLoading",
+    energyAddressOptionsLoading:
+      state.estateAdminEnergyConsumption.addressOptionsStatus === "isLoading",
+  }));
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const userRes = await dispatch(getSignedInUser()).unwrap();
+        const user = userRes?.data as Record<string, unknown> | undefined;
+        const id = extractEstateIdFromUser(user);
+        const name = extractEstateNameFromUser(user) ?? "Estate";
+        if (id) {
+          setEstateId(id);
+          setEstateName(name);
+        }
+      } catch (err: unknown) {
+        const msg =
+          err &&
+          typeof err === "object" &&
+          "message" in err &&
+          typeof (err as { message?: string }).message === "string"
+            ? (err as { message: string }).message
+            : "Failed to load user.";
+        toast.error(msg);
+      }
+    })();
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (!estateId) return;
+    dispatch(getEstateAdminTransactionSummary({ estateId })).catch(
+      (err: unknown) => {
+        const msg =
+          err &&
+          typeof err === "object" &&
+          "message" in err &&
+          typeof (err as { message?: string }).message === "string"
+            ? (err as { message: string }).message
+            : "Failed to load transaction summary.";
+        toast.error(msg);
+      },
+    );
+  }, [dispatch, estateId]);
+
+  useEffect(() => {
+    if (!estateId) return;
+    dispatch(getEstateAdminEnergyConsumptionAddressOptions({ estateId })).catch(
+      (err: unknown) => {
+        const msg =
+          err &&
+          typeof err === "object" &&
+          "message" in err &&
+          typeof (err as { message?: string }).message === "string"
+            ? (err as { message: string }).message
+            : "Failed to load address options.";
+        toast.error(msg);
+      },
+    );
+  }, [dispatch, estateId]);
+
+  useEffect(() => {
+    if (!estateId) return;
+    dispatch(
+      getEstateAdminEnergyConsumptionChart({
+        estateId,
+        period: energyPeriod,
+        addressId: selectedAddressId,
+      }),
+    ).catch((err: unknown) => {
+      const msg =
+        err &&
+        typeof err === "object" &&
+        "message" in err &&
+        typeof (err as { message?: string }).message === "string"
+          ? (err as { message: string }).message
+          : "Failed to load energy consumption chart.";
+      toast.error(msg);
+    });
+  }, [dispatch, estateId, energyPeriod, selectedAddressId]);
 
   /** 🔥 Dummy Stats */
   const stats = [
@@ -761,11 +876,12 @@ export default function DummyDashboard() {
     { name: "Security", value: 1500000, fill: "#10b981" },
   ];
 
-  const billsBreakdownData = billsOverviewData.map((b) => ({
-    name: b.name,
-    value: b.value,
-    amount: formatNaira(b.value),
-  }));
+  const billsStatusData = {
+    total: 75,
+    paid: 20,
+    pending: 20,
+    overdue: 20,
+  };
 
   const meterAssignmentPieData = [
     { name: "Assigned", value: 80 },
@@ -825,6 +941,34 @@ export default function DummyDashboard() {
         })}
       </div>
 
+      <TransactionSummaryCard
+        data={transactionSummary}
+        loading={transactionSummaryLoading}
+        emptyMessage={
+          !estateId
+            ? "No estate linked to your account."
+            : "No transaction data to display."
+        }
+      />
+
+      <EnergyConsumptionOverTimeCard
+        data={energyConsumptionChart}
+        loading={energyChartLoading}
+        period={energyPeriod}
+        onPeriodChange={setEnergyPeriod}
+        showAddressFilter
+        addressOptions={energyAddressOptions}
+        addressValue={selectedAddressId}
+        onAddressChange={setSelectedAddressId}
+        addressFilterLabel="Address"
+        addressFilterLoading={energyAddressOptionsLoading}
+        emptyMessage={
+          !estateId
+            ? "No estate linked to your account."
+            : "No vending data for this period yet."
+        }
+      />
+
       {/* Transactions */}
       <div>
         <Select
@@ -865,9 +1009,9 @@ export default function DummyDashboard() {
         <VendingTrendChart data={withdrawalsData} />
       </Card> */}
 
-      {/* Breakdown + Occupancy */}
+      {/* Bills status + Occupancy */}
       <div className="grid lg:grid-cols-2 gap-6">
-        <BillsBreakdownCard title="Bills" data={billsBreakdownData} />
+        <BillsStatusDonutCard title="Bills" data={billsStatusData} />
         <OccupancyDistribution
           totalResidents={5000}
           occupiedPercentage={65}

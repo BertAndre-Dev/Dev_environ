@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function EstateAdminSupportPage() {
-  redirect("/dashboard/estate-admin/chat");
+  redirect("/dashboard/estate-admin/transactions");
 }

@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getStoredUserEmail } from "@/utils/auth-storage";
 import { clearCsrfToken, fetchCsrfToken } from "@/utils/csrf";
 
 export interface InvitedUserData {
@@ -112,18 +113,23 @@ export const forgotPassword = createAsyncThunk(
   },
 );
 
-// sign out
+// sign out — revokes tokens and clears refresh cookie (user from Bearer, cookie, or body email)
 export const signOut = createAsyncThunk(
   "auth-mgt/signOut",
-  async (data: { email: string }, { rejectWithValue }) => {
+  async (data: { email?: string } | undefined, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.post("/api/v1/auth-mgt/sign-out", data, {
+      const email = data?.email?.trim() || getStoredUserEmail();
+      const body = email ? { email } : {};
+      const res = await axiosInstance.post("/api/v1/auth-mgt/sign-out", body, {
         withCredentials: true,
       });
       clearCsrfToken();
       return res.data;
     } catch (error: any) {
-      return rejectWithValue(error.res?.data?.message);
+      const apiError = error.response?.data;
+      return rejectWithValue(
+        apiError?.message ?? apiError ?? error.message ?? "Sign out failed",
+      );
     }
   },
 );

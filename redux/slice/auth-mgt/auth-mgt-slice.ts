@@ -122,10 +122,22 @@ const authSlice = createSlice({
 
 
       // ===== SIGN OUT =====
+      .addCase(signOut.pending, (state) => {
+        state.signOutStatus = 'isLoading';
+        state.error = null;
+      })
       .addCase(signOut.fulfilled, (state) => {
+        state.signOutStatus = 'succeeded';
         state.user = null;
         state.token = null;
         if (typeof window !== 'undefined') clearStoredAuth();
+      })
+      .addCase(signOut.rejected, (state, action) => {
+        state.signOutStatus = 'failed';
+        state.error =
+          (typeof action.payload === 'string'
+            ? action.payload
+            : null) ?? 'Sign out failed';
       })
 
       // ✅ INVITE USER

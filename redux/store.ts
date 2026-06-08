@@ -29,10 +29,15 @@ import estateProfileSliceReducer from "@/redux/slice/estate-profile/estate-profi
 import complaintsSliceReducer from "@/redux/slice/admin/maintenance/complaints-slice";
 import residentComplaintsSliceReducer from "@/redux/slice/resident/maintenance/resident-complaints-slice";
 import transactionAnalyticsSliceReducer from "@/redux/slice/estate-admin/transaction-analytics/transaction-analytics-slice";
+import estateAdminTransactionSummarySliceReducer from "@/redux/slice/estate-admin/transaction-summary/estate-admin-transaction-summary-slice";
+import estateAdminEnergyConsumptionSliceReducer from "@/redux/slice/estate-admin/energy-consumption/estate-admin-energy-consumption-slice";
 import billsAnalyticsSliceReducer from "@/redux/slice/estate-admin/bills-analytics/bills-analytics-slice";
 import meterAnalyticsSliceReducer from "@/redux/slice/estate-admin/meter-analytics/meter-analytics-slice";
 import superAdminBillsAnalyticsSliceReducer from "@/redux/slice/super-admin/super-admin-bills-analytics/super-admin-bills-analytics-slice";
 import adminDashboardAnalyticsSliceReducer from "@/redux/slice/admin/dashboard-analytics/admin-dashboard-analytics-slice";
+import adminEnergyConsumptionSliceReducer from "@/redux/slice/admin/energy-consumption/admin-energy-consumption-slice";
+import adminTransactionSummarySliceReducer from "@/redux/slice/admin/transaction-summary/admin-transaction-summary-slice";
+import adminUserAnalyticsSliceReducer from "@/redux/slice/admin/user-analytics/user-analytics-slice";
 import residentDashboardAnalyticsSliceReducer from "@/redux/slice/resident/dashboard-analytics/resident-dashboard-analytics-slice";
 import residentInviteTenantSliceReducer from "@/redux/slice/resident/invite-tenant/invite-tenant-slice";
 import residentAddressOptionsSliceReducer from "@/redux/slice/resident/address-options/resident-address-options-slice";
@@ -61,10 +66,12 @@ import companyFinancialReportSliceReducer from "@/redux/slice/company/financial-
 import companyExpenseHeadSliceReducer from "@/redux/slice/company/expense-head/company-expense-head-slice";
 import companyExpenseEntrySliceReducer from "@/redux/slice/company/expense-entry/company-expense-entry-slice";
 import companyTransactionSliceReducer from "@/redux/slice/company/transaction/company-transaction-slice";
+import companyTransactionSummarySliceReducer from "@/redux/slice/company/transaction-summary/company-transaction-summary-slice";
+import companyEnergyConsumptionSliceReducer from "@/redux/slice/company/energy-consumption/company-energy-consumption-slice";
 import companyWalletSliceReducer from "@/redux/slice/company/wallet-mgt/company-wallet-mgt-slice";
 import chatSliceReducer from "@/redux/slice/chat/chat-slice";
-import estateAdminChatSliceReducer from "@/redux/slice/estate-admin/chat/estate-admin-chat-slice";
 import communityGroupSliceReducer from "@/redux/slice/community-group/community-group-slice";
+import estateAdminCommunityGroupSliceReducer from "@/redux/slice/estate-admin/community-group/community-group-slice";
 import mapsSliceReducer from "@/redux/slice/maps/maps-slice";
 import { mapsApi } from "@/redux/api/mapsApi";
 import residentBillsPaymentSliceReducer from "@/redux/slice/resident/bills-payment/bills-payment-slice";
@@ -254,10 +261,15 @@ export const store = configureStore({
     complaints: persistedComplaintsSliceReducer,
     residentComplaints: persistedResidentComplaintsSliceReducer,
     estateAdminTransactionAnalytics: transactionAnalyticsSliceReducer,
+    estateAdminTransactionSummary: estateAdminTransactionSummarySliceReducer,
+    estateAdminEnergyConsumption: estateAdminEnergyConsumptionSliceReducer,
     estateAdminBillsAnalytics: billsAnalyticsSliceReducer,
     estateAdminMeterAnalytics: meterAnalyticsSliceReducer,
     superAdminBillsAnalytics: superAdminBillsAnalyticsSliceReducer,
     adminDashboardAnalytics: adminDashboardAnalyticsSliceReducer,
+    adminEnergyConsumption: adminEnergyConsumptionSliceReducer,
+    adminTransactionSummary: adminTransactionSummarySliceReducer,
+    adminUserAnalytics: adminUserAnalyticsSliceReducer,
     residentDashboardAnalytics: residentDashboardAnalyticsSliceReducer,
     residentInviteTenant: residentInviteTenantSliceReducer,
     residentAddressOptions: residentAddressOptionsSliceReducer,
@@ -281,6 +293,8 @@ export const store = configureStore({
     companyExpenseHead: companyExpenseHeadSliceReducer,
     companyExpenseEntry: companyExpenseEntrySliceReducer,
     companyTransaction: companyTransactionSliceReducer,
+    companyTransactionSummary: companyTransactionSummarySliceReducer,
+    companyEnergyConsumption: companyEnergyConsumptionSliceReducer,
     companyWallet: companyWalletSliceReducer,
     residentMarketplace: residentMarketplaceSliceReducer,
     residentAnnouncements: residentAnnouncementsSliceReducer,
@@ -288,8 +302,8 @@ export const store = configureStore({
     adminExpenseEntry: persistedAdminExpenseEntrySliceReducer,
     estateAdminFinancialReport: estateAdminFinancialReportSliceReducer,
     chat: chatSliceReducer,
-    estateAdminChat: estateAdminChatSliceReducer,
     communityGroup: communityGroupSliceReducer,
+    estateAdminCommunityGroup: estateAdminCommunityGroupSliceReducer,
     maps: mapsSliceReducer,
     staffUserProfile: persistedStaffUserProfileSliceReducer,
     staffSupport: staffSupportSliceReducer,

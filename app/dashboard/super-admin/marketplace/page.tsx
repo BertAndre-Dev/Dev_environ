@@ -455,6 +455,7 @@ export default function SuperAdminMarketplacePage() {
                         : 'No businesses yet. Click "Add business" to create one.'
                   }
                   enableDateRangeFilter
+                  defaultDateRangeDays={0}
                   startDate={startDate}
                   endDate={endDate}
                   onDateRangeChange={({ startDate, endDate }) => {

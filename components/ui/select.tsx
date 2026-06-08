@@ -7,7 +7,7 @@ type Option = {
 };
 
 interface SelectProps extends React.ComponentProps<"select"> {
-  options: Option[];
+  options: readonly Option[];
 }
 
 function Select({ className, options, ...props }: SelectProps) {

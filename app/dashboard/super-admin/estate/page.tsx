@@ -346,6 +346,7 @@ export default function EstatePage() {
           data={allEstates}
           emptyMessage="No estates found"
           enableDateRangeFilter
+          defaultDateRangeDays={0}
           startDate={startDate}
           endDate={endDate}
           onDateRangeChange={({ startDate, endDate }) => {

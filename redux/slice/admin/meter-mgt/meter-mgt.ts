@@ -69,5 +69,39 @@ export const getMeter = createAsyncThunk(
     }
 );
 
+export interface VendingStatsByEstateData {
+  totalVends: number;
+  totalAmount: number;
+  averageAmount: number;
+  maxAmount: number;
+  minAmount: number;
+  uniqueMeters: number;
+}
 
+export interface VendingStatsByEstateResponse {
+  success: boolean;
+  message: string;
+  data: VendingStatsByEstateData;
+}
+
+/** GET /analytics/meters/vending/by-estate?estateId= */
+export const getVendingStatsByEstate = createAsyncThunk(
+  "meter-mgt/getVendingStatsByEstate",
+  async ({ estateId }: { estateId: string }, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.get<VendingStatsByEstateResponse>(
+        "/analytics/meters/vending/by-estate",
+        { params: { estateId } },
+      );
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ||
+          "Failed to fetch vending statistics.",
+      });
+    }
+  },
+);
 

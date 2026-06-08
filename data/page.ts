@@ -1,4 +1,4 @@
-import { FiSettings, FiMapPin, FiLogOut } from "react-icons/fi";
+import { FiSettings, FiMapPin, FiLogOut, FiHome } from "react-icons/fi";
 import { BsBuildings } from "react-icons/bs";
 import { IoSpeedometerOutline } from "react-icons/io5";
 import {
@@ -9,8 +9,6 @@ import {
   CarFront,
   ClipboardList,
   CircleDollarSign,
-  CreditCard,
-  Armchair,
   Hammer,
   History,
   Home,
@@ -28,11 +26,11 @@ import {
 } from "lucide-react";
 
 export const superAdminNav = [
-  // {
-  //   label: "Overview",
-  //   icon: FiHome,
-  //   path: "/dashboard/super-admin/dashboard",
-  // },
+  {
+    label: "Overview",
+    icon: FiHome,
+    path: "/dashboard/super-admin/dashboard",
+  },
   {
     label: "Transactions",
     icon: ArrowLeftRight,
@@ -127,6 +125,11 @@ export const staffNav = [
 
 export const companyNav = [
   {
+    label: "Overview",
+    icon: FiHome,
+    path: "/dashboard/company/overview",
+  },
+  {
     label: "Transactions",
     icon: ArrowLeftRight,
     path: "/dashboard/company/transactions",
@@ -198,7 +201,7 @@ export const companyNav = [
 ];
 
 export const adminNav = [
-  // { label: "Overview", icon: FiHome, path: "/dashboard/admin/overview" },
+  { label: "Overview", icon: FiHome, path: "/dashboard/admin/overview" },
   {
     label: "Address Management",
     icon: FiMapPin,
@@ -308,7 +311,7 @@ export const securityNav = [
 ];
 
 export const residentNav = [
-  // { label: "Overview", icon: FiHome, path: "/dashboard/resident/dashboard" },
+  { label: "Overview", icon: FiHome, path: "/dashboard/resident/dashboard" },
   {
     label: "Bills Management",
     icon: ClipboardList,
@@ -386,11 +389,11 @@ export const residentNav = [
 ];
 
 export const estateAdminNav = [
-  // {
-  //   label: "Overview",
-  //   icon: FiHome,
-  //   path: "/dashboard/estate-admin/dashboard",
-  // },
+  {
+    label: "Overview",
+    icon: FiHome,
+    path: "/dashboard/estate-admin/dashboard",
+  },
   {
     label: "Transactions",
     icon: ArrowLeftRight,
@@ -406,16 +409,16 @@ export const estateAdminNav = [
     moduleKey: "wallet",
   },
   {
-    label: "Community Chat",
-    icon: MessagesSquare,
-    path: "/dashboard/estate-admin/chat",
-    moduleKey: "chat",
-  },
-  {
     label: "Reports",
     icon: BarChart,
     path: "/dashboard/estate-admin/reports",
     moduleKey: "reporting",
+  },
+  {
+    label: "Community Chat",
+    icon: MessagesSquare,
+    path: "/dashboard/estate-admin/chat",
+    moduleKey: "chat",
   },
   { label: "Settings", icon: FiSettings, path: "/dashboard/settings" },
   { label: "Logout", icon: FiLogOut },

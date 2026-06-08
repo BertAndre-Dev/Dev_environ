@@ -334,6 +334,7 @@ export default function SuperAdminTransactionsPage() {
         onExport={(format) => handleExport(format)}
         showTypeFilter={false}
         showSearchInput={false}
+        defaultDateRangeDays={0}
       />
 
       <TransactionsTableCard

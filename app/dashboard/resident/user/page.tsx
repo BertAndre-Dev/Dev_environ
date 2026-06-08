@@ -213,6 +213,7 @@ export default function ResidentUserPage() {
                 : "You have not invited any tenants yet."
             }
             enableDateRangeFilter
+            defaultDateRangeDays={0}
             startDate={startDate}
             endDate={endDate}
             onDateRangeChange={({ startDate, endDate }) => {

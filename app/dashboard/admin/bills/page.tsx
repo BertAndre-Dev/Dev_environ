@@ -629,6 +629,7 @@ export default function BillPage() {
             data={filteredBills}
             emptyMessage="No bills found."
             enableDateRangeFilter
+            defaultDateRangeDays={0}
             startDate={billsStartDate}
             endDate={billsEndDate}
             onDateRangeChange={({ startDate, endDate }) => {
@@ -736,6 +737,7 @@ export default function BillPage() {
                   : "Select an address to view assigned bills."
               }
               enableDateRangeFilter
+              defaultDateRangeDays={0}
               startDate={assignedStartDate}
               endDate={assignedEndDate}
               onDateRangeChange={({ startDate, endDate }) => {

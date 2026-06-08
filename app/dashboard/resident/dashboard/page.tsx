@@ -10,7 +10,6 @@ import {
   Zap,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Select } from "@/components/ui/select";
 import BillsOverview from "@/components/charts/bills-overview";
 import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
 import TransactionsChart from "@/components/charts/transactions-chart";
@@ -247,11 +246,6 @@ export default function ResidentDashboard() {
       }));
   }, [vending]);
 
-  const vendingLoading = residentDashboard?.vendingStatus === "isLoading";
-
-  const [chartView, setChartView] = useState<"bills" | "transactions" | "vending">(
-    "bills",
-  );
   const estateOptions = useMemo(() => [{ label: "My data", value: "me" }], []);
 
   return (
@@ -307,87 +301,60 @@ export default function ResidentDashboard() {
         }
       />
 
-      <div className="space-y-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <label
-            htmlFor="resident-chart-select"
-            className="text-sm font-medium text-muted-foreground"
-          >
-            Chart to display
-          </label>
-          <Select
-            id="resident-chart-select"
-            options={[
-              { label: "Bills", value: "bills" },
-              { label: "Transactions", value: "transactions" },
-              { label: "Vending", value: "vending" },
-            ]}
-            value={chartView}
-            onChange={(e) =>
-              setChartView(e.target.value as "bills" | "transactions" | "vending")
-            }
-            className="w-full max-w-xs"
-          />
-        </div>
-        <div className="min-h-[320px]">
-          {chartView === "bills" && (
-            <Card className="p-4">
-              {loading && billsChartData.length === 0 ? (
-                <p className="text-muted-foreground text-sm py-8 text-center">
-                  Loading bills...
-                </p>
-              ) : billsChartData.length === 0 ? (
-                <p className="text-muted-foreground text-sm py-8 text-center">
-                  No bills data to display
-                </p>
-              ) : (
-                <BillsOverview
-                  title="My bills"
-                  subtitle={`${bills.length} bill(s)`}
-                  data={billsChartData}
-                  onExport={() => {}}
-                />
-              )}
-            </Card>
+      {/* <div className="space-y-6">
+        <Card className="p-4">
+          {loading && billsChartData.length === 0 ? (
+            <p className="text-muted-foreground text-sm py-8 text-center">
+              Loading bills...
+            </p>
+          ) : billsChartData.length === 0 ? (
+            <p className="text-muted-foreground text-sm py-8 text-center">
+              No bills data to display
+            </p>
+          ) : (
+            <BillsOverview
+              title="My bills"
+              subtitle={`${bills.length} bill(s)`}
+              data={billsChartData}
+              onExport={() => {}}
+            />
           )}
-          {chartView === "transactions" && (
+        </Card>
+
+        <TransactionsChart
+          title="Transaction history"
+          subtitle={`${transactions.length} transaction(s)`}
+          data={transactionTrendData}
+          estateOptions={estateOptions}
+          onExport={() => {}}
+          className="w-full"
+        />
+
+        <Card className="p-4">
+          {!meter?.meterNumber ? (
+            <p className="text-muted-foreground text-sm py-8 text-center">
+              Link your meter on the Meter page to see vending history here.
+            </p>
+          ) : loading && vendingChartData.length === 0 ? (
+            <p className="text-muted-foreground text-sm py-8 text-center">
+              Loading vending history...
+            </p>
+          ) : vendingChartData.length === 0 ? (
+            <p className="text-muted-foreground text-sm py-8 text-center">
+              No vending data to display
+            </p>
+          ) : (
             <TransactionsChart
-              title="Transaction history"
-              subtitle={`${transactions.length} transaction(s)`}
-              data={transactionTrendData}
+              title="Vending history"
+              subtitle={`${vending.length} vend(s)`}
+              data={vendingChartData}
               estateOptions={estateOptions}
               onExport={() => {}}
               className="w-full"
             />
           )}
-          {chartView === "vending" && (
-            <Card className="p-4">
-              {!meter?.meterNumber ? (
-                <p className="text-muted-foreground text-sm py-8 text-center">
-                  Link your meter on the Meter page to see vending history here.
-                </p>
-              ) : loading && vendingChartData.length === 0 ? (
-                <p className="text-muted-foreground text-sm py-8 text-center">
-                  Loading vending history...
-                </p>
-              ) : vendingChartData.length === 0 ? (
-                <p className="text-muted-foreground text-sm py-8 text-center">
-                  No vending data to display
-                </p>
-              ) : (
-                <TransactionsChart
-                  title="Vending history"
-                  subtitle={`${vending.length} vend(s)`}
-                  data={vendingChartData}
-                  estateOptions={estateOptions}
-                  onExport={() => {}}
-                  className="w-full"
-                />
-              )}
-            </Card>
-          )}
-        </div>
-      </div>
+        </Card>
+      </div> */}
     </div>
   );
 }

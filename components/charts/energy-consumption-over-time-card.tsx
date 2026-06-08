@@ -126,7 +126,7 @@ function PeriodSegmentedControl({
           type="button"
           onClick={() => onChange(opt.value)}
           className={cn(
-            "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+            "rounded-full px-4 py-1.5 text-sm font-medium transition-colors cursor-pointer hover:cursor-pointer",
             value === opt.value
               ? "bg-[#0150AC] text-white shadow-sm"
               : "text-muted-foreground hover:text-foreground",

@@ -13,8 +13,17 @@ import {
   getAllEstateMeter,
   getVendingStatsByEstate,
 } from "@/redux/slice/admin/meter-mgt/meter-mgt";
+import { getEstateEnergyUsage } from "@/redux/slice/admin/estate-energy-usage/admin-estate-energy-usage";
+import { getEstateConsumptionChart } from "@/redux/slice/admin/estate-consumption-chart/admin-estate-consumption-chart";
+import { getEstateRealtimeReadings } from "@/redux/slice/admin/estate-realtime-readings/admin-estate-realtime-readings";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import AssignMeterForm from "@/components/admin/meter-form/page";
+import Tab from "@/components/tabs/page";
+import { EstateEnergyUsageChartCard } from "@/components/charts/estate-energy-usage-chart-card";
+import { EstateConsumptionChartCard } from "@/components/charts/estate-consumption-chart-card";
+import { EstateRealtimeReadingsCard } from "@/components/charts/estate-realtime-readings-card";
+import type { EstateEnergyUsageRange } from "@/lib/estate-energy-usage-chart";
+import type { EstateConsumptionChartRange } from "@/lib/estate-consumption-chart";
 import { IoSpeedometerOutline } from "react-icons/io5";
 import Loader from "@/components/ui/Loader";
 
@@ -49,6 +58,8 @@ interface AdminMeterData {
 
 const PAGE_LIMIT = 10;
 
+const METER_TAB_TITLES = ["Chart Overview", "Meter Management"] as const;
+
 /** Placeholder until estate-wide usage API is wired. */
 const HARDCODED_TOTAL_ENERGY_KWH = 12_450;
 
@@ -65,6 +76,12 @@ export default function AdminMeterManagement() {
     null,
   );
   const [search, setSearch] = useState("");
+  const [usageRange, setUsageRange] = useState<EstateEnergyUsageRange>("weekly");
+  const [usageRefreshing, setUsageRefreshing] = useState(false);
+  const [chartRange, setChartRange] =
+    useState<EstateConsumptionChartRange>("monthly");
+  const [chartRefreshing, setChartRefreshing] = useState(false);
+  const [realtimeRefreshing, setRealtimeRefreshing] = useState(false);
 
   const { allAdminMeters, pagination, loading } = useSelector(
     (state: RootState) => {
@@ -86,6 +103,51 @@ export default function AdminMeterManagement() {
     useSelector(
       (state: RootState) => state.adminMeter.getVendingStatsByEstateState,
     ) === "isLoading";
+
+  const {
+    estateEnergyUsage,
+    estateEnergyUsageLoading,
+    estateEnergyUsageProgress,
+    estateEnergyUsageMessage,
+    estateEnergyUsageError,
+  } = useSelector((state: RootState) => ({
+    estateEnergyUsage: state.adminEstateEnergyUsage.usage,
+    estateEnergyUsageLoading:
+      state.adminEstateEnergyUsage.status === "isLoading",
+    estateEnergyUsageProgress: state.adminEstateEnergyUsage.progress,
+    estateEnergyUsageMessage: state.adminEstateEnergyUsage.message,
+    estateEnergyUsageError: state.adminEstateEnergyUsage.error,
+  }));
+
+  const {
+    estateConsumptionChart,
+    estateConsumptionChartLoading,
+    estateConsumptionChartProgress,
+    estateConsumptionChartMessage,
+    estateConsumptionChartError,
+  } = useSelector((state: RootState) => ({
+    estateConsumptionChart: state.adminEstateConsumptionChart.chart,
+    estateConsumptionChartLoading:
+      state.adminEstateConsumptionChart.status === "isLoading",
+    estateConsumptionChartProgress: state.adminEstateConsumptionChart.progress,
+    estateConsumptionChartMessage: state.adminEstateConsumptionChart.message,
+    estateConsumptionChartError: state.adminEstateConsumptionChart.error,
+  }));
+
+  const {
+    estateRealtimeReadings,
+    estateRealtimeReadingsLoading,
+    estateRealtimeReadingsProgress,
+    estateRealtimeReadingsMessage,
+    estateRealtimeReadingsError,
+  } = useSelector((state: RootState) => ({
+    estateRealtimeReadings: state.adminEstateRealtimeReadings.readings,
+    estateRealtimeReadingsLoading:
+      state.adminEstateRealtimeReadings.status === "isLoading",
+    estateRealtimeReadingsProgress: state.adminEstateRealtimeReadings.progress,
+    estateRealtimeReadingsMessage: state.adminEstateRealtimeReadings.message,
+    estateRealtimeReadingsError: state.adminEstateRealtimeReadings.error,
+  }));
 
   const fetchMeters = useCallback(
     async (page = 1) => {
@@ -150,6 +212,89 @@ export default function AdminMeterManagement() {
       toast.error(error?.message ?? "Failed to load vending statistics."),
     );
   }, [dispatch, estateId]);
+
+  useEffect(() => {
+    if (!estateId) return;
+    dispatch(getEstateEnergyUsage({ estateId, range: usageRange })).catch(
+      (error: { message?: string }) => {
+        toast.error(error?.message ?? "Failed to load estate energy usage.");
+      },
+    );
+  }, [dispatch, estateId, usageRange]);
+
+  useEffect(() => {
+    if (!estateId) return;
+    dispatch(getEstateConsumptionChart({ estateId, range: chartRange })).catch(
+      (error: { message?: string }) => {
+        toast.error(
+          error?.message ?? "Failed to load estate consumption chart.",
+        );
+      },
+    );
+  }, [dispatch, estateId, chartRange]);
+
+  useEffect(() => {
+    if (!estateId) return;
+    dispatch(getEstateRealtimeReadings({ estateId })).catch(
+      (error: { message?: string }) => {
+        toast.error(
+          error?.message ?? "Failed to load estate realtime readings.",
+        );
+      },
+    );
+  }, [dispatch, estateId]);
+
+  const handleRefreshUsage = async () => {
+    if (!estateId) return;
+    setUsageRefreshing(true);
+    try {
+      await dispatch(
+        getEstateEnergyUsage({
+          estateId,
+          range: usageRange,
+          refresh: true,
+        }),
+      ).unwrap();
+    } catch (error: any) {
+      toast.error(error?.message ?? "Failed to refresh estate energy usage.");
+    } finally {
+      setUsageRefreshing(false);
+    }
+  };
+
+  const handleRefreshConsumptionChart = async () => {
+    if (!estateId) return;
+    setChartRefreshing(true);
+    try {
+      await dispatch(
+        getEstateConsumptionChart({
+          estateId,
+          range: chartRange,
+          refresh: true,
+        }),
+      ).unwrap();
+    } catch (error: any) {
+      toast.error(
+        error?.message ?? "Failed to refresh estate consumption chart.",
+      );
+    } finally {
+      setChartRefreshing(false);
+    }
+  };
+
+  const handleRefreshRealtime = async () => {
+    if (!estateId) return;
+    setRealtimeRefreshing(true);
+    try {
+      await dispatch(getEstateRealtimeReadings({ estateId })).unwrap();
+    } catch (error: any) {
+      toast.error(
+        error?.message ?? "Failed to refresh estate realtime readings.",
+      );
+    } finally {
+      setRealtimeRefreshing(false);
+    }
+  };
 
   const handleRefresh = async () => {
     try {
@@ -264,11 +409,9 @@ export default function AdminMeterManagement() {
       >
       {/* Header */}
       <div>
-        <h1 className="font-heading text-3xl font-bold">
-          Estate Meter Management
-        </h1>
+        <h1 className="font-heading text-3xl font-bold">Energy Management</h1>
         <p className="text-muted-foreground mt-1">
-          Monitor and manage all energy meters in {" "}
+          Monitor energy usage and manage all meters in{" "}
           <span className="text-[18px] font-bold underline uppercase text-black">
             {estateName || ""}
           </span>
@@ -319,53 +462,110 @@ export default function AdminMeterManagement() {
         </div>
       </Card>
 
-      {/* Search */}
-      <Card className="p-4">
-        <input
-          type="text"
-          placeholder="Search by meter number"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-sm px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        />
-      </Card>
+      <Tab
+        titles={[...METER_TAB_TITLES]}
+        renderContent={(activeTab) => {
+          switch (activeTab) {
+            case "Chart Overview":
+              return (
+                <div className="space-y-6">
+                  <EstateEnergyUsageChartCard
+                    data={estateEnergyUsage}
+                    loading={estateEnergyUsageLoading}
+                    progress={estateEnergyUsageProgress}
+                    range={usageRange}
+                    onRangeChange={setUsageRange}
+                    onRefresh={handleRefreshUsage}
+                    refreshing={usageRefreshing}
+                    emptyMessage={
+                      estateEnergyUsageError ??
+                      estateEnergyUsageMessage ??
+                      undefined
+                    }
+                  />
+                  <EstateConsumptionChartCard
+                    data={estateConsumptionChart}
+                    loading={estateConsumptionChartLoading}
+                    progress={estateConsumptionChartProgress}
+                    range={chartRange}
+                    onRangeChange={setChartRange}
+                    onRefresh={handleRefreshConsumptionChart}
+                    refreshing={chartRefreshing}
+                    emptyMessage={
+                      estateConsumptionChartError ??
+                      estateConsumptionChartMessage ??
+                      undefined
+                    }
+                  />
+                  <EstateRealtimeReadingsCard
+                    data={estateRealtimeReadings}
+                    loading={estateRealtimeReadingsLoading}
+                    progress={estateRealtimeReadingsProgress}
+                    onRefresh={handleRefreshRealtime}
+                    refreshing={realtimeRefreshing}
+                    emptyMessage={
+                      estateRealtimeReadingsError ??
+                      estateRealtimeReadingsMessage ??
+                      undefined
+                    }
+                  />
+                </div>
+              );
+            case "Meter Management":
+              return (
+                <div className="space-y-6">
+                  <Card className="p-4">
+                    <input
+                      type="text"
+                      placeholder="Search by meter number"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="w-full max-w-sm px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </Card>
 
-      <Card className="p-4">
-        <Table
-          columns={columns}
-          data={allAdminMeters || []}
-          emptyMessage="No meter found."
-          showPagination
-          // enableSearch
-          onSearch={(value) => setSearch(value)}
-          paginationInfo={{
-            total: pagination?.total || 0,
-            current: Number(pagination?.currentPage) || 1,
-            pageSize: Number(pagination?.pageSize) || 10,
-          }}
-          onPageChange={(page) => {
-            fetchMeters(page).catch(() =>
-              toast.error("Failed to change page"),
-            );
-          }}
-          enableExport
-          exportFileName="meters"
-          onExportRequest={
-            estateId
-              ? async () => {
-                  const res = await dispatch(
-                    getAllEstateMeter({
-                      estateId,
-                      page: 1,
-                      limit: 50000,
-                    }),
-                  ).unwrap();
-                  return res?.data ?? [];
-                }
-              : undefined
+                  <Card className="p-4">
+                    <Table
+                      columns={columns}
+                      data={allAdminMeters || []}
+                      emptyMessage="No meter found."
+                      showPagination
+                      onSearch={(value) => setSearch(value)}
+                      paginationInfo={{
+                        total: pagination?.total || 0,
+                        current: Number(pagination?.currentPage) || 1,
+                        pageSize: Number(pagination?.pageSize) || 10,
+                      }}
+                      onPageChange={(page) => {
+                        fetchMeters(page).catch(() =>
+                          toast.error("Failed to change page"),
+                        );
+                      }}
+                      enableExport
+                      exportFileName="meters"
+                      onExportRequest={
+                        estateId
+                          ? async () => {
+                              const res = await dispatch(
+                                getAllEstateMeter({
+                                  estateId,
+                                  page: 1,
+                                  limit: 50000,
+                                }),
+                              ).unwrap();
+                              return res?.data ?? [];
+                            }
+                          : undefined
+                      }
+                    />
+                  </Card>
+                </div>
+              );
+            default:
+              return null;
           }
-        />
-      </Card>
+        }}
+      />
 
       {open && estateId && selectedMeter && (
         <Modal visible={open} onClose={handleCloseModal}>

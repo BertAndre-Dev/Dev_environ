@@ -9,6 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-toastify";
+import {
+  formatAmountInput,
+  parseFormattedNumber,
+} from "@/lib/format-number";
 
 /** Form state: yearlyAmount can be string (empty input) or number */
 interface BillFormState {
@@ -60,7 +64,9 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
             id: fetchData.id,
             name: fetchData.name || "",
             description: fetchData.description || "",
-            yearlyAmount: fetchData.yearlyAmount || 0,
+            yearlyAmount: fetchData.yearlyAmount
+              ? formatAmountInput(String(fetchData.yearlyAmount))
+              : "",
           });
         }
       } catch (error: any) {
@@ -81,7 +87,7 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
     e.preventDefault();
     const payload: BillSubmitData = {
       ...formData,
-      yearlyAmount: Number(formData.yearlyAmount) || 0,
+      yearlyAmount: parseFormattedNumber(formData.yearlyAmount),
     };
     onSubmit(payload);
   };
@@ -120,11 +126,15 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
             </div>
 
             <div>
-              <Label>Yearly Amount</Label>
+              <Label>Yearly Amount (₦)</Label>
               <Input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 value={formData.yearlyAmount}
-                onChange={(e) => handleChange("yearlyAmount", Number(e.target.value))}
+                onChange={(e) =>
+                  handleChange("yearlyAmount", formatAmountInput(e.target.value))
+                }
+                placeholder="1,200,000"
                 required
               />
             </div>

@@ -6,9 +6,9 @@ import Image from "next/image";
 
 const QUICK_LINKS = [
   { label: "Home", href: "/" },
-  { label: "About Us", href: "#about" },
-  // { label: "Business", href: "/" },
-  { label: "Contact Us", href: "#demo" },
+  { label: "About Us", href: "/#about" },
+  { label: "Blog", href: "/blog" },
+  { label: "Contact Us", href: "/#demo" },
 ];
 
 const SERVICES = [{ label: "Businesses", href: "/" }];

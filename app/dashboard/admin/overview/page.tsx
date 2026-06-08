@@ -284,7 +284,7 @@ export default function AdminOverview() {
         })}
       </div> */}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      {/* <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <OccupancyDistributionDonutCard
           title="Occupancy Distribution"
           data={residentDistributionData}
@@ -302,7 +302,7 @@ export default function AdminOverview() {
               : "No transaction data to display."
           }
         />
-      </div>
+      </div> */}
 
        <TransactionSummaryCard
           data={transactionSummary}
@@ -332,6 +332,8 @@ export default function AdminOverview() {
         }
       />
 
+      {/* Chart Selector */}
+     
     </div>
   );
 }

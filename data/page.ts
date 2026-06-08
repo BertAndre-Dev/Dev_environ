@@ -62,7 +62,7 @@ export const superAdminNav = [
   //   path: "/dashboard/super-admin/bills",
   // },
   {
-    label: "Meter Management",
+    label: "Energy Management",
     icon: IoSpeedometerOutline,
     path: "/dashboard/super-admin/meter",
   },
@@ -222,7 +222,7 @@ export const adminNav = [
     moduleKey: "bills",
   },
   {
-    label: "Meter Management",
+    label: "Energy Management",
     icon: IoSpeedometerOutline,
     path: "/dashboard/admin/meter",
     module: "meter",
@@ -319,7 +319,7 @@ export const residentNav = [
     moduleKey: "bills",
   },
   {
-    label: "Meter Management",
+    label: "Energy Management",
     icon: IoSpeedometerOutline,
     path: "/dashboard/resident/meter",
     moduleKey: "meter",

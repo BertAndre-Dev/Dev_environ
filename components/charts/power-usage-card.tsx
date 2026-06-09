@@ -63,13 +63,13 @@ function computeYAxisMax(points: PowerUsageDataPoint[]): number {
 }
 
 export function PowerUsageCard({
-  title = "Power Usage",
+  title = "Energy Usage",
   data,
   totalUsageKwh,
   className,
   loading = false,
   loadingContent,
-  emptyMessage = "No power usage data to display",
+  emptyMessage = "No energy usage data to display",
   headerActions,
   subtitle,
 }: PowerUsageCardProps) {

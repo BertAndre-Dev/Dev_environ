@@ -311,7 +311,7 @@ export const securityNav = [
 ];
 
 export const residentNav = [
-  { label: "Overview", icon: FiHome, path: "/dashboard/resident/dashboard" },
+  // { label: "Overview", icon: FiHome, path: "/dashboard/resident/dashboard" },
   {
     label: "Bills Management",
     icon: ClipboardList,

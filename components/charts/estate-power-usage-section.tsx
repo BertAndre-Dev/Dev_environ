@@ -4,10 +4,10 @@ import { useMemo } from "react";
 import { RefreshCw } from "lucide-react";
 
 import { PowerUsageCard } from "@/components/charts/power-usage-card";
+import { EnergyUsagePeriodControl } from "@/components/charts/energy-usage-period-control";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
-  ESTATE_ENERGY_USAGE_RANGE_OPTIONS,
   formatEstateUsageDateRange,
   mapEstateEnergyUsageToPowerUsage,
   type EstateEnergyUsageData,
@@ -26,38 +26,6 @@ export interface EstatePowerUsageSectionProps {
   readonly refreshing?: boolean;
   readonly emptyMessage?: string | null;
   readonly className?: string;
-}
-
-function PeriodSegmentedControl({
-  value,
-  onChange,
-  disabled,
-}: Readonly<{
-  value: EstateEnergyUsageRange;
-  onChange: (range: EstateEnergyUsageRange) => void;
-  disabled?: boolean;
-}>) {
-  return (
-    <div className="inline-flex flex-wrap rounded-full border border-input bg-muted/30 p-1">
-      {ESTATE_ENERGY_USAGE_RANGE_OPTIONS.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          disabled={disabled}
-          onClick={() => onChange(opt.value)}
-          className={cn(
-            "rounded-full px-2 py-1.5 text-sm font-medium transition-colors cursor-pointer",
-            disabled && "cursor-not-allowed opacity-60",
-            value === opt.value
-              ? "bg-[#0150AC] text-white shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
-  );
 }
 
 export function EstatePowerUsageSection({
@@ -80,7 +48,7 @@ export function EstatePowerUsageSection({
 
   const headerActions = (
     <>
-      <PeriodSegmentedControl
+      <EnergyUsagePeriodControl
         value={range}
         onChange={onRangeChange}
         disabled={loading}
@@ -119,14 +87,14 @@ export function EstatePowerUsageSection({
   return (
     <PowerUsageCard
       className={className}
-      title="Power Usage"
+      title="Energy Usage"
       data={powerUsage.points}
       totalUsageKwh={powerUsage.totalKwh}
       loading={loading}
       loadingContent={loadingContent}
       subtitle={!loading && dateRangeLabel ? dateRangeLabel : undefined}
       headerActions={headerActions}
-      emptyMessage={emptyMessage ?? "No power usage data for this period."}
+      emptyMessage={emptyMessage ?? "No energy usage data for this period."}
     />
   );
 }

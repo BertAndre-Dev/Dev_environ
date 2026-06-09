@@ -11,17 +11,12 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import BillsOverview from "@/components/charts/bills-overview";
-import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
 import TransactionsChart from "@/components/charts/transactions-chart";
-import type { EnergyConsumptionPeriod } from "@/lib/energy-consumption-chart";
 import SwitchAddress from "@/components/resident/switch-address/page";
 import { normalizeAddresses, type AddressOption } from "@/lib/address";
 import { parseResidentEstate } from "@/app/dashboard/resident/asset/lib/estate";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
-import {
-  getMeterByAddress,
-  getResidentEnergyConsumptionChart,
-} from "@/redux/slice/resident/meter-mgt/meter-mgt";
+import { getMeterByAddress } from "@/redux/slice/resident/meter-mgt/meter-mgt";
 import {
   getResidentDashboardBills,
   getResidentDashboardTransactions,
@@ -122,28 +117,6 @@ export default function ResidentDashboard() {
       toast.error(e?.message ?? "Failed to load vending history.");
     });
   }, [meter?.meterNumber, dispatch]);
-
-  const [energyPeriod, setEnergyPeriod] =
-    useState<EnergyConsumptionPeriod>("weekly");
-
-  useEffect(() => {
-    if (!estateId || !selectedAddressId) return;
-    dispatch(
-      getResidentEnergyConsumptionChart({
-        estateId,
-        addressId: selectedAddressId,
-        period: energyPeriod,
-      }),
-    ).catch((err: unknown) => {
-      const e = err as { message?: string };
-      toast.error(e?.message ?? "Failed to load energy consumption chart.");
-    });
-  }, [estateId, selectedAddressId, energyPeriod, dispatch]);
-
-  const energyConsumptionData =
-    residentMeterState?.energyConsumptionChart ?? [];
-  const energyChartLoading =
-    residentMeterState?.getEnergyConsumptionChartState === "isLoading";
 
   const handleAddressChange = useCallback((addressId: string) => {
     setSelectedAddressId(addressId);
@@ -286,20 +259,6 @@ export default function ResidentDashboard() {
           );
         })}
       </div> */}
-
-      <EnergyConsumptionOverTimeCard
-        data={energyConsumptionData}
-        loading={energyChartLoading}
-        period={energyPeriod}
-        onPeriodChange={setEnergyPeriod}
-        emptyMessage={
-          !estateId
-            ? "Your account is not linked to an estate."
-            : !selectedAddressId
-              ? "Select an address to view energy consumption."
-              : "No vending data for this period yet."
-        }
-      />
 
       {/* <div className="space-y-6">
         <Card className="p-4">

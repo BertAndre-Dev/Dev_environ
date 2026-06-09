@@ -2,14 +2,15 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
-import { PowerUsageCard } from "@/components/charts/power-usage-card";
 import { MeterRealtimeBalanceCard } from "@/components/charts/meter-realtime-balance-card";
-import { mapMeterUsageToPowerUsage } from "@/lib/power-usage-chart";
+import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
+import { MeterEnergyUsageSection } from "@/components/charts/meter-energy-usage-section";
+import type { EnergyConsumptionPeriod } from "@/lib/energy-consumption-chart";
+import { parseResidentEstate } from "@/app/dashboard/resident/asset/lib/estate";
 import Modal from "@/components/modal/page";
 import { toast } from "react-toastify";
 import { RootState, AppDispatch } from "@/redux/store";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getMeterByAddress,
@@ -17,6 +18,7 @@ import {
   disconnectMeter,
   getMeterVendHistory,
   getMeterUsage,
+  getResidentEnergyConsumptionChart,
   getVendingStatsByAddress,
   type MeterUsageRange,
 } from "@/redux/slice/resident/meter-mgt/meter-mgt";
@@ -31,13 +33,6 @@ import Tab from "@/components/tabs/page";
 import type { EnergyListItem } from "@/redux/slice/resident/meter-mgt/meter-mgt-slice";
 import Loader from "@/components/ui/Loader";
 import { CopyButton } from "@/components/ui/copy-button";
-
-const USAGE_RANGE_OPTIONS: { label: string; value: MeterUsageRange }[] = [
-  { label: "Daily", value: "daily" },
-  { label: "Weekly", value: "weekly" },
-  { label: "Monthly", value: "monthly" },
-  { label: "Yearly", value: "yearly" },
-];
 
 const METER_TAB_TITLES = ["Chart Overview", "Vend"] as const;
 
@@ -64,7 +59,10 @@ export default function ResidentMeter() {
     null,
   );
   const [walletId, setWalletId] = useState<string | null>(null);
-  const [usageRange, setUsageRange] = useState<MeterUsageRange>("daily");
+  const [estateId, setEstateId] = useState<string | null>(null);
+  const [usageRange, setUsageRange] = useState<MeterUsageRange>("weekly");
+  const [energyPeriod, setEnergyPeriod] =
+    useState<EnergyConsumptionPeriod>("weekly");
   const [realtimeBalanceRefreshing, setRealtimeBalanceRefreshing] =
     useState(false);
   const { meterVendHistory, pagination, loading } = useSelector(
@@ -105,6 +103,14 @@ export default function ResidentMeter() {
       (state: RootState) => state.residentMeter.getVendingStatsByAddressState,
     ) === "isLoading";
 
+  const energyConsumptionChart = useSelector(
+    (state: RootState) => state.residentMeter.energyConsumptionChart,
+  );
+  const energyChartLoading =
+    useSelector(
+      (state: RootState) => state.residentMeter.getEnergyConsumptionChartState,
+    ) === "isLoading";
+
   const {
     realtimeBalance,
     realtimeBalanceLoading,
@@ -123,10 +129,14 @@ export default function ResidentMeter() {
     (async () => {
       try {
         const userRes = await dispatch(getSignedInUser()).unwrap();
-        const foundWalletId: string | null = userRes?.data?.walletId ?? null;
+        const userData = userRes?.data ?? {};
+        const foundWalletId: string | null = userData?.walletId ?? null;
         setWalletId(foundWalletId);
 
-        const addresses = normalizeAddresses(userRes?.data ?? {});
+        const estate = parseResidentEstate(userData as Record<string, unknown>);
+        setEstateId(estate?.id ?? null);
+
+        const addresses = normalizeAddresses(userData);
         if (addresses.length === 0) {
           toast.warning("No address attached to your account.");
           return;
@@ -185,10 +195,25 @@ export default function ResidentMeter() {
     if (!meterNumber) return;
     dispatch(getMeterUsage({ meterNumber, range: usageRange })).catch(
       (error: { message?: string }) => {
-        toast.error(error?.message ?? "Failed to load power usage.");
+        toast.error(error?.message ?? "Failed to load energy usage.");
       },
     );
   }, [meter?.meterNumber, usageRange, dispatch]);
+
+  useEffect(() => {
+    if (!estateId || !selectedAddressId) return;
+    dispatch(
+      getResidentEnergyConsumptionChart({
+        estateId,
+        addressId: selectedAddressId,
+        period: energyPeriod,
+      }),
+    ).catch((error: { message?: string }) => {
+      toast.error(
+        error?.message ?? "Failed to load energy consumption chart.",
+      );
+    });
+  }, [dispatch, estateId, selectedAddressId, energyPeriod]);
 
   useEffect(() => {
     const meterNumber = meter?.meterNumber;
@@ -203,12 +228,7 @@ export default function ResidentMeter() {
     });
   }, [meter?.meterNumber, dispatch]);
 
-  const powerUsage = useMemo(
-    () => mapMeterUsageToPowerUsage(meterUsage),
-    [meterUsage],
-  );
-
-  const powerUsageLoading =
+  const energyUsageLoading =
     Boolean(meter?.meterNumber) &&
     (meterUsageLoading || (meterLoading && !meterUsage));
 
@@ -389,9 +409,9 @@ export default function ResidentMeter() {
                 Total Energy Consumed
               </p>
               <p className="text-lg font-semibold tabular-nums mt-1">
-                {powerUsageLoading
+                {energyUsageLoading
                   ? "—"
-                  : `${powerUsage.totalKwh.toLocaleString()} kWh`}
+                  : `${Math.round(Number(meterUsage?.totalUsage) || 0).toLocaleString()} kWh`}
               </p>
             </div>
             <div
@@ -456,41 +476,35 @@ export default function ResidentMeter() {
                     }
                   />
 
-                  <div className="space-y-3 bg-white p-4 rounded-md">
-                    {meter?.meterNumber ? (
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-                        <label
-                          htmlFor="meter-usage-range-select"
-                          className="text-sm font-medium text-muted-foreground shrink-0"
-                        >
-                          Usage period
-                        </label>
-                        <Select
-                          id="meter-usage-range-select"
-                          options={USAGE_RANGE_OPTIONS}
-                          value={usageRange}
-                          onChange={(e) =>
-                            setUsageRange(e.target.value as MeterUsageRange)
-                          }
-                          className="w-full max-w-30"
-                        />
-                      </div>
-                    ) : null}
-                    <PowerUsageCard
-                      data={powerUsage.points}
-                      totalUsageKwh={powerUsage.totalKwh}
-                      loading={powerUsageLoading}
-                      emptyMessage={
-                        !selectedAddressId
-                          ? "Add an address to your account to see power usage."
-                          : !meter?.meterNumber
-                            ? "No meter linked to this address."
-                            : meterUsageMessage ||
-                              meterUsage?.hint ||
-                              "No power usage data for this period. The meter may be offline or have no history yet."
-                      }
-                    />
-                  </div>
+                  <MeterEnergyUsageSection
+                    data={meterUsage}
+                    loading={energyUsageLoading}
+                    range={usageRange}
+                    onRangeChange={setUsageRange}
+                    showPeriodFilter={Boolean(meter?.meterNumber)}
+                    emptyMessage={
+                      !selectedAddressId
+                        ? "Add an address to your account to see energy usage."
+                        : !meter?.meterNumber
+                          ? "No meter linked to this address."
+                          : meterUsageMessage ||
+                            meterUsage?.hint ||
+                            "No energy usage data for this period. The meter may be offline or have no history yet."
+                    }
+                  />
+                  <EnergyConsumptionOverTimeCard
+                    data={energyConsumptionChart}
+                    loading={energyChartLoading}
+                    period={energyPeriod}
+                    onPeriodChange={setEnergyPeriod}
+                    emptyMessage={
+                      !estateId
+                        ? "Your account is not linked to an estate."
+                        : !selectedAddressId
+                          ? "Select an address to view vending data."
+                          : "No vending data for this period yet."
+                    }
+                  />
                 </div>
               );
             case "Vend":

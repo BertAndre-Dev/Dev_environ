@@ -119,7 +119,7 @@ function PeriodSegmentedControl({
   onChange: (period: EnergyConsumptionPeriod) => void;
 }>) {
   return (
-    <div className="inline-flex rounded-full border border-input bg-muted/30 p-1">
+    <div className="inline-flex rounded-full border border-input bg-muted/30">
       {PERIOD_OPTIONS.map((opt) => (
         <button
           key={opt.value}
@@ -164,7 +164,7 @@ function FilterSelect({
           value={value}
           disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
-          className="h-9 w-[130px] max-w-[130px] shrink-0 appearance-none rounded-full border-input px-2 pr-7 text-xs sm:text-sm cursor-pointer hover:cursor-pointer"
+          className="h-9 w-[120px] max-w-[120px] shrink-0 appearance-none rounded-full border-input px-2 pr-7 text-xs sm:text-sm cursor-pointer hover:cursor-pointer"
         />
         <ChevronDown
           className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground hover:cursor-pointer"
@@ -176,7 +176,7 @@ function FilterSelect({
 }
 
 export function EnergyConsumptionOverTimeCard({
-  title = "Vending Data Over Time",
+  title = "Vending Over Time",
   data,
   loading = false,
   emptyMessage = "No vending data to display",
@@ -257,7 +257,7 @@ export function EnergyConsumptionOverTimeCard({
       )}
     >
       <div className="flex flex-col gap-4 border-b border-border px-5 py-5 sm:px-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex flex-col gap-4 xl  :flex-row xl:items-start xl:justify-between">
           <div className="space-y-3">
             <h2 className="font-heading text-xl font-bold text-foreground sm:text-2xl">
               {title}

@@ -53,13 +53,13 @@ export function mapTransactionSummaryToBarChart(
 
   return [
     {
-      label: "Credit",
+      label: "Inflow",
       value: credit,
       count: data.creditTransactions,
       highlighted: true,
     },
     {
-      label: "Debit",
+      label: "Outflow",
       value: debit,
       count: data.debitTransactions,
       highlighted: false,

@@ -7,14 +7,26 @@ import Table from "@/components/tables/list/page";
 import { toast } from "react-toastify";
 import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useState } from "react";
+import type { EstateEnergyUsageRange } from "@/lib/estate-energy-usage-chart";
 import { useDispatch, useSelector } from "react-redux";
-import { Link } from "lucide-react";
+import { DollarSign, Link, Zap } from "lucide-react";
 import {
   getAllEstateMeter,
   getVendingStatsByEstate,
 } from "@/redux/slice/admin/meter-mgt/meter-mgt";
+import {
+  getAdminEnergyConsumptionAddressOptions,
+  getAdminEnergyConsumptionChart,
+} from "@/redux/slice/admin/energy-consumption/admin-energy-consumption";
+import { getEstateEnergyUsage } from "@/redux/slice/admin/estate-energy-usage/admin-estate-energy-usage";
+import { getEstateRealtimeReadings } from "@/redux/slice/admin/estate-realtime-readings/admin-estate-realtime-readings";
+import { formatRealtimeEnergyKwh } from "@/lib/estate-realtime-readings";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import AssignMeterForm from "@/components/admin/meter-form/page";
+import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
+import { EstatePowerUsageSection } from "@/components/charts/estate-power-usage-section";
+import type { EnergyConsumptionPeriod } from "@/lib/energy-consumption-chart";
+import Tab from "@/components/tabs/page";
 import { IoSpeedometerOutline } from "react-icons/io5";
 import Loader from "@/components/ui/Loader";
 
@@ -49,8 +61,7 @@ interface AdminMeterData {
 
 const PAGE_LIMIT = 10;
 
-/** Placeholder until estate-wide usage API is wired. */
-const HARDCODED_TOTAL_ENERGY_KWH = 12_450;
+const METER_TAB_TITLES = ["Chart Overview", "Meter Management"] as const;
 
 function formatPurchasedAmount(amount: number): string {
   return `₦${amount.toLocaleString()}`;
@@ -65,6 +76,11 @@ export default function AdminMeterManagement() {
     null,
   );
   const [search, setSearch] = useState("");
+  const [usageRange, setUsageRange] = useState<EstateEnergyUsageRange>("weekly");
+  const [usageRefreshing, setUsageRefreshing] = useState(false);
+  const [energyPeriod, setEnergyPeriod] =
+    useState<EnergyConsumptionPeriod>("weekly");
+  const [selectedAddressId, setSelectedAddressId] = useState("all");
 
   const { allAdminMeters, pagination, loading } = useSelector(
     (state: RootState) => {
@@ -86,6 +102,44 @@ export default function AdminMeterManagement() {
     useSelector(
       (state: RootState) => state.adminMeter.getVendingStatsByEstateState,
     ) === "isLoading";
+
+  const {
+    energyConsumptionChart,
+    energyAddressOptions,
+    energyChartLoading,
+    energyAddressOptionsLoading,
+  } = useSelector((state: RootState) => ({
+    energyConsumptionChart: state.adminEnergyConsumption.chart,
+    energyAddressOptions: state.adminEnergyConsumption.addressOptions,
+    energyChartLoading:
+      state.adminEnergyConsumption.chartStatus === "isLoading",
+    energyAddressOptionsLoading:
+      state.adminEnergyConsumption.addressOptionsStatus === "isLoading",
+  }));
+
+  const {
+    estateRealtimeReadings,
+    estateRealtimeReadingsLoading,
+  } = useSelector((state: RootState) => ({
+    estateRealtimeReadings: state.adminEstateRealtimeReadings.readings,
+    estateRealtimeReadingsLoading:
+      state.adminEstateRealtimeReadings.status === "isLoading",
+  }));
+
+  const {
+    estateEnergyUsage,
+    estateEnergyUsageLoading,
+    estateEnergyUsageProgress,
+    estateEnergyUsageMessage,
+    estateEnergyUsageError,
+  } = useSelector((state: RootState) => ({
+    estateEnergyUsage: state.adminEstateEnergyUsage.usage,
+    estateEnergyUsageLoading:
+      state.adminEstateEnergyUsage.status === "isLoading",
+    estateEnergyUsageProgress: state.adminEstateEnergyUsage.progress,
+    estateEnergyUsageMessage: state.adminEstateEnergyUsage.message,
+    estateEnergyUsageError: state.adminEstateEnergyUsage.error,
+  }));
 
   const fetchMeters = useCallback(
     async (page = 1) => {
@@ -150,6 +204,68 @@ export default function AdminMeterManagement() {
       toast.error(error?.message ?? "Failed to load vending statistics."),
     );
   }, [dispatch, estateId]);
+
+  useEffect(() => {
+    if (!estateId) return;
+    dispatch(getEstateRealtimeReadings({ estateId })).catch(
+      (error: { message?: string }) => {
+        toast.error(
+          error?.message ?? "Failed to load estate realtime usage.",
+        );
+      },
+    );
+  }, [dispatch, estateId]);
+
+  useEffect(() => {
+    if (!estateId) return;
+    dispatch(getEstateEnergyUsage({ estateId, range: usageRange })).catch(
+      (error: { message?: string }) => {
+        toast.error(error?.message ?? "Failed to load estate energy usage.");
+      },
+    );
+  }, [dispatch, estateId, usageRange]);
+
+  useEffect(() => {
+    if (!estateId) return;
+    dispatch(getAdminEnergyConsumptionAddressOptions({ estateId })).catch(
+      (error: { message?: string }) => {
+        toast.error(error?.message ?? "Failed to load address options.");
+      },
+    );
+  }, [dispatch, estateId]);
+
+  useEffect(() => {
+    if (!estateId) return;
+    dispatch(
+      getAdminEnergyConsumptionChart({
+        estateId,
+        period: energyPeriod,
+        addressId: selectedAddressId,
+      }),
+    ).catch((error: { message?: string }) => {
+      toast.error(
+        error?.message ?? "Failed to load energy consumption chart.",
+      );
+    });
+  }, [dispatch, estateId, energyPeriod, selectedAddressId]);
+
+  const handleRefreshUsage = async () => {
+    if (!estateId) return;
+    setUsageRefreshing(true);
+    try {
+      await dispatch(
+        getEstateEnergyUsage({
+          estateId,
+          range: usageRange,
+          refresh: true,
+        }),
+      ).unwrap();
+    } catch (error: any) {
+      toast.error(error?.message ?? "Failed to refresh estate energy usage.");
+    } finally {
+      setUsageRefreshing(false);
+    }
+  };
 
   const handleRefresh = async () => {
     try {
@@ -264,11 +380,9 @@ export default function AdminMeterManagement() {
       >
       {/* Header */}
       <div>
-        <h1 className="font-heading text-3xl font-bold">
-          Estate Meter Management
-        </h1>
+        <h1 className="font-heading text-3xl font-bold">Energy Management</h1>
         <p className="text-muted-foreground mt-1">
-          Monitor and manage all energy meters in {" "}
+          Monitor energy usage and manage all meters in{" "}
           <span className="text-[18px] font-bold underline uppercase text-black">
             {estateName || ""}
           </span>
@@ -276,34 +390,28 @@ export default function AdminMeterManagement() {
         </p>
       </div>
 
-      {/* Stats Card */}
-      <Card className="p-6 md:p-8 shadow-md">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
-          <div className="min-w-0 shrink-0">
-            <p className="text-sm text-muted-foreground">Total Meters</p>
-            <p className="font-heading text-4xl font-bold mt-2 tabular-nums tracking-tight">
-              {pagination?.total ?? 0}
-            </p>
-          </div>
-
-          <div className="flex flex-1 items-stretch rounded-xl border border-border bg-muted/40 max-w-2xl">
-            <div className="flex flex-1 flex-col justify-center p-4 text-center sm:text-left">
-              <p className="text-sm text-muted-foreground">
-                Total Energy Consumed
-              </p>
-              <p className="text-lg font-semibold tabular-nums mt-1">
-                {HARDCODED_TOTAL_ENERGY_KWH.toLocaleString()} kWh
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="p-6 shadow-md">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Total Meters</p>
+              <p className="font-heading text-2xl font-bold mt-2 tabular-nums tracking-tight">
+                {pagination?.total ?? 0}
               </p>
             </div>
-            <div
-              className="w-px shrink-0 self-stretch bg-border my-4"
-              aria-hidden
-            />
-            <div className="flex flex-1 flex-col justify-center p-4 text-center sm:text-left">
+            <div className="rounded-lg bg-[#FEE6D480] p-3">
+              <IoSpeedometerOutline className="h-6 w-6" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6 shadow-md">
+          <div className="flex items-start justify-between">
+            <div>
               <p className="text-sm text-muted-foreground">
                 Total Amount Purchased
               </p>
-              <p className="text-lg font-semibold tabular-nums mt-1">
+              <p className="font-heading text-2xl font-bold mt-2 tabular-nums tracking-tight">
                 {vendingStatsLoading
                   ? "—"
                   : formatPurchasedAmount(
@@ -311,61 +419,126 @@ export default function AdminMeterManagement() {
                     )}
               </p>
             </div>
+            <div className="rounded-lg bg-[#D0DFF280] p-3">
+              <DollarSign className="h-6 w-6" />
+            </div>
           </div>
+        </Card>
 
-          <div className="p-3 rounded-lg bg-[#FEE6D480] shrink-0 self-start xl:self-center">
-            <IoSpeedometerOutline className="w-6 h-6" />
+        <Card className="p-6 shadow-md">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Total Energy</p>
+              <p className="font-heading text-2xl font-bold mt-2 tabular-nums tracking-tight">
+                {estateRealtimeReadingsLoading
+                  ? "—"
+                  : formatRealtimeEnergyKwh(
+                      estateRealtimeReadings?.totalEnergy,
+                    )}
+              </p>
+            </div>
+            <div className="rounded-lg bg-[#CCE4DB80] p-3">
+              <Zap className="h-6 w-6" />
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
 
-      {/* Search */}
-      <Card className="p-4">
-        <input
-          type="text"
-          placeholder="Search by meter number"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-sm px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        />
-      </Card>
+      <Tab
+        titles={[...METER_TAB_TITLES]}
+        renderContent={(activeTab) => {
+          switch (activeTab) {
+            case "Chart Overview":
+              return (
+                <div className="space-y-6">
+                  <EstatePowerUsageSection
+                    data={estateEnergyUsage}
+                    loading={estateEnergyUsageLoading}
+                    progress={estateEnergyUsageProgress}
+                    range={usageRange}
+                    onRangeChange={setUsageRange}
+                    onRefresh={handleRefreshUsage}
+                    refreshing={usageRefreshing}
+                    emptyMessage={
+                      estateEnergyUsageError ??
+                      estateEnergyUsageMessage ??
+                      undefined
+                    }
+                  />
+                  <EnergyConsumptionOverTimeCard
+                    data={energyConsumptionChart}
+                    loading={energyChartLoading}
+                    period={energyPeriod}
+                    onPeriodChange={setEnergyPeriod}
+                    showAddressFilter
+                    addressOptions={energyAddressOptions}
+                    addressValue={selectedAddressId}
+                    onAddressChange={setSelectedAddressId}
+                    addressFilterLabel="Address"
+                    addressFilterLoading={energyAddressOptionsLoading}
+                    emptyMessage={
+                      !estateId
+                        ? "No estate linked to your account."
+                        : "No vending data for this period yet."
+                    }
+                  />
+                </div>
+              );
+            case "Meter Management":
+              return (
+                <div className="space-y-6">
+                  <Card className="p-4">
+                    <input
+                      type="text"
+                      placeholder="Search by meter number"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="w-full max-w-sm px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </Card>
 
-      <Card className="p-4">
-        <Table
-          columns={columns}
-          data={allAdminMeters || []}
-          emptyMessage="No meter found."
-          showPagination
-          // enableSearch
-          onSearch={(value) => setSearch(value)}
-          paginationInfo={{
-            total: pagination?.total || 0,
-            current: Number(pagination?.currentPage) || 1,
-            pageSize: Number(pagination?.pageSize) || 10,
-          }}
-          onPageChange={(page) => {
-            fetchMeters(page).catch(() =>
-              toast.error("Failed to change page"),
-            );
-          }}
-          enableExport
-          exportFileName="meters"
-          onExportRequest={
-            estateId
-              ? async () => {
-                  const res = await dispatch(
-                    getAllEstateMeter({
-                      estateId,
-                      page: 1,
-                      limit: 50000,
-                    }),
-                  ).unwrap();
-                  return res?.data ?? [];
-                }
-              : undefined
+                  <Card className="p-4">
+                    <Table
+                      columns={columns}
+                      data={allAdminMeters || []}
+                      emptyMessage="No meter found."
+                      showPagination
+                      onSearch={(value) => setSearch(value)}
+                      paginationInfo={{
+                        total: pagination?.total || 0,
+                        current: Number(pagination?.currentPage) || 1,
+                        pageSize: Number(pagination?.pageSize) || 10,
+                      }}
+                      onPageChange={(page) => {
+                        fetchMeters(page).catch(() =>
+                          toast.error("Failed to change page"),
+                        );
+                      }}
+                      enableExport
+                      exportFileName="meters"
+                      onExportRequest={
+                        estateId
+                          ? async () => {
+                              const res = await dispatch(
+                                getAllEstateMeter({
+                                  estateId,
+                                  page: 1,
+                                  limit: 50000,
+                                }),
+                              ).unwrap();
+                              return res?.data ?? [];
+                            }
+                          : undefined
+                      }
+                    />
+                  </Card>
+                </div>
+              );
+            default:
+              return null;
           }
-        />
-      </Card>
+        }}
+      />
 
       {open && estateId && selectedMeter && (
         <Modal visible={open} onClose={handleCloseModal}>

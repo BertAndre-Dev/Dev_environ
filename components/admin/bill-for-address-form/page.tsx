@@ -11,6 +11,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-toastify";
+import {
+  formatAmountInput,
+  parseFormattedNumber,
+} from "@/lib/format-number";
 
 export interface BillForAddressFormData {
   addressId: string;
@@ -35,10 +39,10 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
   const [loadingAddresses, setLoadingAddresses] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const [form, setForm] = useState<BillForAddressFormData>({
+  const [form, setForm] = useState({
     addressId: "",
     frequency: "monthly",
-    amountPerBillingPeriod: 0,
+    amountPerBillingPeriod: "",
     startDate: "",
   });
 
@@ -92,8 +96,8 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
   }, [dispatch, estateId]);
 
   const handleChange = (
-    field: keyof BillForAddressFormData,
-    value: string | number,
+    field: keyof typeof form,
+    value: string,
   ) => {
     setForm((prev) => ({
       ...prev,
@@ -111,7 +115,7 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
       toast.error("Please enter billing frequency.");
       return;
     }
-    const amount = Number(form.amountPerBillingPeriod);
+    const amount = parseFormattedNumber(form.amountPerBillingPeriod);
     if (!Number.isFinite(amount) || amount <= 0) {
       toast.error("Please enter a valid amount per billing period.");
       return;
@@ -124,8 +128,10 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
     try {
       setSubmitting(true);
       await onSubmit({
-        ...form,
+        addressId: form.addressId,
+        frequency: form.frequency,
         amountPerBillingPeriod: amount,
+        startDate: form.startDate,
       });
     } finally {
       setSubmitting(false);
@@ -190,16 +196,16 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
           </Label>
           <Input
             id="amountPerBillingPeriod"
-            type="number"
-            min={0}
-            value={form.amountPerBillingPeriod || ""}
+            type="text"
+            inputMode="numeric"
+            value={form.amountPerBillingPeriod}
             onChange={(e) =>
               handleChange(
                 "amountPerBillingPeriod",
-                Number(e.target.value) || 0,
+                formatAmountInput(e.target.value),
               )
             }
-            placeholder="10000"
+            placeholder="10,000"
           />
         </div>
 

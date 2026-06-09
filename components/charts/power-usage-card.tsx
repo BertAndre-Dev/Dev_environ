@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo } from "react";
+import { useId, useMemo, type ReactNode } from "react";
 import {
   Area,
   AreaChart,
@@ -23,7 +23,10 @@ export interface PowerUsageCardProps {
   readonly totalUsageKwh?: number;
   readonly className?: string;
   readonly loading?: boolean;
+  readonly loadingContent?: ReactNode;
   readonly emptyMessage?: string;
+  readonly headerActions?: ReactNode;
+  readonly subtitle?: string;
 }
 
 const STROKE_COLOR = "#0150AC";
@@ -60,12 +63,15 @@ function computeYAxisMax(points: PowerUsageDataPoint[]): number {
 }
 
 export function PowerUsageCard({
-  title = "Power Usage",
+  title = "Energy Usage",
   data,
   totalUsageKwh,
   className,
   loading = false,
-  emptyMessage = "No power usage data to display",
+  loadingContent,
+  emptyMessage = "No energy usage data to display",
+  headerActions,
+  subtitle,
 }: PowerUsageCardProps) {
   const gradientId = useId().replaceAll(":", "");
 
@@ -92,20 +98,32 @@ export function PowerUsageCard({
         className,
       )}
     >
-      <div className="border-b border-border px-6 py-5">
-        <h2 className="font-heading text-2xl font-bold text-foreground">{title}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Total Usage:{" "}
-          <span className="font-semibold text-foreground tabular-nums">
-            {loading ? "—" : `${resolvedTotal.toLocaleString()} kWh`}
-          </span>
-        </p>
+      <div className="flex flex-col gap-4 border-b border-border px-6 py-5 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="font-heading text-2xl font-bold text-foreground">
+            {title}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Total Usage:{" "}
+            <span className="font-semibold text-foreground tabular-nums">
+              {loading ? "—" : `${resolvedTotal.toLocaleString()} kWh`}
+            </span>
+          </p>
+          {subtitle ? (
+            <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
+          ) : null}
+        </div>
+        {headerActions ? (
+          <div className="flex shrink-0 flex-wrap items-center gap-2 self-start">
+            {headerActions}
+          </div>
+        ) : null}
       </div>
 
       <div className="px-4 py-4 sm:px-6 sm:py-6">
         {loading ? (
           <div className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">
-            Loading…
+            {loadingContent ?? "Loading…"}
           </div>
         ) : hasChartData ? (
           <div className="h-[280px] w-full">

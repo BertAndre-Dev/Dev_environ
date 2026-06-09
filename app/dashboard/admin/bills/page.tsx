@@ -32,6 +32,7 @@ import { useEffect, useState } from "react";
 import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import Loader from "@/components/ui/Loader";
+import { formatAmountDisplay } from "@/lib/format-number";
 
 interface BillData {
   createdAt?: string;
@@ -398,7 +399,11 @@ export default function BillPage() {
     },
     { key: "name", header: "Bill Name" },
     { key: "description", header: "Description" },
-    { key: "yearlyAmount", header: "Yearly Amount" },
+    {
+      key: "yearlyAmount",
+      header: "Yearly Amount (₦)",
+      render: (item: BillData) => formatAmountDisplay(item.yearlyAmount),
+    },
     {
       key: "isActive",
       header: "Status",

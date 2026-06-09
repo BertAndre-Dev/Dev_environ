@@ -18,6 +18,7 @@ import residentBillPinSliceReducer from "@/redux/slice/resident/set-pin/set-pin-
 import fundWalletSliceReducer from "@/redux/slice/estate-admin/fund-wallet/fund-wallet-slice";
 import adminMeterSliceReducer from "@/redux/slice/admin/meter-mgt/meter-mgt-slice";
 import residentMeterSliceReducer from "@/redux/slice/resident/meter-mgt/meter-mgt-slice";
+import residentMeterRealtimeBalanceSliceReducer from "@/redux/slice/resident/meter-realtime-balance/resident-meter-realtime-balance-slice";
 import superAdminMeterSliceReducer from "@/redux/slice/super-admin/super-admin-meter-mgt/super-admin-meter-slice";
 import superAdminTransactionSliceReducer from "@/redux/slice/super-admin/super-admin-transactions-mgt/super-admin-transactions-slice";
 import visitorSliceReducer from "@/redux/slice/admin/visitor/visitor.slice";
@@ -36,6 +37,8 @@ import meterAnalyticsSliceReducer from "@/redux/slice/estate-admin/meter-analyti
 import superAdminBillsAnalyticsSliceReducer from "@/redux/slice/super-admin/super-admin-bills-analytics/super-admin-bills-analytics-slice";
 import adminDashboardAnalyticsSliceReducer from "@/redux/slice/admin/dashboard-analytics/admin-dashboard-analytics-slice";
 import adminEnergyConsumptionSliceReducer from "@/redux/slice/admin/energy-consumption/admin-energy-consumption-slice";
+import adminEstateEnergyUsageSliceReducer from "@/redux/slice/admin/estate-energy-usage/admin-estate-energy-usage-slice";
+import adminEstateRealtimeReadingsSliceReducer from "@/redux/slice/admin/estate-realtime-readings/admin-estate-realtime-readings-slice";
 import adminTransactionSummarySliceReducer from "@/redux/slice/admin/transaction-summary/admin-transaction-summary-slice";
 import adminUserAnalyticsSliceReducer from "@/redux/slice/admin/user-analytics/user-analytics-slice";
 import residentDashboardAnalyticsSliceReducer from "@/redux/slice/resident/dashboard-analytics/resident-dashboard-analytics-slice";
@@ -250,6 +253,7 @@ export const store = configureStore({
     estateAdminFundWallet: persistedFundWalletSliceReducer,
     adminMeter: persistedAdminMeterliceReducer,
     residentMeter: persistedResidentMeterliceReducer,
+    residentMeterRealtimeBalance: residentMeterRealtimeBalanceSliceReducer,
     superAdminMeter: persistedSuperAdmintMeterliceReducer,
     superAdminTransaction: persistedSuperAdminTransactionSliceReducer,
     visitor: persistedVisitorSliceReducer,
@@ -268,6 +272,8 @@ export const store = configureStore({
     superAdminBillsAnalytics: superAdminBillsAnalyticsSliceReducer,
     adminDashboardAnalytics: adminDashboardAnalyticsSliceReducer,
     adminEnergyConsumption: adminEnergyConsumptionSliceReducer,
+    adminEstateEnergyUsage: adminEstateEnergyUsageSliceReducer,
+    adminEstateRealtimeReadings: adminEstateRealtimeReadingsSliceReducer,
     adminTransactionSummary: adminTransactionSummarySliceReducer,
     adminUserAnalytics: adminUserAnalyticsSliceReducer,
     residentDashboardAnalytics: residentDashboardAnalyticsSliceReducer,

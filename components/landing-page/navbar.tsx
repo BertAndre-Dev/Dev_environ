@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import Button from "@/components/landing-page/atom/button";
@@ -10,15 +11,27 @@ type NavbarProps = {
 };
 
 export default function Navbar({ onOpenBookDemo }: NavbarProps) {
+  const pathname = usePathname();
   const [activeLink, setActiveLink] = useState("/");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navLinks = [
     { href: "/", label: "Home" },
-    { href: "#about", label: "About" },
-    { href: "#features", label: "Features" },
-    { href: "#faq", label: "FAQ" },
+    { href: "/#about", label: "About" },
+    { href: "/#features", label: "Features" },
+    { href: "/blog", label: "Blog" },
+    { href: "/#faq", label: "FAQ" },
   ];
+
+  const isLinkActive = (href: string) => {
+    if (href === "/blog") {
+      return pathname === "/blog" || pathname.startsWith("/blog/");
+    }
+    if (href === "/") {
+      return pathname === "/";
+    }
+    return activeLink === href;
+  };
 
   const handleMobileNavClick = (href: string) => {
     setActiveLink(href);
@@ -44,7 +57,7 @@ export default function Navbar({ onOpenBookDemo }: NavbarProps) {
         <div className="hidden lg:flex items-center justify-center flex-1">
           <div className="inline-flex items-center gap-10 rounded-full bg-[#FA812880] px-10 py-3">
             {navLinks.map((link) => {
-              const isActive = activeLink === link.href;
+              const isActive = isLinkActive(link.href);
 
               return (
                 <div key={link.href} className="relative group">

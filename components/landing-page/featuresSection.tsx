@@ -70,7 +70,7 @@ export default function FeaturesSection() {
                       ? "Property Management"
                       : "Resident Management"}
                   </h2>
-                  <div className="mt-2 h-[3px] w-20 rounded-full bg-[#FA8128] mb-4" />
+                  <div className="mt-2 h-[3px] w-20 rounded-full bg-[#FA8128] mb-6" />
                   {activeTab === "owners" ? (
                     <p className="text-[#4C4C4C] text-sm sm:text-base leading-relaxed">
                       A powerful web-based management suite designed for
@@ -121,12 +121,6 @@ export default function FeaturesSection() {
                     </p>
                   )}
                 </div>
-              </div>
-
-              <div className="pt-2">
-                <button className="inline-flex items-center justify-center rounded-full bg-[#1560BD] hover:bg-[#124ea0] text-white text-sm sm:text-base font-medium px-6 sm:px-8 py-2.5 transition-colors">
-                  Learn More
-                </button>
               </div>
             </article>
           </div>

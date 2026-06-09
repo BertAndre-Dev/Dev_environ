@@ -2,13 +2,15 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
-import { PowerUsageCard } from "@/components/charts/power-usage-card";
-import { mapMeterUsageToPowerUsage } from "@/lib/power-usage-chart";
+import { MeterRealtimeBalanceCard } from "@/components/charts/meter-realtime-balance-card";
+import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
+import { MeterEnergyUsageSection } from "@/components/charts/meter-energy-usage-section";
+import type { EnergyConsumptionPeriod } from "@/lib/energy-consumption-chart";
+import { parseResidentEstate } from "@/app/dashboard/resident/asset/lib/estate";
 import Modal from "@/components/modal/page";
 import { toast } from "react-toastify";
 import { RootState, AppDispatch } from "@/redux/store";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getMeterByAddress,
@@ -16,24 +18,23 @@ import {
   disconnectMeter,
   getMeterVendHistory,
   getMeterUsage,
+  getResidentEnergyConsumptionChart,
   getVendingStatsByAddress,
   type MeterUsageRange,
 } from "@/redux/slice/resident/meter-mgt/meter-mgt";
+import { getMeterRealtimeBalance } from "@/redux/slice/resident/meter-realtime-balance/resident-meter-realtime-balance";
+import { clearResidentMeterRealtimeBalance } from "@/redux/slice/resident/meter-realtime-balance/resident-meter-realtime-balance-slice";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { normalizeAddresses } from "@/lib/address";
 import SwitchAddress from "@/components/resident/switch-address/page";
 import VendPower from "@/components/resident/vend-power/page";
 import Table from "@/components/tables/list/page";
+import Tab from "@/components/tabs/page";
 import type { EnergyListItem } from "@/redux/slice/resident/meter-mgt/meter-mgt-slice";
 import Loader from "@/components/ui/Loader";
 import { CopyButton } from "@/components/ui/copy-button";
 
-const USAGE_RANGE_OPTIONS: { label: string; value: MeterUsageRange }[] = [
-  { label: "Daily", value: "daily" },
-  { label: "Weekly", value: "weekly" },
-  { label: "Monthly", value: "monthly" },
-  { label: "Yearly", value: "yearly" },
-];
+const METER_TAB_TITLES = ["Chart Overview", "Vend"] as const;
 
 function formatMeterBalance(balance: number | null | undefined): string {
   const n = Number(balance);
@@ -58,7 +59,12 @@ export default function ResidentMeter() {
     null,
   );
   const [walletId, setWalletId] = useState<string | null>(null);
-  const [usageRange, setUsageRange] = useState<MeterUsageRange>("daily");
+  const [estateId, setEstateId] = useState<string | null>(null);
+  const [usageRange, setUsageRange] = useState<MeterUsageRange>("weekly");
+  const [energyPeriod, setEnergyPeriod] =
+    useState<EnergyConsumptionPeriod>("weekly");
+  const [realtimeBalanceRefreshing, setRealtimeBalanceRefreshing] =
+    useState(false);
   const { meterVendHistory, pagination, loading } = useSelector(
     (state: RootState) => {
       const vendState = state.residentMeter as any;
@@ -97,15 +103,40 @@ export default function ResidentMeter() {
       (state: RootState) => state.residentMeter.getVendingStatsByAddressState,
     ) === "isLoading";
 
+  const energyConsumptionChart = useSelector(
+    (state: RootState) => state.residentMeter.energyConsumptionChart,
+  );
+  const energyChartLoading =
+    useSelector(
+      (state: RootState) => state.residentMeter.getEnergyConsumptionChartState,
+    ) === "isLoading";
+
+  const {
+    realtimeBalance,
+    realtimeBalanceLoading,
+    realtimeBalanceMessage,
+    realtimeBalanceError,
+  } = useSelector((state: RootState) => ({
+    realtimeBalance: state.residentMeterRealtimeBalance.balance,
+    realtimeBalanceLoading:
+      state.residentMeterRealtimeBalance.status === "isLoading",
+    realtimeBalanceMessage: state.residentMeterRealtimeBalance.message,
+    realtimeBalanceError: state.residentMeterRealtimeBalance.error,
+  }));
+
   // Load user and normalize addresses (addressIds for owners, addressId for tenants)
   useEffect(() => {
     (async () => {
       try {
         const userRes = await dispatch(getSignedInUser()).unwrap();
-        const foundWalletId: string | null = userRes?.data?.walletId ?? null;
+        const userData = userRes?.data ?? {};
+        const foundWalletId: string | null = userData?.walletId ?? null;
         setWalletId(foundWalletId);
 
-        const addresses = normalizeAddresses(userRes?.data ?? {});
+        const estate = parseResidentEstate(userData as Record<string, unknown>);
+        setEstateId(estate?.id ?? null);
+
+        const addresses = normalizeAddresses(userData);
         if (addresses.length === 0) {
           toast.warning("No address attached to your account.");
           return;
@@ -164,19 +195,60 @@ export default function ResidentMeter() {
     if (!meterNumber) return;
     dispatch(getMeterUsage({ meterNumber, range: usageRange })).catch(
       (error: { message?: string }) => {
-        toast.error(error?.message ?? "Failed to load power usage.");
+        toast.error(error?.message ?? "Failed to load energy usage.");
       },
     );
   }, [meter?.meterNumber, usageRange, dispatch]);
 
-  const powerUsage = useMemo(
-    () => mapMeterUsageToPowerUsage(meterUsage),
-    [meterUsage],
-  );
+  useEffect(() => {
+    if (!estateId || !selectedAddressId) return;
+    dispatch(
+      getResidentEnergyConsumptionChart({
+        estateId,
+        addressId: selectedAddressId,
+        period: energyPeriod,
+      }),
+    ).catch((error: { message?: string }) => {
+      toast.error(
+        error?.message ?? "Failed to load energy consumption chart.",
+      );
+    });
+  }, [dispatch, estateId, selectedAddressId, energyPeriod]);
 
-  const powerUsageLoading =
+  useEffect(() => {
+    const meterNumber = meter?.meterNumber;
+    if (!meterNumber) {
+      dispatch(clearResidentMeterRealtimeBalance());
+      return;
+    }
+    dispatch(
+      getMeterRealtimeBalance({ meterNumber, includeUsed: true }),
+    ).catch((error: { message?: string }) => {
+      toast.error(error?.message ?? "Failed to load realtime meter balance.");
+    });
+  }, [meter?.meterNumber, dispatch]);
+
+  const energyUsageLoading =
     Boolean(meter?.meterNumber) &&
     (meterUsageLoading || (meterLoading && !meterUsage));
+
+  const handleRefreshRealtimeBalance = async () => {
+    if (!meter?.meterNumber) return;
+    setRealtimeBalanceRefreshing(true);
+    try {
+      await dispatch(
+        getMeterRealtimeBalance({
+          meterNumber: meter.meterNumber,
+          includeUsed: true,
+          refresh: true,
+        }),
+      ).unwrap();
+    } catch (error: any) {
+      toast.error(error?.message ?? "Failed to refresh realtime meter balance.");
+    } finally {
+      setRealtimeBalanceRefreshing(false);
+    }
+  };
 
   const handleRefresh = async () => {
     if (!selectedAddressId) return;
@@ -193,6 +265,13 @@ export default function ResidentMeter() {
             getMeterUsage({
               meterNumber: meter.meterNumber,
               range: usageRange,
+              refresh: true,
+            }),
+          ).unwrap(),
+          dispatch(
+            getMeterRealtimeBalance({
+              meterNumber: meter.meterNumber,
+              includeUsed: true,
               refresh: true,
             }),
           ).unwrap(),
@@ -312,7 +391,7 @@ export default function ResidentMeter() {
       />
 
       <Card className="p-6 md:p-8 shadow-md">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0 shrink-0">
             <h2 className="text-xl font-semibold tracking-tight">My Meter</h2>
             <p className="text-sm text-muted-foreground mt-1">
@@ -324,15 +403,15 @@ export default function ResidentMeter() {
             </p>
           </div>
 
-          <div className="flex flex-1 items-stretch rounded-xl border border-border bg-muted/40 max-w-2xl">
+          <div className="flex flex-1 items-stretch rounded-xl border border-border bg-muted/40 max-w-100">
             <div className="flex flex-1 flex-col justify-center p-4 text-center sm:text-left">
               <p className="text-sm text-muted-foreground">
                 Total Energy Consumed
               </p>
               <p className="text-lg font-semibold tabular-nums mt-1">
-                {powerUsageLoading
+                {energyUsageLoading
                   ? "—"
-                  : `${powerUsage.totalKwh.toLocaleString()} kWh`}
+                  : `${Math.round(Number(meterUsage?.totalUsage) || 0).toLocaleString()} kWh`}
               </p>
             </div>
             <div
@@ -353,7 +432,7 @@ export default function ResidentMeter() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+          <div className="flex flex-col xl:flex-row items-stretch xl:items-center gap-3 shrink-0">
             <Button
               onClick={handleOpenModal}
               size="lg"
@@ -374,77 +453,105 @@ export default function ResidentMeter() {
         </div>
       </Card>
 
-      <div className="space-y-3 bg-white p-4 rounded-md">
-        {meter?.meterNumber ? (
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-            <label
-              htmlFor="meter-usage-range-select"
-              className="text-sm font-medium text-muted-foreground shrink-0"
-            >
-              Usage period
-            </label>
-            <Select
-              id="meter-usage-range-select"
-              options={USAGE_RANGE_OPTIONS}
-              value={usageRange}
-              onChange={(e) => setUsageRange(e.target.value as MeterUsageRange)}
-              className="w-full max-w-30"
-            />
-          </div>
-        ) : null}
-        <PowerUsageCard
-          data={powerUsage.points}
-          totalUsageKwh={powerUsage.totalKwh}
-          loading={powerUsageLoading}
-          emptyMessage={
-            !selectedAddressId
-              ? "Add an address to your account to see power usage."
-              : !meter?.meterNumber
-                ? "No meter linked to this address."
-                : meterUsageMessage ||
-                  meterUsage?.hint ||
-                  "No power usage data for this period. The meter may be offline or have no history yet."
-          }
-        />
-      </div>
+      <Tab
+        titles={[...METER_TAB_TITLES]}
+        renderContent={(activeTab) => {
+          switch (activeTab) {
+            case "Chart Overview":
+              return (
+                <div className="space-y-6">
+                  <MeterRealtimeBalanceCard
+                    data={realtimeBalance}
+                    loading={
+                      Boolean(meter?.meterNumber) && realtimeBalanceLoading
+                    }
+                    onRefresh={handleRefreshRealtimeBalance}
+                    refreshing={realtimeBalanceRefreshing}
+                    emptyMessage={
+                      !meter?.meterNumber
+                        ? "No meter linked to this address."
+                        : (realtimeBalanceError ??
+                          realtimeBalanceMessage ??
+                          undefined)
+                    }
+                  />
 
-      <Card className="p-4">
-        <h2 className="font-semibold mb-4">Vend History</h2>
-        <Table
-          columns={vendColumns}
-          data={meterVendHistory || []}
-          emptyMessage={
-            loading ? (
-              <Loader label="Loading vend history..." />
-            ) : (
-              "No vend history available."
-            )
+                  <MeterEnergyUsageSection
+                    data={meterUsage}
+                    loading={energyUsageLoading}
+                    range={usageRange}
+                    onRangeChange={setUsageRange}
+                    showPeriodFilter={Boolean(meter?.meterNumber)}
+                    emptyMessage={
+                      !selectedAddressId
+                        ? "Add an address to your account to see energy usage."
+                        : !meter?.meterNumber
+                          ? "No meter linked to this address."
+                          : meterUsageMessage ||
+                            meterUsage?.hint ||
+                            "No energy usage data for this period. The meter may be offline or have no history yet."
+                    }
+                  />
+                  <EnergyConsumptionOverTimeCard
+                    data={energyConsumptionChart}
+                    loading={energyChartLoading}
+                    period={energyPeriod}
+                    onPeriodChange={setEnergyPeriod}
+                    emptyMessage={
+                      !estateId
+                        ? "Your account is not linked to an estate."
+                        : !selectedAddressId
+                          ? "Select an address to view vending data."
+                          : "No vending data for this period yet."
+                    }
+                  />
+                </div>
+              );
+            case "Vend":
+              return (
+                <Card className="p-4">
+                  <h2 className="font-semibold mb-4">Vend History</h2>
+                  <Table
+                    columns={vendColumns}
+                    data={meterVendHistory || []}
+                    emptyMessage={
+                      loading ? (
+                        <Loader label="Loading vend history..." />
+                      ) : (
+                        "No vend history available."
+                      )
+                    }
+                    showPagination
+                    paginationInfo={{
+                      total: pagination?.total ?? meterVendHistory.length ?? 0,
+                      current: Number(pagination?.page) || 1,
+                      pageSize: Number(pagination?.limit) || 10,
+                    }}
+                    onPageChange={handleVendPageChange}
+                    enableExport
+                    exportFileName="meter-vend-history"
+                    onExportRequest={
+                      meter?.meterNumber
+                        ? async () => {
+                            const res = await dispatch(
+                              getMeterVendHistory({
+                                meterNumber: meter.meterNumber,
+                                page: 1,
+                                limit: 50000,
+                              }),
+                            ).unwrap();
+                            return res?.data ?? [];
+                          }
+                        : undefined
+                    }
+                  />
+                </Card>
+              );
+            default:
+              return null;
           }
-          showPagination
-          paginationInfo={{
-            total: pagination?.total ?? meterVendHistory.length ?? 0,
-            current: Number(pagination?.page) || 1,
-            pageSize: Number(pagination?.limit) || 10,
-          }}
-          onPageChange={handleVendPageChange}
-          enableExport
-          exportFileName="meter-vend-history"
-          onExportRequest={
-            meter?.meterNumber
-              ? async () => {
-                  const res = await dispatch(
-                    getMeterVendHistory({
-                      meterNumber: meter.meterNumber,
-                      page: 1,
-                      limit: 50000,
-                    }),
-                  ).unwrap();
-                  return res?.data ?? [];
-                }
-              : undefined
-          }
-        />
-      </Card>
+        }}
+      />
 
       {open && meter && walletId && selectedAddressId && (
         <Modal visible={open} onClose={handleOpenModal}>

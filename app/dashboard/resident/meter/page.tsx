@@ -371,7 +371,7 @@ export default function ResidentMeter() {
       />
 
       <Card className="p-6 md:p-8 shadow-md">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0 shrink-0">
             <h2 className="text-xl font-semibold tracking-tight">My Meter</h2>
             <p className="text-sm text-muted-foreground mt-1">
@@ -383,7 +383,7 @@ export default function ResidentMeter() {
             </p>
           </div>
 
-          <div className="flex flex-1 items-stretch rounded-xl border border-border bg-muted/40 max-w-2xl">
+          <div className="flex flex-1 items-stretch rounded-xl border border-border bg-muted/40 max-w-100">
             <div className="flex flex-1 flex-col justify-center p-4 text-center sm:text-left">
               <p className="text-sm text-muted-foreground">
                 Total Energy Consumed
@@ -412,7 +412,7 @@ export default function ResidentMeter() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+          <div className="flex flex-col xl:flex-row items-stretch xl:items-center gap-3 shrink-0">
             <Button
               onClick={handleOpenModal}
               size="lg"

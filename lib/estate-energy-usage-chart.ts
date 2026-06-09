@@ -112,6 +112,18 @@ export function mapEstateEnergyUsageToChartPoints(
     }));
 }
 
+/** Maps estate usage API data for PowerUsageCard. */
+export function mapEstateEnergyUsageToPowerUsage(
+  usage: EstateEnergyUsageData | null | undefined,
+): { points: PowerUsageDataPoint[]; totalKwh: number } {
+  const points = mapEstateEnergyUsageToChartPoints(usage);
+  const rawTotal = usage?.totalUsage;
+  const totalKwh = Math.round(
+    Number.isFinite(rawTotal) ? Number(rawTotal) : 0,
+  );
+  return { points, totalKwh };
+}
+
 function parseUsagePayload(value: unknown): EstateEnergyUsageData | null {
   if (!value || typeof value !== "object") return null;
   const record = value as Record<string, unknown>;

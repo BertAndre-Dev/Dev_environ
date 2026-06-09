@@ -38,7 +38,6 @@ import superAdminBillsAnalyticsSliceReducer from "@/redux/slice/super-admin/supe
 import adminDashboardAnalyticsSliceReducer from "@/redux/slice/admin/dashboard-analytics/admin-dashboard-analytics-slice";
 import adminEnergyConsumptionSliceReducer from "@/redux/slice/admin/energy-consumption/admin-energy-consumption-slice";
 import adminEstateEnergyUsageSliceReducer from "@/redux/slice/admin/estate-energy-usage/admin-estate-energy-usage-slice";
-import adminEstateConsumptionChartSliceReducer from "@/redux/slice/admin/estate-consumption-chart/admin-estate-consumption-chart-slice";
 import adminEstateRealtimeReadingsSliceReducer from "@/redux/slice/admin/estate-realtime-readings/admin-estate-realtime-readings-slice";
 import adminTransactionSummarySliceReducer from "@/redux/slice/admin/transaction-summary/admin-transaction-summary-slice";
 import adminUserAnalyticsSliceReducer from "@/redux/slice/admin/user-analytics/user-analytics-slice";
@@ -274,7 +273,6 @@ export const store = configureStore({
     adminDashboardAnalytics: adminDashboardAnalyticsSliceReducer,
     adminEnergyConsumption: adminEnergyConsumptionSliceReducer,
     adminEstateEnergyUsage: adminEstateEnergyUsageSliceReducer,
-    adminEstateConsumptionChart: adminEstateConsumptionChartSliceReducer,
     adminEstateRealtimeReadings: adminEstateRealtimeReadingsSliceReducer,
     adminTransactionSummary: adminTransactionSummarySliceReducer,
     adminUserAnalytics: adminUserAnalyticsSliceReducer,

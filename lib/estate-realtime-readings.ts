@@ -1,5 +1,3 @@
-import { extractEstateEnergyUsageMessage } from "@/lib/estate-energy-usage-chart";
-
 export interface EstateRealtimeReadingsData {
   estateId: string;
   meterCount: number;
@@ -11,54 +9,31 @@ export interface EstateRealtimeReadingsData {
   source?: string;
 }
 
-export interface EstateRealtimeGaugePoint {
-  name: string;
-  value: number;
-  fill: string;
+export function formatRealtimeEnergyKwh(
+  value: number | null | undefined,
+): string {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "—";
+  return `${n.toLocaleString(undefined, { maximumFractionDigits: 2 })} kWh`;
 }
 
-const GAUGE_COLOR = "#0150AC";
+function extractJobMessage(value: unknown): string | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const job = value as Record<string, unknown>;
 
-export function formatRealtimeTimestamp(iso?: string): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
+  const nested = job.data;
+  if (nested && typeof nested === "object") {
+    const inner = nested as Record<string, unknown>;
+    if (typeof inner.message === "string" && inner.message.trim()) {
+      return inner.message;
+    }
+  }
 
-export function computeRealtimeSuccessRate(data: EstateRealtimeReadingsData): number {
-  if (data.meterCount <= 0) return 0;
-  return Math.round((data.successCount / data.meterCount) * 1000) / 10;
-}
+  if (typeof job.message === "string" && job.message.trim()) {
+    return job.message;
+  }
 
-/** Radial gauge segment for read success rate (0–100). */
-export function mapRealtimeToGaugePoints(
-  data: EstateRealtimeReadingsData | null | undefined,
-): EstateRealtimeGaugePoint[] {
-  if (!data) return [];
-  return [
-    {
-      name: "Success rate",
-      value: computeRealtimeSuccessRate(data),
-      fill: GAUGE_COLOR,
-    },
-  ];
-}
-
-export function mapRealtimeToMeterPieData(
-  data: EstateRealtimeReadingsData | null | undefined,
-): { name: string; value: number; fill: string }[] {
-  if (!data) return [];
-  return [
-    { name: "Successful reads", value: data.successCount, fill: "#10b981" },
-    { name: "Failed reads", value: data.failedCount, fill: "#ef4444" },
-  ].filter((item) => item.value > 0);
+  return undefined;
 }
 
 function parseRealtimePayload(value: unknown): EstateRealtimeReadingsData | null {
@@ -102,7 +77,7 @@ export function parseEstateRealtimeReadingsJobResponse(
         source:
           readings.source ??
           (typeof job.source === "string" ? job.source : undefined),
-        message: extractEstateEnergyUsageMessage(value),
+        message: extractJobMessage(value),
       };
     }
   }
@@ -111,6 +86,6 @@ export function parseEstateRealtimeReadingsJobResponse(
   if (!direct) return null;
   return {
     ...direct,
-    message: extractEstateEnergyUsageMessage(value),
+    message: extractJobMessage(value),
   };
 }

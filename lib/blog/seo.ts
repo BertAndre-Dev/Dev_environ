@@ -30,9 +30,11 @@ function resolveOgImage(imagePath?: string) {
     url: absoluteUrl(path),
     width: imagePath?.includes("blog/") ? 1200 : 512,
     height: imagePath?.includes("blog/") ? 630 : 512,
-    alt: imagePath?.includes("blog/")
-      ? "Bertahub blog featured image"
-      : `${SITE_NAME} logo`,
+    alt: imagePath?.includes("blogHero")
+      ? "Bertahub digital operating system for Nigerian estates"
+      : imagePath?.includes("blog/")
+        ? "Modern Nigerian residential estate entrance"
+        : `${SITE_NAME} logo`,
   };
 }
 
@@ -41,7 +43,7 @@ export function createBlogIndexMetadata(): Metadata {
   const description =
     "Insights on estate management, digital transformation, and building smarter communities in Nigeria.";
   const canonical = absoluteUrl("/blog");
-  const ogImage = resolveOgImage();
+  const ogImage = resolveOgImage("/assets/blog/blogHero.png");
 
   return {
     title,

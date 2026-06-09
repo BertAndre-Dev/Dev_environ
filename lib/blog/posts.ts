@@ -26,9 +26,9 @@ export const blogPosts: BlogPostMeta[] = [
     wordCount: 2400,
     category: "Estate Management",
     author: "Bertahub Team",
-    featuredImage: "/assets/blog/digital-operating-system-hero.jpg",
+    featuredImage: "/assets/blog/blogHero.png",
     featuredImageAlt:
-      "Estate manager reviewing digital dashboard for Nigerian residential community",
+      "Bertahub digital operating system for Nigerian estates shown on laptop and mobile dashboard",
     keywords: [
       "digital estate management Nigeria",
       "estate management software Nigeria",

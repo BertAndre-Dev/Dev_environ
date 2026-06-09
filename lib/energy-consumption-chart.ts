@@ -1,4 +1,8 @@
-export type EnergyConsumptionPeriod = "daily" | "weekly" | "monthly";
+export type EnergyConsumptionPeriod =
+  | "daily"
+  | "weekly"
+  | "monthly"
+  | "yearly";
 
 export interface EnergyConsumptionDataPoint {
   label: string;
@@ -38,10 +42,19 @@ function startOfWeekMonday(isoDate: string): string {
 function bucketKey(isoDate: string, period: EnergyConsumptionPeriod): string {
   if (period === "daily") return isoDate;
   if (period === "weekly") return startOfWeekMonday(isoDate);
-  return isoDate.slice(0, 7);
+  if (period === "monthly") return isoDate.slice(0, 7);
+  return isoDate.slice(0, 4);
+}
+
+function normalizeChartDateKey(key: string): string {
+  if (/^\d{4}$/.test(key)) return `${key}-01-01`;
+  if (/^\d{4}-\d{2}$/.test(key)) return `${key}-01`;
+  return key;
 }
 
 function formatAxisLabel(bucketKey: string, period: EnergyConsumptionPeriod): string {
+  if (period === "yearly") return bucketKey;
+
   const dateStr =
     period === "monthly" ? `${bucketKey}-01` : bucketKey;
   const d = new Date(`${dateStr}T12:00:00`);
@@ -52,7 +65,7 @@ function formatAxisLabel(bucketKey: string, period: EnergyConsumptionPeriod): st
 }
 
 export function formatEnergyTooltipDate(isoDate: string): string {
-  const d = new Date(`${isoDate}T12:00:00`);
+  const d = new Date(`${normalizeChartDateKey(isoDate)}T12:00:00`);
   if (Number.isNaN(d.getTime())) return isoDate;
   return d.toLocaleString("en-GB", {
     day: "2-digit",
@@ -272,6 +285,14 @@ const MOCK_ENERGY_CONSUMPTION_BY_PERIOD: Record<
     { label: "01 DEC", date: "2025-12-01", unitsKwh: 395, amountNaira: 172_000 },
     { label: "01 JAN", date: "2026-01-01", unitsKwh: 450, amountNaira: 198_000 },
     { label: "01 FEB", date: "2026-02-01", unitsKwh: 380, amountNaira: 165_000 },
+  ],
+  yearly: [
+    { label: "2021", date: "2021", unitsKwh: 2_800, amountNaira: 1_200_000 },
+    { label: "2022", date: "2022", unitsKwh: 3_150, amountNaira: 1_380_000 },
+    { label: "2023", date: "2023", unitsKwh: 3_420, amountNaira: 1_520_000 },
+    { label: "2024", date: "2024", unitsKwh: 3_890, amountNaira: 1_740_000 },
+    { label: "2025", date: "2025", unitsKwh: 4_120, amountNaira: 1_860_000 },
+    { label: "2026", date: "2026", unitsKwh: 890, amountNaira: 410_000 },
   ],
 };
 

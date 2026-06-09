@@ -32,6 +32,7 @@ const PERIOD_OPTIONS: { label: string; value: EnergyConsumptionPeriod }[] = [
   { label: "Daily", value: "daily" },
   { label: "Weekly", value: "weekly" },
   { label: "Monthly", value: "monthly" },
+  { label: "Yearly", value: "yearly" },
 ];
 
 export interface EnergyConsumptionOverTimeCardProps {
@@ -257,7 +258,7 @@ export function EnergyConsumptionOverTimeCard({
       )}
     >
       <div className="flex flex-col gap-4 border-b border-border px-5 py-5 sm:px-6">
-        <div className="flex flex-col gap-4 xl  :flex-row xl:items-start xl:justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-3">
             <h2 className="font-heading text-xl font-bold text-foreground sm:text-2xl">
               {title}

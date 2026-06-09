@@ -3,6 +3,7 @@ import type { BlogPostMeta } from "@/lib/blog/posts";
 import Navbar from "@/components/landing-page/navbar";
 import Footer from "@/components/landing-page/footer";
 import Button from "@/components/landing-page/atom/button";
+import BlogImage from "@/components/blog/blog-image";
 
 type BlogArticleLayoutProps = {
   readonly post: BlogPostMeta;
@@ -68,6 +69,21 @@ export default function BlogArticleLayout({
           </div>
         </div>
       </header>
+
+      {post.featuredImage && (
+        <div className="container mx-auto px-6 md:px-8 lg:px-10 xl:px-20 max-w-[1320px] xl:max-w-[1440px] -mt-8 lg:-mt-12 relative z-20">
+          <div className="max-w-3xl mx-auto">
+            <BlogImage
+              src={post.featuredImage}
+              alt={post.featuredImageAlt ?? post.title}
+              priority
+              fit="contain"
+              aspectClassName="aspect-[16/9] sm:aspect-[2/1]"
+              className="my-0 shadow-xl"
+            />
+          </div>
+        </div>
+      )}
 
       <main className="container mx-auto px-6 md:px-8 lg:px-10 xl:px-20 max-w-[1320px] xl:max-w-[1440px] py-12 lg:py-16">
         <div className="max-w-3xl mx-auto">{children}</div>

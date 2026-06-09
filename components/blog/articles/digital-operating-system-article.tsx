@@ -6,6 +6,7 @@ import {
   BlogChallengeCard,
   BlogBenefitCard,
 } from "@/components/blog/blog-prose";
+import BlogImage from "@/components/blog/blog-image";
 
 export default function DigitalOperatingSystemArticle() {
   return (
@@ -79,6 +80,12 @@ export default function DigitalOperatingSystemArticle() {
         This is where the concept of a digital operating system for estates
         becomes essential.
       </p>
+
+      <BlogImage
+        src="/assets/blog/blog.png"
+        alt="Modern gated residential estate entrance in Nigeria at dusk"
+        caption="As Nigerian estates grow in scale and sophistication, the systems managing them must evolve too."
+      />
 
       <BlogPullQuote>
         The question is no longer whether estates should go digital. It&apos;s

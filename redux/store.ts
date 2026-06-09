@@ -32,6 +32,7 @@ import residentComplaintsSliceReducer from "@/redux/slice/resident/maintenance/r
 import transactionAnalyticsSliceReducer from "@/redux/slice/estate-admin/transaction-analytics/transaction-analytics-slice";
 import estateAdminTransactionSummarySliceReducer from "@/redux/slice/estate-admin/transaction-summary/estate-admin-transaction-summary-slice";
 import estateAdminEnergyConsumptionSliceReducer from "@/redux/slice/estate-admin/energy-consumption/estate-admin-energy-consumption-slice";
+import estateAdminEstateEnergyUsageSliceReducer from "@/redux/slice/estate-admin/estate-energy-usage/estate-admin-estate-energy-usage-slice";
 import billsAnalyticsSliceReducer from "@/redux/slice/estate-admin/bills-analytics/bills-analytics-slice";
 import meterAnalyticsSliceReducer from "@/redux/slice/estate-admin/meter-analytics/meter-analytics-slice";
 import superAdminBillsAnalyticsSliceReducer from "@/redux/slice/super-admin/super-admin-bills-analytics/super-admin-bills-analytics-slice";
@@ -267,6 +268,7 @@ export const store = configureStore({
     estateAdminTransactionAnalytics: transactionAnalyticsSliceReducer,
     estateAdminTransactionSummary: estateAdminTransactionSummarySliceReducer,
     estateAdminEnergyConsumption: estateAdminEnergyConsumptionSliceReducer,
+    estateAdminEstateEnergyUsage: estateAdminEstateEnergyUsageSliceReducer,
     estateAdminBillsAnalytics: billsAnalyticsSliceReducer,
     estateAdminMeterAnalytics: meterAnalyticsSliceReducer,
     superAdminBillsAnalytics: superAdminBillsAnalyticsSliceReducer,

@@ -103,7 +103,7 @@ export function TransactionSummaryCard({
           {title}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Credit vs debit amounts
+          Inflow vs outflow amounts
         </p>
       </div>
 
@@ -120,12 +120,12 @@ export function TransactionSummaryCard({
             loading={loading}
           />
           <SummaryStat
-            label="Total credits"
+            label="Total inflow"
             value={formatTransactionAmount(data.totalCredits)}
             loading={loading}
           />
           <SummaryStat
-            label="Total debits"
+            label="Total outflow"
             value={formatTransactionAmount(data.totalDebits)}
             loading={loading}
           />
@@ -182,12 +182,12 @@ export function TransactionSummaryCard({
 
         <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
           <SummaryStat
-            label="Credit transactions"
+            label="Inflow transactions"
             value={data.creditTransactions.toLocaleString()}
             loading={loading}
           />
           <SummaryStat
-            label="Debit transactions"
+            label="Outflow transactions"
             value={data.debitTransactions.toLocaleString()}
             loading={loading}
           />

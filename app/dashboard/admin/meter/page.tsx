@@ -14,10 +14,7 @@ import {
   getAllEstateMeter,
   getVendingStatsByEstate,
 } from "@/redux/slice/admin/meter-mgt/meter-mgt";
-import {
-  getAdminEnergyConsumptionAddressOptions,
-  getAdminEnergyConsumptionChart,
-} from "@/redux/slice/admin/energy-consumption/admin-energy-consumption";
+import { getAdminEnergyConsumptionChart } from "@/redux/slice/admin/energy-consumption/admin-energy-consumption";
 import { getEstateEnergyUsage } from "@/redux/slice/admin/estate-energy-usage/admin-estate-energy-usage";
 import { getEstateRealtimeReadings } from "@/redux/slice/admin/estate-realtime-readings/admin-estate-realtime-readings";
 import { formatRealtimeEnergyKwh } from "@/lib/estate-realtime-readings";
@@ -80,7 +77,6 @@ export default function AdminMeterManagement() {
   const [usageRefreshing, setUsageRefreshing] = useState(false);
   const [energyPeriod, setEnergyPeriod] =
     useState<EnergyConsumptionPeriod>("weekly");
-  const [selectedAddressId, setSelectedAddressId] = useState("all");
 
   const { allAdminMeters, pagination, loading } = useSelector(
     (state: RootState) => {
@@ -103,19 +99,13 @@ export default function AdminMeterManagement() {
       (state: RootState) => state.adminMeter.getVendingStatsByEstateState,
     ) === "isLoading";
 
-  const {
-    energyConsumptionChart,
-    energyAddressOptions,
-    energyChartLoading,
-    energyAddressOptionsLoading,
-  } = useSelector((state: RootState) => ({
-    energyConsumptionChart: state.adminEnergyConsumption.chart,
-    energyAddressOptions: state.adminEnergyConsumption.addressOptions,
-    energyChartLoading:
-      state.adminEnergyConsumption.chartStatus === "isLoading",
-    energyAddressOptionsLoading:
-      state.adminEnergyConsumption.addressOptionsStatus === "isLoading",
-  }));
+  const { energyConsumptionChart, energyChartLoading } = useSelector(
+    (state: RootState) => ({
+      energyConsumptionChart: state.adminEnergyConsumption.chart,
+      energyChartLoading:
+        state.adminEnergyConsumption.chartStatus === "isLoading",
+    }),
+  );
 
   const {
     estateRealtimeReadings,
@@ -227,27 +217,17 @@ export default function AdminMeterManagement() {
 
   useEffect(() => {
     if (!estateId) return;
-    dispatch(getAdminEnergyConsumptionAddressOptions({ estateId })).catch(
-      (error: { message?: string }) => {
-        toast.error(error?.message ?? "Failed to load address options.");
-      },
-    );
-  }, [dispatch, estateId]);
-
-  useEffect(() => {
-    if (!estateId) return;
     dispatch(
       getAdminEnergyConsumptionChart({
         estateId,
         period: energyPeriod,
-        addressId: selectedAddressId,
       }),
     ).catch((error: { message?: string }) => {
       toast.error(
         error?.message ?? "Failed to load energy consumption chart.",
       );
     });
-  }, [dispatch, estateId, energyPeriod, selectedAddressId]);
+  }, [dispatch, estateId, energyPeriod]);
 
   const handleRefreshUsage = async () => {
     if (!estateId) return;
@@ -470,12 +450,6 @@ export default function AdminMeterManagement() {
                     loading={energyChartLoading}
                     period={energyPeriod}
                     onPeriodChange={setEnergyPeriod}
-                    showAddressFilter
-                    addressOptions={energyAddressOptions}
-                    addressValue={selectedAddressId}
-                    onAddressChange={setSelectedAddressId}
-                    addressFilterLabel="Address"
-                    addressFilterLoading={energyAddressOptionsLoading}
                     emptyMessage={
                       !estateId
                         ? "No estate linked to your account."

@@ -274,7 +274,7 @@ export const getEstateVendAnalyticsChart = createAsyncThunk(
     }: {
       estateId: string;
       addressId: string;
-      period?: EnergyConsumptionPeriod | "yearly";
+      period?: EnergyConsumptionPeriod;
       metric: "value" | "unit";
     },
     { rejectWithValue },

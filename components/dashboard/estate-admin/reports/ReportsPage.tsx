@@ -31,13 +31,9 @@ import {
   IsoLinkedRangeEnd,
   IsoLinkedRangeStart,
 } from "@/components/ui/iso-date-picker";
+import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-function toInputDate(iso: string): string {
-  if (!iso) return "";
-  return String(iso).slice(0, 10);
-}
 
 function toIsoIfPresent(dateInputValue: string): string | undefined {
   if (!dateInputValue) return undefined;
@@ -68,16 +64,6 @@ function normalizeEstate(user: any): { estateId: string; estateName: string } {
     "Estate";
 
   return { estateId, estateName };
-}
-
-function getDefaultDateRange() {
-  const end = new Date();
-  const start = new Date(end);
-  start.setUTCDate(start.getUTCDate() - 30);
-  return {
-    startDate: toInputDate(start.toISOString()),
-    endDate: toInputDate(end.toISOString()),
-  };
 }
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -160,27 +146,25 @@ export default function ReportsPage() {
   const [estateId, setEstateId] = useState("");
   const [estateName, setEstateName] = useState("Estate");
 
-  const defaults = useMemo(() => getDefaultDateRange(), []);
-
   // Chart filters — isolated to the Insights card only
-  const [chartStartDate, setChartStartDate] = useState(defaults.startDate);
-  const [chartEndDate, setChartEndDate] = useState(defaults.endDate);
+  const [chartStartDate, setChartStartDate] = useState("");
+  const [chartEndDate, setChartEndDate] = useState("");
   const [granularity, setGranularity] = useState<Granularity>("month");
   const [chartRevenueCategory, setChartRevenueCategory] =
     useState<RevenueCategory>("all");
 
   // Revenue table filters — isolated to the Revenue ReportTable only
-  const [revenueStartDate, setRevenueStartDate] = useState(defaults.startDate);
-  const [revenueEndDate, setRevenueEndDate] = useState(defaults.endDate);
+  const [revenueStartDate, setRevenueStartDate] = useState("");
+  const [revenueEndDate, setRevenueEndDate] = useState("");
   const [revenueCategory, setRevenueCategory] =
     useState<RevenueCategory>("all");
 
   // Expenses table filters — isolated to the Expenses ReportTable only
-  const [expensesStartDate, setExpensesStartDate] = useState(
-    defaults.startDate,
-  );
-  const [expensesEndDate, setExpensesEndDate] = useState(defaults.endDate);
+  const [expensesStartDate, setExpensesStartDate] = useState("");
+  const [expensesEndDate, setExpensesEndDate] = useState("");
   const [expensesHeadId, setExpensesHeadId] = useState<string>("all");
+
+  const datePlaceholders = useMemo(() => getDateRangePlaceholders(), []);
 
   // Redux selectors — only used for the chart data
   const chartData = useSelector((s: RootState) =>
@@ -413,6 +397,7 @@ export default function ReportsPage() {
                 startDate={chartStartDate}
                 endDate={chartEndDate}
                 onStartChange={setChartStartDate}
+                placeholder={datePlaceholders.start}
                 className="cursor-pointer"
               />
             </div>
@@ -429,6 +414,7 @@ export default function ReportsPage() {
                 startDate={chartStartDate}
                 endDate={chartEndDate}
                 onEndChange={setChartEndDate}
+                placeholder={datePlaceholders.end}
                 className="cursor-pointer"
               />
             </div>
@@ -520,12 +506,15 @@ export default function ReportsPage() {
               expensesReport?.summary?.totalExpenses ??
               expensesReport?.expenses?.totalExpenses ??
               0,
-            colorClass: "bg-red-100 text-red-700",
+            colorClass: "bg-blue-100 text-blue-700",
           },
           {
-            label: `Profit/Loss (${net >= 0 ? "Profit" : "Loss"})`,
+            label: `${net >= 0 ? "Profit" : "Loss"}`,
             amount: Math.abs(net),
-            colorClass: "bg-blue-100 text-blue-700",
+            colorClass:
+              net >= 0
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700",
           },
         ]}
         filterLabel="Expense Head"

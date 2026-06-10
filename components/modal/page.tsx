@@ -48,7 +48,7 @@ const Modal: React.FC<ModalProps> = ({
           <motion.div
             className={[
               "bg-white rounded-xl shadow-xl p-5 overflow-y-auto overflow-x-hidden max-h-[70vh] flex flex-col relative min-w-0 w-full",
-              contentClassName ?? "md:w-[45%]",
+              contentClassName ?? "md:w-[45%] lg:w-[35%] xl:w-[35%]",
             ].join(" ")}
             initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -76,7 +76,7 @@ const Modal: React.FC<ModalProps> = ({
               aria-label="Close modal"
             >
               <X
-                className="w-5 h-5 text-gray-600 cursor-pointer"
+                className="w-5 h-5 text-gray-600 cursor-pointer hover:cursor-pointer hover:text-gray-800 "
                 aria-label="Close modal"
                 onClick={onClose}
               />

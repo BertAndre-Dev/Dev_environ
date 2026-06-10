@@ -11,25 +11,22 @@ import { CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CountryDropdown, RegionDropdown } from "react-country-region-selector"
 import { cn } from "@/lib/utils"
 import type { AppDispatch } from "@/redux/store"
-import { fetchEstateModules } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt"
 import type { EstateData } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt"
 import { VisitorVerificationMode } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt"
 import { getCompanyModules } from "@/redux/slice/super-admin/company-mgt/company"
 import { labelForEstateModule } from "@/lib/estate-module-labels"
-import { selectAvailableModules as selectEstateEnabledModules } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt-slice"
 import type { RootState } from "@/redux/store"
 
 interface EstateFormProps {
   initialData?: EstateData | null
-  estateId?: string
   onSubmit: (data: EstateData) => void
 }
 
 export default function EstateForm({
   initialData = null,
-  estateId,
   onSubmit,
 }: EstateFormProps) {
+  const isEditing = Boolean(initialData)
   const dispatch = useDispatch<AppDispatch>()
   const { availableModules, modulesLoading, modulesError } = useSelector(
     (state: RootState) => {
@@ -56,20 +53,9 @@ export default function EstateForm({
   })
 
   useEffect(() => {
+    if (isEditing) return
     dispatch(getCompanyModules())
-  }, [dispatch])
-
-  useEffect(() => {
-    if (!estateId) return
-    dispatch(fetchEstateModules(estateId))
-  }, [dispatch, estateId])
-
-  const estateEnabledModules = useSelector(selectEstateEnabledModules)
-
-  useEffect(() => {
-    if (!estateId || !estateEnabledModules.length) return
-    setFormData((prev) => ({ ...prev, modules: [...estateEnabledModules] }))
-  }, [estateId, estateEnabledModules])
+  }, [dispatch, isEditing])
 
   useEffect(() => {
     if (initialData) {
@@ -79,7 +65,7 @@ export default function EstateForm({
         city: initialData.city,
         state: initialData.state,
         country: initialData.country,
-        modules: Array.isArray(initialData.modules) ? [...initialData.modules] : [],
+        modules: [],
         visitorVerificationMode:
           initialData.visitorVerificationMode ??
           VisitorVerificationMode.VIEW_AND_VERIFY,
@@ -112,8 +98,13 @@ export default function EstateForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (formData.modules.length === 0) {
+    if (!isEditing && formData.modules.length === 0) {
       toast.error("Select at least one module")
+      return
+    }
+    if (isEditing) {
+      const { modules: _modules, ...rest } = formData
+      onSubmit({ ...rest, modules: [] })
       return
     }
     onSubmit(formData)
@@ -198,53 +189,56 @@ export default function EstateForm({
             </select>
           </div>
 
-          <div className="space-y-3">
-            <Label>Modules</Label>
-            <p className="text-sm text-muted-foreground">
-              Select one or more features enabled for this estate.
-            </p>
-            {modulesLoading ? (
-              <div className="flex items-center gap-2 rounded-md border border-border px-3 py-6 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading available modules…
-              </div>
-            ) : modulesError ? (
-              <p className="text-sm text-destructive">{modulesError}</p>
-            ) : availableModules.length === 0 ? (
-              <p className="text-sm text-destructive">No modules are available.</p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {availableModules.map((key) => {
-                  const selected = formData.modules.includes(key)
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => toggleModule(key)}
-                      className={cn(
-                        "rounded-full border px-3 py-1.5 text-sm transition-colors cursor-pointer",
-                        selected
-                          ? "border-primary bg-primary/10 text-primary font-medium"
-                          : "border-border bg-background hover:bg-muted/50 text-foreground",
-                      )}
-                    >
-                      {labelForEstateModule(key)}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </div>
+          {!isEditing && (
+            <div className="space-y-3">
+              <Label>Modules</Label>
+              <p className="text-sm text-muted-foreground">
+                Select one or more features enabled for this estate.
+              </p>
+              {modulesLoading ? (
+                <div className="flex items-center gap-2 rounded-md border border-border px-3 py-6 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading available modules…
+                </div>
+              ) : modulesError ? (
+                <p className="text-sm text-destructive">{modulesError}</p>
+              ) : availableModules.length === 0 ? (
+                <p className="text-sm text-destructive">No modules are available.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {availableModules.map((key) => {
+                    const selected = formData.modules.includes(key)
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => toggleModule(key)}
+                        className={cn(
+                          "rounded-full border px-3 py-1.5 text-sm transition-colors cursor-pointer",
+                          selected
+                            ? "border-primary bg-primary/10 text-primary font-medium"
+                            : "border-border bg-background hover:bg-muted/50 text-foreground",
+                        )}
+                      >
+                        {labelForEstateModule(key)}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="w-full pt-4">
             <Button
               type="submit"
               className="w-full cursor-pointer"
               disabled={
-                modulesLoading ||
-                Boolean(modulesError) ||
-                availableModules.length === 0 ||
-                formData.modules.length === 0
+                !isEditing &&
+                (modulesLoading ||
+                  Boolean(modulesError) ||
+                  availableModules.length === 0 ||
+                  formData.modules.length === 0)
               }
             >
               {initialData ? "Update" : "Create Estate"}

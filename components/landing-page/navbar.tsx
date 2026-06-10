@@ -39,7 +39,7 @@ export default function Navbar({ onOpenBookDemo }: NavbarProps) {
   };
 
   return (
-    <nav className="w-full bg-transparent fixed top-0 z-50">
+    <nav className="w-full fixed top-0 z-50 bg-black/40 backdrop-blur-md border-b border-white/10 shadow-[0_2px_24px_0_rgba(0,0,0,0.18)]">
       <div className="container mx-auto px-6 md:px-8 lg:px-10 xl:px-20 max-w-[1320px] xl:max-w-[1440px] py-4 flex items-center justify-between gap-4">
         {/* Logo */}
         <Link href="/" className="flex items-center cursor-pointer">
@@ -163,7 +163,7 @@ export default function Navbar({ onOpenBookDemo }: NavbarProps) {
             onClick={() => setIsMobileMenuOpen(false)}
           />
 
-            <div className="absolute right-0 top-0 h-full w-[88%] max-w-sm bg-[#050816] border-l border-white/10 p-6">
+          <div className="absolute right-0 top-0 h-full w-[88%] max-w-sm bg-[#050816] border-l border-white/10 p-6">
             <div className="flex items-center justify-between">
               <Link
                 href="/"
@@ -203,7 +203,7 @@ export default function Navbar({ onOpenBookDemo }: NavbarProps) {
               </button>
             </div>
 
-            <div className="mt-10 flex flex-col gap-6 bg-red-200 md:bg-transparent p-4 rounded">
+            <div className="mt-6 flex flex-col gap-6 p-4 rounded-xl bg-black border border-white/10">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
@@ -214,31 +214,15 @@ export default function Navbar({ onOpenBookDemo }: NavbarProps) {
                   {link.label}
                 </Link>
               ))}
-            </div>
 
-            <div className="mt-10 grid gap-3">
-              {onOpenBookDemo ? (
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    onOpenBookDemo();
-                  }}
-                  bg="bg-white"
-                  text="text-[#1560BD]"
-                  rounded="rounded-full"
-                  padding="px-6 py-3"
-                  className="w-full cursor-pointer"
-                >
-                  Book a Demo
-                </Button>
-              ) : (
-                <Link
-                  href="/book-demo"
-                  onClick={() => handleMobileNavClick("/book-demo")}
-                  className="cursor-pointer"
-                >
+              <div className="mt-5 grid gap-3 p-4 ">
+                {onOpenBookDemo ? (
                   <Button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onOpenBookDemo();
+                    }}
                     bg="bg-white"
                     text="text-[#1560BD]"
                     rounded="rounded-full"
@@ -247,24 +231,40 @@ export default function Navbar({ onOpenBookDemo }: NavbarProps) {
                   >
                     Book a Demo
                   </Button>
-                </Link>
-              )}
-              <Link
-                href="https://www.bertahub.com/auth/login"
-                className="cursor-pointer"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button
-                  bg="bg-transparent"
-                  text="text-white"
-                  rounded="rounded-full"
-                  padding="px-6 py-3"
-                  className="w-full border border-white/50 cursor-pointer"
+                ) : (
+                  <Link
+                    href="/book-demo"
+                    onClick={() => handleMobileNavClick("/book-demo")}
+                    className="cursor-pointer"
+                  >
+                    <Button
+                      bg="bg-white"
+                      text="text-[#1560BD]"
+                      rounded="rounded-full"
+                      padding="px-6 py-3"
+                      className="w-full cursor-pointer"
+                    >
+                      Book a Demo
+                    </Button>
+                  </Link>
+                )}
+                <Link
+                  href="https://www.bertahub.com/auth/login"
+                  className="cursor-pointer"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
-                  Sign in
-                </Button>
-              </Link>
+                  <Button
+                    bg="bg-transparent"
+                    text="text-white"
+                    rounded="rounded-full"
+                    padding="px-6 py-3"
+                    className="w-full border border-white/50 cursor-pointer"
+                  >
+                    Sign in
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         </div>

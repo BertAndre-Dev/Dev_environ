@@ -1,17 +1,22 @@
 "use client";
 
 import React, { useState } from "react";
+import PhoneInput, { type Value } from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 
 type BookDemoModalProps = {
   readonly isOpen: boolean;
   readonly onClose: () => void;
 };
 
+const PHONE_INPUT_CLASS =
+  "flex items-center gap-2 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus-within:border-[#1560BD] [&_.PhoneInputCountry]:mr-1 [&_.PhoneInputCountrySelect]:border-none [&_.PhoneInputCountrySelect]:bg-transparent [&_.PhoneInputCountrySelect]:text-sm [&_.PhoneInputCountrySelect]:outline-none [&_.PhoneInputInput]:min-w-0 [&_.PhoneInputInput]:flex-1 [&_.PhoneInputInput]:border-none [&_.PhoneInputInput]:bg-transparent [&_.PhoneInputInput]:text-sm [&_.PhoneInputInput]:text-[#101828] [&_.PhoneInputInput]:outline-none";
+
 export default function BookDemoModal({ isOpen, onClose }: BookDemoModalProps) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState<Value | undefined>();
   const [message, setMessage] = useState("");
   const [heardAboutUs, setHeardAboutUs] = useState("");
   const [featureInterest, setFeatureInterest] = useState<string[]>([]);
@@ -61,7 +66,7 @@ export default function BookDemoModal({ isOpen, onClose }: BookDemoModalProps) {
       setFirstName("");
       setLastName("");
       setEmail("");
-      setPhone("");
+      setPhone(undefined);
       setMessage("");
       setHeardAboutUs("");
       setFeatureInterest([]);
@@ -168,13 +173,18 @@ export default function BookDemoModal({ isOpen, onClose }: BookDemoModalProps) {
                 >
                   Phone number
                 </label>
-                <input
+                <PhoneInput
                   id="phone"
                   name="phone"
-                  type="tel"
+                  defaultCountry="NG"
+                  international
+                  countryCallingCodeEditable={false}
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-[#1560BD] text-[#101828]"
+                  onChange={setPhone}
+                  className={PHONE_INPUT_CLASS}
+                  numberInputProps={{
+                    placeholder: "Phone number",
+                  }}
                 />
               </div>
             </div>

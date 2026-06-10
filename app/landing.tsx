@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Navbar from "@/components/landing-page/navbar";
 import HeroSection from "@/components/landing-page/heroSection";
 import CallToActionSection from "@/components/landing-page/callToActionSection";
@@ -9,17 +8,14 @@ import FeaturesShowcaseSection from "@/components/landing-page/featuresShowcaseS
 import BertaShowcaseSection from "@/components/landing-page/bertaShowcaseSection";
 import FeaturesSection from "@/components/landing-page/featuresSection";
 import Footer from "@/components/landing-page/footer";
-import BookDemoModal from "@/components/landing-page/BookDemoModal";
 import TrustedBySection from "@/components/landing-page/trustedBy";
 
 export default function Home() {
-  const [isBookDemoOpen, setIsBookDemoOpen] = useState(false);
-
   return (
     <div className="min-h-screen bg-white">
-      <Navbar onOpenBookDemo={() => setIsBookDemoOpen(true)} />
+      <Navbar />
       <main>
-        <HeroSection onOpenBookDemo={() => setIsBookDemoOpen(true)} />
+        <HeroSection />
         <FeaturesShowcaseSection />
         <TrustedBySection />
         <FeaturesSection />
@@ -28,10 +24,6 @@ export default function Home() {
         <CallToActionSection />
       </main>
       <Footer />
-      <BookDemoModal
-        isOpen={isBookDemoOpen}
-        onClose={() => setIsBookDemoOpen(false)}
-      />
     </div>
   );
 }

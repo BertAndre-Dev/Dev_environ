@@ -5,12 +5,10 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import Button from "@/components/landing-page/atom/button";
+import { useBookDemo } from "@/components/landing-page/book-demo-provider";
 
-type NavbarProps = {
-  readonly onOpenBookDemo?: () => void;
-};
-
-export default function Navbar({ onOpenBookDemo }: NavbarProps) {
+export default function Navbar() {
+  const { openBookDemo } = useBookDemo();
   const pathname = usePathname();
   const [activeLink, setActiveLink] = useState("/");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -99,31 +97,17 @@ export default function Navbar({ onOpenBookDemo }: NavbarProps) {
             </Button>
           </Link>
 
-          {onOpenBookDemo ? (
-            <Button
-              type="button"
-              onClick={onOpenBookDemo}
-              bg="bg-white"
-              text="text-[#1560BD]"
-              rounded="rounded-full"
-              padding="px-6 py-2.5"
-              className="hover:bg-[#e8f0fb] hover:-translate-y-px transition-all duration-300 cursor-pointer"
-            >
-              Book a Demo
-            </Button>
-          ) : (
-            <Link href="/book-demo" className="cursor-pointer">
-              <Button
-                bg="bg-white"
-                text="text-[#1560BD]"
-                rounded="rounded-full"
-                padding="px-6 py-2.5"
-                className="hover:bg-[#e8f0fb] hover:-translate-y-px transition-all duration-300 cursor-pointer"
-              >
-                Book a Demo
-              </Button>
-            </Link>
-          )}
+          <Button
+            type="button"
+            onClick={openBookDemo}
+            bg="bg-white"
+            text="text-[#1560BD]"
+            rounded="rounded-full"
+            padding="px-6 py-2.5"
+            className="hover:bg-[#e8f0fb] hover:-translate-y-px transition-all duration-300 cursor-pointer"
+          >
+            Book a Demo
+          </Button>
         </div>
 
         {/* Mobile: logo + hamburger only */}
@@ -216,38 +200,20 @@ export default function Navbar({ onOpenBookDemo }: NavbarProps) {
               ))}
 
               <div className="mt-5 grid gap-3 p-4 ">
-                {onOpenBookDemo ? (
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      onOpenBookDemo();
-                    }}
-                    bg="bg-white"
-                    text="text-[#1560BD]"
-                    rounded="rounded-full"
-                    padding="px-6 py-3"
-                    className="w-full cursor-pointer"
-                  >
-                    Book a Demo
-                  </Button>
-                ) : (
-                  <Link
-                    href="/book-demo"
-                    onClick={() => handleMobileNavClick("/book-demo")}
-                    className="cursor-pointer"
-                  >
-                    <Button
-                      bg="bg-white"
-                      text="text-[#1560BD]"
-                      rounded="rounded-full"
-                      padding="px-6 py-3"
-                      className="w-full cursor-pointer"
-                    >
-                      Book a Demo
-                    </Button>
-                  </Link>
-                )}
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    openBookDemo();
+                  }}
+                  bg="bg-white"
+                  text="text-[#1560BD]"
+                  rounded="rounded-full"
+                  padding="px-6 py-3"
+                  className="w-full cursor-pointer"
+                >
+                  Book a Demo
+                </Button>
                 <Link
                   href="https://www.bertahub.com/auth/login"
                   className="cursor-pointer"

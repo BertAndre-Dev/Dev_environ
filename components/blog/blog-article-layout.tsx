@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { BlogPostMeta } from "@/lib/blog/posts";
 import Navbar from "@/components/landing-page/navbar";
 import Footer from "@/components/landing-page/footer";
-import Button from "@/components/landing-page/atom/button";
+import { BookDemoButton } from "@/components/landing-page/book-demo-button";
 import BlogImage from "@/components/blog/blog-image";
 
 type BlogArticleLayoutProps = {
@@ -100,17 +100,7 @@ export default function BlogArticleLayout({
               improve transparency, and deliver the resident experience your
               community deserves.
             </p>
-            <Link href="/book-demo">
-              <Button
-                bg="bg-[#1560BD]"
-                text="text-white"
-                rounded="rounded-full"
-                padding="px-8 py-3"
-                className="hover:bg-[#124ea0] transition-colors"
-              >
-                Book a Demo
-              </Button>
-            </Link>
+            <BookDemoButton />
           </div>
         </div>
       </section>

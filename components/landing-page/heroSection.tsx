@@ -1,13 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import { useBookDemo } from "@/components/landing-page/book-demo-provider";
 
-type HeroSectionProps = {
-  readonly onOpenBookDemo?: () => void;
-};
-
-export default function HeroSection({ onOpenBookDemo }: HeroSectionProps) {
+export default function HeroSection() {
+  const { openBookDemo } = useBookDemo();
   return (
     <section className="relative bg-[#050816] text-white pt-2 overflow-hidden"
 >
@@ -39,22 +36,13 @@ export default function HeroSection({ onOpenBookDemo }: HeroSectionProps) {
         </p>
 
         <div>
-          {onOpenBookDemo ? (
-            <button
-              type="button"
-              onClick={onOpenBookDemo}
-              className="inline-flex items-center justify-center rounded-full bg-[#0150AC] hover:bg-[#124ea0] text-base font-medium sm:px-9 px-10 py-2 transition-colors cursor-pointer"
-            >
-              Book a demo
-            </button>
-          ) : (
-            <Link
-              href="/book-demo"
-              className="inline-flex items-center justify-center rounded-full bg-[#0150AC] hover:bg-[#124ea0] text-base font-medium sm:px-9 px-10 py-2 transition-colors"
-            >
-              Book a demo
-            </Link>
-          )}
+          <button
+            type="button"
+            onClick={openBookDemo}
+            className="inline-flex items-center justify-center rounded-full bg-[#0150AC] hover:bg-[#124ea0] text-base font-medium sm:px-9 px-10 py-2 transition-colors cursor-pointer"
+          >
+            Book a demo
+          </button>
         </div>
       </div>
 

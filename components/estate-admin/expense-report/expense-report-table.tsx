@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { Calendar, ChevronDown, Download } from "lucide-react";
 import {
   IsoLinkedRangeEnd,
   IsoLinkedRangeStart,
 } from "@/components/ui/iso-date-picker";
+import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 
 export interface ReportTableRow {
   key: string;
@@ -137,6 +138,7 @@ function DateRangeDropdown({
 }) {
   const [localStart, setLocalStart] = useState(startDate);
   const [localEnd, setLocalEnd] = useState(endDate);
+  const datePlaceholders = useMemo(() => getDateRangePlaceholders(), []);
 
   return (
     <PillDropdown
@@ -154,12 +156,14 @@ function DateRangeDropdown({
               startDate={localStart}
               endDate={localEnd}
               onStartChange={setLocalStart}
+              placeholder={datePlaceholders.start}
               className="w-full"
             />
             <IsoLinkedRangeEnd
               startDate={localStart}
               endDate={localEnd}
               onEndChange={setLocalEnd}
+              placeholder={datePlaceholders.end}
               className="w-full"
             />
           </div>

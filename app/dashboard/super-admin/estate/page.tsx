@@ -8,12 +8,10 @@ import {
   Home,
   TrendingUp,
   Plus,
-  Edit,
-  Power,
-  PowerOff,
-  Trash2,
+  MoreVertical,
   Search,
 } from "lucide-react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import Table from "@/components/tables/list/page";
 import {
   getAllEstates,
@@ -32,6 +30,8 @@ import Modal from "@/components/modal/page";
 import EstateForm from "@/components/super-admin/estate-form/page";
 import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import Loader from "@/components/ui/Loader";
+import { EstateStatusModal } from "./components/EstateStatusModal";
+import { EstateModulesForm } from "./components/EstateModulesForm";
 
 type EstateTableRow = Omit<EstateData, "modules"> & {
   id?: string;
@@ -57,7 +57,12 @@ export default function EstatePage() {
   );
 
   const [open, setOpen] = useState(false);
+  const [modulesOpen, setModulesOpen] = useState(false);
   const [selectedEstate, setSelectedEstate] = useState<EstateTableRow | null>(null);
+  const [modulesEstate, setModulesEstate] = useState<EstateTableRow | null>(null);
+  const [statusItem, setStatusItem] = useState<EstateTableRow | null>(null);
+  const [statusMode, setStatusMode] = useState<"suspend" | "activate">("suspend");
+  const [statusSubmitting, setStatusSubmitting] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -85,10 +90,24 @@ export default function EstatePage() {
     setSelectedEstate(null);
   };
 
+  const handleModulesModal = (estate: EstateTableRow) => {
+    if (!estate.id) return;
+    setModulesEstate(estate);
+    setModulesOpen(true);
+  };
+
+  const handleCloseModulesModal = () => {
+    setModulesOpen(false);
+    setModulesEstate(null);
+  };
+
   const handleSubmitEstate = async (data: EstateData) => {
     try {
       if (selectedEstate?.id) {
-        await dispatch(updateEstate({ id: selectedEstate.id, data })).unwrap();
+        const { modules: _modules, ...updateData } = data;
+        await dispatch(
+          updateEstate({ id: selectedEstate.id, data: updateData as EstateData }),
+        ).unwrap();
         toast.success("Estate updated successfully!");
       } else {
         await dispatch(createEstate(data)).unwrap();
@@ -103,22 +122,41 @@ export default function EstatePage() {
     }
   };
 
-  // ✅ Handle Activate / Suspend Estate
-  const handleToggleStatus = async (estate: EstateTableRow) => {
+  const closeStatusModal = () => {
+    if (statusSubmitting) return;
+    setStatusItem(null);
+  };
+
+  const openSuspendModal = (estate: EstateTableRow) => {
+    setStatusItem(estate);
+    setStatusMode("suspend");
+  };
+
+  const openActivateModal = (estate: EstateTableRow) => {
+    setStatusItem(estate);
+    setStatusMode("activate");
+  };
+
+  const handleConfirmStatus = async () => {
+    const estate = statusItem;
+    if (!estate?.id) return;
+    setStatusSubmitting(true);
     try {
-      if (!estate.id) return;
-      if (estate.isActive) {
+      if (statusMode === "suspend") {
         await dispatch(suspendEstate(estate.id)).unwrap();
         toast.info(`${estate.name} has been suspended.`);
       } else {
         await dispatch(activateEstate(estate.id)).unwrap();
         toast.success(`${estate.name} has been activated.`);
       }
+      closeStatusModal();
       await dispatch(
         getAllEstates({ page: 1, limit: Number(pagination?.pageSize) || 10 }),
       ).unwrap();
     } catch (err: any) {
       toast.error(err?.message || "Failed to update estate status.");
+    } finally {
+      setStatusSubmitting(false);
     }
   };
 
@@ -192,52 +230,56 @@ export default function EstatePage() {
       key: "actions",
       header: "Actions",
       render: (item: EstateTableRow) => (
-        <div className="flex items-center gap-1">
-          {/* Edit Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleEstateModal(item)}
-            title="Edit Estate"
-            className="cursor-pointer"
-          >
-            <Edit className="w-4 h-4 text-blue-600 " />
-          </Button>
-
-          {/* Activate / Suspend Toggle */}
-          {item.isActive ? (
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleToggleStatus(item)}
-              title="Suspend Estate"
+              title="Actions"
               className="cursor-pointer"
             >
-              <PowerOff className="w-4 h-4 text-red-600 " />
+              <MoreVertical className="w-4 h-4" />
             </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleToggleStatus(item)}
-              title="Activate Estate"
-              className="cursor-pointer"
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              align="end"
+              sideOffset={8}
+              className="z-50 min-w-[200px] rounded-md border bg-white p-1 shadow-md"
             >
-              <Power className="w-4 h-4 text-green-600 " />
-            </Button>
-          )}
-
-          {/* 🗑️ Delete Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleDeleteEstate(item.id, item.name)}
-            title="Delete Estate"
-            className="cursor-pointer"
-          >
-            <Trash2 className="w-4 h-4 text-red-600 " />
-          </Button>
-        </div>
+              <DropdownMenu.Item
+                onSelect={() => handleEstateModal(item)}
+                className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100"
+              >
+                Update Estate Details
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                onSelect={() => handleModulesModal(item)}
+                className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100"
+              >
+                Update Estate Modules
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                onSelect={() =>
+                  item.isActive
+                    ? openSuspendModal(item)
+                    : openActivateModal(item)
+                }
+                className={`cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100 ${
+                  item.isActive ? "text-red-600" : "text-green-600"
+                }`}
+              >
+                {item.isActive ? "Suspend Estate" : "Activate Estate"}
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                onSelect={() => handleDeleteEstate(item.id, item.name)}
+                className="cursor-pointer select-none rounded px-3 py-2 text-sm text-red-600 outline-none hover:bg-gray-100 focus:bg-gray-100"
+              >
+                Delete Estate
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
       ),
     },
   ];
@@ -390,7 +432,6 @@ export default function EstatePage() {
       {open && (
         <Modal visible={open} onClose={handleCloseModal}>
           <EstateForm
-            estateId={selectedEstate?.id}
             initialData={
               selectedEstate
                 ? {
@@ -399,7 +440,7 @@ export default function EstatePage() {
                     city: selectedEstate.city,
                     state: selectedEstate.state,
                     country: selectedEstate.country,
-                    modules: selectedEstate.modules ?? [],
+                    modules: [],
                     visitorVerificationMode:
                       (selectedEstate as any).visitorVerificationMode,
                   }
@@ -409,6 +450,35 @@ export default function EstatePage() {
           />
         </Modal>
       )}
+
+      {modulesOpen && modulesEstate?.id && (
+        <Modal visible={modulesOpen} onClose={handleCloseModulesModal}>
+          <EstateModulesForm
+            estateId={modulesEstate.id}
+            estateName={modulesEstate.name}
+            initialModules={modulesEstate.modules}
+            onCancel={handleCloseModulesModal}
+            onSuccess={async () => {
+              handleCloseModulesModal();
+              await dispatch(
+                getAllEstates({
+                  page: 1,
+                  limit: Number(pagination?.pageSize) || 10,
+                }),
+              ).unwrap();
+            }}
+          />
+        </Modal>
+      )}
+
+      <EstateStatusModal
+        visible={Boolean(statusItem)}
+        onClose={closeStatusModal}
+        estateName={statusItem?.name ?? "this estate"}
+        mode={statusMode}
+        loading={statusSubmitting}
+        onConfirm={handleConfirmStatus}
+      />
       </div>
     </div>
   );

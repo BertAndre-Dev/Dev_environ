@@ -9,6 +9,7 @@ import {
   getEstate,
   suspendEstate,
   updateEstate,
+  updateEstateModules,
 } from "./super-admin-est-mgt";
 
 // 🏠 Estate Types
@@ -48,6 +49,7 @@ export interface EstateState {
   getEstateState: "idle" | "isLoading" | "succeeded" | "failed";
   suspendEstateState: "idle" | "isLoading" | "succeeded" | "failed";
   updateEstateState: "idle" | "isLoading" | "succeeded" | "failed";
+  updateEstateModulesState: "idle" | "isLoading" | "succeeded" | "failed";
   status: "idle" | "isLoading" | "succeeded" | "failed";
   estate: EstateDetails | null;
   allEstates: AllEstatesResponse | null;
@@ -66,6 +68,7 @@ const initialState: EstateState = {
   getEstateState: "idle",
   suspendEstateState: "idle",
   updateEstateState: "idle",
+  updateEstateModulesState: "idle",
   status: "idle",
   estate: null,
   allEstates: null,
@@ -200,6 +203,30 @@ const estateSlice = createSlice({
       .addCase(updateEstate.rejected, (state, action) => {
         state.updateEstateState = "failed";
         state.error = action.error.message || "Failed to update estate";
+      });
+
+    // 🔹 UPDATE ESTATE MODULES
+    builder
+      .addCase(updateEstateModules.pending, (state) => {
+        state.updateEstateModulesState = "isLoading";
+      })
+      .addCase(updateEstateModules.fulfilled, (state, action) => {
+        state.updateEstateModulesState = "succeeded";
+        const updatedId = action.payload?.updatedId as string | undefined;
+        const modules = action.payload?.modules as string[] | undefined;
+        if (!updatedId || !modules || !state.allEstates?.data) return;
+        state.allEstates.data = state.allEstates.data.map((est) =>
+          est.id === updatedId ? { ...est, modules } : est,
+        );
+        state.availableModules = modules;
+      })
+      .addCase(updateEstateModules.rejected, (state, action) => {
+        state.updateEstateModulesState = "failed";
+        const payload = action.payload as { message?: string } | undefined;
+        state.error =
+          payload?.message ||
+          action.error.message ||
+          "Failed to update estate modules";
       });
 
     // 🔹 DELETE ESTATE

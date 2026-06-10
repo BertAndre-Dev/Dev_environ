@@ -24,6 +24,33 @@ export const ESTATE_MODULE_LABELS: Record<string, string> = {
   assets: "Asset Management",
 };
 
+/** Normalize module lists from estate list rows or `/estate-mgt/{id}/modules` API payloads. */
+export function parseEstateModulesResponse(payload: unknown): string[] {
+  if (Array.isArray(payload)) {
+    return payload.filter((item): item is string => typeof item === "string");
+  }
+  if (!payload || typeof payload !== "object") return [];
+
+  const record = payload as Record<string, unknown>;
+  if (Array.isArray(record.data)) {
+    return record.data.filter((item): item is string => typeof item === "string");
+  }
+
+  const nested = record.data;
+  if (nested && typeof nested === "object") {
+    const modules = (nested as Record<string, unknown>).modules;
+    if (Array.isArray(modules)) {
+      return modules.filter((item): item is string => typeof item === "string");
+    }
+  }
+
+  if (Array.isArray(record.modules)) {
+    return record.modules.filter((item): item is string => typeof item === "string");
+  }
+
+  return [];
+}
+
 export function labelForEstateModule(key: string): string {
   return (
     ESTATE_MODULE_LABELS[key] ??

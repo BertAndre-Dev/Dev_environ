@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { parseEstateModulesResponse } from "@/lib/estate-module-labels";
 
 export enum VisitorVerificationMode {
   VIEW_AND_VERIFY = "VIEW_AND_VERIFY",
@@ -18,20 +19,46 @@ export interface EstateData {
   visitorVerificationMode?: VisitorVerificationMode;
 }
 
+export interface UpdateEstateModulesPayload {
+  id: string;
+  modules: string[];
+}
+
 /** GET /api/v1/estate-mgt/{id}/modules — enabled modules for an estate */
 export const fetchEstateModules = createAsyncThunk(
   "super-admin-est-mgt/fetchEstateModules",
   async (estateId: string, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.get<{ data?: string[] }>(
+      const res = await axiosInstance.get(
         `/api/v1/estate-mgt/${estateId}/modules`,
       );
-      return res.data;
+      return { data: parseEstateModulesResponse(res.data) };
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
       return rejectWithValue({
         message:
           err?.response?.data?.message ?? "Failed to load estate modules",
+      });
+    }
+  },
+);
+
+/** PUT /api/v1/estate-mgt/{id}/modules — set enabled modules for an estate */
+export const updateEstateModules = createAsyncThunk(
+  "super-admin-est-mgt/updateEstateModules",
+  async (payload: UpdateEstateModulesPayload, { rejectWithValue }) => {
+    try {
+      const { id, modules } = payload;
+      const res = await axiosInstance.put(
+        `/api/v1/estate-mgt/${id}/modules`,
+        { modules },
+      );
+      return { ...res.data, updatedId: id, modules };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ?? "Failed to update estate modules",
       });
     }
   },

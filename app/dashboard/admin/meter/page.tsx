@@ -9,7 +9,7 @@ import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useState } from "react";
 import type { EstateEnergyUsageRange } from "@/lib/estate-energy-usage-chart";
 import { useDispatch, useSelector } from "react-redux";
-import { DollarSign, Link, Zap } from "lucide-react";
+import { Link, Zap } from "lucide-react";
 import {
   getAllEstateMeter,
   getVendingStatsByEstate,
@@ -60,10 +60,6 @@ const PAGE_LIMIT = 10;
 
 const METER_TAB_TITLES = ["Chart Overview", "Meter Management"] as const;
 
-function formatPurchasedAmount(amount: number): string {
-  return `₦${amount.toLocaleString()}`;
-}
-
 export default function AdminMeterManagement() {
   const dispatch = useDispatch<AppDispatch>();
   const [open, setOpen] = useState(false);
@@ -90,15 +86,7 @@ export default function AdminMeterManagement() {
       };
     },
   );
-
-  const vendingStats = useSelector(
-    (state: RootState) => state.adminMeter.vendingStatsByEstate,
-  );
-  const vendingStatsLoading =
-    useSelector(
-      (state: RootState) => state.adminMeter.getVendingStatsByEstateState,
-    ) === "isLoading";
-
+  
   const { energyConsumptionChart, energyChartLoading } = useSelector(
     (state: RootState) => ({
       energyConsumptionChart: state.adminEnergyConsumption.chart,
@@ -381,26 +369,6 @@ export default function AdminMeterManagement() {
             </div>
             <div className="rounded-lg bg-[#FEE6D480] p-3">
               <IoSpeedometerOutline className="h-6 w-6" />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6 shadow-md">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Total Amount Purchased
-              </p>
-              <p className="font-heading text-2xl font-bold mt-2 tabular-nums tracking-tight">
-                {vendingStatsLoading
-                  ? "—"
-                  : formatPurchasedAmount(
-                      Number(vendingStats?.totalAmount) || 0,
-                    )}
-              </p>
-            </div>
-            <div className="rounded-lg bg-[#D0DFF280] p-3">
-              <DollarSign className="h-6 w-6" />
             </div>
           </div>
         </Card>

@@ -89,7 +89,7 @@ export default function DigitalOperatingSystemArticle() {
 
       <BlogPullQuote>
         The question is no longer whether estates should go digital. It&apos;s
-        how quickly they can — before resident frustration and operational
+        how quickly they can, before resident frustration and operational
         chaos outpace growth.
       </BlogPullQuote>
 

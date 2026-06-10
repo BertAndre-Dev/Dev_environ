@@ -33,33 +33,13 @@ export default function BlogPage() {
             opacity: 0.35,
           }}
         />
-        <div className="relative z-10 container mx-auto px-6 md:px-8 lg:px-10 xl:px-20 max-w-[1320px] xl:max-w-[1440px]">
-          <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-10 lg:gap-12 items-center">
-            <div>
-              <p className="text-[#FA8128] text-sm font-medium uppercase tracking-wide mb-4">
+
+          <div className="flex justify-center items-center mx-auto my-12">
+                <p className="text-[#FA8128] text-base lg:text-lg font-bold uppercase tracking-wide mb-4">
                 Bertahub Blog
               </p>
-              <h1 className="text-3xl sm:text-4xl lg:text-[44px] font-semibold leading-tight max-w-2xl mb-4">
-                Ideas for smarter estate management
-              </h1>
-              <p className="text-white/80 text-base sm:text-lg max-w-xl leading-relaxed">
-                Practical perspectives on digital transformation, resident
-                experience, and the future of Nigerian residential communities.
-              </p>
-            </div>
-
-            <div className="relative aspect-[16/10] w-full max-w-xl lg:max-w-none mx-auto lg:mx-0 rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-white">
-              <Image
-                src="/assets/blog/blogHero.png"
-                alt="Bertahub digital operating system for Nigerian estates"
-                fill
-                priority
-                sizes="(max-width: 1024px) 90vw, 560px"
-                className="object-contain p-3 sm:p-4"
-              />
-            </div>
-          </div>
-        </div>
+              </div>
+      
       </header>
 
       <main className="container mx-auto px-6 md:px-8 lg:px-10 xl:px-20 max-w-[1320px] xl:max-w-[1440px] py-12 lg:py-16">

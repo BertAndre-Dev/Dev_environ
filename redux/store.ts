@@ -58,6 +58,7 @@ import adminRevenueHeadSliceReducer from "@/redux/slice/admin/revenue-head/reven
 import adminRevenueEntrySliceReducer from "@/redux/slice/admin/revenue-entry/revenue-entry-slice";
 import estateAdminFinancialReportSliceReducer from "@/redux/slice/estate-admin/financial-report/financial-report-slice";
 import estateAdminRevenueChartSliceReducer from "@/redux/slice/estate-admin/revenue-chart/revenue-chart-slice";
+import estateAdminExpenseChartSliceReducer from "@/redux/slice/estate-admin/expense-chart/expense-chart-slice";
 import superAdminCompanySliceReducer from "@/redux/slice/super-admin/company-mgt/company-slice";
 import companyMarketplaceSliceReducer from "@/redux/slice/company/marketplace/company-marketplace-slice";
 import companyAssetSliceReducer from "@/redux/slice/company/asset-mgt/company-asset-slice";
@@ -323,6 +324,7 @@ export const store = configureStore({
     adminRevenueEntry: persistedAdminRevenueEntrySliceReducer,
     estateAdminFinancialReport: estateAdminFinancialReportSliceReducer,
     estateAdminRevenueChart: estateAdminRevenueChartSliceReducer,
+    estateAdminExpenseChart: estateAdminExpenseChartSliceReducer,
     chat: chatSliceReducer,
     communityGroup: communityGroupSliceReducer,
     estateAdminCommunityGroup: estateAdminCommunityGroupSliceReducer,

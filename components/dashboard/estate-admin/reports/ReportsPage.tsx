@@ -32,7 +32,13 @@ import {
   IsoLinkedRangeStart,
 } from "@/components/ui/iso-date-picker";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
+import {
+  buildRevenueFilterOptions,
+  buildRevenueTableRows,
+  type FinancialReportData,
+} from "@/lib/financial-report-utils";
 import { RevenueChartCard } from "@/components/dashboard/estate-admin/reports/RevenueChartCard";
+import { ExpenseChartCard } from "@/components/dashboard/estate-admin/reports/ExpenseChartCard";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -72,23 +78,6 @@ function normalizeEstate(user: any): { estateId: string; estateName: string } {
 type RevenueCategory = "all" | "bills" | "vending";
 type Granularity = "day" | "month" | "year";
 
-interface ReportData {
-  summary?: {
-    totalRevenue?: number;
-    totalExpenses?: number;
-    netProfitLoss?: number;
-  };
-  revenue?: {
-    totalRevenue?: number;
-    billPaymentRevenue?: number;
-    vendingRevenue?: number;
-  };
-  expenses?: {
-    totalExpenses?: number;
-    byHead?: Array<{ _id: string; headName: string; totalAmount: number }>;
-  };
-}
-
 // ─── Custom Hook: isolated report fetcher ────────────────────────────────────
 
 function useIsolatedReport(
@@ -98,7 +87,7 @@ function useIsolatedReport(
   dispatch: AppDispatch,
   errorLabel: string,
 ) {
-  const [data, setData] = useState<ReportData | null>(null);
+  const [data, setData] = useState<FinancialReportData | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Ref to cancel stale requests
@@ -157,8 +146,7 @@ export default function ReportsPage() {
   // Revenue table filters — isolated to the Revenue ReportTable only
   const [revenueStartDate, setRevenueStartDate] = useState("");
   const [revenueEndDate, setRevenueEndDate] = useState("");
-  const [revenueCategory, setRevenueCategory] =
-    useState<RevenueCategory>("all");
+  const [revenueFilter, setRevenueFilter] = useState("all");
 
   // Expenses table filters — isolated to the Expenses ReportTable only
   const [expensesStartDate, setExpensesStartDate] = useState("");
@@ -317,19 +305,16 @@ export default function ReportsPage() {
       amount: h.totalAmount,
     }));
 
-  // ── Revenue table rows (filtered by category) ─────────────────────────────
-  const revenueTableRows = [
-    {
-      key: "bills",
-      label: "Bills",
-      amount: revenueReport?.revenue?.billPaymentRevenue ?? 0,
-    },
-    {
-      key: "vending",
-      label: "Vending",
-      amount: revenueReport?.revenue?.vendingRevenue ?? 0,
-    },
-  ].filter((r) => revenueCategory === "all" || r.key === revenueCategory);
+  const revenueTableRows = useMemo(
+    () =>
+      buildRevenueTableRows(revenueReport?.revenue, revenueFilter),
+    [revenueReport?.revenue, revenueFilter],
+  );
+
+  const revenueFilterOptions = useMemo(
+    () => buildRevenueFilterOptions(revenueReport?.revenue),
+    [revenueReport?.revenue],
+  );
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -467,28 +452,26 @@ export default function ReportsPage() {
 
       {estateId ? <RevenueChartCard estateId={estateId} /> : null}
 
+      {estateId ? <ExpenseChartCard estateId={estateId} /> : null}
+
       {/* Revenue table — revenue filters are fully isolated here */}
       <ReportTable
         columnLabel="Revenue"
         rows={revenueTableRows}
         summaryRows={[
           {
-            label: "Gross Profit",
+            label: "Total Revenue",
             amount:
               revenueReport?.summary?.totalRevenue ??
               revenueReport?.revenue?.totalRevenue ??
               0,
-            colorClass: "bg-emerald-100 text-emerald-700",
+            colorClass: "bg-orange-100 text-orange-700",
           },
         ]}
         filterLabel="Category"
-        filterOptions={[
-          { label: "Category", value: "all" },
-          { label: "Bills", value: "bills" },
-          { label: "Vending", value: "vending" },
-        ]}
-        filterValue={revenueCategory}
-        onFilterChange={(v) => setRevenueCategory(v as RevenueCategory)}
+        filterOptions={revenueFilterOptions}
+        filterValue={revenueFilter}
+        onFilterChange={setRevenueFilter}
         startDate={revenueStartDate}
         endDate={revenueEndDate}
         onDateRangeChange={({ startDate, endDate }) => {

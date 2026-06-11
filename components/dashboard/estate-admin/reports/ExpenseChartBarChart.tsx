@@ -19,31 +19,11 @@ import {
   formatNairaFull,
 } from "./financial-report-chart-utils";
 import {
-  getActiveSegmentKeys,
-  seriesHasRevenue,
-  type RevenueChartSeriesPoint,
-} from "./revenue-chart-series";
+  seriesHasExpenses,
+  type ExpenseChartSeriesPoint,
+} from "./expense-chart-series";
 
-const SEGMENT_COLORS: Record<string, string> = {
-  vending: "#0150AC",
-  bills: "#A7C5E8",
-  Other: "#2E9E6B",
-  value: "#0150AC",
-};
-
-const HEAD_PALETTE = [
-  "#2E9E6B",
-  "#E67E22",
-  "#8E44AD",
-  "#16A085",
-  "#C0392B",
-  "#2980B9",
-] as const;
-
-function colorForSegment(key: string, index: number): string {
-  if (SEGMENT_COLORS[key]) return SEGMENT_COLORS[key];
-  return HEAD_PALETTE[index % HEAD_PALETTE.length];
-}
+const EXPENSE_COLOR = "#739FD7";
 
 function SkeletonBars() {
   return (
@@ -88,93 +68,27 @@ function computeNiceYMax(max: number): number {
   return nice * magnitude;
 }
 
-function toChartRows(
-  series: RevenueChartSeriesPoint[],
-  segmentKeys: string[],
-  singleHead: boolean,
-) {
-  return series.map((point) => {
-    const row: Record<string, string | number> = {
-      key: point.key,
-      label: point.label,
-      value: point.value,
-    };
+export type { ExpenseChartSeriesPoint };
 
-    if (singleHead) return row;
-
-    for (const key of segmentKeys) {
-      row[key] = Number(point.segments[key] ?? 0);
-    }
-    return row;
-  });
-}
-
-export type { RevenueChartSeriesPoint };
-
-export interface RevenueChartBarChartProps {
+export interface ExpenseChartBarChartProps {
   loading: boolean;
-  series: RevenueChartSeriesPoint[];
-  singleHead?: boolean;
+  series: ExpenseChartSeriesPoint[];
 }
 
-export function RevenueChartBarChart({
+export function ExpenseChartBarChart({
   loading,
   series,
-  singleHead = false,
-}: Readonly<RevenueChartBarChartProps>) {
-  const activeSegments = useMemo(
-    () => getActiveSegmentKeys(series),
-    [series],
-  );
-
-  const segmentKeys = useMemo(
-    () => activeSegments.map((s) => s.key),
-    [activeSegments],
-  );
-
-  const chartRows = useMemo(
-    () => toChartRows(series, segmentKeys, singleHead),
-    [series, segmentKeys, singleHead],
-  );
-
-  const legendPayload = useMemo(() => {
-    if (singleHead) {
-      return [
-        {
-          value: "Revenue",
-          type: "square" as const,
-          id: "value",
-          color: SEGMENT_COLORS.value,
-        },
-      ];
-    }
-    return activeSegments.map((seg, i) => ({
-      value: seg.label,
-      type: "square" as const,
-      id: seg.key,
-      color: colorForSegment(seg.key, i),
-    }));
-  }, [activeSegments, singleHead]);
-
-  const labelByKey = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const seg of activeSegments) {
-      map.set(seg.key, seg.label);
-    }
-    map.set("value", "Revenue");
-    return map;
-  }, [activeSegments]);
-
+}: Readonly<ExpenseChartBarChartProps>) {
   const yMax = useMemo(() => {
     let max = 0;
-    for (const row of chartRows) {
+    for (const row of series) {
       max = Math.max(max, Number(row.value ?? 0));
     }
     return computeNiceYMax(max);
-  }, [chartRows]);
+  }, [series]);
 
   if (loading) return <SkeletonBars />;
-  if (!series.length || !seriesHasRevenue(series)) return <EmptyState />;
+  if (!series.length || !seriesHasExpenses(series)) return <EmptyState />;
 
   const isDense = series.length > 12;
   const minWidth = isDense ? `max(100%, ${series.length * 56}px)` : "100%";
@@ -193,7 +107,14 @@ export function RevenueChartBarChart({
     left: 0,
   };
 
-  const useStack = !singleHead && segmentKeys.length > 0;
+  const legendPayload = [
+    {
+      value: "Expenses",
+      type: "square" as const,
+      id: "value",
+      color: EXPENSE_COLOR,
+    },
+  ];
 
   return (
     <div className="h-[380px]">
@@ -201,7 +122,7 @@ export function RevenueChartBarChart({
         <div className="w-[74px] shrink-0">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
-              data={chartRows}
+              data={series}
               barSize={barSize}
               barCategoryGap="30%"
               margin={CHART_MARGIN}
@@ -224,7 +145,7 @@ export function RevenueChartBarChart({
           <div style={{ minWidth }} className="h-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={chartRows}
+                data={series}
                 barCategoryGap={series.length <= 1 ? "20%" : 18}
                 barSize={barSize}
                 margin={CHART_MARGIN}
@@ -246,9 +167,9 @@ export function RevenueChartBarChart({
                 />
 
                 <Tooltip
-                  formatter={(value: number, name: string) => [
+                  formatter={(value: number) => [
                     formatNairaFull(Number(value)),
-                    labelByKey.get(name) ?? name,
+                    "Expenses",
                   ]}
                   labelFormatter={String}
                 />
@@ -261,39 +182,13 @@ export function RevenueChartBarChart({
                   payload={legendPayload}
                 />
 
-                {singleHead ? (
-                  <Bar
-                    dataKey="value"
-                    fill={SEGMENT_COLORS.value}
-                    radius={[6, 6, 0, 0]}
-                    minPointSize={3}
-                    cursor="pointer"
-                  />
-                ) : (
-                  segmentKeys.map((key, index) => {
-                    const isTop = index === segmentKeys.length - 1;
-                    const isBottom = index === 0;
-                    return (
-                      <Bar
-                        key={key}
-                        dataKey={key}
-                        stackId={useStack ? "revenue-stack" : undefined}
-                        fill={colorForSegment(key, index)}
-                        radius={
-                          useStack
-                            ? isTop
-                              ? [6, 6, 0, 0]
-                              : isBottom
-                                ? [0, 0, 0, 0]
-                                : [0, 0, 0, 0]
-                            : [6, 6, 0, 0]
-                        }
-                        minPointSize={3}
-                        cursor="pointer"
-                      />
-                    );
-                  })
-                )}
+                <Bar
+                  dataKey="value"
+                  fill={EXPENSE_COLOR}
+                  radius={[6, 6, 0, 0]}
+                  minPointSize={3}
+                  cursor="pointer"
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>

@@ -32,6 +32,7 @@ import {
   IsoLinkedRangeStart,
 } from "@/components/ui/iso-date-picker";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
+import { RevenueChartCard } from "@/components/dashboard/estate-admin/reports/RevenueChartCard";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -463,6 +464,8 @@ export default function ReportsPage() {
           />
         </div>
       </Card>
+
+      {estateId ? <RevenueChartCard estateId={estateId} /> : null}
 
       {/* Revenue table — revenue filters are fully isolated here */}
       <ReportTable

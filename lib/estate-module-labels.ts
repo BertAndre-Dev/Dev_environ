@@ -12,6 +12,7 @@ export const ESTATE_MODULE_LABELS: Record<string, string> = {
   comments: "Comments",
   address: "Address Management",
   expense: "Expenses",
+  revenue: "Revenue",
   reporting: "Reporting",
   users: "User Management",
   chat: "Community Chat",

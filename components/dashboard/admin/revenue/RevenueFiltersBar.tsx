@@ -11,7 +11,7 @@ import {
   IsoLinkedRangeStart,
 } from "@/components/ui/iso-date-picker";
 
-export interface ExpensesFiltersBarProps {
+export interface RevenueFiltersBarProps {
   startDate: string;
   endDate: string;
   search: string;
@@ -22,7 +22,7 @@ export interface ExpensesFiltersBarProps {
   defaultDateRangeDays?: number;
 }
 
-export function ExpensesFiltersBar({
+export function RevenueFiltersBar({
   startDate,
   endDate,
   search,
@@ -31,7 +31,7 @@ export function ExpensesFiltersBar({
   onResetDates,
   onSearchChange,
   defaultDateRangeDays = 30,
-}: Readonly<ExpensesFiltersBarProps>) {
+}: Readonly<RevenueFiltersBarProps>) {
   const didInitDefaultRangeRef = useRef(false);
   const exampleDateRange = useMemo(() => getDateRangePlaceholders(), []);
   const showExamplePlaceholders = !defaultDateRangeDays;
@@ -70,11 +70,11 @@ export function ExpensesFiltersBar({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2">
-            <label className="text-sm text-muted-foreground" htmlFor="eh-start-date">
+            <label className="text-sm text-muted-foreground" htmlFor="rh-start-date">
               From
             </label>
             <IsoLinkedRangeStart
-              id="eh-start-date"
+              id="rh-start-date"
               startDate={startDate}
               endDate={endDate}
               onStartChange={onStartDateChange}
@@ -84,11 +84,11 @@ export function ExpensesFiltersBar({
             />
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-sm text-muted-foreground" htmlFor="eh-end-date">
+            <label className="text-sm text-muted-foreground" htmlFor="rh-end-date">
               To
             </label>
             <IsoLinkedRangeEnd
-              id="eh-end-date"
+              id="rh-end-date"
               startDate={startDate}
               endDate={endDate}
               onEndChange={onEndDateChange}
@@ -108,7 +108,7 @@ export function ExpensesFiltersBar({
           <Input
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search expense heads by name"
+            placeholder="Search revenue heads by name"
           />
         </div>
       </div>

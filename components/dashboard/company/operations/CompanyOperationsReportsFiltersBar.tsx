@@ -172,7 +172,7 @@ export function CompanyOperationsReportsFiltersBar({
             ) : null}
           </div>
 
-          <div className="w-full lg:max-w-md">
+          <div className="w-full lg:w-[250px] xl:w-[300px]">
             <Input
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}

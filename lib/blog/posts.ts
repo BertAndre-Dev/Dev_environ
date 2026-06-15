@@ -16,6 +16,29 @@ export type BlogPostMeta = {
 
 export const blogPosts: BlogPostMeta[] = [
   {
+    slug: "developers-build-estates-communities-built-afterward",
+    title: "Developers Build Estates. Communities Are Built Afterward.",
+    excerpt:
+      "Handover marks the start of operations, not the end of work. When residents move in, success shifts from buildings to daily experience — and that's where many estates struggle without the right systems.",
+    hook: "Completion is not the end of the work. It is the beginning of operations.",
+    publishedAt: "2026-06-15",
+    readTimeMinutes: 7,
+    wordCount: 1100,
+    category: "Estate Management",
+    author: "Bertahub Team",
+    featuredImage: "/assets/blog/blog-2.jpeg",
+    featuredImageAlt:
+      "Newly completed residential estate with aligned buildings, paved roads, and landscaped surroundings",
+    keywords: [
+      "estate management after handover",
+      "property management Nigeria",
+      "estate operations software",
+      "community management platform",
+      "developer estate handover",
+      "residential estate operations",
+    ],
+  },
+  {
     slug: "why-nigerian-estates-need-digital-operating-system",
     title: "Why Nigerian Estates Need a Digital Operating System",
     excerpt:

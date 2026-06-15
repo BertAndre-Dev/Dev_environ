@@ -245,7 +245,7 @@ export default function DashboardLayout({
             type="button"
             disabled={signingOut}
             onClick={handleSignOut}
-            className={`flex items-center w-full gap-3 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-muted/50 disabled:opacity-50`}
+            className={`flex items-center w-full gap-3 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-muted/50 disabled:opacity-50 cursor-pointer`}
           >
             <Icon className="w-4 h-4 text-[#D31510]" />
             {sidebarOpen && (

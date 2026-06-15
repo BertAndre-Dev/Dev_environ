@@ -119,7 +119,7 @@ export default function TransactionPage() {
         // Load banks for displaying bank name in withdraw modal
         await dispatch(getResidentBanks("NG")).unwrap();
       } catch (err) {
-        console.error("❌ Initialization error:", err);
+        // console.error("❌ Initialization error:", err);
         toast.error("Failed to load data.");
       }
     })();
@@ -311,8 +311,8 @@ export default function TransactionPage() {
       // Redirect to Flutterwave
       window.location.href = paymentUrl;
     } catch (err: any) {
-      console.error("❌ Fund wallet error:", err);
-      toast.error(err?.message || "Failed to fund wallet.");
+      // console.error("❌ Fund wallet error:", err);
+      toast.error(err?.message);
     }
   };
 
@@ -339,14 +339,14 @@ export default function TransactionPage() {
 
         if (!currentUserId) throw new Error("User not found for verification");
 
-        console.log("🧾 Auto-verifying transaction:", tx_ref);
+        // console.log("🧾 Auto-verifying transaction:", tx_ref);
 
         // ✅ Trigger verification via Redux thunk
         const verificationRes = await dispatch(
           verifyTransaction({ tx_ref, paymentType: "fundWallet" }),
         ).unwrap();
 
-        console.log("✅ Verification response:", verificationRes);
+        // console.log("✅ Verification response:", verificationRes);
         toast.success("Wallet funded successfully!");
 
         // Refresh wallet balance
@@ -359,10 +359,10 @@ export default function TransactionPage() {
         );
         window.history.replaceState({}, document.title, url.toString());
       } catch (err: any) {
-        console.error("❌ Verification failed:", err);
+        // console.error("❌ Verification failed:", err);
         const errorMessage =
           err?.message || err?.payload?.message || "Verification failed";
-        toast.error(errorMessage);
+        // toast.error(errorMessage);
       }
     };
 

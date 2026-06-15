@@ -193,3 +193,6 @@ export const selectEstateModules = (state: RootState): string[] => {
   );
   return Array.from(new Set(merged));
 };
+
+export const selectResidentCode = (state: RootState) =>
+  (state.auth.user?.residentCode as string | undefined) ?? "";

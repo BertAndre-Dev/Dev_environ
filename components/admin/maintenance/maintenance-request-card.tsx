@@ -180,10 +180,10 @@ export function MaintenanceRequestCard({
       onClick={onSelect}
     >
       <CardContent className="p-0">
-        <div className="p-5 space-y-4">
+        <div className="p-3 space-y-4">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-            <div className="flex gap-3">
+          <div className="flex flex-row items-start lg:items-center justify-between gap-3">
+            <div className="flex gap-1">
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary shrink-0">
                 {getInitials(requesterName)}
               </div>
@@ -200,11 +200,11 @@ export function MaintenanceRequestCard({
                 </p>
               </div>
             </div>
-            <div className="flex flex-col items-center justify-center gap-2">
+            <div className="flex flex-col items-start lg:items-center justify-center gap-2">
               <span className="text-sm font-medium text-muted-foreground shrink-0 pb-2">
                 #{ticketDisplay}
               </span>
-              <div className="relative min-w-[140px]">
+              <div className="relative min-w-[120px]">
                 <Select
                   options={STATUS_OPTIONS_API}
                   value={complaint.status}
@@ -213,7 +213,7 @@ export function MaintenanceRequestCard({
                     handleStatusChange(e.target.value);
                   }}
                   disabled={updateStatusLoading}
-                  className="min-w-[140px] pr-8 text-white border-0 font-medium cursor-pointer"
+                  className="min-w-[120px] pr-8 text-white border-0 font-medium cursor-pointer"
                   style={{
                     backgroundColor: getStatusStyle(complaint.status),
                   }}

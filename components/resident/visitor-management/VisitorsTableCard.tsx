@@ -44,6 +44,17 @@ export function VisitorsTableCard({
           item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "—",
       },
       {
+        key: "name",
+        header: "Name",
+        render: (item: ResidentVisitorData) =>
+          `${item.firstName || ""} ${item.lastName || ""}`.trim() || "—",
+      },
+      {
+        key: "phone",
+        header: "Phone",
+        render: (item: ResidentVisitorData) => item.phone || "—",
+      },
+      {
         key: "visitorCode",
         header: "Visitor Code",
         render: (item: ResidentVisitorData) => (
@@ -56,17 +67,6 @@ export function VisitorsTableCard({
             ) : null}
           </div>
         ),
-      },
-      {
-        key: "name",
-        header: "Name",
-        render: (item: ResidentVisitorData) =>
-          `${item.firstName || ""} ${item.lastName || ""}`.trim() || "—",
-      },
-      {
-        key: "phone",
-        header: "Phone",
-        render: (item: ResidentVisitorData) => item.phone || "—",
       },
       {
         key: "purpose",
@@ -126,7 +126,7 @@ export function VisitorsTableCard({
         key: "actions",
         header: "Actions",
         render: (item: ResidentVisitorData) => (
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-row items-center gap-2">
             <Button
               className="cursor-pointer"
               variant="outline"

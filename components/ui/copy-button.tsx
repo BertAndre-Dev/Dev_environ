@@ -64,7 +64,7 @@ export function CopyButton({
         onClick={onCopy}
         className={[
           "inline-flex items-center gap-1 rounded py-1 text-xs font-medium cursor-pointer",
-          " bg-white hover:bg-muted/30 text-primary cursor-pointer",
+          "text-primary cursor-pointer",
           className ?? "",
         ].join(" ")}
         title={title ?? label}

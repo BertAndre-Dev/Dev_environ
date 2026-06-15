@@ -1,9 +1,12 @@
 "use client";
 
 import React from "react";
+import { useSelector } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { CopyButton } from "@/components/ui/copy-button";
+import { selectResidentCode } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 
 export function VisitorPageHeader({
   onAddVisitor,
@@ -16,9 +19,24 @@ export function VisitorPageHeader({
   disabled?: boolean;
   disabledReason?: string;
 }>) {
+  const residentCode = useSelector(selectResidentCode);
   return (
     <div className="flex flex-col md:flex-row gap-5 md:gap-0 items-start md:items-center justify-between">
-      <h1 className="font-heading text-3xl font-bold">Visitor Management</h1>
+      <div className="space-y-2">
+        <h1 className="font-heading text-3xl font-bold">Visitor Management</h1>
+        {residentCode ? (
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground bg-primary/10 rounded-md p-4">
+            <span>Your resident code:</span>
+            <span className="font-mono font-semibold text-foreground">
+              {residentCode}
+            </span>
+            <CopyButton
+              value={residentCode}
+              title="Copy resident code"
+            />
+          </div>
+        ) : null}
+      </div>
       <DropdownMenu.Root>
         <DropdownMenu.Trigger asChild>
           <Button

@@ -46,7 +46,7 @@ interface TransactionsFilterBarProps {
   showSearchInput?: boolean;
   /**
    * Auto-initialize the date range when empty.
-   * Default: 30 (last 30 days). Set to 0 to disable.
+   * Default: 0 (disabled). Set to a positive number for last-N-days on load.
    */
   defaultDateRangeDays?: number;
 }
@@ -62,7 +62,7 @@ export const TransactionsFilterBar: React.FC<TransactionsFilterBarProps> = ({
   searchFieldLabel = "Estate",
   showTypeFilter = true,
   showSearchInput = true,
-  defaultDateRangeDays = 30,
+  defaultDateRangeDays = 0,
 }) => {
   const hasInitializedDefaultRange = useRef(false);
   const exampleDateRange = useMemo(() => getDateRangePlaceholders(), []);

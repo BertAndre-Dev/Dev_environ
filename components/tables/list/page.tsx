@@ -50,7 +50,7 @@ interface TableProps<T> {
   endDatePlaceholder?: string;
   /**
    * Auto-initialize the date range filter when empty.
-   * Default: 30 (last 30 days). Set to 0/undefined to disable.
+   * Default: 0 (disabled). Set to a positive number for last-N-days on load.
    */
   defaultDateRangeDays?: number;
   /** Show an Export button that downloads table data as CSV. */
@@ -85,7 +85,7 @@ export default function Table<T extends { id?: string }>({
   onDateRangeChange,
   startDatePlaceholder,
   endDatePlaceholder,
-  defaultDateRangeDays = 30,
+  defaultDateRangeDays = 0,
   enableExport = false,
   exportFileName = "export",
   onExportRequest,

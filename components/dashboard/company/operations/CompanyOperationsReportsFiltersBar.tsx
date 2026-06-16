@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useMemo } from "react";
 import Select from "react-select";
 
 import { Card } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import {
   IsoLinkedRangeEnd,
   IsoLinkedRangeStart,
 } from "@/components/ui/iso-date-picker";
+import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 import type {
   CompanyOperationsReportingField,
   CompanyOperationsReportingType,
@@ -56,25 +57,7 @@ export function CompanyOperationsReportsFiltersBar({
   onResetDates,
   onSearchChange,
 }: Readonly<Props>) {
-  const didInitDefaultRangeRef = useRef(false);
-
-  useEffect(() => {
-    if (didInitDefaultRangeRef.current) return;
-    if (startDate || endDate) return;
-    didInitDefaultRangeRef.current = true;
-
-    const now = new Date();
-    const start = new Date(now);
-    start.setUTCDate(start.getUTCDate() - 30);
-
-    const toIso = (d: Date) =>
-      new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
-        .toISOString()
-        .slice(0, 10);
-
-    onStartDateChange(toIso(start));
-    onEndDateChange(toIso(now));
-  }, [startDate, endDate, onStartDateChange, onEndDateChange]);
+  const datePlaceholders = useMemo(() => getDateRangePlaceholders(), []);
 
   const typeOptions: SelectOption[] = types.map((t) => ({
     label: t.name,
@@ -152,6 +135,7 @@ export function CompanyOperationsReportsFiltersBar({
                 startDate={startDate}
                 endDate={endDate}
                 onStartChange={onStartDateChange}
+                placeholder={datePlaceholders.start}
               />
             </div>
             <div className="flex items-center gap-2">
@@ -163,6 +147,7 @@ export function CompanyOperationsReportsFiltersBar({
                 startDate={startDate}
                 endDate={endDate}
                 onEndChange={onEndDateChange}
+                placeholder={datePlaceholders.end}
               />
             </div>
             {startDate && endDate ? (

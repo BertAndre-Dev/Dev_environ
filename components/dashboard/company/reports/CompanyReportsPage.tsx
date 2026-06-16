@@ -21,6 +21,7 @@ import {
   IsoLinkedRangeEnd,
   IsoLinkedRangeStart,
 } from "@/components/ui/iso-date-picker";
+import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
 import {
@@ -50,11 +51,6 @@ type EstateSelectOption = { label: string; value: string };
 type RevenueCategory = "all" | "bills" | "vending";
 type Granularity = "day" | "month" | "year";
 
-function toInputDate(iso: string): string {
-  if (!iso) return "";
-  return String(iso).slice(0, 10);
-}
-
 function toIsoIfPresent(dateInputValue: string): string | undefined {
   if (!dateInputValue) return undefined;
   const d = new Date(`${dateInputValue}T00:00:00.000Z`);
@@ -64,16 +60,6 @@ function toIsoIfPresent(dateInputValue: string): string | undefined {
 
 function formatNaira(n: number): string {
   return `₦${Number(n ?? 0).toLocaleString()}`;
-}
-
-function getDefaultDateRange() {
-  const end = new Date();
-  const start = new Date(end);
-  start.setUTCDate(start.getUTCDate() - 30);
-  return {
-    startDate: toInputDate(start.toISOString()),
-    endDate: toInputDate(end.toISOString()),
-  };
 }
 
 function useIsolatedReport(
@@ -130,23 +116,21 @@ export default function CompanyReportsPage() {
     useState<EstateSelectOption | null>(null);
   const [estatesLoading, setEstatesLoading] = useState(true);
 
-  const defaults = useMemo(() => getDefaultDateRange(), []);
-
-  const [chartStartDate, setChartStartDate] = useState(defaults.startDate);
-  const [chartEndDate, setChartEndDate] = useState(defaults.endDate);
+  const [chartStartDate, setChartStartDate] = useState("");
+  const [chartEndDate, setChartEndDate] = useState("");
   const [granularity, setGranularity] = useState<Granularity>("month");
   const [chartRevenueCategory, setChartRevenueCategory] =
     useState<RevenueCategory>("all");
 
-  const [revenueStartDate, setRevenueStartDate] = useState(defaults.startDate);
-  const [revenueEndDate, setRevenueEndDate] = useState(defaults.endDate);
+  const [revenueStartDate, setRevenueStartDate] = useState("");
+  const [revenueEndDate, setRevenueEndDate] = useState("");
   const [revenueFilter, setRevenueFilter] = useState("all");
 
-  const [expensesStartDate, setExpensesStartDate] = useState(
-    defaults.startDate,
-  );
-  const [expensesEndDate, setExpensesEndDate] = useState(defaults.endDate);
+  const [expensesStartDate, setExpensesStartDate] = useState("");
+  const [expensesEndDate, setExpensesEndDate] = useState("");
   const [expensesHeadId, setExpensesHeadId] = useState<string>("all");
+
+  const datePlaceholders = useMemo(() => getDateRangePlaceholders(), []);
 
   const chartData = useSelector(selectCompanyFinancialReportChartData);
   const chartLoading = useSelector(selectCompanyFinancialReportLoading);
@@ -453,6 +437,7 @@ export default function CompanyReportsPage() {
                       endDate={chartEndDate}
                       onStartChange={setChartStartDate}
                       className="cursor-pointer"
+                      placeholder={datePlaceholders.start}
                     />
                   </div>
 
@@ -469,6 +454,7 @@ export default function CompanyReportsPage() {
                       endDate={chartEndDate}
                       onEndChange={setChartEndDate}
                       className="cursor-pointer"
+                      placeholder={datePlaceholders.end}
                     />
                   </div>
 

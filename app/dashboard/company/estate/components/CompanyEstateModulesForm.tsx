@@ -5,24 +5,24 @@ import { useDispatch, useSelector } from "react-redux";
 import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ModuleSelectionChips } from "@/components/shared/module-selection-chips";
-import type { AppDispatch, RootState } from "@/redux/store";
-import { getCompanyModules } from "@/redux/slice/super-admin/company-mgt/company";
+import type { AppDispatch } from "@/redux/store";
 import {
-  fetchEstateModules,
-  updateEstateModules,
-} from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
+  fetchCompanyEstateEnabledModules,
+  fetchCompanyEstateModules,
+  updateCompanyEstateModules,
+} from "@/redux/slice/company/estate-mgt/company-estate";
+import { parseEstateModulesResponse } from "@/lib/estate-module-labels";
 import {
-  parseEstateModulesResponse,
-} from "@/lib/estate-module-labels";
-import {
-  selectModulesError,
-  selectModulesLoading,
-} from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt-slice";
+  selectCompanyAvailableModules,
+  selectCompanyEstateModulesError,
+  selectCompanyEstateModulesLoading,
+  selectCompanyModulesError,
+  selectCompanyModulesLoading,
+} from "@/redux/slice/company/estate-mgt/company-estate-slice";
 
-interface EstateModulesFormProps {
+interface CompanyEstateModulesFormProps {
   readonly estateId: string;
   readonly estateName: string;
   readonly initialModules?: string[];
@@ -30,13 +30,13 @@ interface EstateModulesFormProps {
   readonly onCancel: () => void;
 }
 
-export function EstateModulesForm({
+export function CompanyEstateModulesForm({
   estateId,
   estateName,
   initialModules,
   onSuccess,
   onCancel,
-}: EstateModulesFormProps) {
+}: CompanyEstateModulesFormProps) {
   const dispatch = useDispatch<AppDispatch>();
   const seededModules = Array.isArray(initialModules) ? initialModules : [];
   const [selectedModules, setSelectedModules] = useState<string[]>(() => [
@@ -44,27 +44,17 @@ export function EstateModulesForm({
   ]);
   const [submitting, setSubmitting] = useState(false);
 
-  const { availableModules, companyModulesLoading, companyModulesError } =
-    useSelector((state: RootState) => {
-      const companyState = state.superAdminCompany;
-      return {
-        availableModules: (companyState?.modules ?? []) as string[],
-        companyModulesLoading: companyState?.getModulesStatus === "isLoading",
-        companyModulesError:
-          companyState?.getModulesStatus === "failed"
-            ? (companyState?.error ?? "Failed to load modules")
-            : null,
-      };
-    });
-
-  const estateModulesLoading = useSelector(selectModulesLoading);
-  const estateModulesError = useSelector(selectModulesError);
+  const availableModules = useSelector(selectCompanyAvailableModules);
+  const companyModulesLoading = useSelector(selectCompanyModulesLoading);
+  const companyModulesError = useSelector(selectCompanyModulesError);
+  const estateModulesLoading = useSelector(selectCompanyEstateModulesLoading);
+  const estateModulesError = useSelector(selectCompanyEstateModulesError);
 
   useEffect(() => {
     const seeded = Array.isArray(initialModules) ? [...initialModules] : [];
     setSelectedModules(seeded);
-    dispatch(getCompanyModules());
-    dispatch(fetchEstateModules(estateId))
+    dispatch(fetchCompanyEstateModules());
+    dispatch(fetchCompanyEstateEnabledModules(estateId))
       .unwrap()
       .then((res) => {
         const mods = parseEstateModulesResponse(res);
@@ -86,7 +76,7 @@ export function EstateModulesForm({
     setSubmitting(true);
     try {
       await dispatch(
-        updateEstateModules({ id: estateId, modules: selectedModules }),
+        updateCompanyEstateModules({ id: estateId, modules: selectedModules }),
       ).unwrap();
       toast.success("Estate modules updated successfully!");
       onSuccess();

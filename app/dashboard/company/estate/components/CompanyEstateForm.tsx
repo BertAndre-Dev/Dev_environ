@@ -9,8 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CountryDropdown, RegionDropdown } from "react-country-region-selector";
-import { cn } from "@/lib/utils";
-import { labelForEstateModule } from "@/lib/estate-module-labels";
+import { ModuleSelectionChips } from "@/components/shared/module-selection-chips";
 import type { AppDispatch } from "@/redux/store";
 import {
   type EstateData,
@@ -32,6 +31,7 @@ export default function CompanyEstateForm({
   initialData = null,
   onSubmit,
 }: Readonly<Props>) {
+  const isEditing = Boolean(initialData);
   const dispatch = useDispatch<AppDispatch>();
 
   const availableModules = useSelector(selectCompanyAvailableModules);
@@ -50,8 +50,9 @@ export default function CompanyEstateForm({
   }));
 
   useEffect(() => {
+    if (isEditing) return;
     dispatch(fetchCompanyEstateModules());
-  }, [dispatch]);
+  }, [dispatch, isEditing]);
 
   useEffect(() => {
     if (initialData) {
@@ -72,19 +73,15 @@ export default function CompanyEstateForm({
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const toggleModule = (key: string) => {
-    setFormData((prev) => {
-      const current = new Set(prev.modules ?? []);
-      if (current.has(key)) current.delete(key);
-      else current.add(key);
-      return { ...prev, modules: Array.from(current) };
-    });
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.modules || formData.modules.length === 0) {
+    if (!isEditing && (!formData.modules || formData.modules.length === 0)) {
       toast.error("Select at least one module for this estate");
+      return;
+    }
+    if (isEditing) {
+      const { modules: _modules, ...rest } = formData;
+      onSubmit({ ...rest, modules: [] });
       return;
     }
     onSubmit({ ...formData });
@@ -167,56 +164,46 @@ export default function CompanyEstateForm({
           </select>
         </div>
 
-        <div className="space-y-3">
-          <Label>Modules</Label>
-          <p className="text-sm text-muted-foreground">
-            Select one or more modules to enable for this estate.
-          </p>
-
-          {modulesLoading ? (
-            <div className="flex items-center gap-2 rounded-md border border-border px-3 py-6 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading available modules…
-            </div>
-          ) : modulesError ? (
-            <p className="text-sm text-destructive">{modulesError}</p>
-          ) : availableModules.length === 0 ? (
-            <p className="text-sm text-destructive">
-              No modules are available. Please contact support.
+        {!isEditing && (
+          <div className="space-y-3">
+            <Label>Modules</Label>
+            <p className="text-sm text-muted-foreground">
+              Select one or more modules to enable for this estate.
             </p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {availableModules.map((key) => {
-                const selected = selectedModules.includes(key);
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => toggleModule(key)}
-                    className={cn(
-                      "rounded-full border px-3 py-1.5 text-sm transition-colors cursor-pointer",
-                      selected
-                        ? "border-primary bg-primary/10 text-primary font-medium"
-                        : "border-border bg-background hover:bg-muted/50 text-foreground",
-                    )}
-                  >
-                    {labelForEstateModule(key)}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
+
+            {modulesLoading ? (
+              <div className="flex items-center gap-2 rounded-md border border-border px-3 py-6 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading available modules…
+              </div>
+            ) : modulesError ? (
+              <p className="text-sm text-destructive">{modulesError}</p>
+            ) : availableModules.length === 0 ? (
+              <p className="text-sm text-destructive">
+                No modules are available. Please contact support.
+              </p>
+            ) : (
+              <ModuleSelectionChips
+                availableModules={availableModules}
+                selectedModules={selectedModules}
+                onChange={(modules) =>
+                  setFormData((prev) => ({ ...prev, modules }))
+                }
+              />
+            )}
+          </div>
+        )}
 
         <div className="w-full pt-4">
           <Button
             type="submit"
             className="w-full cursor-pointer"
             disabled={
-              modulesLoading ||
-              Boolean(modulesError) ||
-              availableModules.length === 0 ||
-              selectedModules.length === 0
+              !isEditing &&
+              (modulesLoading ||
+                Boolean(modulesError) ||
+                availableModules.length === 0 ||
+                selectedModules.length === 0)
             }
           >
             {initialData ? "Update" : "Create Estate"}

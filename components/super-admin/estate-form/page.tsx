@@ -9,13 +9,11 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CountryDropdown, RegionDropdown } from "react-country-region-selector"
-import { cn } from "@/lib/utils"
-import type { AppDispatch } from "@/redux/store"
+import { ModuleSelectionChips } from "@/components/shared/module-selection-chips"
+import type { AppDispatch, RootState } from "@/redux/store"
 import type { EstateData } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt"
 import { VisitorVerificationMode } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt"
 import { getCompanyModules } from "@/redux/slice/super-admin/company-mgt/company"
-import { labelForEstateModule } from "@/lib/estate-module-labels"
-import type { RootState } from "@/redux/store"
 
 interface EstateFormProps {
   initialData?: EstateData | null
@@ -85,15 +83,6 @@ export default function EstateForm({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
-  }
-
-  const toggleModule = (key: string) => {
-    setFormData((prev) => {
-      const next = new Set(prev.modules)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return { ...prev, modules: Array.from(next) }
-    })
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -205,26 +194,13 @@ export default function EstateForm({
               ) : availableModules.length === 0 ? (
                 <p className="text-sm text-destructive">No modules are available.</p>
               ) : (
-                <div className="flex flex-wrap gap-2">
-                  {availableModules.map((key) => {
-                    const selected = formData.modules.includes(key)
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => toggleModule(key)}
-                        className={cn(
-                          "rounded-full border px-3 py-1.5 text-sm transition-colors cursor-pointer",
-                          selected
-                            ? "border-primary bg-primary/10 text-primary font-medium"
-                            : "border-border bg-background hover:bg-muted/50 text-foreground",
-                        )}
-                      >
-                        {labelForEstateModule(key)}
-                      </button>
-                    )
-                  })}
-                </div>
+                <ModuleSelectionChips
+                  availableModules={availableModules}
+                  selectedModules={formData.modules}
+                  onChange={(modules) =>
+                    setFormData((prev) => ({ ...prev, modules }))
+                  }
+                />
               )}
             </div>
           )}

@@ -1,0 +1,102 @@
+"use client";
+
+import React from "react";
+import Image from "next/image";
+import { Eye, Pencil, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+
+import { Card } from "@/components/ui/card";
+import type { RevenueHead } from "@/redux/slice/admin/revenue-head/revenue-head";
+import { slugify } from "@/lib/slug";
+
+export interface RevenueHeadCardProps {
+  item: RevenueHead;
+  onView: (item: RevenueHead) => void;
+  onEdit: (item: RevenueHead) => void;
+  onDelete: (item: RevenueHead) => void;
+  detailBasePath?: string;
+  estateId?: string;
+}
+
+export function RevenueHeadCard({
+  item,
+  onView,
+  onEdit,
+  onDelete,
+  detailBasePath = "/dashboard/admin/revenue",
+  estateId,
+}: Readonly<RevenueHeadCardProps>) {
+  const router = useRouter();
+  const slug = slugify(item.name ?? "");
+  const id = item.id ?? item._id;
+  const base = id ? `${detailBasePath}/${id}` : `${detailBasePath}/${slug}`;
+  const href = estateId ? `${base}?estateId=${encodeURIComponent(estateId)}` : base;
+
+  return (
+    <Card
+      role="button"
+      tabIndex={0}
+      className="relative overflow-hidden p-6 hover:shadow-md transition-shadow cursor-pointer"
+      onClick={() => router.push(href)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          router.push(href);
+        }
+      }}
+    >
+      <div className="absolute right-4 top-0 flex items-center gap-2">
+        <button
+          type="button"
+          className="h-10 w-10 rounded-full bg-white/90 shadow-sm grid place-items-center hover:bg-muted cursor-pointer"
+          aria-label="View revenue head"
+          onClick={(e) => {
+            e.stopPropagation();
+            onView(item);
+          }}
+        >
+          <Eye className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          className="h-10 w-10 rounded-full bg-white/90 shadow-sm grid place-items-center hover:bg-muted cursor-pointer"
+          aria-label="Edit revenue head"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(item);
+          }}
+        >
+          <Pencil className="h-4 w-4 text-blue-600" />
+        </button>
+        <button
+          type="button"
+          className="h-10 w-10 rounded-full bg-white/90 shadow-sm grid place-items-center hover:bg-muted cursor-pointer"
+          aria-label="Delete revenue head"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(item);
+          }}
+        >
+          <Trash2 className="h-4 w-4 text-red-600" />
+        </button>
+      </div>
+
+      <div className="flex items-start gap-4 pr-16">
+        <div className="h-12 w-12 rounded-full bg-emerald-50 grid place-items-center">
+          <Image src="/money.svg" alt="" width={24} height={24} />
+        </div>
+        <div className="min-w-0">
+          <p className="font-heading text-4xl font-bold tracking-tight truncate">
+            {item.name}
+          </p>
+          {item.description ? (
+            <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+              {item.description}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </Card>
+  );
+}
+

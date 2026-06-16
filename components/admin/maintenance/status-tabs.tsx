@@ -31,7 +31,7 @@ export function StatusTabs({ value, onChange, className }: StatusTabsProps) {
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-2 border-b border-border pb-4",
+        "flex flex-wrap items-center border-b border-border pb-4",
         className
       )}
     >
@@ -44,7 +44,7 @@ export function StatusTabs({ value, onChange, className }: StatusTabsProps) {
             type="button"
             onClick={() => onChange(tab.value)}
             className={cn(
-              "cursor-pointer px-4 py-2 rounded-full text-sm font-medium transition-colors",
+              "cursor-pointer px-3 py-2 rounded-full text-sm font-medium transition-colors",
               isAll
                 ? "text-primary border-b-2 border-primary rounded-none rounded-t pb-2 -mb-0.5"
                 : "border border-transparent",

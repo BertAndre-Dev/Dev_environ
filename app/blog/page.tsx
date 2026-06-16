@@ -43,7 +43,7 @@ export default function BlogPage() {
       </header>
 
       <main className="container mx-auto px-6 md:px-8 lg:px-10 xl:px-20 max-w-[1320px] xl:max-w-[1440px] py-12 lg:py-16">
-        <div className="grid gap-8 max-w-3xl">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {blogPosts.map((post) => (
             <article
               key={post.slug}
@@ -64,7 +64,7 @@ export default function BlogPage() {
                 </Link>
               )}
 
-              <div className="p-6 sm:p-8">
+              <div className="p-6">
               <div className="flex flex-wrap items-center gap-3 mb-4">
                 <span className="rounded-full bg-[#EEF4FC] text-[#1560BD] text-xs font-medium px-3 py-1">
                   {post.category}

@@ -245,7 +245,7 @@ export default function DashboardLayout({
             type="button"
             disabled={signingOut}
             onClick={handleSignOut}
-            className={`flex items-center w-full gap-3 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-muted/50 disabled:opacity-50`}
+            className={`flex items-center w-full gap-3 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-muted/50 disabled:opacity-50 cursor-pointer`}
           >
             <Icon className="w-4 h-4 text-[#D31510]" />
             {sidebarOpen && (
@@ -408,14 +408,14 @@ export default function DashboardLayout({
                   className="w-48 bg-transparent text-sm outline-none"
                 />
               </div>
-              <button
+              {/* <button
                 type="button"
                 title="Notifications"
-                className="relative rounded-lg p-2 transition-colors hover:bg-muted"
+                className="relative rounded-lg p-2 transition-colors hover:bg-muted cursor-pointer"
               >
                 <Bell className="h-5 w-5" />
                 <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-accent" />
-              </button>
+              </button> */}
               <button
                 type="button"
                 title="Open menu"

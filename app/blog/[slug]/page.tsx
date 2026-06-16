@@ -1,11 +1,14 @@
 import { notFound } from "next/navigation";
 import BlogArticleLayout from "@/components/blog/blog-article-layout";
 import { BlogArticleJsonLd } from "@/components/blog/blog-json-ld";
+import DevelopersBuildEstatesArticle from "@/components/blog/articles/developers-build-estates-article";
 import DigitalOperatingSystemArticle from "@/components/blog/articles/digital-operating-system-article";
 import { getBlogPost, getAllBlogSlugs } from "@/lib/blog/posts";
 import { createBlogPostMetadata } from "@/lib/blog/seo";
 
 const articleComponents: Record<string, React.ComponentType> = {
+  "developers-build-estates-communities-built-afterward":
+    DevelopersBuildEstatesArticle,
   "why-nigerian-estates-need-digital-operating-system":
     DigitalOperatingSystemArticle,
 };

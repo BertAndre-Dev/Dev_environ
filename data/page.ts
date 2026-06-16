@@ -243,6 +243,13 @@ export const adminNav = [
     module: "expense",
   },
   {
+    label: "Revenue",
+    icon: Banknote,
+    path: "/dashboard/admin/revenue",
+    moduleKey: "revenue",
+    module: "revenue",
+  },
+  {
     label: "Maintenance Requests",
     icon: Hammer,
     path: "/dashboard/admin/maintenance",

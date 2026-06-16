@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import type { FinancialReportData } from "@/lib/financial-report-utils";
 
 export type CompanyAnalyticsChartPoint = {
   date: string;
@@ -12,30 +13,7 @@ export type CompanyAnalyticsChartPoint = {
 export type CompanyFinancialReportGenerateResponse = {
   success?: boolean;
   message?: string;
-  data?: {
-    reportPeriod?: { startDate: string; endDate: string };
-    revenue?: {
-      vendingRevenue: number;
-      billPaymentRevenue: number;
-      totalRevenue: number;
-    };
-    expenses?: {
-      totalExpenses: number;
-      byHead: Array<{
-        _id: string;
-        headName: string;
-        totalAmount: number;
-        entryCount: number;
-      }>;
-    };
-    summary?: {
-      totalRevenue: number;
-      totalExpenses: number;
-      netProfitLoss: number;
-      profitMargin: string;
-      status: string;
-    };
-  };
+  data?: FinancialReportData;
 };
 
 export type CompanyFinancialReportAnalyticsChartResponse = {

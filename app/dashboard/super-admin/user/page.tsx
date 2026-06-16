@@ -198,9 +198,7 @@ export default function SuperAdminUserPage() {
 
   // ✅ Fetch estates for filter dropdown (high limit — not user table page size)
   useEffect(() => {
-    dispatch(
-      getAllEstates({ page: 1, limit: ESTATE_FILTER_FETCH_LIMIT }),
-    )
+    dispatch(getAllEstates({ page: 1, limit: ESTATE_FILTER_FETCH_LIMIT }))
       .unwrap()
       .catch(() => toast.error("Failed to fetch estates"));
   }, [dispatch]);

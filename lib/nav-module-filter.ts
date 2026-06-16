@@ -23,6 +23,11 @@ export function isNavModuleEnabled(
       estateModules.includes("expense") || estateModules.includes("expenses")
     );
   }
+  if (moduleKey === "revenue" || moduleKey === "revenues") {
+    return (
+      estateModules.includes("revenue") || estateModules.includes("revenues")
+    );
+  }
   if (moduleKey === "asset" || moduleKey === "assets") {
     return (
       estateModules.includes("asset") || estateModules.includes("assets")

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import {
   IsoLinkedRangeEnd,
   IsoLinkedRangeStart,
 } from "@/components/ui/iso-date-picker";
+import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 
 export interface ExpensesFiltersBarProps {
   startDate: string;
@@ -29,6 +30,8 @@ export function ExpensesFiltersBar({
   onResetDates,
   onSearchChange,
 }: Readonly<ExpensesFiltersBarProps>) {
+  const datePlaceholders = useMemo(() => getDateRangePlaceholders(), []);
+
   return (
     <Card className="mt-0 p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -42,6 +45,7 @@ export function ExpensesFiltersBar({
               startDate={startDate}
               endDate={endDate}
               onStartChange={onStartDateChange}
+              placeholder={datePlaceholders.start}
             />
           </div>
           <div className="flex items-center gap-2">
@@ -53,6 +57,7 @@ export function ExpensesFiltersBar({
               startDate={startDate}
               endDate={endDate}
               onEndChange={onEndDateChange}
+              placeholder={datePlaceholders.end}
             />
           </div>
           {startDate && endDate && (

@@ -577,8 +577,7 @@ export function GroupInfoModal({
             <div className="border-t border-border pt-4">
               <Label htmlFor="add-all-role">Bulk add by role</Label>
               <p className="mb-2 text-xs text-muted-foreground">
-                Adds every active user in the estate with the selected role (API
-                behaviour).
+                Adds every active user in the estate with the selected role.
               </p>
               <Select
                 id="add-all-role"

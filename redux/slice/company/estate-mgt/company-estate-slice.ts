@@ -4,11 +4,13 @@ import {
   activateCompanyEstate,
   createCompanyEstate,
   deleteCompanyEstate,
+  fetchCompanyEstateEnabledModules,
   fetchCompanyEstateModules,
   getCompanyEstateById,
   getCompanyEstates,
   suspendCompanyEstate,
   updateCompanyEstate,
+  updateCompanyEstateModules,
 } from "./company-estate";
 
 export interface EstateDetails {
@@ -55,6 +57,9 @@ export interface CompanyEstateState {
   availableModules: string[];
   modulesLoading: boolean;
   modulesError: string | null;
+  estateModulesLoading: boolean;
+  estateModulesError: string | null;
+  updateEstateModulesStatus: AsyncStatus;
 }
 
 const initialState: CompanyEstateState = {
@@ -71,6 +76,9 @@ const initialState: CompanyEstateState = {
   availableModules: [],
   modulesLoading: false,
   modulesError: null,
+  estateModulesLoading: false,
+  estateModulesError: null,
+  updateEstateModulesStatus: "idle",
 };
 
 function estateId(est: EstateDetails) {
@@ -109,6 +117,41 @@ const companyEstateSlice = createSlice({
           action.error.message ??
           "Failed to load modules";
         state.availableModules = [];
+      })
+      .addCase(fetchCompanyEstateEnabledModules.pending, (state) => {
+        state.estateModulesLoading = true;
+        state.estateModulesError = null;
+      })
+      .addCase(fetchCompanyEstateEnabledModules.fulfilled, (state) => {
+        state.estateModulesLoading = false;
+        state.estateModulesError = null;
+      })
+      .addCase(fetchCompanyEstateEnabledModules.rejected, (state, action) => {
+        state.estateModulesLoading = false;
+        state.estateModulesError =
+          (action.payload as { message?: string } | undefined)?.message ??
+          action.error.message ??
+          "Failed to load estate modules";
+      })
+      .addCase(updateCompanyEstateModules.pending, (state) => {
+        state.updateEstateModulesStatus = "isLoading";
+      })
+      .addCase(updateCompanyEstateModules.fulfilled, (state, action) => {
+        state.updateEstateModulesStatus = "succeeded";
+        const updatedId = (action.payload as { updatedId?: string })?.updatedId;
+        const modules = (action.payload as { modules?: string[] })?.modules;
+        if (updatedId && modules && state.allEstates?.data) {
+          state.allEstates.data = state.allEstates.data.map((est) =>
+            estateId(est) === updatedId ? { ...est, modules } : est,
+          );
+        }
+      })
+      .addCase(updateCompanyEstateModules.rejected, (state, action) => {
+        state.updateEstateModulesStatus = "failed";
+        state.error =
+          (action.payload as { message?: string } | undefined)?.message ??
+          action.error.message ??
+          "Failed to update estate modules";
       })
       .addCase(getCompanyEstates.pending, (state) => {
         state.getAllEstatesStatus = "isLoading";
@@ -264,3 +307,7 @@ export const selectCompanyModulesLoading = (state: RootState) =>
   state.companyEstate?.modulesLoading ?? false;
 export const selectCompanyModulesError = (state: RootState) =>
   state.companyEstate?.modulesError ?? null;
+export const selectCompanyEstateModulesLoading = (state: RootState) =>
+  state.companyEstate?.estateModulesLoading ?? false;
+export const selectCompanyEstateModulesError = (state: RootState) =>
+  state.companyEstate?.estateModulesError ?? null;

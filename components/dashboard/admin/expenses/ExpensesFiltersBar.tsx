@@ -30,7 +30,7 @@ export function ExpensesFiltersBar({
   onEndDateChange,
   onResetDates,
   onSearchChange,
-  defaultDateRangeDays = 30,
+  defaultDateRangeDays = 0,
 }: Readonly<ExpensesFiltersBarProps>) {
   const didInitDefaultRangeRef = useRef(false);
   const exampleDateRange = useMemo(() => getDateRangePlaceholders(), []);

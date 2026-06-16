@@ -172,6 +172,12 @@ export const companyNav = [
     moduleKey: "expense",
   },
   {
+    label: "Revenue",
+    icon: Banknote,
+    path: "/dashboard/company/revenue",
+    moduleKey: "revenue",
+  },
+  {
     label: "Operations Reporting",
     icon: ClipboardList,
     path: "/dashboard/company/operations",

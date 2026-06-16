@@ -5,7 +5,7 @@ import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Modal from "@/components/modal/page";
-import { cn } from "@/lib/utils";
+import { ModuleSelectionChips } from "@/components/shared/module-selection-chips";
 import type {
   CompanyModuleKey,
   CreateCompanyPayload,
@@ -47,14 +47,7 @@ export function CompanyFormModal({
   readonly modulesLoading: boolean;
   readonly onSubmit: (e: React.FormEvent) => void | Promise<void>;
 }) {
-  const toggleModule = (key: CompanyModuleKey) => {
-    setForm((prev) => {
-      const next = new Set(prev.modules);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return { ...prev, modules: Array.from(next) };
-    });
-  };
+  const getModuleLabel = (key: string) => MODULE_LABELS[key] ?? key;
 
   return (
     <Modal visible={open} onClose={onClose}>
@@ -147,27 +140,14 @@ export function CompanyFormModal({
                 No modules available.
               </div>
             ) : (
-              <div className="flex flex-wrap gap-2">
-                {modules.map((key) => {
-                  const selected = form.modules.includes(key);
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => toggleModule(key)}
-                      className={cn(
-                        "rounded-full border px-3 py-1.5 text-sm transition-colors cursor-pointer",
-                        selected &&
-                          "border-primary bg-primary/10 text-primary font-medium",
-                        !selected &&
-                          "border-border bg-background hover:bg-muted/50 text-foreground",
-                      )}
-                    >
-                      {MODULE_LABELS[key] ?? key}
-                    </button>
-                  );
-                })}
-              </div>
+              <ModuleSelectionChips
+                availableModules={modules}
+                selectedModules={form.modules}
+                onChange={(next) =>
+                  setForm((prev) => ({ ...prev, modules: next as CompanyModuleKey[] }))
+                }
+                getLabel={getModuleLabel}
+              />
             )}
           </div>
 

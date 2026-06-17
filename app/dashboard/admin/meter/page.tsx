@@ -9,7 +9,7 @@ import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useState } from "react";
 import type { EstateEnergyUsageRange } from "@/lib/estate-energy-usage-chart";
 import { useDispatch, useSelector } from "react-redux";
-import { Link, Zap } from "lucide-react";
+import { Link, Search, Zap } from "lucide-react";
 import {
   getAllEstateMeter,
   getVendingStatsByEstate,
@@ -68,24 +68,24 @@ export default function AdminMeterManagement() {
   const [selectedMeter, setSelectedMeter] = useState<AdminMeterData | null>(
     null,
   );
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
+  const [bootstrapping, setBootstrapping] = useState(true);
+  const [initialMetersLoading, setInitialMetersLoading] = useState(false);
   const [usageRange, setUsageRange] = useState<EstateEnergyUsageRange>("weekly");
   const [usageRefreshing, setUsageRefreshing] = useState(false);
   const [energyPeriod, setEnergyPeriod] =
     useState<EnergyConsumptionPeriod>("weekly");
 
-  const { allAdminMeters, pagination, loading } = useSelector(
-    (state: RootState) => {
-      const adminMeterState = state.adminMeter as any;
-      return {
-        allAdminMeters: adminMeterState?.allAdminMeters?.data || [],
-        pagination: adminMeterState?.allAdminMeters?.pagination || {},
-        loading:
-          adminMeterState.getAllEstateMeterState === "isLoading" ||
-          adminMeterState.getMeterState === "isLoading",
-      };
-    },
-  );
+  const { allAdminMeters, pagination } = useSelector((state: RootState) => {
+    const adminMeterState = state.adminMeter as any;
+    return {
+      allAdminMeters: adminMeterState?.allAdminMeters?.data || [],
+      pagination: adminMeterState?.allAdminMeters?.pagination || {},
+    };
+  });
+
+  const pageLoading = bootstrapping || initialMetersLoading;
   
   const { energyConsumptionChart, energyChartLoading } = useSelector(
     (state: RootState) => ({
@@ -120,19 +120,42 @@ export default function AdminMeterManagement() {
   }));
 
   const fetchMeters = useCallback(
-    async (page = 1) => {
+    async (page = 1, searchTerm = appliedSearch) => {
       if (!estateId) return;
       await dispatch(
         getAllEstateMeter({
           estateId,
           page,
           limit: PAGE_LIMIT,
-          search: search || undefined,
+          search: searchTerm || undefined,
         }),
       ).unwrap();
     },
-    [dispatch, estateId, search],
+    [dispatch, estateId, appliedSearch],
   );
+
+  const handleSearchSubmit = () => {
+    const term = searchInput.trim();
+    setAppliedSearch(term);
+    fetchMeters(1, term).catch((error: { message?: string }) =>
+      toast.error(error?.message ?? "Failed to search meters."),
+    );
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput("");
+    setAppliedSearch("");
+    if (!estateId) return;
+    dispatch(
+      getAllEstateMeter({
+        estateId,
+        page: 1,
+        limit: PAGE_LIMIT,
+      }),
+    ).catch((error: { message?: string }) =>
+      toast.error(error?.message ?? "Failed to clear search."),
+    );
+  };
 
   // Bootstrap signed-in user and estate only (no meter fetch here).
   useEffect(() => {
@@ -166,15 +189,29 @@ export default function AdminMeterManagement() {
         setEstateId(estateIdValue);
       } catch (error: any) {
         toast.error(error?.message);
+      } finally {
+        setBootstrapping(false);
       }
     })();
   }, [dispatch]);
 
-  // Single fetch when estate or search changes.
+  // Initial meter fetch when estate is resolved (not on every keystroke).
   useEffect(() => {
     if (!estateId) return;
-    fetchMeters(1).catch((error: any) => toast.error(error?.message));
-  }, [estateId, fetchMeters]);
+    setSearchInput("");
+    setAppliedSearch("");
+    setInitialMetersLoading(true);
+    dispatch(
+      getAllEstateMeter({
+        estateId,
+        page: 1,
+        limit: PAGE_LIMIT,
+      }),
+    )
+      .unwrap()
+      .catch((error: { message?: string }) => toast.error(error?.message))
+      .finally(() => setInitialMetersLoading(false));
+  }, [estateId, dispatch]);
 
   useEffect(() => {
     if (!estateId) return;
@@ -334,7 +371,7 @@ export default function AdminMeterManagement() {
 
   return (
     <div className="relative">
-      {loading && (
+      {pageLoading && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
           <Loader label="Loading estate meters..." />
         </div>
@@ -343,7 +380,7 @@ export default function AdminMeterManagement() {
       <div
         className={[
           "space-y-6",
-          loading ? "blur-sm opacity-60 pointer-events-none select-none" : "",
+          pageLoading ? "blur-sm opacity-60 pointer-events-none select-none" : "",
         ].join(" ")}
       >
       {/* Header */}
@@ -430,13 +467,37 @@ export default function AdminMeterManagement() {
               return (
                 <div className="space-y-6">
                   <Card className="p-4">
-                    <input
-                      type="text"
-                      placeholder="Search by meter number"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="w-full max-w-sm px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
+                    <div className="relative w-full max-w-sm flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground cursor-pointer" />
+                        <input
+                          type="text"
+                          placeholder="Search by meter number."
+                          value={searchInput}
+                          onChange={(e) => setSearchInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleSearchSubmit();
+                            }
+                            if (e.key === "Escape") {
+                              handleClearSearch();
+                            }
+                          }}
+                          className="w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                      </div>
+
+                      {searchInput.trim().length > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleSearchSubmit}
+                          className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:opacity-90 transition shrink-0"
+                        >
+                          Search
+                        </button>
+                      )}
+                    </div>
                   </Card>
 
                   <Card className="p-4">
@@ -445,7 +506,6 @@ export default function AdminMeterManagement() {
                       data={allAdminMeters || []}
                       emptyMessage="No meter found."
                       showPagination
-                      onSearch={(value) => setSearch(value)}
                       paginationInfo={{
                         total: pagination?.total || 0,
                         current: Number(pagination?.currentPage) || 1,

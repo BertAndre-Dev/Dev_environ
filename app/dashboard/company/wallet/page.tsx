@@ -287,12 +287,6 @@ export default function CompanyWalletPage() {
 
       <EstateWalletOverviewCard
         wallet={wallet}
-        billStats={{
-          totalBills: 0,
-          paidBills: 0,
-          pendingBills: 0,
-          serviceFee: 0,
-        }}
         onWithdraw={() => setOpen((prev) => !prev)}
         onCreateWallet={() => setCreateWalletModalOpen(true)}
         createWalletLoading={createWalletState === "isLoading"}

@@ -71,6 +71,8 @@ import adminAssetMaintenanceSliceReducer from "@/redux/slice/admin/asset-mainten
 import adminOperationsReportingSliceReducer from "@/redux/slice/admin/operations-reporting/admin-operations-reporting-slice";
 import companyOperationsReportingSliceReducer from "@/redux/slice/company/operations-reporting/company-operations-reporting-slice";
 import companyFinancialReportSliceReducer from "@/redux/slice/company/financial-report/company-financial-report-slice";
+import companyRevenueChartSliceReducer from "@/redux/slice/company/revenue-chart/company-revenue-chart-slice";
+import companyExpenseChartSliceReducer from "@/redux/slice/company/expense-chart/company-expense-chart-slice";
 import companyExpenseHeadSliceReducer from "@/redux/slice/company/expense-head/company-expense-head-slice";
 import companyExpenseEntrySliceReducer from "@/redux/slice/company/expense-entry/company-expense-entry-slice";
 import companyRevenueHeadSliceReducer from "@/redux/slice/company/revenue-head/company-revenue-head-slice";
@@ -312,6 +314,8 @@ export const store = configureStore({
     adminOperationsReporting: adminOperationsReportingSliceReducer,
     companyOperationsReporting: companyOperationsReportingSliceReducer,
     companyFinancialReport: companyFinancialReportSliceReducer,
+    companyRevenueChart: companyRevenueChartSliceReducer,
+    companyExpenseChart: companyExpenseChartSliceReducer,
     companyExpenseHead: companyExpenseHeadSliceReducer,
     companyExpenseEntry: companyExpenseEntrySliceReducer,
     companyRevenueHead: companyRevenueHeadSliceReducer,

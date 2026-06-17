@@ -8,14 +8,13 @@ const LANDING_DESCRIPTION =
   "Manage property and energy operations, payments, and residents in one platform. Bertahub helps Nigerian estates deliver modern, connected living with smart metering, billing, and maintenance tools.";
 const LANDING_OG_IMAGE = "/assets/blog/blogHero.png";
 
-const LANDING_KEYWORDS = [
-  "estate management Nigeria",
+const LANDING_KEYWORDS = [  
+  "Bertahub estate management Nigeria",
   "property management software",
-  "residential community management",
-  "smart metering platform",
-  "estate billing software",
-  "energy vending",
-  "Bertahub",
+  "Bertahub residential community management",
+  "Bertahub smart metering platform",
+  "Bertahub estate billing software",
+  "Bertahub energy vending",
   "Berta Hub",
   "Nigerian estates",
   "Estate management software",
@@ -27,7 +26,19 @@ const LANDING_KEYWORDS = [
   "Estate management service",
   "Estate management company",
   "Estate management consultant",
-  "Real Estate"
+  "Real Estate",
+  "Bertahub property management",
+  "Bertahub real property management",
+  "Bertahub rental property management",
+  "Bertahub property management app",
+  "Bertahub property management and maintenance",
+  "Bertahub property management assistant",
+  "Bertahub property management companies in Nigeria",
+  "Bertahub property management companies in Lagos",
+  "Bertahub property management companies in Africa",
+  "Bertahub property management companies in Lagos, Nigeria",
+  "Bertahub Operating system for real estate",
+  "Bertahub Real Estate Property Management",
 ];
 
 function resolveOgImage() {

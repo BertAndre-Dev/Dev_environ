@@ -346,12 +346,6 @@ export default function EstateAdminWalletPage() {
       {/* Wallet overview */}
       <EstateWalletOverviewCard
         wallet={wallet}
-        billStats={{
-          totalBills: 0,
-          paidBills: 0,
-          pendingBills: 0,
-          serviceFee: 0,
-        }}
         onWithdraw={handleOpenModal}
         onCreateWallet={() => setCreateWalletModalOpen(true)}
         createWalletLoading={createWalletState === "isLoading"}

@@ -5,7 +5,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ModuleSelectionChips } from "@/components/shared/module-selection-chips";
 import type { AppDispatch, RootState } from "@/redux/store";

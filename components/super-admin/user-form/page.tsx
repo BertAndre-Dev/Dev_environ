@@ -99,8 +99,8 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
   }, [dispatch]);
 
   const roleOptions = [
-    { value: "estate admin", label: "Estate Admin" },
-    { value: "admin", label: "Admin" },
+    // { value: "estate admin", label: "Estate Admin" },
+    // { value: "admin", label: "Admin" },
     { value: "company", label: "Company" },
   ];
 

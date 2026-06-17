@@ -7,6 +7,8 @@ import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { fetchExpenseHeads } from "@/redux/slice/admin/expense-head/expense-head";
 import { selectExpenseHeads } from "@/redux/slice/admin/expense-head/expense-head-slice";
+import { fetchCompanyExpenseHeads } from "@/redux/slice/company/expense-head/company-expense-head";
+import { selectCompanyExpenseHeads } from "@/redux/slice/company/expense-head/company-expense-head-slice";
 import {
   fetchExpenseChart,
   type ExpenseChartPeriod,
@@ -16,6 +18,15 @@ import {
   selectExpenseChartError,
   selectExpenseChartLoading,
 } from "@/redux/slice/estate-admin/expense-chart/expense-chart-slice";
+import {
+  fetchCompanyExpenseChart,
+  type CompanyExpenseChartPeriod,
+} from "@/redux/slice/company/expense-chart/company-expense-chart";
+import {
+  selectCompanyExpenseChartData,
+  selectCompanyExpenseChartError,
+  selectCompanyExpenseChartLoading,
+} from "@/redux/slice/company/expense-chart/company-expense-chart-slice";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,22 +48,40 @@ function toIsoIfPresent(dateInputValue: string): string | undefined {
 
 interface ExpenseChartCardProps {
   estateId: string;
+  variant?: "estate-admin" | "company";
 }
 
-export function ExpenseChartCard({ estateId }: Readonly<ExpenseChartCardProps>) {
+export function ExpenseChartCard({
+  estateId,
+  variant = "estate-admin",
+}: Readonly<ExpenseChartCardProps>) {
   const dispatch = useDispatch<AppDispatch>();
+  const isCompany = variant === "company";
+  const idPrefix = isCompany ? "company-" : "";
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [period, setPeriod] = useState<ExpenseChartPeriod>("monthly");
+  const [period, setPeriod] = useState<ExpenseChartPeriod | CompanyExpenseChartPeriod>(
+    "monthly",
+  );
   const [headId, setHeadId] = useState("all");
 
   const datePlaceholders = useMemo(() => getDateRangePlaceholders(), []);
 
-  const chartData = useSelector((s: RootState) => selectExpenseChartData(s));
-  const loading = useSelector((s: RootState) => selectExpenseChartLoading(s));
-  const error = useSelector((s: RootState) => selectExpenseChartError(s));
-  const expenseHeads = useSelector((s: RootState) => selectExpenseHeads(s));
+  const chartData = useSelector((s: RootState) =>
+    isCompany ? selectCompanyExpenseChartData(s) : selectExpenseChartData(s),
+  );
+  const loading = useSelector((s: RootState) =>
+    isCompany
+      ? selectCompanyExpenseChartLoading(s)
+      : selectExpenseChartLoading(s),
+  );
+  const error = useSelector((s: RootState) =>
+    isCompany ? selectCompanyExpenseChartError(s) : selectExpenseChartError(s),
+  );
+  const expenseHeads = useSelector((s: RootState) =>
+    isCompany ? selectCompanyExpenseHeads(s) : selectExpenseHeads(s),
+  );
 
   useEffect(() => {
     if (error) toast.error(error);
@@ -60,27 +89,30 @@ export function ExpenseChartCard({ estateId }: Readonly<ExpenseChartCardProps>) 
 
   useEffect(() => {
     if (!estateId) return;
-    dispatch(fetchExpenseHeads({ estateId, page: 1, limit: 500 })).catch(
-      () => {},
-    );
-  }, [estateId, dispatch]);
+    const fetchHeads = isCompany
+      ? dispatch(fetchCompanyExpenseHeads({ estateId, page: 1, limit: 500 }))
+      : dispatch(fetchExpenseHeads({ estateId, page: 1, limit: 500 }));
+    fetchHeads.catch(() => {});
+  }, [estateId, dispatch, isCompany]);
 
   useEffect(() => {
     if (!estateId) return;
-    dispatch(
-      fetchExpenseChart({
-        estateId,
-        period,
-        startDate: toIsoIfPresent(startDate),
-        endDate: toIsoIfPresent(endDate),
-        headId: headId !== "all" ? headId : undefined,
-      }),
-    )
+    const params = {
+      estateId,
+      period,
+      startDate: toIsoIfPresent(startDate),
+      endDate: toIsoIfPresent(endDate),
+      headId: headId !== "all" ? headId : undefined,
+    };
+    const fetchChart = isCompany
+      ? dispatch(fetchCompanyExpenseChart(params))
+      : dispatch(fetchExpenseChart(params));
+    fetchChart
       .unwrap()
       .catch((e: { message?: string }) =>
         toast.error(e?.message ?? "Failed to fetch expense chart."),
       );
-  }, [estateId, startDate, endDate, period, headId, dispatch]);
+  }, [estateId, startDate, endDate, period, headId, dispatch, isCompany]);
 
   const series = useMemo(() => buildExpenseChartSeries(chartData), [chartData]);
 
@@ -125,12 +157,12 @@ export function ExpenseChartCard({ estateId }: Readonly<ExpenseChartCardProps>) 
           <div className="flex items-center gap-2">
             <label
               className="text-sm text-muted-foreground"
-              htmlFor="expense-chart-start"
+              htmlFor={`${idPrefix}expense-chart-start`}
             >
               From
             </label>
             <IsoLinkedRangeStart
-              id="expense-chart-start"
+              id={`${idPrefix}expense-chart-start`}
               startDate={startDate}
               endDate={endDate}
               onStartChange={setStartDate}
@@ -142,12 +174,12 @@ export function ExpenseChartCard({ estateId }: Readonly<ExpenseChartCardProps>) 
           <div className="flex items-center gap-2">
             <label
               className="text-sm text-muted-foreground"
-              htmlFor="expense-chart-end"
+              htmlFor={`${idPrefix}expense-chart-end`}
             >
               To
             </label>
             <IsoLinkedRangeEnd
-              id="expense-chart-end"
+              id={`${idPrefix}expense-chart-end`}
               startDate={startDate}
               endDate={endDate}
               onEndChange={setEndDate}

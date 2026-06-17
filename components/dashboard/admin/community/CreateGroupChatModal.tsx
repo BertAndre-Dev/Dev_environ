@@ -117,7 +117,7 @@ export function CreateGroupChatModal({
             />
           </div>
           <div>
-            <Label htmlFor="group-image">Group image (optional)</Label>
+            <Label htmlFor="group-image">Group image</Label>
             <Input
               id="group-image"
               name="profileImage"

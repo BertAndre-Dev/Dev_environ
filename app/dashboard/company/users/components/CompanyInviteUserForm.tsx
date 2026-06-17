@@ -171,10 +171,7 @@ export default function CompanyInviteUserForm({
           </div>
           <div>
             <Label>
-              Estate{" "}
-              <span className="text-muted-foreground text-xs font-normal">
-                (optional)
-              </span>
+              Estate
             </Label>
             <Select
               options={estateOptions}

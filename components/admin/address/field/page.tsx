@@ -18,6 +18,7 @@ import { useEffect, useState } from "react";
 import Modal from "@/components/modal/page";
 import FieldForm from "../forms/field-form/page";
 import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
+import { formatAddressRecordCreatedAt } from "@/lib/address";
 
 interface FieldData {
   estateId: string;
@@ -158,14 +159,7 @@ export default function AddressField() {
     {
       key: "createdAt",
       header: "Created At",
-      render: (item: any) =>
-        item.createdAt
-          ? new Date(item.createdAt).toLocaleDateString("en-GB", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            })
-          : "—",
+      render: (item: any) => formatAddressRecordCreatedAt(item.createdAt),
     },
     {
       key: "actions",

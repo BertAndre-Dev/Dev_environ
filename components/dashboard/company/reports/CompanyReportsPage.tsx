@@ -34,12 +34,16 @@ import {
   selectCompanyFinancialReportLoading,
   setCompanyFinancialReportEstate,
 } from "@/redux/slice/company/financial-report/company-financial-report-slice";
+import { clearCompanyRevenueChart } from "@/redux/slice/company/revenue-chart/company-revenue-chart-slice";
+import { clearCompanyExpenseChart } from "@/redux/slice/company/expense-chart/company-expense-chart-slice";
 import type { AppDispatch } from "@/redux/store";
 import {
   buildRevenueFilterOptions,
   buildRevenueTableRows,
   type FinancialReportData,
 } from "@/lib/financial-report-utils";
+import { RevenueChartCard } from "@/components/dashboard/estate-admin/reports/RevenueChartCard";
+import { ExpenseChartCard } from "@/components/dashboard/estate-admin/reports/ExpenseChartCard";
 import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
 import {
   mapCompanyEstateRows,
@@ -315,6 +319,8 @@ export default function CompanyReportsPage() {
   const handleEstateChange = (option: EstateSelectOption | null) => {
     setSelectedEstate(option);
     dispatch(setCompanyFinancialReportEstate(option?.value ?? null));
+    dispatch(clearCompanyRevenueChart());
+    dispatch(clearCompanyExpenseChart());
   };
 
   return (
@@ -505,6 +511,18 @@ export default function CompanyReportsPage() {
               </div>
             </Card>
 
+            <RevenueChartCard
+              key={`revenue-${estateId}`}
+              estateId={estateId}
+              variant="company"
+            />
+
+            <ExpenseChartCard
+              key={`expense-${estateId}`}
+              estateId={estateId}
+              variant="company"
+            />
+
             <ReportTable
               columnLabel="Revenue"
               rows={revenueTableRows}
@@ -515,7 +533,7 @@ export default function CompanyReportsPage() {
                     revenueReport?.summary?.totalRevenue ??
                     revenueReport?.revenue?.totalRevenue ??
                     0,
-                  colorClass: "bg-emerald-100 text-emerald-700",
+                  colorClass: "bg-orange-100 text-orange-700",
                 },
               ]}
               filterLabel="Category"
@@ -541,12 +559,15 @@ export default function CompanyReportsPage() {
                     expensesReport?.summary?.totalExpenses ??
                     expensesReport?.expenses?.totalExpenses ??
                     0,
-                  colorClass: "bg-red-100 text-red-700",
+                  colorClass: "bg-blue-100 text-blue-700",
                 },
                 {
-                  label: `Profit/Loss (${net >= 0 ? "Profit" : "Loss"})`,
+                  label: `${net >= 0 ? "Profit" : "Loss"}`,
                   amount: Math.abs(net),
-                  colorClass: "bg-blue-100 text-blue-700",
+                  colorClass:
+                    net >= 0
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700",
                 },
               ]}
               filterLabel="Expense Head"

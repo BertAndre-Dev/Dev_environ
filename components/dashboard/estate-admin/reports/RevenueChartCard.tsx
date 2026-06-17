@@ -7,6 +7,8 @@ import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { fetchRevenueHeads } from "@/redux/slice/admin/revenue-head/revenue-head";
 import { selectRevenueHeads } from "@/redux/slice/admin/revenue-head/revenue-head-slice";
+import { fetchCompanyRevenueHeads } from "@/redux/slice/company/revenue-head/company-revenue-head";
+import { selectCompanyRevenueHeads } from "@/redux/slice/company/revenue-head/company-revenue-head-slice";
 import {
   fetchRevenueChart,
   type RevenueChartPeriod,
@@ -16,6 +18,15 @@ import {
   selectRevenueChartError,
   selectRevenueChartLoading,
 } from "@/redux/slice/estate-admin/revenue-chart/revenue-chart-slice";
+import {
+  fetchCompanyRevenueChart,
+  type CompanyRevenueChartPeriod,
+} from "@/redux/slice/company/revenue-chart/company-revenue-chart";
+import {
+  selectCompanyRevenueChartData,
+  selectCompanyRevenueChartError,
+  selectCompanyRevenueChartLoading,
+} from "@/redux/slice/company/revenue-chart/company-revenue-chart-slice";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,22 +48,40 @@ function toIsoIfPresent(dateInputValue: string): string | undefined {
 
 interface RevenueChartCardProps {
   estateId: string;
+  variant?: "estate-admin" | "company";
 }
 
-export function RevenueChartCard({ estateId }: Readonly<RevenueChartCardProps>) {
+export function RevenueChartCard({
+  estateId,
+  variant = "estate-admin",
+}: Readonly<RevenueChartCardProps>) {
   const dispatch = useDispatch<AppDispatch>();
+  const isCompany = variant === "company";
+  const idPrefix = isCompany ? "company-" : "";
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [period, setPeriod] = useState<RevenueChartPeriod>("monthly");
+  const [period, setPeriod] = useState<RevenueChartPeriod | CompanyRevenueChartPeriod>(
+    "monthly",
+  );
   const [headId, setHeadId] = useState("all");
 
   const datePlaceholders = useMemo(() => getDateRangePlaceholders(), []);
 
-  const chartData = useSelector((s: RootState) => selectRevenueChartData(s));
-  const loading = useSelector((s: RootState) => selectRevenueChartLoading(s));
-  const error = useSelector((s: RootState) => selectRevenueChartError(s));
-  const revenueHeads = useSelector((s: RootState) => selectRevenueHeads(s));
+  const chartData = useSelector((s: RootState) =>
+    isCompany ? selectCompanyRevenueChartData(s) : selectRevenueChartData(s),
+  );
+  const loading = useSelector((s: RootState) =>
+    isCompany
+      ? selectCompanyRevenueChartLoading(s)
+      : selectRevenueChartLoading(s),
+  );
+  const error = useSelector((s: RootState) =>
+    isCompany ? selectCompanyRevenueChartError(s) : selectRevenueChartError(s),
+  );
+  const revenueHeads = useSelector((s: RootState) =>
+    isCompany ? selectCompanyRevenueHeads(s) : selectRevenueHeads(s),
+  );
 
   useEffect(() => {
     if (error) toast.error(error);
@@ -60,27 +89,30 @@ export function RevenueChartCard({ estateId }: Readonly<RevenueChartCardProps>) 
 
   useEffect(() => {
     if (!estateId) return;
-    dispatch(fetchRevenueHeads({ estateId, page: 1, limit: 500 })).catch(
-      () => {},
-    );
-  }, [estateId, dispatch]);
+    const fetchHeads = isCompany
+      ? dispatch(fetchCompanyRevenueHeads({ estateId, page: 1, limit: 500 }))
+      : dispatch(fetchRevenueHeads({ estateId, page: 1, limit: 500 }));
+    fetchHeads.catch(() => {});
+  }, [estateId, dispatch, isCompany]);
 
   useEffect(() => {
     if (!estateId) return;
-    dispatch(
-      fetchRevenueChart({
-        estateId,
-        period,
-        startDate: toIsoIfPresent(startDate),
-        endDate: toIsoIfPresent(endDate),
-        headId: headId !== "all" ? headId : undefined,
-      }),
-    )
+    const params = {
+      estateId,
+      period,
+      startDate: toIsoIfPresent(startDate),
+      endDate: toIsoIfPresent(endDate),
+      headId: headId !== "all" ? headId : undefined,
+    };
+    const fetchChart = isCompany
+      ? dispatch(fetchCompanyRevenueChart(params))
+      : dispatch(fetchRevenueChart(params));
+    fetchChart
       .unwrap()
       .catch((e: { message?: string }) =>
         toast.error(e?.message ?? "Failed to fetch revenue chart."),
       );
-  }, [estateId, startDate, endDate, period, headId, dispatch]);
+  }, [estateId, startDate, endDate, period, headId, dispatch, isCompany]);
 
   const series = useMemo(() => buildRevenueChartSeries(chartData), [chartData]);
 
@@ -135,12 +167,12 @@ export function RevenueChartCard({ estateId }: Readonly<RevenueChartCardProps>) 
           <div className="flex items-center gap-2">
             <label
               className="text-sm text-muted-foreground"
-              htmlFor="revenue-chart-start"
+              htmlFor={`${idPrefix}revenue-chart-start`}
             >
               From
             </label>
             <IsoLinkedRangeStart
-              id="revenue-chart-start"
+              id={`${idPrefix}revenue-chart-start`}
               startDate={startDate}
               endDate={endDate}
               onStartChange={setStartDate}
@@ -152,12 +184,12 @@ export function RevenueChartCard({ estateId }: Readonly<RevenueChartCardProps>) 
           <div className="flex items-center gap-2">
             <label
               className="text-sm text-muted-foreground"
-              htmlFor="revenue-chart-end"
+              htmlFor={`${idPrefix}revenue-chart-end`}
             >
               To
             </label>
             <IsoLinkedRangeEnd
-              id="revenue-chart-end"
+              id={`${idPrefix}revenue-chart-end`}
               startDate={startDate}
               endDate={endDate}
               onEndChange={setEndDate}

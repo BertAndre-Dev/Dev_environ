@@ -149,7 +149,7 @@ export default function UpdateRentForm({
             </div>
           </div>
           <div>
-            <Label htmlFor="edit-notes">Notes (optional)</Label>
+            <Label htmlFor="edit-notes">Notes</Label>
             <Input
               id="edit-notes"
               value={notes}

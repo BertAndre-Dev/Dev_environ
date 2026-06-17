@@ -3,11 +3,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { CiSearch } from "react-icons/ci";
 import { Briefcase } from "lucide-react";
+import Select from "react-select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import Loader from "@/components/ui/Loader";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
@@ -22,9 +21,9 @@ import AssetCategoryCard from "./components/AssetCategoryCard";
 
 const CATEGORY_LIMIT = 200;
 const ASSETS_LIMIT = 500;
-const TOP_TABS_LIMIT = 5;
-const SEARCH_DEBOUNCE_MS = 350;
 const ALL_TAB = "__all__";
+
+type CategoryFilterOption = { label: string; value: string };
 
 function getId(v: { id?: string; _id?: string } | undefined) {
   return v?.id || v?._id || "";
@@ -34,8 +33,6 @@ export default function AdminAssetPage() {
   const dispatch = useDispatch<AppDispatch>();
   const [estateName, setEstateName] = useState("Estate");
   const [estateId, setEstateId] = useState("");
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [activeTab, setActiveTab] = useState<string>(ALL_TAB);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -79,30 +76,30 @@ export default function AdminAssetPage() {
   }, [dispatch]);
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search), SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(t);
-  }, [search]);
-
-  useEffect(() => {
     if (!estateId) return;
     dispatch(
       getAssetCategories({
         estateId,
         page: 1,
         limit: CATEGORY_LIMIT,
-        search: debouncedSearch.trim() || undefined,
       }),
     )
       .unwrap()
       .catch(() => toast.error("Failed to load asset categories."));
-  }, [dispatch, estateId, debouncedSearch]);
+  }, [dispatch, estateId]);
 
   useEffect(() => {
     if (!estateId) return;
-    dispatch(
-      getAssets({ estateId, page: 1, limit: ASSETS_LIMIT }),
-    ).catch(() => {});
+    dispatch(getAssets({ estateId, page: 1, limit: ASSETS_LIMIT })).catch(
+      () => {},
+    );
   }, [dispatch, estateId]);
+
+  useEffect(() => {
+    if (activeTab === ALL_TAB) return;
+    const stillVisible = categories.some((c) => getId(c) === activeTab);
+    if (!stillVisible) setActiveTab(ALL_TAB);
+  }, [categories, activeTab]);
 
   const assetsByCategory = useMemo(() => {
     const map = new Map<string, number>();
@@ -122,13 +119,34 @@ export default function AdminAssetPage() {
     return categories.filter((c) => getId(c) === activeTab);
   }, [categories, activeTab]);
 
-  const topTabs = useMemo(
-    () => categories.slice(0, TOP_TABS_LIMIT),
-    [categories],
-  );
-
   const totalCategories = Number(
     categoriesPagination?.total ?? categories.length ?? 0,
+  );
+
+  const categoryFilterOptions = useMemo<CategoryFilterOption[]>(
+    () => [
+      {
+        label: `All categories (${totalCategories})`,
+        value: ALL_TAB,
+      },
+      ...categories.map((c) => {
+        const id = getId(c);
+        const count = assetsByCategory.get(id) ?? 0;
+        return {
+          label: `${c.name} (${count})`,
+          value: id,
+        };
+      }),
+    ],
+    [categories, totalCategories, assetsByCategory],
+  );
+
+  const selectedCategoryFilter = useMemo(
+    () =>
+      categoryFilterOptions.find((o) => o.value === activeTab) ??
+      categoryFilterOptions[0] ??
+      null,
+    [categoryFilterOptions, activeTab],
   );
 
   const activeCategoryName = useMemo(() => {
@@ -167,7 +185,7 @@ export default function AdminAssetPage() {
       setSaving(false);
     }
   };
-  
+
   const pageLoading = categoriesLoading || assetsLoading;
 
   return (
@@ -181,7 +199,7 @@ export default function AdminAssetPage() {
       <div
         className={`space-y-6${pageLoading ? " blur-sm opacity-60 pointer-events-none select-none" : ""}`}
       >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <h1 className="font-heading text-3xl font-bold">Asset Category</h1>
             <p className="text-muted-foreground mt-1">
@@ -192,26 +210,34 @@ export default function AdminAssetPage() {
               .
             </p>
           </div>
-          <Button
-            onClick={() => setModalOpen(true)}
-            className="shrink-0 text-white"
-            style={{ backgroundColor: "#0150AC" }}
-          >
-            + Create Asset Category
-          </Button>
-        </div>
-
-        <Card className="p-4 mt-0">
-          <div className="relative">
-            <CiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <Input
-              placeholder="Search by asset category name"
-              className="pl-10 h-11"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+          <div className="flex items-center gap-4">
+            <Select<CategoryFilterOption>
+              options={categoryFilterOptions}
+              value={selectedCategoryFilter}
+              onChange={(option) => setActiveTab(option?.value ?? ALL_TAB)}
+              isSearchable
+              placeholder="Filter by category"
+              noOptionsMessage={() => "No categories found"}
+              styles={{
+                control: (base) => ({
+                  ...base,
+                  cursor: "pointer",
+                  minHeight: 44,
+                }),
+                option: (base) => ({ ...base, cursor: "pointer" }),
+                dropdownIndicator: (base) => ({ ...base, cursor: "pointer" }),
+                clearIndicator: (base) => ({ ...base, cursor: "pointer" }),
+              }}
             />
+            <Button
+              onClick={() => setModalOpen(true)}
+              className="shrink-0 text-white"
+              style={{ backgroundColor: "#0150AC" }}
+            >
+              + Create Asset Category
+            </Button>
           </div>
-        </Card>
+        </div>
 
         <Card className="p-6 mt-0">
           <div className="flex items-start justify-between gap-4">
@@ -231,46 +257,10 @@ export default function AdminAssetPage() {
           </div>
         </Card>
 
-        <div className="border-b border-border">
-          <div className="flex flex-wrap items-center gap-1 overflow-x-auto">
-            <button
-              type="button"
-              className={`py-2 px-3 text-sm whitespace-nowrap cursor-pointer ${
-                activeTab === ALL_TAB
-                  ? "text-primary border-b-2 border-primary font-semibold"
-                  : "text-muted-foreground"
-              }`}
-              onClick={() => setActiveTab(ALL_TAB)}
-            >
-              All Asset categories ({totalCategories})
-            </button>
-            {topTabs.map((c) => {
-              const id = getId(c);
-              const count = assetsByCategory.get(id) ?? 0;
-              return (
-                <button
-                  type="button"
-                  key={id}
-                  className={`py-2 px-3 text-sm whitespace-nowrap cursor-pointer ${
-                    activeTab === id
-                      ? "text-primary border-b-2 border-primary font-semibold"
-                      : "text-muted-foreground"
-                  }`}
-                  onClick={() => setActiveTab(id)}
-                >
-                  {c.name} ({count})
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         {visibleCategories.length === 0 ? (
           <Card className="p-10 mt-0 text-center">
             <p className="text-muted-foreground">
-              {debouncedSearch.trim()
-                ? "No categories match your search."
-                : "No asset categories yet. Create one to get started."}
+              No asset categories yet. Create one to get started.
             </p>
           </Card>
         ) : (

@@ -69,7 +69,7 @@ export default function TransferToBalanceModal({
               htmlFor="transferToBalanceDescription"
               className="text-sm font-medium text-foreground"
             >
-              Description (optional)
+              Description
             </label>
             <input
               id="transferToBalanceDescription"

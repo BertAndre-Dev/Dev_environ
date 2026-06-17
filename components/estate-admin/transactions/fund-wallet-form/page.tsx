@@ -33,6 +33,8 @@ interface FundWalletFormProps {
   bankName?: string;
   /** Max amount that can be withdrawn (e.g. estate wallet temporaryBalance). */
   maxWithdrawableAmount?: number;
+  /** Service charge applied on withdrawal. */
+  serviceFee?: number;
   onClose?: () => void;
   /** When true, use resident-owner withdrawal APIs instead of estate-admin ones. */
   isResidentOwner?: boolean;
@@ -46,6 +48,7 @@ export default function FundWalletForm({
   bankCode,
   bankName,
   maxWithdrawableAmount,
+  serviceFee = 2000,
   onClose,
   isResidentOwner = false,
 }: FundWalletFormProps) {
@@ -341,6 +344,12 @@ export default function FundWalletForm({
                   placeholder="Enter amount"
                   required
                 />
+                {Number(amount) > 0 && serviceFee > 0 && !isResidentOwner && (
+                  <p className="text-red-600 text-sm mt-1.5">
+                    A service charge of ₦{serviceFee.toLocaleString()} will be
+                    applied.
+                  </p>
+                )}
               </div>
 
               <div>

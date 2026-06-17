@@ -20,14 +20,11 @@ export interface WalletOverviewBillStats {
 }
 
 interface EstateWalletOverviewCardProps {
-  /** Wallet from GET /api/v1/wallet-mgt/estate/{estateId}. Null when no wallet yet. */
   wallet: WalletOverviewWallet | null;
-  /** Optional bill stats (Total Bills, Paid, Pending, Service Fee). Omit to hide the row. */
   billStats?: WalletOverviewBillStats | null;
   onWithdraw: () => void;
   onCreateWallet?: () => void;
   createWalletLoading?: boolean;
-  /** Optional filter/export bar below the card (e.g. Filter by Ref, Filter by Status, Export). */
   filterExportSlot?: React.ReactNode;
 }
 
@@ -35,14 +32,11 @@ const formatNaira = (value: number) => `₦${(value ?? 0).toLocaleString()}`;
 
 export default function EstateWalletOverviewCard({
   wallet,
-  billStats,
   onWithdraw,
   onCreateWallet,
   createWalletLoading = false,
   filterExportSlot,
 }: EstateWalletOverviewCardProps) {
-  const showBillStats = billStats != null;
-
   return (
     <div className="space-y-4">
       <Card className="p-4 md:p-6 shadow-md">
@@ -75,32 +69,15 @@ export default function EstateWalletOverviewCard({
                 </div>
               </div>
 
-              {/* Middle: Bill statistics row (Figma) */}
-              {showBillStats && (
-                <div className="bg-[#D0DFF233] rounded-lg p-4 flex justify-between items-center gap-4">
-                  <div className="flex flex-col items-center justify-center">
-                    <p className="text-sm text-muted-foreground">
-                      Service Fee (₦)
-                    </p>
-                    <p className="text-xl font-bold mt-0.5">
-                      2000
-                      {/* {billStats.serviceFee < 0
-                        ? `-${formatNaira(Math.abs(billStats.serviceFee))}`
-                        : formatNaira(billStats.serviceFee)} */}
-                    </p>
-                  </div>
-                  <div></div>
-                  <div className="mx-auto">
-                    <Button
-                      onClick={onWithdraw}
-                      size="lg"
-                      className="px-8 w-full"
-                    >
-                      Withdraw Funds
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <div className="bg-[#D0DFF233] rounded-lg p-4 flex justify-center items-center">
+                <Button
+                  onClick={onWithdraw}
+                  size="lg"
+                  className="px-8 w-full max-w-md"
+                >
+                  Withdraw Funds
+                </Button>
+              </div>
             </>
           ) : (
             <div className="flex justify-center py-4">

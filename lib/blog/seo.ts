@@ -12,6 +12,22 @@ const BLOG_INDEX_KEYWORDS = [
   "residential community management",
   "Bertahub blog",
   "estate management software",
+  "property management software",
+  "residential community management",
+  "smart metering platform",
+  "estate billing software",
+  "energy vending",
+  "Bertahub",
+  "Berta Hub",
+  "Nigerian estates",
+  "Estate management software",
+  "Estate management system",
+  "Estate management solution",
+  "Estate management platform",
+  "Estate management tool",
+  "Estate management app",
+  "Estate management service",
+  "Estate management company",
 ];
 
 function truncateDescription(text: string, maxLength = 160): string {

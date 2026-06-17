@@ -202,7 +202,7 @@ export default function CreateRentForm({
             </div>
           </div>
           <div>
-            <Label htmlFor="notes">Notes (optional)</Label>
+            <Label htmlFor="notes">Notes</Label>
             <Input
               id="notes"
               value={form.notes ?? ""}

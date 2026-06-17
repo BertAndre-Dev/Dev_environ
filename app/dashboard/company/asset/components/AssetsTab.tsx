@@ -88,7 +88,12 @@ export default function AssetsTab({
   useEffect(() => {
     if (!selectedEstateId) return;
     dispatch(
-      getAssetCategories({ estateId: selectedEstateId, page: 1, limit: 100, search: "" }),
+      getAssetCategories({
+        estateId: selectedEstateId,
+        page: 1,
+        limit: 100,
+        search: "",
+      }),
     )
       .unwrap()
       .catch(() => {});
@@ -100,13 +105,23 @@ export default function AssetsTab({
 
   useEffect(() => {
     if (!selectedEstateId) return;
-    dispatch(getAssets({ estateId: selectedEstateId, page, limit: PAGE_SIZE, search }))
+    dispatch(
+      getAssets({ estateId: selectedEstateId, page, limit: PAGE_SIZE, search }),
+    )
       .unwrap()
       .catch(() => toast.error("Failed to load assets."));
   }, [dispatch, selectedEstateId, page, search]);
 
   const columns = useMemo(
     () => [
+      {
+        key: "createdAt" as const,
+        header: "Created",
+        render: (item: Asset) =>
+          item.createdAt ? new Date(item.createdAt).toLocaleString() : "—",
+        exportValue: (item: Asset) =>
+          item.createdAt ? new Date(item.createdAt).toISOString() : "",
+      },
       {
         key: "datePurchased" as const,
         header: "Purchased",
@@ -117,30 +132,7 @@ export default function AssetsTab({
         exportValue: (item: Asset) =>
           item.datePurchased ? String(item.datePurchased) : "",
       },
-      {
-        key: "createdAt" as const,
-        header: "Created",
-        render: (item: Asset) =>
-          item.createdAt ? new Date(item.createdAt).toLocaleString() : "—",
-        exportValue: (item: Asset) =>
-          item.createdAt ? new Date(item.createdAt).toISOString() : "",
-      },
       { key: "name" as const, header: "Asset" },
-      { key: "tag" as const, header: "Tag" },
-      {
-        key: "estateId" as const,
-        header: "Estate",
-        render: (item: Asset) => getEstateName(item.estateId as any, estates),
-        exportValue: (item: Asset) => getEstateName(item.estateId as any, estates),
-      },
-      {
-        key: "assetCategoryId" as const,
-        header: "Category",
-        render: (item: Asset) =>
-          getCategoryName(item.assetCategoryId as any, categories),
-        exportValue: (item: Asset) =>
-          getCategoryName(item.assetCategoryId as any, categories),
-      },
       {
         key: "amount" as const,
         header: "Amount (₦)",
@@ -150,6 +142,15 @@ export default function AssetsTab({
             : "—",
         exportValue: (item: Asset) =>
           item.amount != null ? String(item.amount) : "",
+      },
+      { key: "tag" as const, header: "Tag" },
+      {
+        key: "assetCategoryId" as const,
+        header: "Category",
+        render: (item: Asset) =>
+          getCategoryName(item.assetCategoryId as any, categories),
+        exportValue: (item: Asset) =>
+          getCategoryName(item.assetCategoryId as any, categories),
       },
       {
         key: "useFullLife" as const,

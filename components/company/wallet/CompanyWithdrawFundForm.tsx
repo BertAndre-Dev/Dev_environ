@@ -31,6 +31,8 @@ interface CompanyWithdrawFundFormProps {
   bankCode?: string;
   bankName?: string;
   maxWithdrawableAmount?: number;
+  /** Service charge applied on withdrawal. */
+  serviceFee?: number;
   creditsPage?: number;
   onClose?: () => void;
 }
@@ -44,6 +46,7 @@ export default function CompanyWithdrawFundForm({
   bankCode,
   bankName,
   maxWithdrawableAmount,
+  serviceFee = 2000,
   creditsPage = 1,
   onClose,
 }: CompanyWithdrawFundFormProps) {
@@ -279,6 +282,12 @@ export default function CompanyWithdrawFundForm({
                   placeholder="Enter amount"
                   required
                 />
+                {Number(amount) > 0 && serviceFee > 0 && (
+                  <p className="text-red-600 text-sm mt-1.5">
+                    A service charge of ₦{serviceFee.toLocaleString()} will be
+                    applied.
+                  </p>
+                )}
               </div>
 
               <div>

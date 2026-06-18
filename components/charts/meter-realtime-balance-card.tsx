@@ -276,7 +276,7 @@ export function MeterRealtimeBalanceCard({
                 </div>
               </div>
 
-              <div className="grid gap-3 rounded-lg border border-border bg-muted/30 p-4 sm:grid-cols-2">
+              <div className="grid gap-3 rounded-lg border border-border bg-muted/30 p-4">
                 <div>
                   <p className="text-xs text-muted-foreground">Last updated</p>
                   <p className="mt-0.5 text-sm font-medium">

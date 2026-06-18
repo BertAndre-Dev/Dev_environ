@@ -13,6 +13,9 @@ import {
 } from "@/redux/slice/resident/marketplace/marketplace";
 import type { RootState, AppDispatch } from "@/redux/store";
 import Loader from "@/components/ui/Loader";
+import Pagination from "@/components/pagination/page";
+
+const PAGE_SIZE = 10;
 
 const CATEGORIES = [
   "All",
@@ -29,12 +32,14 @@ export default function ResidentMarketplacePage() {
   const dispatch = useDispatch<AppDispatch>();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+  const [page, setPage] = useState(1);
   const [bootstrapping, setBootstrapping] = useState(true);
 
-  const { list, getListStatus } = useSelector((state: RootState) => {
+  const { list, pagination, getListStatus } = useSelector((state: RootState) => {
     const s = (state as RootState).residentMarketplace;
     return {
       list: s?.list ?? null,
+      pagination: s?.pagination ?? null,
       getListStatus: s?.getListStatus ?? "idle",
     };
   });
@@ -63,23 +68,40 @@ export default function ResidentMarketplacePage() {
         );
       });
     }
-    if (categoryFilter !== "All") {
-      result = result.filter(
-        (item) =>
-          (item.productCategory ?? "").toLowerCase() ===
-          categoryFilter.toLowerCase()
-      );
-    }
     return result;
-  }, [listings, search, categoryFilter]);
+  }, [listings, search]);
 
   useEffect(() => {
-    dispatch(getResidentMarketplaceList({ page: 1, limit: 100 }))
+    dispatch(
+      getResidentMarketplaceList({
+        page,
+        limit: PAGE_SIZE,
+        status: "ACTIVE",
+        category: categoryFilter !== "All" ? categoryFilter : undefined,
+      }),
+    )
       .catch(() => toast.error("Failed to load marketplace."))
       .finally(() => setBootstrapping(false));
-  }, [dispatch]);
+  }, [dispatch, page, categoryFilter]);
 
-  const pageLoading = bootstrapping || getListStatus === "isLoading";
+  const listLoading = getListStatus === "isLoading";
+  const pageLoading = bootstrapping || (listLoading && !list);
+
+  const paginationInfo = {
+    total: pagination?.total ?? filteredListings.length,
+    current: pagination?.page ?? page,
+    pageSize: pagination?.limit ?? PAGE_SIZE,
+  };
+
+  const handlePageChange = (nextPage: number) => {
+    setPage(nextPage);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleCategoryChange = (cat: string) => {
+    setCategoryFilter(cat);
+    setPage(1);
+  };
 
   return (
     <div className="relative">
@@ -138,7 +160,7 @@ export default function ResidentMarketplacePage() {
               <button
                 key={cat}
                 type="button"
-                onClick={() => setCategoryFilter(cat)}
+                onClick={() => handleCategoryChange(cat)}
                 className={`
                   inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-colors
                   ${
@@ -155,7 +177,7 @@ export default function ResidentMarketplacePage() {
           </div>
         </div>
 
-        {filteredListings.length === 0 ? (
+        {filteredListings.length === 0 && !listLoading ? (
           <Card className="p-12 text-center">
             <Store className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">
@@ -222,6 +244,13 @@ export default function ResidentMarketplacePage() {
             ))}
           </div>
         )}
+
+        <Pagination
+          paginationInfo={paginationInfo}
+          onPageChange={handlePageChange}
+          disabled={listLoading}
+          itemLabel="businesses"
+        />
       </div>
     </div>
   );

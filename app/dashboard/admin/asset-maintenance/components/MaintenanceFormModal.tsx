@@ -64,27 +64,43 @@ function getId(v: { id?: string; _id?: string } | string | undefined) {
   return v.id || v._id || "";
 }
 
-function toDatetimeLocal(iso?: string) {
+function toDateInputValue(iso?: string) {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-function fromDatetimeLocal(value: string) {
+function fromDateInputValue(value: string) {
   if (!value) return "";
-  const d = new Date(value);
+  const d = new Date(`${value}T00:00:00`);
   return Number.isNaN(d.getTime()) ? value : d.toISOString();
 }
 
-function maxDatetimeLocalNow() {
-  return toDatetimeLocal(new Date().toISOString());
+function maxDateInputToday() {
+  return toDateInputValue(new Date().toISOString());
 }
 
-function clampDatetimeLocal(value: string, max: string) {
+function clampDateInput(value: string, max: string) {
   if (!value || !max) return value;
   return value > max ? max : value;
+}
+
+function closeDatePickerIfComplete(input: HTMLInputElement, value: string) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    requestAnimationFrame(() => input.blur());
+  }
+}
+
+function handleDatePickerChange(
+  input: HTMLInputElement,
+  rawValue: string,
+  onUpdate: (value: string) => void,
+) {
+  const next = clampDateInput(rawValue, maxDateInputToday());
+  onUpdate(next);
+  closeDatePickerIfComplete(input, next);
 }
 
 function formatCurrency(amount?: number) {
@@ -135,7 +151,7 @@ export default function MaintenanceFormModal({
 
   const initialEdit: EditFormState = useMemo(
     () => ({
-      lastMaintenanceDate: toDatetimeLocal(initial?.lastMaintenanceDate),
+      lastMaintenanceDate: toDateInputValue(initial?.lastMaintenanceDate),
       frequency: toApiMaintenanceFrequency(initial?.frequency),
       note: initial?.note ?? "",
     }),
@@ -236,18 +252,22 @@ export default function MaintenanceFormModal({
               </label>
               <Input
                 id="maint-date-edit"
-                type="datetime-local"
+                type="date"
                 className={DATE_INPUT_CLASS}
-                max={maxDatetimeLocalNow()}
+                max={maxDateInputToday()}
                 value={editForm.lastMaintenanceDate}
                 onChange={(e) =>
-                  setEditForm((s) => ({
-                    ...s,
-                    lastMaintenanceDate: clampDatetimeLocal(
-                      e.target.value,
-                      maxDatetimeLocalNow(),
-                    ),
-                  }))
+                  handleDatePickerChange(e.target, e.target.value, (value) =>
+                    setEditForm((s) => ({ ...s, lastMaintenanceDate: value })),
+                  )
+                }
+                onInput={(e) =>
+                  handleDatePickerChange(
+                    e.currentTarget,
+                    e.currentTarget.value,
+                    (value) =>
+                      setEditForm((s) => ({ ...s, lastMaintenanceDate: value })),
+                  )
                 }
               />
             </div>
@@ -375,18 +395,22 @@ export default function MaintenanceFormModal({
                 </label>
                 <Input
                   id="maint-date"
-                  type="datetime-local"
+                  type="date"
                   className={DATE_INPUT_CLASS}
-                  max={maxDatetimeLocalNow()}
+                  max={maxDateInputToday()}
                   value={createForm.lastMaintenanceDate}
                   onChange={(e) =>
-                    setCreateForm((s) => ({
-                      ...s,
-                      lastMaintenanceDate: clampDatetimeLocal(
-                        e.target.value,
-                        maxDatetimeLocalNow(),
-                      ),
-                    }))
+                    handleDatePickerChange(e.target, e.target.value, (value) =>
+                      setCreateForm((s) => ({ ...s, lastMaintenanceDate: value })),
+                    )
+                  }
+                  onInput={(e) =>
+                    handleDatePickerChange(
+                      e.currentTarget,
+                      e.currentTarget.value,
+                      (value) =>
+                        setCreateForm((s) => ({ ...s, lastMaintenanceDate: value })),
+                    )
                   }
                 />
               </div>
@@ -435,7 +459,7 @@ export default function MaintenanceFormModal({
             onClick={async () => {
               if (isEdit) {
                 await onUpdate({
-                  lastMaintenanceDate: fromDatetimeLocal(editForm.lastMaintenanceDate),
+                  lastMaintenanceDate: fromDateInputValue(editForm.lastMaintenanceDate),
                   frequency: editForm.frequency,
                   note: editForm.note.trim() || undefined,
                 });
@@ -445,7 +469,7 @@ export default function MaintenanceFormModal({
                   assetId: createForm.assetId,
                   categoryId: createForm.categoryId,
                   tag: createForm.tag.trim(),
-                  lastMaintenanceDate: fromDatetimeLocal(
+                  lastMaintenanceDate: fromDateInputValue(
                     createForm.lastMaintenanceDate,
                   ),
                   frequency: createForm.frequency,

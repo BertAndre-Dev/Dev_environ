@@ -12,7 +12,10 @@ import {
 } from "recharts";
 
 import { Card } from "@/components/ui/card";
-import type { PowerUsageDataPoint } from "@/lib/power-usage-chart";
+import {
+  formatPowerUsageKwh,
+  type PowerUsageDataPoint,
+} from "@/lib/power-usage-chart";
 import { cn } from "@/lib/utils";
 
 export type { PowerUsageDataPoint } from "@/lib/power-usage-chart";
@@ -50,7 +53,9 @@ function ChartTooltip({ active, payload }: ChartTooltipProps) {
   return (
     <div className="rounded-lg border border-border bg-card px-3 py-2 text-sm shadow-md">
       <p className="font-medium text-foreground">{point?.label}</p>
-      <p className="text-muted-foreground tabular-nums">{kwh} kWh</p>
+      <p className="text-muted-foreground tabular-nums">
+        {formatPowerUsageKwh(kwh)} kWh
+      </p>
     </div>
   );
 }
@@ -77,7 +82,7 @@ export function PowerUsageCard({
 
   const resolvedTotal = useMemo(() => {
     if (typeof totalUsageKwh === "number") return totalUsageKwh;
-    return Math.round(data.reduce((sum, p) => sum + p.usageKwh, 0));
+    return data.reduce((sum, p) => sum + p.usageKwh, 0);
   }, [data, totalUsageKwh]);
 
   const yMax = useMemo(() => computeYAxisMax(data), [data]);
@@ -106,7 +111,7 @@ export function PowerUsageCard({
           <p className="mt-1 text-sm text-muted-foreground">
             Total Usage:{" "}
             <span className="font-semibold text-foreground tabular-nums">
-              {loading ? "—" : `${resolvedTotal.toLocaleString()} kWh`}
+              {loading ? "—" : `${formatPowerUsageKwh(resolvedTotal)} kWh`}
             </span>
           </p>
           {subtitle ? (

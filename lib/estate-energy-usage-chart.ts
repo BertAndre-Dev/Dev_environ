@@ -118,9 +118,7 @@ export function mapEstateEnergyUsageToPowerUsage(
 ): { points: PowerUsageDataPoint[]; totalKwh: number } {
   const points = mapEstateEnergyUsageToChartPoints(usage);
   const rawTotal = usage?.totalUsage;
-  const totalKwh = Math.round(
-    Number.isFinite(rawTotal) ? Number(rawTotal) : 0,
-  );
+  const totalKwh = Number.isFinite(rawTotal) ? Number(rawTotal) : 0;
   return { points, totalKwh };
 }
 

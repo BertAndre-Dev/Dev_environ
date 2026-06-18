@@ -6,6 +6,7 @@ import { MeterRealtimeBalanceCard } from "@/components/charts/meter-realtime-bal
 import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
 import { MeterEnergyUsageSection } from "@/components/charts/meter-energy-usage-section";
 import type { EnergyConsumptionPeriod } from "@/lib/energy-consumption-chart";
+import { formatPowerUsageKwh } from "@/lib/power-usage-chart";
 import { parseResidentEstate } from "@/app/dashboard/resident/asset/lib/estate";
 import Modal from "@/components/modal/page";
 import { toast } from "react-toastify";
@@ -403,7 +404,7 @@ export default function ResidentMeter() {
             </p>
           </div>
 
-          <div className="flex flex-1 items-stretch rounded-xl border border-border bg-muted/40 max-w-100">
+          <div className="flex flex-1 items-stretch rounded-xl border border-border bg-muted/40 max-w-80">
             <div className="flex flex-1 flex-col justify-center p-4 text-center sm:text-left">
               <p className="text-sm text-muted-foreground">
                 Total Energy Consumed
@@ -411,10 +412,10 @@ export default function ResidentMeter() {
               <p className="text-lg font-semibold tabular-nums mt-1">
                 {energyUsageLoading
                   ? "—"
-                  : `${Math.round(Number(meterUsage?.totalUsage) || 0).toLocaleString()} kWh`}
+                  : `${formatPowerUsageKwh(Number(meterUsage?.totalUsage) || 0)} kWh`}
               </p>
             </div>
-            <div
+            {/* <div
               className="w-px shrink-0 self-stretch bg-border my-4"
               aria-hidden
             />
@@ -429,7 +430,7 @@ export default function ResidentMeter() {
                       Number(vendingStats?.totalAmount) || 0,
                     )}
               </p>
-            </div>
+            </div> */}
           </div>
 
           <div className="flex flex-col xl:flex-row items-stretch xl:items-center gap-3 shrink-0">

@@ -6,6 +6,15 @@ export interface PowerUsageDataPoint {
   usageKwh: number;
 }
 
+export function formatPowerUsageKwh(value: number | null | undefined): string {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "0.00";
+  return n.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 type VendLike = {
   createdAt?: string;
   value?: string | number;
@@ -73,9 +82,7 @@ export function mapMeterUsageToPowerUsage(
     return { points: [], totalKwh: 0 };
   }
 
-  const totalKwh = Math.round(
-    Number.isFinite(usage.totalUsage) ? usage.totalUsage : 0,
-  );
+  const totalKwh = Number.isFinite(usage.totalUsage) ? usage.totalUsage : 0;
 
   const sorted = [...(usage.points ?? [])].sort(
     (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),

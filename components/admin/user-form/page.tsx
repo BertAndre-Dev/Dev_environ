@@ -24,7 +24,7 @@ interface InviteUserFormData {
   firstName: string;
   lastName: string;
   email: string;
-  role: "resident" | "security" | "company" | "staff" | "";
+  role: "resident" | "security" | "staff" | "company" | "";
   residentType: string | null;
   addressIds: string[];
 }
@@ -33,7 +33,7 @@ const roleOptions = [
   { label: "Resident", value: "resident" },
   { label: "Staff", value: "staff" },
   { label: "Security", value: "security" },
-  { label: "Company", value: "company" },
+  // { label: "Company", value: "company" },
 ];
 
 // Admins can only invite residents as OWNERS. Tenants must be invited by owners.
@@ -193,13 +193,20 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
 
-          {["firstName", "lastName", "email"].map((field) => (
-            <div key={field}>
-              <Label className="capitalize">{field}</Label>
+          {(
+            [
+              { name: "firstName", label: "First Name", type: "text" },
+              { name: "lastName", label: "Last Name", type: "text" },
+              { name: "email", label: "Email", type: "email" },
+            ] as const
+          ).map((field) => (
+            <div key={field.name}>
+              <Label htmlFor={field.name}>{field.label}</Label>
               <Input
-                name={field}
-                type={field === "email" ? "email" : "text"}
-                value={(formData as any)[field]}
+                id={field.name}
+                name={field.name}
+                type={field.type}
+                value={(formData as any)[field.name]}
                 onChange={handleInput}
                 required
               />

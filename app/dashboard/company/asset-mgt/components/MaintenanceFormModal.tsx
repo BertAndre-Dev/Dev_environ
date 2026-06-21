@@ -16,6 +16,12 @@ import {
   MAINTENANCE_FREQUENCY_OPTIONS,
   toApiMaintenanceFrequency,
 } from "@/lib/asset-maintenance-frequency";
+import {
+  DEFAULT_RECURRING_FIELDS,
+  isValidRecurringSpan,
+  toCreateRecurringPayload,
+} from "@/lib/asset-maintenance-recurring";
+import MaintenanceRecurringFields from "@/components/maintenance/MaintenanceRecurringFields";
 import type {
   AssetMaintenanceRecord,
   CreateMaintenancePayload,
@@ -34,6 +40,9 @@ type CreateFormState = {
   tag: string;
   lastMaintenanceDate: string;
   frequency: string;
+  recurring: boolean;
+  recurringSpanMonths: number;
+  recurringSpanYears: number;
   note: string;
 };
 
@@ -155,6 +164,7 @@ export default function MaintenanceFormModal({
       tag: "",
       lastMaintenanceDate: "",
       frequency: "weekly",
+      ...DEFAULT_RECURRING_FIELDS,
       note: "",
     }),
     [estates, defaultEstateId],
@@ -227,6 +237,9 @@ export default function MaintenanceFormModal({
       tag: "",
       lastMaintenanceDate: createForm.lastMaintenanceDate,
       frequency: createForm.frequency,
+      recurring: createForm.recurring,
+      recurringSpanMonths: createForm.recurringSpanMonths,
+      recurringSpanYears: createForm.recurringSpanYears,
       note: createForm.note,
     });
   };
@@ -250,7 +263,12 @@ export default function MaintenanceFormModal({
     Boolean(createForm.categoryId) &&
     Boolean(createForm.tag.trim()) &&
     Boolean(createForm.lastMaintenanceDate) &&
-    Boolean(createForm.frequency);
+    Boolean(createForm.frequency) &&
+    isValidRecurringSpan(
+      createForm.recurring,
+      createForm.recurringSpanMonths,
+      createForm.recurringSpanYears,
+    );
 
   const canSubmitEdit =
     Boolean(editForm.lastMaintenanceDate) && Boolean(editForm.frequency);
@@ -477,6 +495,22 @@ export default function MaintenanceFormModal({
                 </select>
               </div>
               <div className="space-y-2 sm:col-span-2">
+                <MaintenanceRecurringFields
+                  idPrefix="maint"
+                  value={{
+                    recurring: createForm.recurring,
+                    recurringSpanMonths: createForm.recurringSpanMonths,
+                    recurringSpanYears: createForm.recurringSpanYears,
+                  }}
+                  onChange={(value) =>
+                    setCreateForm((s) => ({
+                      ...s,
+                      ...value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
                 <label htmlFor="maint-note" className="text-sm font-medium">
                   Note
                 </label>
@@ -516,6 +550,11 @@ export default function MaintenanceFormModal({
                     createForm.lastMaintenanceDate,
                   ),
                   frequency: createForm.frequency,
+                  ...toCreateRecurringPayload({
+                    recurring: createForm.recurring,
+                    recurringSpanMonths: createForm.recurringSpanMonths,
+                    recurringSpanYears: createForm.recurringSpanYears,
+                  }),
                   note: createForm.note.trim() || undefined,
                 });
               }

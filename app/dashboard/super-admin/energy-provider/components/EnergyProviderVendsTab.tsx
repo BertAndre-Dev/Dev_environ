@@ -1,6 +1,7 @@
 "use client";
 
 import Table from "@/components/tables/list/page";
+import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 import type { EnergyProviderVendRow } from "@/lib/energy-provider-vends";
 import {
   formatVendCurrency,
@@ -87,6 +88,8 @@ const columns = [
   },
 ];
 
+const DATE_RANGE_PLACEHOLDERS = getDateRangePlaceholders();
+
 export default function EnergyProviderVendsTab({
   data,
   startDate,
@@ -102,7 +105,9 @@ export default function EnergyProviderVendsTab({
       data={data}
       emptyMessage="No vend history found for this estate"
       enableDateRangeFilter
-      defaultDateRangeDays={30}
+      defaultDateRangeDays={0}
+      startDatePlaceholder={DATE_RANGE_PLACEHOLDERS.start}
+      endDatePlaceholder={DATE_RANGE_PLACEHOLDERS.end}
       startDate={startDate}
       endDate={endDate}
       onDateRangeChange={onDateRangeChange}

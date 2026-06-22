@@ -16,6 +16,29 @@ export type BlogPostMeta = {
 
 export const blogPosts: BlogPostMeta[] = [
   {
+    slug: "why-resident-experience-should-be-every-estate-managers-priority",
+    title: "Why Resident Experience Should Be Every Estate Manager's Priority",
+    excerpt:
+      "Two estates can look identical on day one — but six months later, resident experience tells a different story. Operations matter, but what residents feel every day is what defines a thriving community.",
+    hook: "Residents don't judge your estate by what happens behind the scenes. They judge it by what they experience every day.",
+    publishedAt: "2026-06-22",
+    readTimeMinutes: 5,
+    wordCount: 650,
+    category: "Estate Management",
+    author: "Bertahub Team",
+    featuredImage: "/assets/blog/blog-3.jpg",
+    featuredImageAlt:
+      "Residents enjoying a well-managed residential estate community",
+    keywords: [
+      "resident experience estate management",
+      "estate manager priorities",
+      "property management resident satisfaction",
+      "estate community management",
+      "resident engagement platform",
+      "estate operations Nigeria",
+    ],
+  },
+  {
     slug: "developers-build-estates-communities-built-afterward",
     title: "Developers Build Estates. Communities Are Built Afterward.",
     excerpt:

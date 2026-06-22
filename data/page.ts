@@ -107,7 +107,7 @@ export const energyProviderNav = [
   {
     label: "Transactions",
     icon: ArrowLeftRight,
-    path: "/dashboard/energy-provider/transactions",
+    path: "/dashboard/energy-provider/transaction",
     moduleKey: "transactions",
   },
   {
@@ -186,6 +186,11 @@ export const companyNav = [
     icon: UserCog,
     path: "/dashboard/company/users",
     moduleKey: "users",
+  },
+  {
+    label: "Energy Provider Management",
+    icon: IoSpeedometerOutline,
+    path: "/dashboard/company/energy-provider",
   },
   {
     label: "Estate Management",

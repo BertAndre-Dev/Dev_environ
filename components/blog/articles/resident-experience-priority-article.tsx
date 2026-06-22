@@ -36,12 +36,6 @@ export default function ResidentExperiencePriorityArticle() {
         quality of the resident experience.
       </BlogPullQuote>
 
-      <BlogImage
-        src="/assets/blog/blog-3.jpg"
-        alt="Residents enjoying a well-managed residential estate community"
-        caption="Residents judge an estate not by what happens behind the scenes, but by what they experience every day."
-      />
-
       <BlogSectionHeading id="operations-vs-experience">
         Beyond Operations: What Residents Actually Experience
       </BlogSectionHeading>

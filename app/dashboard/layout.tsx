@@ -15,6 +15,7 @@ import {
   estateAdminNav,
   companyNav,
   staffNav,
+  energyProviderNav,
 } from "@/data/page";
 import { AppDispatch, RootState } from "@/redux/store";
 import {
@@ -191,6 +192,8 @@ export default function DashboardLayout({
         ? superAdminNav
         : role === "company"
           ? companyNav
+          : role === "energy provider"
+            ? energyProviderNav
           : role === "admin"
             ? adminNav
             : role === "estate admin"
@@ -223,6 +226,7 @@ export default function DashboardLayout({
       "estate admin",
       "staff",
       "company",
+      "energy provider",
     ]);
     if (rolesWithModules.has(role)) {
       navItems = filterNavItemsByEstateModules(navItems, estateModules, {

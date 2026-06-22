@@ -117,7 +117,7 @@ export default function MaintenanceRecordsTable({
     () => [
       {
         key: "lastMaintenanceDate" as const,
-        header: "Last maintenance",
+        header: "Maintenance date", 
         render: (item: AssetMaintenanceRecord) =>
           item.lastMaintenanceDate
             ? new Date(item.lastMaintenanceDate).toLocaleString()

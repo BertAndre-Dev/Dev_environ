@@ -51,6 +51,11 @@ export const superAdminNav = [
     icon: Building2,
     path: "/dashboard/super-admin/company",
   },
+    {
+    label: "Energy Provider Management",
+    icon: IoSpeedometerOutline,
+    path: "/dashboard/super-admin/energy-provider",
+  },
   //   {
   //     label: "Address Management",
   //     icon: BsBuildings,
@@ -90,6 +95,41 @@ export const superAdminNav = [
     label: "Logout",
     icon: FiLogOut,
     // path: "/auth/logout"
+  },
+];
+
+export const energyProviderNav = [
+  {
+    label: "Overview",
+    icon: FiHome,
+    path: "/dashboard/energy-provider/dashboard",
+  },
+  {
+    label: "Transactions",
+    icon: ArrowLeftRight,
+    path: "/dashboard/energy-provider/transactions",
+    moduleKey: "transactions",
+  },
+  {
+    label: "Wallet",
+    icon: Wallet,
+    path: "/dashboard/energy-provider/wallet",
+    moduleKey: "wallet",
+  },
+  {
+    label: "Energy Management",
+    icon: IoSpeedometerOutline,
+    path: "/dashboard/energy-provider/meter",
+    moduleKey: "meter",
+  },
+  {
+    label: "Settings",
+    icon: FiSettings,
+    path: "/dashboard/settings",
+  },
+  {
+    label: "Logout",
+    icon: FiLogOut,
   },
 ];
 

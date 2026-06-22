@@ -92,6 +92,8 @@ import staffSupportSliceReducer from "@/redux/slice/staff/support/staff-support-
 import staffMaintenanceSliceReducer from "@/redux/slice/staff/maintenance/staff-maintenance-slice";
 import staffCommunitySliceReducer from "@/redux/slice/staff/community/staff-community-slice";
 import staffAnnouncementsSliceReducer from "@/redux/slice/staff/announcements/staff-announcements-slice";
+import superAdminEnergyProviderConfigSliceReducer from "@/redux/slice/super-admin/energy-provider-config/energy-provider-config-slice";
+import energyProviderVendsSliceReducer from "@/redux/slice/energy-provider/vends/energy-provider-vends-slice";
 
 const persistConfig = {
   key: "root",
@@ -342,6 +344,8 @@ export const store = configureStore({
     staffMaintenance: persistedStaffMaintenanceSliceReducer,
     staffCommunity: persistedStaffCommunitySliceReducer,
     staffAnnouncements: staffAnnouncementsSliceReducer,
+    superAdminEnergyProviderConfig: superAdminEnergyProviderConfigSliceReducer,
+    energyProviderVends: energyProviderVendsSliceReducer,
     [mapsApi.reducerPath]: mapsApi.reducer,
   },
 

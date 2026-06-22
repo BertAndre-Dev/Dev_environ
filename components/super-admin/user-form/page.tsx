@@ -10,6 +10,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
 import { iniviteUser } from "@/redux/slice/auth-mgt/auth-mgt"; // keep name you used
 import { getCompanies } from "@/redux/slice/super-admin/company-mgt/company";
+import {
+  buildInviteUserPayload,
+  isEnergyProviderRole,
+  SUPER_ADMIN_COMPANY_INVITE_ROLE_OPTIONS,
+  SUPER_ADMIN_ESTATE_INVITE_ROLE_OPTIONS,
+  validateEnergyProviderInviteScope,
+} from "@/lib/invite-user-roles";
 import { toast } from "react-toastify";
 import type { AppDispatch, RootState } from "@/redux/store";
 
@@ -98,11 +105,12 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
     loadCompanies();
   }, [dispatch]);
 
-  const roleOptions = [
-    // { value: "estate admin", label: "Estate Admin" },
-    // { value: "admin", label: "Admin" },
-    { value: "company", label: "Company" },
-  ];
+  const roleOptions =
+    inviteScope === "company"
+      ? [...SUPER_ADMIN_COMPANY_INVITE_ROLE_OPTIONS]
+      : [...SUPER_ADMIN_ESTATE_INVITE_ROLE_OPTIONS];
+
+  const invitingEnergyProvider = isEnergyProviderRole(formData.role);
 
   const estateOptions = estates.map((est: any) => ({
     value: est.id ?? est._id,
@@ -146,20 +154,25 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
       return toast.error("Please select a company.");
     }
 
+    const energyProviderError = validateEnergyProviderInviteScope({
+      role: formData.role,
+      inviteContext: inviteScope,
+      estateId: formData.estateId,
+      companyId: formData.companyId,
+    });
+    if (energyProviderError) return toast.error(energyProviderError);
+
     setSubmitting(true);
     try {
-      const estateId = formData.estateId?.trim();
-      const companyId = formData.companyId?.trim();
-      const payload = {
-        ...(inviteScope === "estate" && estateId ? { estateId } : {}),
-        ...(inviteScope === "company" && companyId ? { companyId } : {}),
+      const payload = buildInviteUserPayload({
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
         role: formData.role,
-        residentType: null,
-        addressIds: [] as string[],
-      };
+        inviteContext: inviteScope,
+        estateId: formData.estateId,
+        companyId: formData.companyId,
+      });
       const res = await dispatch(iniviteUser(payload) as any).unwrap();
       toast.success(res?.message || "User invited successfully");
       resetForm();
@@ -242,7 +255,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
                   checked={inviteScope === "estate"}
                   onChange={() => {
                     setInviteScope("estate");
-                    setFormData((p) => ({ ...p, companyId: "" }));
+                    setFormData((p) => ({ ...p, companyId: "", role: "" }));
                   }}
                 />
                 Estate
@@ -255,7 +268,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
                   checked={inviteScope === "company"}
                   onChange={() => {
                     setInviteScope("company");
-                    setFormData((p) => ({ ...p, estateId: "" }));
+                    setFormData((p) => ({ ...p, estateId: "", role: "" }));
                   }}
                 />
                 Company
@@ -279,20 +292,38 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
               />
             </div>
           ) : (
-            <div>
-              <Label>Company</Label>
-              <Select
-                options={companyOptions}
-                value={
-                  companyOptions.find((o) => o.value === formData.companyId) ??
-                  null
-                }
-                onChange={(opt) => handleSelectChange("companyId", opt)}
-                isLoading={loadingCompanies}
-                placeholder="Select company"
-                isClearable
-              />
-            </div>
+            <>
+              <div>
+                <Label>Company</Label>
+                <Select
+                  options={companyOptions}
+                  value={
+                    companyOptions.find((o) => o.value === formData.companyId) ??
+                    null
+                  }
+                  onChange={(opt) => handleSelectChange("companyId", opt)}
+                  isLoading={loadingCompanies}
+                  placeholder="Select company"
+                  isClearable
+                />
+              </div>
+              {invitingEnergyProvider && (
+                <div>
+                  <Label>Estate</Label>
+                  <Select
+                    options={estateOptions}
+                    value={
+                      estateOptions.find((o) => o.value === formData.estateId) ??
+                      null
+                    }
+                    onChange={(opt) => handleSelectChange("estateId", opt)}
+                    isLoading={loadingEstates}
+                    placeholder="Select estate"
+                    isClearable
+                  />
+                </div>
+              )}
+            </>
           )}
 
           <div>

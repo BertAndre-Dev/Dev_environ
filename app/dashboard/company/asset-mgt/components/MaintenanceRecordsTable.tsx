@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import Table from "@/components/tables/list/page";
 import { Pencil, Power, PowerOff, Trash2 } from "lucide-react";
 import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
+import { formatRecurringSpan } from "@/lib/asset-maintenance-recurring";
 import type { AppDispatch } from "@/redux/store";
 import {
   getAssets,
@@ -148,6 +149,16 @@ export default function MaintenanceRecordsTable({
           ),
       },
       { key: "frequency" as const, header: "Frequency" },
+      {
+        key: "recurring" as const,
+        header: "Recurring",
+        render: (item: AssetMaintenanceRecord) =>
+          formatRecurringSpan(
+            item.recurring,
+            item.recurringSpanMonths,
+            item.recurringSpanYears,
+          ),
+      },
       {
         key: "note" as const,
         header: "Note",

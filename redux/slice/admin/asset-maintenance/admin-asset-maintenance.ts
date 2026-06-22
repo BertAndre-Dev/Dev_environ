@@ -22,6 +22,9 @@ export type AssetMaintenanceRecord = {
   lastMaintenanceDate?: string;
   nextMaintenanceDate?: string;
   frequency?: string;
+  recurring?: boolean;
+  recurringSpanMonths?: number;
+  recurringSpanYears?: number;
   note?: string;
   isActive?: boolean;
   createdAt?: string;
@@ -49,6 +52,9 @@ export type CreateMaintenancePayload = {
   tag: string;
   lastMaintenanceDate: string;
   frequency: string;
+  recurring: boolean;
+  recurringSpanMonths: number;
+  recurringSpanYears: number;
   note?: string;
 };
 

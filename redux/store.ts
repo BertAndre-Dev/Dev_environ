@@ -92,6 +92,11 @@ import staffSupportSliceReducer from "@/redux/slice/staff/support/staff-support-
 import staffMaintenanceSliceReducer from "@/redux/slice/staff/maintenance/staff-maintenance-slice";
 import staffCommunitySliceReducer from "@/redux/slice/staff/community/staff-community-slice";
 import staffAnnouncementsSliceReducer from "@/redux/slice/staff/announcements/staff-announcements-slice";
+import superAdminEnergyProviderConfigSliceReducer from "@/redux/slice/super-admin/energy-provider-config/energy-provider-config-slice";
+import energyProviderVendsSliceReducer from "@/redux/slice/energy-provider/vends/energy-provider-vends-slice";
+import companyEnergyProviderConfigSliceReducer from "@/redux/slice/company/energy-provider-config/company-energy-provider-config-slice";
+import companyEnergyProviderVendsSliceReducer from "@/redux/slice/company/energy-provider-vends/company-energy-provider-vends-slice";
+import energyProviderTransactionSliceReducer from "@/redux/slice/energy-provider/transaction/energy-provider-transaction-slice";
 
 const persistConfig = {
   key: "root",
@@ -342,6 +347,11 @@ export const store = configureStore({
     staffMaintenance: persistedStaffMaintenanceSliceReducer,
     staffCommunity: persistedStaffCommunitySliceReducer,
     staffAnnouncements: staffAnnouncementsSliceReducer,
+    superAdminEnergyProviderConfig: superAdminEnergyProviderConfigSliceReducer,
+    energyProviderVends: energyProviderVendsSliceReducer,
+    companyEnergyProviderConfig: companyEnergyProviderConfigSliceReducer,
+    companyEnergyProviderVends: companyEnergyProviderVendsSliceReducer,
+    energyProviderTransaction: energyProviderTransactionSliceReducer,
     [mapsApi.reducerPath]: mapsApi.reducer,
   },
 

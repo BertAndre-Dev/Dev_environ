@@ -34,6 +34,7 @@ import type { AddBusinessFormPayload } from "@/components/super-admin/add-busine
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import { MarketplaceListingCard } from "@/components/super-admin/marketplace-listing-card";
 import Loader from "@/components/ui/Loader";
+import Pagination from "@/components/pagination/page";
 
 export default function SuperAdminMarketplacePage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -301,6 +302,14 @@ export default function SuperAdminMarketplacePage() {
   const formLoading =
     createStatus === "isLoading" || updateStatus === "isLoading";
 
+  const paginationInfo = {
+    total: pagination?.total ?? filteredListings.length,
+    current: pagination?.page ?? page,
+    pageSize: pagination?.limit ?? limit,
+  };
+
+  const listLoading = getListStatus === "isLoading";
+
   return (
     <div className="space-y-6 sm:space-y-8 pb-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -426,18 +435,26 @@ export default function SuperAdminMarketplacePage() {
                         : 'No businesses yet. Click "Add business" to create one.'}
                     </p>
                   ) : (
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {filteredListings.map((item) => (
-                        <MarketplaceListingCard
-                          key={item.id}
-                          item={item}
-                          onEdit={openEditModal}
-                          onActivate={handleActivate}
-                          onSuspend={openSuspendModal}
-                          onDelete={handleDelete}
-                        />
-                      ))}
-                    </div>
+                    <>
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {filteredListings.map((item) => (
+                          <MarketplaceListingCard
+                            key={item.id}
+                            item={item}
+                            onEdit={openEditModal}
+                            onActivate={handleActivate}
+                            onSuspend={openSuspendModal}
+                            onDelete={handleDelete}
+                          />
+                        ))}
+                      </div>
+                      <Pagination
+                        paginationInfo={paginationInfo}
+                        onPageChange={(p) => setPage(p)}
+                        disabled={listLoading}
+                        itemLabel="businesses"
+                      />
+                    </>
                   )}
                 </div>
               );
@@ -464,11 +481,7 @@ export default function SuperAdminMarketplacePage() {
                     setPage(1);
                   }}
                   showPagination
-                  paginationInfo={{
-                    total: pagination?.total ?? filteredListings.length,
-                    current: pagination?.page ?? page,
-                    pageSize: pagination?.limit ?? limit,
-                  }}
+                  paginationInfo={paginationInfo}
                   onPageChange={(p) => setPage(p)}
                   enableExport
                   exportFileName="marketplace-businesses"

@@ -11,6 +11,12 @@ import { toast } from "react-toastify";
 import type { AppDispatch } from "@/redux/store";
 import { iniviteUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
+import {
+  buildInviteUserPayload,
+  COMPANY_INVITE_ROLE_OPTIONS,
+  isEnergyProviderRole,
+  validateEnergyProviderInviteScope,
+} from "@/lib/invite-user-roles";
 
 type Props = {
   companyId: string;
@@ -71,10 +77,8 @@ export default function CompanyInviteUserForm({
     })();
   }, [dispatch]);
 
-  const roleOptions = [
-    { value: "estate admin", label: "Estate Admin" },
-    { value: "admin", label: "Admin" },
-  ];
+  const roleOptions = [...COMPANY_INVITE_ROLE_OPTIONS];
+  const invitingEnergyProvider = isEnergyProviderRole(formData.role);
 
   const estateOptions = estates.map((e) => ({
     value: e.id,
@@ -92,19 +96,28 @@ export default function CompanyInviteUserForm({
     if (!formData.firstName.trim()) return toast.error("Please provide first name.");
     if (!formData.lastName.trim()) return toast.error("Please provide last name.");
 
+    const energyProviderError = validateEnergyProviderInviteScope({
+      role: formData.role,
+      inviteContext: "company",
+      estateId: formData.estateId,
+      companyId,
+    });
+    if (energyProviderError) return toast.error(energyProviderError);
+
     setSubmitting(true);
     try {
       const res = await dispatch(
-        iniviteUser({
-          companyId,
-          ...(formData.estateId.trim() ? { estateId: formData.estateId.trim() } : {}),
-          firstName: formData.firstName.trim(),
-          lastName: formData.lastName.trim(),
-          email: formData.email.trim(),
-          role: formData.role,
-          residentType: null,
-          addressIds: [],
-        }),
+        iniviteUser(
+          buildInviteUserPayload({
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            role: formData.role,
+            inviteContext: "company",
+            estateId: formData.estateId,
+            companyId,
+          }),
+        ),
       ).unwrap();
       toast.success((res as { message?: string })?.message ?? "User invited successfully");
       setFormData({
@@ -171,7 +184,7 @@ export default function CompanyInviteUserForm({
           </div>
           <div>
             <Label>
-              Estate
+              Estate{invitingEnergyProvider ? "" : " (optional)"}
             </Label>
             <Select
               options={estateOptions}

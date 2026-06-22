@@ -19,7 +19,7 @@ import AnnouncementFormModal, {
   type AnnouncementFormData,
 } from "@/components/admin/announcement-form-modal/page";
 import { canEditWithinOneHour } from "@/components/admin/announcement-card/page";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import type { RootState, AppDispatch } from "@/redux/store";
 import AnnouncementsPageHeader from "@/components/admin/announcements/announcements-page-header/page";
 import AnnouncementsStatsGrid from "@/components/admin/announcements/announcements-stats-grid/page";
@@ -54,11 +54,12 @@ export default function AdminAnnouncementsPage() {
   const [estateId, setEstateId] = useState<string | null>(null);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<AnnouncementItem | null>(null);
+  const [deletingItem, setDeletingItem] = useState<AnnouncementItem | null>(null);
   const [viewingItem, setViewingItem] = useState<AnnouncementItem | null>(null);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [page, setPage] = useState(1);
 
-  const { list, pagination, stats, getStatus, getStatsStatus, createStatus, updateStatus } =
+  const { list, pagination, stats, getStatus, getStatsStatus, createStatus, updateStatus, deleteStatus } =
     useSelector((state: RootState) => {
       const s = (state as RootState).adminAnnouncements;
       return {
@@ -69,6 +70,7 @@ export default function AdminAnnouncementsPage() {
         getStatsStatus: s?.getStatsStatus ?? "idle",
         createStatus: s?.createStatus ?? "idle",
         updateStatus: s?.updateStatus ?? "idle",
+        deleteStatus: s?.deleteStatus ?? "idle",
       };
     });
 
@@ -202,18 +204,26 @@ export default function AdminAnnouncementsPage() {
   };
 
   const handleDelete = (item: AnnouncementItem) => {
-    if (!item.id || !estateId) return;
-    confirmDeleteToast({
-      name: item.title ?? "this announcement",
-      onConfirm: async () => {
-        await dispatch(deleteAnnouncement({ estateId, id: item.id! })).unwrap();
-        toast.success("Announcement deleted.");
-        const nextPage =
-          announcements.length <= 1 && page > 1 ? page - 1 : page;
-        if (nextPage !== page) setPage(nextPage);
-        refreshAfterMutation(nextPage);
-      },
-    });
+    if (!item.id) return;
+    setDeletingItem(item);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingItem?.id || !estateId) return;
+    try {
+      await dispatch(
+        deleteAnnouncement({ estateId, id: deletingItem.id }),
+      ).unwrap();
+      toast.success("Announcement deleted.");
+      const nextPage =
+        announcements.length <= 1 && page > 1 ? page - 1 : page;
+      if (nextPage !== page) setPage(nextPage);
+      refreshAfterMutation(nextPage);
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      toast.error(e?.message ?? "Failed to delete announcement.");
+      throw err;
+    }
   };
 
   return (
@@ -274,6 +284,15 @@ export default function AdminAnnouncementsPage() {
           submitLabel="Update"
           title="Edit Announcement"
           loading={updateStatus === "isLoading"}
+        />
+
+        <DeleteModal
+          visible={!!deletingItem}
+          onClose={() => setDeletingItem(null)}
+          itemName={deletingItem?.title ?? "this announcement"}
+          title="Delete announcement"
+          onConfirm={handleConfirmDelete}
+          loading={deleteStatus === "isLoading"}
         />
 
         <Modal visible={!!viewingItem} onClose={() => setViewingItem(null)}>

@@ -18,8 +18,9 @@ export type MaintenanceScheduleEvent = {
 };
 
 export const SCHEDULE_EVENT_BADGE_STYLE = {
-  container: "bg-[#E7F5FF] border border-[#A5D8FF]",
-  title: "text-[#1971C2] font-semibold",
+  container: "bg-[#E7F5FF] border-[#A5D8FF]",
+  title: "text-[#1971C2]",
+  icon: "text-[#1971C2]",
 };
 
 export function startOfDay(d: Date) {
@@ -165,7 +166,8 @@ export function buildCalendarCells(
 }
 
 export function formatMonthYear(viewDate: Date) {
-  return viewDate
-    .toLocaleDateString("en-US", { month: "long", year: "numeric" })
-    .toUpperCase();
+  return viewDate.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
 }

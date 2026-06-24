@@ -1,16 +1,4 @@
-export const APP_TIMEZONE = "Africa/Lagos";
-
-const DATETIME_OPTIONS: Intl.DateTimeFormatOptions = {
-  timeZone: APP_TIMEZONE,
-  year: "numeric",
-  month: "numeric",
-  day: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-};
-
-/** Format an ISO timestamp in Nigeria local time (WAT). */
+/** Format an ISO timestamp as UTC, matching the backend value (e.g. 2026-06-10T23:47:22). */
 export function formatDateTime(
   iso?: string | null,
   fallback = "—",
@@ -18,5 +6,5 @@ export function formatDateTime(
   if (!iso) return fallback;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return fallback;
-  return d.toLocaleString("en-NG", DATETIME_OPTIONS);
+  return d.toISOString().slice(0, 19);
 }

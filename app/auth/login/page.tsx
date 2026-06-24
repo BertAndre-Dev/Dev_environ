@@ -196,8 +196,7 @@ export default function LoginPage() {
           <Button
             variant="outline"
             size="lg"
-            className="w-full rounded-lg border-2 group"
-            style={{ borderColor: "#0150AC", color: "#0150AC" }}
+            className="w-full rounded-lg border-2 border-[#0150AC] text-[#0150AC] hover:bg-[#0150AC] hover:text-white group"
           >
             Create Account
             <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />

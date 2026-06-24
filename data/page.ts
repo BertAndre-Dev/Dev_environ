@@ -37,6 +37,11 @@ export const superAdminNav = [
     path: "/dashboard/super-admin/transactions",
   },
   {
+    label: "Estate Transactions",
+    icon: History,
+    path: "/dashboard/super-admin/estate-transactions",
+  },
+  {
     label: "User Management",
     icon: UserCog,
     path: "/dashboard/super-admin/user",

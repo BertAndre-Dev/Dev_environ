@@ -82,18 +82,6 @@ export function PaidBillsTab({
           onExportRequest={onExportRequest}
         />
       </div>
-
-      <div className="flex justify-end items-center gap-2 mt-4">
-        <Button disabled={currentPage === 1} onClick={onPrev}>
-          Prev
-        </Button>
-        <Button
-          disabled={totalPages <= 1 || currentPage >= totalPages}
-          onClick={onNext}
-        >
-          Next
-        </Button>
-      </div>
     </>
   );
 }

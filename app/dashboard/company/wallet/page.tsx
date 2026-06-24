@@ -12,6 +12,7 @@ import Modal from "@/components/modal/page";
 import Table from "@/components/tables/list/page";
 import EstateWalletOverviewCard from "@/components/estate-admin/wallet-overview-card/page";
 import CompanyWithdrawFundForm from "@/components/company/wallet/CompanyWithdrawFundForm";
+import { formatDateTime } from "@/lib/format-date";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getBanks } from "@/redux/slice/estate-admin/fund-wallet/fund-wallet";
 import type { BankItem } from "@/redux/slice/estate-admin/fund-wallet/fund-wallet";
@@ -225,16 +226,7 @@ export default function CompanyWalletPage() {
     {
       key: "createdAt",
       header: "Date",
-      render: (item) =>
-        item.createdAt
-          ? new Date(item.createdAt).toLocaleString("en-NG", {
-              year: "numeric",
-              month: "short",
-              day: "2-digit",
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          : "—",
+      render: (item) => formatDateTime(item.createdAt),
     },
     {
       key: "amount",

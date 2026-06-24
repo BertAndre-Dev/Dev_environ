@@ -1,48 +1,42 @@
 "use client";
 
-import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
-  verifyTransaction,
-  getEstateTransactionHistory,
-  getEstateVends,
-  getEstatePaidBills,
-} from "@/redux/slice/estate-admin/transaction/transaction";
+  getSuperAdminEstateTransactionHistory,
+  getSuperAdminEstateVends,
+  getSuperAdminEstatePaidBills,
+} from "@/redux/slice/super-admin/super-admin-estate-transactions/super-admin-estate-transactions";
+import {
+  selectSuperAdminEstateTransactions,
+  selectSuperAdminEstateTransactionsLoading,
+  selectSuperAdminEstateTransactionsPagination,
+} from "@/redux/slice/super-admin/super-admin-estate-transactions/super-admin-estate-transactions-slice";
+import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
 
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { toast } from "react-toastify";
+import Select from "react-select";
 import { type EstateTransactionsFilters } from "@/components/estate-admin/transactions-filter-bar";
-import { TransactionsPageHeader } from "./components/TransactionsPageHeader";
-import { TransactionsSearchCard } from "./components/TransactionsSearchCard";
+import { TransactionsSearchCard } from "@/app/dashboard/estate-admin/transactions/components/TransactionsSearchCard";
 import {
   TransactionsTabsCard,
   type TransactionsActiveTab,
-} from "./components/TransactionsTabsCard";
-import { HistoryTransactionsTab } from "./components/HistoryTransactionsTab";
-import { VendsTab } from "./components/VendsTab";
-import { PaidBillsTab } from "./components/PaidBillsTab";
+} from "@/app/dashboard/estate-admin/transactions/components/TransactionsTabsCard";
+import { HistoryTransactionsTab } from "@/app/dashboard/estate-admin/transactions/components/HistoryTransactionsTab";
+import { VendsTab } from "@/app/dashboard/estate-admin/transactions/components/VendsTab";
+import { PaidBillsTab } from "@/app/dashboard/estate-admin/transactions/components/PaidBillsTab";
 import { formatDateTime } from "@/lib/format-date";
 
-interface TransactionData {
-  walletId: string;
-  type: string;
-  amount: number;
-  description: string;
-  userId: string;
-  id?: string;
-  paymentStatus?: string;
-  tx_ref?: string;
-  createdAt?: string;
-  updatedAt?: string;
+const ESTATE_FILTER_FETCH_LIMIT = 500;
+
+interface EstateOption {
+  label: string;
+  value: string;
 }
 
-export default function TransactionPage() {
+export default function SuperAdminEstateTransactionsPage() {
   const dispatch = useDispatch<AppDispatch>();
-  const [userId, setUserId] = useState<string | null>(null);
-  const [estateId, setEstateId] = useState<string | null>(null);
-  const [estateName, setEstateName] = useState("Estate");
-  const [email, setEmail] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
   const [limit] = useState(10);
   const [activeTab, setActiveTab] = useState<TransactionsActiveTab>("vends");
@@ -68,129 +62,83 @@ export default function TransactionPage() {
   const [filterFrequency, setFilterFrequency] = useState<string>("");
   const [filterBill, setFilterBill] = useState<string>("");
   const [filterBillStatus, setFilterBillStatus] = useState<string>("");
-  const transactions = useSelector(
-    (state: RootState) =>
-      (state as any).estateAdminTransaction?.allTransactions?.data || [],
+  const [selectedEstate, setSelectedEstate] = useState<EstateOption | null>(null);
+
+  const transactions = useSelector(selectSuperAdminEstateTransactions);
+  const pagination = useSelector(selectSuperAdminEstateTransactionsPagination);
+  const loading = useSelector(selectSuperAdminEstateTransactionsLoading);
+
+  const { allEstates, estateLoading } = useSelector((state: RootState) => {
+    const estateState = state.estate;
+    const data = estateState.allEstates?.data || [];
+    return {
+      allEstates: Array.isArray(data) ? data : [],
+      estateLoading: estateState.getAllEstatesState === "isLoading",
+    };
+  });
+
+  const estateOptions: EstateOption[] = useMemo(
+    () =>
+      allEstates
+        .map((e: { id?: string; _id?: string; name?: string }) => {
+          const value = String(e?._id || e?.id || "").trim();
+          if (!value) return null;
+          return { label: e?.name ?? "Unnamed estate", value };
+        })
+        .filter((x): x is EstateOption => Boolean(x)),
+    [allEstates],
   );
-  const pagination = useSelector(
-    (state: RootState) =>
-      (state as any).estateAdminTransaction?.allTransactions?.pagination,
+
+  const selectedEstateId = selectedEstate?.value;
+  const estateName = selectedEstate?.label ?? "Estate";
+
+  const buildHistoryParams = useCallback(
+    (page: number) => ({
+      estateId: selectedEstateId!,
+      page,
+      limit,
+      search: search.trim() || undefined,
+      type: filterType || undefined,
+      paymentStatus: filterStatus || undefined,
+    }),
+    [selectedEstateId, limit, search, filterType, filterStatus],
   );
-  const loading =
-    useSelector(
-      (state: RootState) =>
-        (state as any).estateAdminTransaction?.getEstateTransactionHistoryState,
-    ) === "isLoading";
 
-  // 🔹 Fetch signed-in user and wallet on mount
   useEffect(() => {
-    (async () => {
-      try {
-        const userRes = await dispatch(getSignedInUser()).unwrap();
-        const data = userRes?.data ?? (userRes as Record<string, unknown>);
-        const id = (data?.id as string) || (data?._id as string) || null;
-        const userEmail = (data?.email as string) || "";
-        const rawEstateId = data?.estateId as
-          | string
-          | { id?: string; _id?: string }
-          | undefined;
-        const estateIdFromUser =
-          typeof rawEstateId === "string"
-            ? rawEstateId
-            : rawEstateId?._id || rawEstateId?.id || "";
+    dispatch(getAllEstates({ page: 1, limit: ESTATE_FILTER_FETCH_LIMIT }))
+      .unwrap()
+      .catch(() => toast.error("Failed to fetch estates"));
+  }, [dispatch]);
 
-        const estateFromId =
-          (data?.estateId as { name?: string } | undefined)?.name ?? "";
-        const estateFromObj =
-          (data?.estate as { name?: string } | undefined)?.name ?? "";
-        const fallbackEstateName = (data?.estateName as string) ?? "";
-        const name =
-          estateFromId || estateFromObj || fallbackEstateName || "Estate";
-        setEstateName(name);
-
-        if (!id) {
-          toast.warning("No user found.");
-          return;
-        }
-
-        setUserId(id);
-        setEmail(userEmail || "");
-
-        if (!estateIdFromUser) {
-          toast.error("No estate ID found for this user.");
-          return;
-        }
-
-        setEstateId(estateIdFromUser);
-
-        // ✅ Fetch estate transactions (paginated) using estateId
-        await dispatch(
-          getEstateTransactionHistory({
-            estateId: estateIdFromUser,
-            page: 1,
-            limit,
-            search: search || undefined,
-            type: filterType || undefined,
-            paymentStatus: filterStatus || undefined,
-          }),
-        );
-
-        // ✅ Fetch vends and paid bills totals for stats (limit 1 just to get pagination.total)
-        await Promise.all([
-          dispatch(
-            getEstateVends({
-              estateId: estateIdFromUser,
-              page: 1,
-              limit: 1,
-            }),
-          )
-            .unwrap()
-            .catch(() => ({ pagination: { total: 0 } })),
-          dispatch(
-            getEstatePaidBills({
-              estateId: estateIdFromUser,
-              page: 1,
-              limit: 50000,
-            }),
-          )
-            .unwrap()
-            .catch(() => ({ pagination: { total: 0 } })),
-        ]);
-      } catch (err) {
-        toast.error("Failed to load data.");
-      }
-    })();
-  }, [dispatch, limit]);
-
-  // 🔹 Refetch transaction history when search or filters change (debounced for search).
   useEffect(() => {
-    if (!estateId) return;
+    if (selectedEstate?.value) return;
+    if (!estateOptions.length) return;
+    setSelectedEstate(estateOptions[0]);
+  }, [estateOptions, selectedEstate?.value]);
+
+  useEffect(() => {
+    if (!selectedEstateId) return;
     const timer = setTimeout(() => {
       setCurrentPage(1);
-      dispatch(
-        getEstateTransactionHistory({
-          estateId,
-          page: 1,
-          limit,
-          search: search.trim() || undefined,
-          type: filterType || undefined,
-          paymentStatus: filterStatus || undefined,
-        }),
-      );
+      dispatch(getSuperAdminEstateTransactionHistory(buildHistoryParams(1)));
     }, 300);
     return () => clearTimeout(timer);
-  }, [search, filterType, filterStatus, estateId, dispatch, limit]);
+  }, [search, filterType, filterStatus, selectedEstateId, dispatch, buildHistoryParams]);
 
-  // 🔹 Fetch vends when tab is vends
   useEffect(() => {
-    if (activeTab !== "vends" || !estateId) return;
+    setVendsPage(1);
+    setPaidBillsPage(1);
+  }, [selectedEstateId]);
+
+  useEffect(() => {
+    if (activeTab !== "vends" || !selectedEstateId) return;
     (async () => {
       setLoadingVends(true);
       try {
         const shouldApplyDateFilter = Boolean(vendsStartDate && vendsEndDate);
         const res = await dispatch(
-          getEstateVends({
-            estateId,
+          getSuperAdminEstateVends({
+            estateId: selectedEstateId,
             page: vendsPage,
             limit,
             startDate: shouldApplyDateFilter ? vendsStartDate : undefined,
@@ -208,7 +156,7 @@ export default function TransactionPage() {
     })();
   }, [
     activeTab,
-    estateId,
+    selectedEstateId,
     vendsPage,
     dispatch,
     limit,
@@ -216,16 +164,15 @@ export default function TransactionPage() {
     vendsEndDate,
   ]);
 
-  // 🔹 Fetch paid bills when tab is paid-bills (larger limit for client-side filtering)
   const PAID_BILLS_FETCH_LIMIT = 2000;
   useEffect(() => {
-    if (activeTab !== "paid-bills" || !estateId) return;
+    if (activeTab !== "paid-bills" || !selectedEstateId) return;
     (async () => {
       setLoadingPaidBills(true);
       try {
         const res = await dispatch(
-          getEstatePaidBills({
-            estateId,
+          getSuperAdminEstatePaidBills({
+            estateId: selectedEstateId,
             page: 1,
             limit: PAID_BILLS_FETCH_LIMIT,
             startDate: paidBillsStartDate || undefined,
@@ -233,32 +180,20 @@ export default function TransactionPage() {
           }),
         ).unwrap();
         setPaidBillsData(res?.data ?? []);
-        // pagination is not currently used in the UI (client-side paging)
       } catch {
         setPaidBillsData([]);
       } finally {
         setLoadingPaidBills(false);
       }
     })();
-  }, [activeTab, estateId, dispatch, paidBillsStartDate, paidBillsEndDate]);
+  }, [activeTab, selectedEstateId, dispatch, paidBillsStartDate, paidBillsEndDate]);
 
-  // 🔹 Pagination Handler
   const handlePageChange = async (newPage: number) => {
-    if (!estateId) return;
+    if (!selectedEstateId) return;
     setCurrentPage(newPage);
-    await dispatch(
-      getEstateTransactionHistory({
-        estateId,
-        page: newPage,
-        limit,
-        search: search.trim() || undefined,
-        type: filterType || undefined,
-        paymentStatus: filterStatus || undefined,
-      }),
-    );
+    await dispatch(getSuperAdminEstateTransactionHistory(buildHistoryParams(newPage)));
   };
 
-  // 🔹 Filter paid bills by Frequency, Bill, Status (client-side)
   const filteredPaidBills = useMemo(() => {
     return (paidBillsData ?? []).filter((item: any) => {
       if (filterFrequency) {
@@ -321,7 +256,6 @@ export default function TransactionPage() {
     setPaidBillsPage(1);
   };
 
-  // Keep paidBillsPage in bounds when filtered list shrinks
   useEffect(() => {
     const total = Math.max(
       1,
@@ -335,78 +269,12 @@ export default function TransactionPage() {
       ? "No paid bills match the selected filters."
       : "No paid bills found.";
 
-  // 🔹 Automatically verify transaction when redirected back
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tx_ref = urlParams.get("tx_ref") || urlParams.get("trx_ref");
-
-    if (!tx_ref) return; // User didn't come from Flutterwave
-
-    const verifyTransactionAsync = async () => {
-      try {
-        // Wait for user info if not ready
-        let currentUserId = userId;
-        let currentEmail = email;
-        let currentEstateId = estateId;
-
-        if (!currentUserId || !currentEstateId) {
-          const userRes = await dispatch(getSignedInUser()).unwrap();
-          currentUserId = userRes?.data?.id;
-          currentEmail = userRes?.data?.email || "";
-          currentEstateId =
-            userRes?.data?.estateId || userRes?.data?.estate?.id;
-          setUserId(currentUserId);
-          setEmail(currentEmail);
-          setEstateId(currentEstateId);
-        }
-
-        if (!currentUserId) throw new Error("User not found for verification");
-        if (!currentEstateId)
-          throw new Error("Estate not found for verification");
-
-        // ✅ Trigger verification via Redux thunk
-        const verificationRes = await dispatch(
-          verifyTransaction({ tx_ref, paymentType: "withdrawFund" }),
-        ).unwrap();
-
-        toast.success("Withdrawal successful!");
-
-        // Refresh transaction history
-        await dispatch(
-          getEstateTransactionHistory({
-            estateId: currentEstateId,
-            page: currentPage,
-            limit,
-          }),
-        );
-
-        // Clean up URL params
-        const url = new URL(window.location.href);
-        ["tx_ref", "trx_ref", "transaction_id", "status"].forEach((key) =>
-          url.searchParams.delete(key),
-        );
-        window.history.replaceState({}, document.title, url.toString());
-      } catch (err: any) {
-        const errorMessage =
-          err?.message || err?.payload?.message || "Verification failed";
-        toast.error(errorMessage);
-      }
-    };
-
-    // Small delay helps ensure wallet/user state is loaded
-    const timer = setTimeout(verifyTransactionAsync, 800);
-    return () => clearTimeout(timer);
-  }, [dispatch, userId, email, estateId, currentPage, limit]);
-
-  // Table columns for transaction history
   const columns = [
     {
       key: "createdAt",
       header: "Date",
-      render: (item: any) =>
-        formatDateTime(item.createdAt, "-"),
-      exportValue: (item: any) =>
-        formatDateTime(item.createdAt, ""),
+      render: (item: any) => formatDateTime(item.createdAt, "-"),
+      exportValue: (item: any) => formatDateTime(item.createdAt, ""),
     },
     {
       key: "user",
@@ -436,7 +304,6 @@ export default function TransactionPage() {
       render: (item: any) => item.tx_ref ?? "-",
       exportValue: (item: any) => String(item?.tx_ref ?? ""),
     },
-
     {
       key: "type",
       header: "Type",
@@ -473,15 +340,12 @@ export default function TransactionPage() {
     },
   ];
 
-
   const vendsColumns = [
     {
       key: "createdAt",
       header: "Date",
-      render: (item: any) =>
-        formatDateTime(item.createdAt, "-"),
-      exportValue: (item: any) =>
-        formatDateTime(item.createdAt, ""),
+      render: (item: any) => formatDateTime(item.createdAt, "-"),
+      exportValue: (item: any) => formatDateTime(item.createdAt, ""),
     },
     {
       key: "user",
@@ -529,40 +393,25 @@ export default function TransactionPage() {
       exportValue: (item: any) =>
         item.amount != null ? String(item.amount) : "",
     },
-
     {
       key: "netEnergyPrice",
       header: "Price(₦/kWh)",
       render: (item: any) => {
         const e = item?.fullResponse?.energyList?.[0];
-
         const price = Number(e?.price);
         const taxRate = Number(e?.taxRate ?? e?.tax_rate);
-
         if (!Number.isFinite(price)) return "—";
         if (!Number.isFinite(taxRate)) return "—";
-
         const totalAmount = price * (1 + taxRate / 100);
-
         if (!Number.isFinite(totalAmount)) return "—";
-
-        const roundToWhole = (value: number) =>
-          Number.isFinite(value) ? Math.round(value) : "—";
-
-        return roundToWhole(totalAmount);
+        return Number.isFinite(totalAmount) ? Math.round(totalAmount) : "—";
       },
       exportValue: (item: any) => {
         const e = item?.fullResponse?.energyList?.[0];
         const price = Number(e?.price);
         const taxRate = Number(e?.taxRate ?? e?.tax_rate);
-
-        // Keep exports machine-friendly (no commas) while still being resilient
-        // to inconsistent API responses.
-        if (!Number.isFinite(price)) return "";
-        if (!Number.isFinite(taxRate)) return "";
-
+        if (!Number.isFinite(price) || !Number.isFinite(taxRate)) return "";
         const totalAmount = price * (1 + taxRate / 100);
-
         if (!Number.isFinite(totalAmount)) return "";
         return String(Math.round(totalAmount));
       },
@@ -582,7 +431,6 @@ export default function TransactionPage() {
         if (price == null || price === "") return "";
         const n = Number(price);
         if (!Number.isFinite(n)) return "";
-        // clean export value (rounded, no commas)
         return String(Math.round(n));
       },
     },
@@ -626,10 +474,8 @@ export default function TransactionPage() {
     {
       key: "createdAt",
       header: "Date",
-      render: (item: any) =>
-        formatDateTime(item.createdAt, "-"),
-      exportValue: (item: any) =>
-        formatDateTime(item.createdAt, ""),
+      render: (item: any) => formatDateTime(item.createdAt, "-"),
+      exportValue: (item: any) => formatDateTime(item.createdAt, ""),
     },
     {
       key: "user",
@@ -699,7 +545,36 @@ export default function TransactionPage() {
 
   return (
     <div className="space-y-6">
-      <TransactionsPageHeader estateName={estateName} />
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="font-heading text-3xl font-bold">Estate Transactions</h1>
+          <p className="text-muted-foreground mt-1">
+            View transactions for{" "}
+            <span className="text-[18px] font-bold underline uppercase text-black">
+              {estateName}
+            </span>
+            .
+          </p>
+        </div>
+
+        <div className="w-full md:w-64 min-w-[12rem]">
+          <Select
+            options={estateOptions}
+            placeholder="Filter by estate"
+            value={selectedEstate}
+            onChange={(option) => setSelectedEstate(option)}
+            isSearchable
+            isDisabled={!estateOptions.length || estateLoading}
+            styles={{
+              control: (base) => ({ ...base, cursor: "pointer" }),
+              option: (base) => ({ ...base, cursor: "pointer" }),
+              dropdownIndicator: (base) => ({ ...base, cursor: "pointer" }),
+              clearIndicator: (base) => ({ ...base, cursor: "pointer" }),
+            }}
+          />
+        </div>
+      </div>
+
       <TransactionsSearchCard search={search} onSearchChange={setSearch} />
       <TransactionsTabsCard
         activeTab={activeTab}
@@ -709,7 +584,11 @@ export default function TransactionPage() {
             columns={columns}
             data={transactions}
             emptyMessage={
-              loading ? "Loading transactions..." : "No transactions found."
+              !estateOptions.length
+                ? "No estates available."
+                : loading
+                  ? "Loading transactions..."
+                  : "No transactions found."
             }
             showPagination
             paginationInfo={{
@@ -721,12 +600,11 @@ export default function TransactionPage() {
             currentPage={currentPage}
             totalPages={pagination?.totalPages || 1}
             onExportRequest={
-              estateId
+              selectedEstateId
                 ? async () => {
                     const res = await dispatch(
-                      getEstateTransactionHistory({
-                        estateId,
-                        page: 1,
+                      getSuperAdminEstateTransactionHistory({
+                        ...buildHistoryParams(1),
                         limit: 50000,
                       }),
                     ).unwrap();
@@ -740,7 +618,13 @@ export default function TransactionPage() {
           <VendsTab
             columns={vendsColumns}
             data={vendsData}
-            emptyMessage={loadingVends ? "Loading vends..." : "No vends found."}
+            emptyMessage={
+              !estateOptions.length
+                ? "No estates available."
+                : loadingVends
+                  ? "Loading vends..."
+                  : "No vends found."
+            }
             defaultDateRangeDays={0}
             startDate={vendsStartDate}
             endDate={vendsEndDate}
@@ -762,11 +646,11 @@ export default function TransactionPage() {
             }}
             onPageChange={(p: number) => setVendsPage(p)}
             onExportRequest={
-              estateId
+              selectedEstateId
                 ? async () => {
                     const res = await dispatch(
-                      getEstateVends({
-                        estateId,
+                      getSuperAdminEstateVends({
+                        estateId: selectedEstateId,
                         page: 1,
                         limit: 50000,
                         startDate:

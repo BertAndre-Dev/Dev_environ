@@ -28,6 +28,7 @@ import Table from "@/components/tables/list/page";
 import type { WalletData } from "@/redux/slice/resident/wallet-mgt/wallet-mgt-slice";
 import Loader from "@/components/ui/Loader";
 import { ResidentWalletCard } from "@/components/resident/wallet/ResidentWalletCard";
+import { formatDateTime } from "@/lib/format-date";
 
 interface TransactionData {
   walletId: string;
@@ -377,7 +378,7 @@ export default function TransactionPage() {
       key: "createdAt",
       header: "Date",
       render: (item: any) =>
-        item.createdAt ? new Date(item.createdAt).toLocaleString() : "-",
+        formatDateTime(item.createdAt, "-"),
     },
     {
       key: "type",

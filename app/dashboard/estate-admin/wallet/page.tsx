@@ -23,6 +23,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import Table from "@/components/tables/list/page";
 import type { EstateCreditItem } from "@/redux/slice/estate-admin/wallet-mgt/wallet-mgt-slice";
+import { formatDateTime } from "@/lib/format-date";
 import { TransactionsFilterBar } from "@/components/super-admin/transactions-filter-bar";
 
 const LIMIT = 10;
@@ -237,15 +238,7 @@ export default function EstateAdminWalletPage() {
       key: "createdAt",
       header: "Date",
       render: (item: ExtendedEstateCreditItem): React.ReactNode =>
-        item.createdAt
-          ? new Date(item.createdAt).toLocaleString("en-NG", {
-              year: "numeric",
-              month: "short",
-              day: "2-digit",
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          : "—",
+        formatDateTime(item.createdAt),
     },
     {
       key: "amount",

@@ -45,11 +45,7 @@ export function resolveProviderPayout(row: EnergyProviderVendRow): number | null
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-export function formatVendDate(value?: string): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString();
-}
+export { formatDateTime as formatVendDate } from "@/lib/format-date";
 
 export function vendResidentName(row: EnergyProviderVendRow): string {
   const user = row.user;

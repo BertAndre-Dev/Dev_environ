@@ -81,7 +81,13 @@ export const updateBill = createAsyncThunk(
     { rejectWithValue },
   ) => {
     try {
-      const res = await axiosInstance.put(`/api/v1/bills-mgt/${billId}`, data);
+      const { estateId, name, description, yearlyAmount } = data;
+      const res = await axiosInstance.put(`/api/v1/bills-mgt/${billId}`, {
+        estateId,
+        name,
+        description,
+        yearlyAmount,
+      });
       return res.data;
     } catch (error: any) {
       return rejectWithValue({

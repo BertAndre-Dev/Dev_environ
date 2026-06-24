@@ -86,7 +86,9 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const payload: BillSubmitData = {
-      ...formData,
+      estateId: formData.estateId,
+      name: formData.name,
+      description: formData.description,
       yearlyAmount: parseFormattedNumber(formData.yearlyAmount),
     };
     onSubmit(payload);

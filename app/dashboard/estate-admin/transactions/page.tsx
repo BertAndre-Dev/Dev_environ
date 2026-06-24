@@ -22,6 +22,7 @@ import {
 import { HistoryTransactionsTab } from "./components/HistoryTransactionsTab";
 import { VendsTab } from "./components/VendsTab";
 import { PaidBillsTab } from "./components/PaidBillsTab";
+import { formatDateTime } from "@/lib/format-date";
 
 interface TransactionData {
   walletId: string;
@@ -403,9 +404,9 @@ export default function TransactionPage() {
       key: "createdAt",
       header: "Date",
       render: (item: any) =>
-        item.createdAt ? new Date(item.createdAt).toLocaleString() : "-",
+        formatDateTime(item.createdAt, "-"),
       exportValue: (item: any) =>
-        item.createdAt ? new Date(item.createdAt).toLocaleString() : "",
+        formatDateTime(item.createdAt, ""),
     },
     {
       key: "user",
@@ -478,9 +479,9 @@ export default function TransactionPage() {
       key: "createdAt",
       header: "Date",
       render: (item: any) =>
-        item.createdAt ? new Date(item.createdAt).toLocaleString() : "-",
+        formatDateTime(item.createdAt, "-"),
       exportValue: (item: any) =>
-        item.createdAt ? new Date(item.createdAt).toLocaleString() : "",
+        formatDateTime(item.createdAt, ""),
     },
     {
       key: "user",
@@ -626,9 +627,9 @@ export default function TransactionPage() {
       key: "createdAt",
       header: "Date",
       render: (item: any) =>
-        item.createdAt ? new Date(item.createdAt).toLocaleString() : "-",
+        formatDateTime(item.createdAt, "-"),
       exportValue: (item: any) =>
-        item.createdAt ? new Date(item.createdAt).toLocaleString() : "",
+        formatDateTime(item.createdAt, ""),
     },
     {
       key: "user",

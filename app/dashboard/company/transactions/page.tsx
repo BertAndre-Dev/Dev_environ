@@ -29,6 +29,7 @@ import {
 import { HistoryTransactionsTab } from "@/app/dashboard/estate-admin/transactions/components/HistoryTransactionsTab";
 import { VendsTab } from "@/app/dashboard/estate-admin/transactions/components/VendsTab";
 import { PaidBillsTab } from "@/app/dashboard/estate-admin/transactions/components/PaidBillsTab";
+import { formatDateTime } from "@/lib/format-date";
 
 interface EstateOption {
   label: string;
@@ -378,9 +379,9 @@ export default function CompanyTransactionPage() {
       key: "createdAt",
       header: "Date",
       render: (item: any) =>
-        item.createdAt ? new Date(item.createdAt).toLocaleString() : "-",
+        formatDateTime(item.createdAt, "-"),
       exportValue: (item: any) =>
-        item.createdAt ? new Date(item.createdAt).toLocaleString() : "",
+        formatDateTime(item.createdAt, ""),
     },
     {
       key: "user",
@@ -454,9 +455,9 @@ export default function CompanyTransactionPage() {
       key: "createdAt",
       header: "Date",
       render: (item: any) =>
-        item.createdAt ? new Date(item.createdAt).toLocaleString() : "-",
+        formatDateTime(item.createdAt, "-"),
       exportValue: (item: any) =>
-        item.createdAt ? new Date(item.createdAt).toLocaleString() : "",
+        formatDateTime(item.createdAt, ""),
     },
     {
       key: "user",
@@ -585,9 +586,9 @@ export default function CompanyTransactionPage() {
       key: "createdAt",
       header: "Date",
       render: (item: any) =>
-        item.createdAt ? new Date(item.createdAt).toLocaleString() : "-",
+        formatDateTime(item.createdAt, "-"),
       exportValue: (item: any) =>
-        item.createdAt ? new Date(item.createdAt).toLocaleString() : "",
+        formatDateTime(item.createdAt, ""),
     },
     {
       key: "user",

@@ -15,6 +15,7 @@ import { TotalTransactionsCard } from "./components/TotalTransactionsCard";
 import { TransactionsSearchCard } from "./components/TransactionsSearchCard";
 import { TransactionsTableCard } from "./components/TransactionsTableCard";
 import Loader from "@/components/ui/Loader";
+import { formatDateTime } from "@/lib/format-date";
 
 const PAGE_SIZE = 10;
 
@@ -138,7 +139,7 @@ export default function SuperAdminTransactionsPage() {
       if (format === "csv") {
         const header = ["Date","Type","Amount","Status","Resident Name","Estate","Description","Reference"];
         const csvRows = rows.map((item) => {
-          const date = new Date(item.createdAt).toISOString();
+          const date = formatDateTime(item.createdAt, "");
           const name = item.user
             ? `${item.user.firstName || ""} ${item.user.lastName || ""}`.trim()
             : "";
@@ -169,7 +170,7 @@ export default function SuperAdminTransactionsPage() {
         const printWindow = window.open("", "_blank");
         if (!printWindow) return;
         const tableRows = rows.map((item) => {
-          const date = new Date(item.createdAt).toLocaleString();
+          const date = formatDateTime(item.createdAt, "");
           const name = item.user
             ? `${item.user.firstName || ""} ${item.user.lastName || ""}`.trim() : "";
           return `<tr>
@@ -199,7 +200,7 @@ export default function SuperAdminTransactionsPage() {
     {
       key: "createdAt",
       header: "Date",
-      render: (item: any) => new Date(item.createdAt).toLocaleString(),
+      render: (item: any) => formatDateTime(item.createdAt, "-"),
     },
     {
       key: "residentEstate",
@@ -304,7 +305,7 @@ export default function SuperAdminTransactionsPage() {
       >
       <div className="flex flex-col">
         <h1 className="font-heading text-3xl font-bold">Transactions</h1>
-        <p className="text-muted-foreground">Overview of transactions</p>
+        <p className="text-muted-foreground">Overview of all transactions</p>
       </div>
 
       {/* ✅ Uses local grandTotalAmount state, not Redux — no overwrite risk */}

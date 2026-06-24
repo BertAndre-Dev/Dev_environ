@@ -10,6 +10,7 @@ import {
 import { Badge } from "@/components/badge/page"
 import { Button } from "@/components/ui/button"
 import { CheckCircle } from "lucide-react"
+import { formatDateTime } from "@/lib/format-date"
 
 interface Transaction {
   id?: string
@@ -44,9 +45,6 @@ export function TransactionDetailsDialog({
       style: "currency",
       currency: "NGN",
     }).format(amount ?? 0)
-
-  const formatDate = (date?: string) =>
-    date ? new Date(date).toLocaleString() : "-"
 
   const getStatusVariant = (
     status?: string
@@ -116,7 +114,7 @@ export function TransactionDetailsDialog({
 
               <DetailItem
                 label="Created At"
-                value={formatDate(transaction.createdAt)}
+                value={formatDateTime(transaction.createdAt, "-")}
               />
             </div>
             {onVerify && transaction.tx_ref && (

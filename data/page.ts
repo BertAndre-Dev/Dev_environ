@@ -478,6 +478,12 @@ export const estateAdminNav = [
     path: "/dashboard/estate-admin/chat",
     moduleKey: "chat",
   },
+  {
+    label: "Announcements",
+    icon: Bell,
+    path: "/dashboard/estate-admin/announcements",
+    moduleKey: "announcements",
+  },
   { label: "Settings", icon: FiSettings, path: "/dashboard/settings" },
   { label: "Logout", icon: FiLogOut },
 ];

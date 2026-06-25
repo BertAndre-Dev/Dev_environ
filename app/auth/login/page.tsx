@@ -75,7 +75,7 @@ export default function LoginPage() {
         } else if (role === "company") {
           router.push("/dashboard/company/asset");
         } else if (role === "energy provider") {
-          router.push("/dashboard/energy-provider/energy");
+          router.push("/dashboard/energy-provider/wallet");
         } else if (role === "staff") {
           router.push("/dashboard/staff/maintenance");
         } else {

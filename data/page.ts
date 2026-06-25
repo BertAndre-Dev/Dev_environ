@@ -122,12 +122,6 @@ export const energyProviderNav = [
     moduleKey: "wallet",
   },
   {
-    label: "Energy Management",
-    icon: IoSpeedometerOutline,
-    path: "/dashboard/energy-provider/meter",
-    moduleKey: "meter",
-  },
-  {
     label: "Settings",
     icon: FiSettings,
     path: "/dashboard/settings",

@@ -99,6 +99,7 @@ import energyProviderVendsSliceReducer from "@/redux/slice/energy-provider/vends
 import companyEnergyProviderConfigSliceReducer from "@/redux/slice/company/energy-provider-config/company-energy-provider-config-slice";
 import companyEnergyProviderVendsSliceReducer from "@/redux/slice/company/energy-provider-vends/company-energy-provider-vends-slice";
 import energyProviderTransactionSliceReducer from "@/redux/slice/energy-provider/transaction/energy-provider-transaction-slice";
+import energyProviderWalletSliceReducer from "@/redux/slice/energy-provider/wallet-mgt/energy-provider-wallet-mgt-slice";
 
 const persistConfig = {
   key: "root",
@@ -356,6 +357,7 @@ export const store = configureStore({
     companyEnergyProviderConfig: companyEnergyProviderConfigSliceReducer,
     companyEnergyProviderVends: companyEnergyProviderVendsSliceReducer,
     energyProviderTransaction: energyProviderTransactionSliceReducer,
+    energyProviderWallet: energyProviderWalletSliceReducer,
     [mapsApi.reducerPath]: mapsApi.reducer,
   },
 

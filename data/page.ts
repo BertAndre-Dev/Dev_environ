@@ -57,7 +57,7 @@ export const superAdminNav = [
     path: "/dashboard/super-admin/company",
   },
     {
-    label: "Energy Provider Management",
+    label: "Energy Provider",
     icon: IoSpeedometerOutline,
     path: "/dashboard/super-admin/energy-provider",
   },
@@ -120,12 +120,6 @@ export const energyProviderNav = [
     icon: Wallet,
     path: "/dashboard/energy-provider/wallet",
     moduleKey: "wallet",
-  },
-  {
-    label: "Energy Management",
-    icon: IoSpeedometerOutline,
-    path: "/dashboard/energy-provider/meter",
-    moduleKey: "meter",
   },
   {
     label: "Settings",
@@ -193,7 +187,7 @@ export const companyNav = [
     moduleKey: "users",
   },
   {
-    label: "Energy Provider Management",
+    label: "Energy Provider",
     icon: IoSpeedometerOutline,
     path: "/dashboard/company/energy-provider",
   },

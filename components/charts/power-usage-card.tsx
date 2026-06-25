@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useMemo, type ReactNode } from "react";
+import { Download } from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -12,7 +13,9 @@ import {
 } from "recharts";
 
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
+  exportPowerUsageToCsv,
   formatPowerUsageKwh,
   type PowerUsageDataPoint,
 } from "@/lib/power-usage-chart";
@@ -30,6 +33,8 @@ export interface PowerUsageCardProps {
   readonly emptyMessage?: string;
   readonly headerActions?: ReactNode;
   readonly subtitle?: string;
+  readonly exportFileName?: string;
+  readonly showDownload?: boolean;
 }
 
 const STROKE_COLOR = "#0150AC";
@@ -77,6 +82,8 @@ export function PowerUsageCard({
   emptyMessage = "No energy usage data to display",
   headerActions,
   subtitle,
+  exportFileName = "energy_usage",
+  showDownload = true,
 }: PowerUsageCardProps) {
   const gradientId = useId().replaceAll(":", "");
 
@@ -95,6 +102,15 @@ export function PowerUsageCard({
     }
     return ticks;
   }, [yMax]);
+
+  const canDownload = showDownload && !loading && hasChartData;
+
+  const handleDownload = () => {
+    exportPowerUsageToCsv(data, {
+      fileName: exportFileName,
+      totalUsageKwh: resolvedTotal,
+    });
+  };
 
   return (
     <Card
@@ -118,9 +134,23 @@ export function PowerUsageCard({
             <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
           ) : null}
         </div>
-        {headerActions ? (
+        {(headerActions || showDownload) ? (
           <div className="flex shrink-0 flex-wrap items-center gap-2 self-start">
             {headerActions}
+            {showDownload ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!canDownload}
+                onClick={handleDownload}
+                className="shrink-0"
+                title="Download energy usage data"
+                aria-label="Download energy usage data"
+              >
+                <Download className="size-4" />
+              </Button>
+            ) : null}
           </div>
         ) : null}
       </div>

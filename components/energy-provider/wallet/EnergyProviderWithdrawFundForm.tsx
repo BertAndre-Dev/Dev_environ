@@ -9,11 +9,11 @@ import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "@/redux/store";
 import {
-  getCompanyCredits,
-  getCompanyWallet,
-  requestCompanyWithdrawOtp,
-  transferCompanyFunds,
-} from "@/redux/slice/company/wallet-mgt/company-wallet-mgt";
+  getEnergyProviderCredits,
+  getEnergyProviderWallet,
+  requestEnergyProviderWithdrawOtp,
+  transferEnergyProviderFunds,
+} from "@/redux/slice/energy-provider/wallet-mgt/energy-provider-wallet-mgt";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import OtpVerification from "@/components/otp-modal/otp-verification/page";
 
@@ -27,34 +27,33 @@ function createTxRef(): string {
   return `tx-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
-interface CompanyWithdrawFundFormProps {
+interface EnergyProviderWithdrawFundFormProps {
   userId: string;
   walletId: string;
-  companyId: string;
-  estateId?: string;
+  estateId: string;
   defaultAccountNumber?: string;
   bankCode?: string;
   bankName?: string;
   maxWithdrawableAmount?: number;
-  /** Service charge applied on withdrawal. */
-  serviceFee?: number;
   creditsPage?: number;
+  sortBy?: "amount" | "date";
+  sortOrder?: "asc" | "desc";
   onClose?: () => void;
 }
 
-export default function CompanyWithdrawFundForm({
+export default function EnergyProviderWithdrawFundForm({
   userId,
   walletId,
-  companyId,
   estateId,
   defaultAccountNumber = "",
   bankCode,
   bankName,
   maxWithdrawableAmount,
-  serviceFee = 2000,
   creditsPage = 1,
+  sortBy = "date",
+  sortOrder = "desc",
   onClose,
-}: CompanyWithdrawFundFormProps) {
+}: EnergyProviderWithdrawFundFormProps) {
   const dispatch = useDispatch<AppDispatch>();
   const [amount, setAmount] = useState<number>();
   const [accountNumber, setAccountNumber] =
@@ -92,22 +91,28 @@ export default function CompanyWithdrawFundForm({
   }, [dispatch]);
 
   const refreshWalletData = async () => {
-    await dispatch(getCompanyWallet(companyId));
+    await dispatch(getEnergyProviderWallet(userId));
     await dispatch(
-      getCompanyCredits({
-        companyId,
+      getEnergyProviderCredits({
+        userId,
         estateId,
         page: creditsPage,
         limit: CREDITS_LIMIT,
+        sortBy,
+        sortOrder,
       }),
     );
   };
 
+  const buildNarration = (value: number) =>
+    description ||
+    `Withdrawal of ${DEFAULT_CURRENCY} ${value.toLocaleString()}`;
+
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
 
-    if (!userId || !walletId || !companyId) {
-      toast.error("Missing user or wallet information.");
+    if (!userId || !walletId || !estateId) {
+      toast.error("Missing user, estate, or wallet information.");
       return;
     }
 
@@ -143,15 +148,13 @@ export default function CompanyWithdrawFundForm({
       setTxRef(tx_ref);
 
       await dispatch(
-        requestCompanyWithdrawOtp({
-          companyId,
+        requestEnergyProviderWithdrawOtp({
+          estateId,
           amount,
           currency: DEFAULT_CURRENCY,
           bankCode,
           accountNumber,
-          narration:
-            description ||
-            `Withdrawal of ${DEFAULT_CURRENCY} ${amount.toLocaleString()}`,
+          narration: buildNarration(amount),
           tx_ref,
         }),
       ).unwrap();
@@ -184,15 +187,13 @@ export default function CompanyWithdrawFundForm({
 
     try {
       await dispatch(
-        transferCompanyFunds({
-          companyId,
+        transferEnergyProviderFunds({
+          estateId,
           amount: amount ?? 0,
           currency: DEFAULT_CURRENCY,
           bankCode: bankCode ?? "",
           accountNumber,
-          narration:
-            description ||
-            `Withdrawal of ${DEFAULT_CURRENCY} ${(amount ?? 0).toLocaleString()}`,
+          narration: buildNarration(amount ?? 0),
           tx_ref: txRef,
           otp: code,
         }),
@@ -222,15 +223,13 @@ export default function CompanyWithdrawFundForm({
 
     try {
       await dispatch(
-        requestCompanyWithdrawOtp({
-          companyId,
+        requestEnergyProviderWithdrawOtp({
+          estateId,
           amount: amount ?? 0,
           currency: DEFAULT_CURRENCY,
           bankCode: bankCode ?? "",
           accountNumber,
-          narration:
-            description ||
-            `Withdrawal of ${DEFAULT_CURRENCY} ${(amount ?? 0).toLocaleString()}`,
+          narration: buildNarration(amount ?? 0),
           tx_ref: txRef,
         }),
       ).unwrap();
@@ -265,12 +264,6 @@ export default function CompanyWithdrawFundForm({
                   placeholder="Enter amount"
                   required
                 />
-                {Number(amount) > 0 && serviceFee > 0 && (
-                  <p className="text-red-600 text-sm mt-1.5">
-                    A service charge of ₦{serviceFee.toLocaleString()} will be
-                    applied.
-                  </p>
-                )}
               </div>
 
               <div>

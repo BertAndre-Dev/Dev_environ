@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
 import Image from "next/image";
 
 interface ModalProps {
@@ -60,6 +59,7 @@ const Modal: React.FC<ModalProps> = ({
               className="
                 absolute
                 cursor-pointer
+                hover:cursor-pointer
                 top-2
                 right-4
                 bg-[#d0dff2]
@@ -75,11 +75,20 @@ const Modal: React.FC<ModalProps> = ({
               "
               aria-label="Close modal"
             >
-              <X
-                className="w-5 h-5 text-gray-600 cursor-pointer hover:cursor-pointer hover:text-gray-800 "
-                aria-label="Close modal"
-                onClick={onClose}
-              />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
             </button>
             <div className="relative w-full min-w-0">
               {/* subtle center watermark */}

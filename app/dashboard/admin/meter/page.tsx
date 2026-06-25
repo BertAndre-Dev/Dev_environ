@@ -354,6 +354,7 @@ export default function AdminMeterManagement() {
         .replace(/([A-Z])/g, " $1")
         .replace(/^./, (c) => c.toUpperCase()),
       render: (item: AdminMeterData) => item.addressId?.data?.[key] ?? "-",
+      exportValue: (item: AdminMeterData) => item.addressId?.data?.[key] ?? "",
     }));
   };
 
@@ -394,8 +395,8 @@ export default function AdminMeterManagement() {
     {
       key: "actions",
       header: "Assign Meter",
+      exportable: false,
       render: (item: AdminMeterData) => (
-        <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="sm"
@@ -405,17 +406,19 @@ export default function AdminMeterManagement() {
           >
             <Link className="w-4 h-4 text-blue-600" />
           </Button>
-        </div>
       ),
     },
     {
       key: "energyUsage",
       header: "Energy Usage",
+      exportable: false,
       render: (item: AdminMeterData) => (
         <Button
           variant="ghost"
           size="sm"
           onClick={() => handleOpenUsageModal(item)}
+          className="cursor-pointer hover:bg-emerald-100"
+          title="View energy usage"
         >
           <Eye className="w-4 h-4 text-emerald-600" />
         </Button>

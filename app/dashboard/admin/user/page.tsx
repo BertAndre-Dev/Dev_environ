@@ -232,6 +232,21 @@ export default function AdminUserPage() {
     return Array.from(keys);
   };
 
+  const formatAddressFieldValue = (
+    item: AdminUserData,
+    key: string,
+  ): string => {
+    if (!item.addressIds?.length) return "";
+
+    const values = item.addressIds
+      .map((address) => address?.data?.[key])
+      .filter((value): value is string => Boolean(value));
+
+    if (!values.length) return "";
+
+    return Array.from(new Set(values)).join(", ");
+  };
+
   const getAddressColumns = (data: AdminUserData[]) => {
     if (!data.length) return [];
 
@@ -242,19 +257,8 @@ export default function AdminUserPage() {
       header: key
         .replace(/([A-Z])/g, " $1")
         .replace(/^./, (c) => c.toUpperCase()),
-      render: (item: AdminUserData) => {
-        if (!item.addressIds?.length) return "-";
-
-        const values = item.addressIds
-          .map((address) => address?.data?.[key])
-          .filter((value): value is string => Boolean(value));
-
-        if (!values.length) return "-";
-
-        // Deduplicate in case the same value appears across multiple addresses
-        const uniqueValues = Array.from(new Set(values));
-        return uniqueValues.join(", ");
-      },
+      render: (item: AdminUserData) => formatAddressFieldValue(item, key) || "-",
+      exportValue: (item: AdminUserData) => formatAddressFieldValue(item, key),
     }));
   };
 
@@ -305,6 +309,7 @@ export default function AdminUserPage() {
     {
       key: "actions",
       header: "Actions",
+      exportable: false,
       render: (item: AdminUserData) => (
         <div className="flex items-center gap-1">
           {item.isActive ? (

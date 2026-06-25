@@ -395,7 +395,6 @@ export default function AdminMeterManagement() {
       key: "actions",
       header: "Assign Meter",
       render: (item: AdminMeterData) => (
-        <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="sm"
@@ -405,7 +404,6 @@ export default function AdminMeterManagement() {
           >
             <Link className="w-4 h-4 text-blue-600" />
           </Button>
-        </div>
       ),
     },
     {
@@ -416,6 +414,8 @@ export default function AdminMeterManagement() {
           variant="ghost"
           size="sm"
           onClick={() => handleOpenUsageModal(item)}
+          className="cursor-pointer hover:bg-emerald-100"
+          title="View energy usage"
         >
           <Eye className="w-4 h-4 text-emerald-600" />
         </Button>

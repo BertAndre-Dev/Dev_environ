@@ -16,6 +16,21 @@ export interface GetEnergyProviderCreditsParams {
   sortOrder?: "asc" | "desc";
 }
 
+export interface EnergyProviderWithdrawOtpPayload {
+  estateId: string;
+  amount: number;
+  currency: string;
+  bankCode: string;
+  accountNumber: string;
+  narration: string;
+  tx_ref: string;
+}
+
+export interface EnergyProviderTransferPayload
+  extends EnergyProviderWithdrawOtpPayload {
+  otp: string;
+}
+
 function getErrorMessage(error: unknown, fallback: string) {
   const err = error as { response?: { data?: { message?: string | string[] } } };
   const msg = err?.response?.data?.message;
@@ -88,6 +103,42 @@ export const getEnergyProviderCredits = createAsyncThunk(
     } catch (error: unknown) {
       return rejectWithValue({
         message: getErrorMessage(error, "Failed to fetch wallet history"),
+      });
+    }
+  },
+);
+
+/** POST /api/v1/payment-mgt/energy-provider/request-otp */
+export const requestEnergyProviderWithdrawOtp = createAsyncThunk(
+  "energy-provider-wallet-mgt/requestWithdrawOtp",
+  async (data: EnergyProviderWithdrawOtpPayload, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.post(
+        "/api/v1/payment-mgt/energy-provider/request-otp",
+        data,
+      );
+      return res.data;
+    } catch (error: unknown) {
+      return rejectWithValue({
+        message: getErrorMessage(error, "Failed to request transfer OTP"),
+      });
+    }
+  },
+);
+
+/** POST /api/v1/payment-mgt/energy-provider/transfer */
+export const transferEnergyProviderFunds = createAsyncThunk(
+  "energy-provider-wallet-mgt/transferFunds",
+  async (data: EnergyProviderTransferPayload, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.post(
+        "/api/v1/payment-mgt/energy-provider/transfer",
+        data,
+      );
+      return res.data;
+    } catch (error: unknown) {
+      return rejectWithValue({
+        message: getErrorMessage(error, "Failed to transfer funds"),
       });
     }
   },

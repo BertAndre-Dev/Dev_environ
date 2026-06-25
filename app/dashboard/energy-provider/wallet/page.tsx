@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import Modal from "@/components/modal/page";
 import Table from "@/components/tables/list/page";
 import EstateWalletOverviewCard from "@/components/estate-admin/wallet-overview-card/page";
+import EnergyProviderWithdrawFundForm from "@/components/energy-provider/wallet/EnergyProviderWithdrawFundForm";
 import { formatDateTime } from "@/lib/format-date";
 import {
   extractEstateIdFromUser,
@@ -54,6 +55,7 @@ function dedupeBanksByCode(banks: BankItem[]): BankItem[] {
 
 export default function EnergyProviderWalletPage() {
   const dispatch = useDispatch<AppDispatch>();
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [createWalletModalOpen, setCreateWalletModalOpen] = useState(false);
   const [createWalletAccountNumber, setCreateWalletAccountNumber] =
     useState("");
@@ -267,6 +269,23 @@ export default function EnergyProviderWalletPage() {
   const pageSize =
     typeof pag?.limit === "number" ? pag.limit : Number(pag?.limit) || LIMIT;
 
+  const walletBankName =
+    wallet?.bankCode
+      ? (bankOptions.find((b) => b.code === wallet.bankCode)?.name ?? "")
+      : "";
+
+  const handleOpenWithdraw = () => {
+    if (!wallet) {
+      toast.warning("Create a wallet before withdrawing funds.");
+      return;
+    }
+    if (!estateId) {
+      toast.error("No estate linked to your account.");
+      return;
+    }
+    setWithdrawOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -282,9 +301,7 @@ export default function EnergyProviderWalletPage() {
 
       <EstateWalletOverviewCard
         wallet={wallet}
-        onWithdraw={() =>
-          toast.info("Withdrawal for energy providers is not available yet.")
-        }
+        onWithdraw={handleOpenWithdraw}
         onCreateWallet={() => setCreateWalletModalOpen(true)}
         createWalletLoading={createWalletState === "isLoading"}
       />
@@ -371,6 +388,30 @@ export default function EnergyProviderWalletPage() {
           }
         />
       </Card>
+
+      <Modal visible={withdrawOpen} onClose={() => setWithdrawOpen(false)}>
+        <div className="bg-white rounded-md shadow-md w-full max-w-md mx-auto">
+          {userId && wallet && estateId ? (
+            <EnergyProviderWithdrawFundForm
+              userId={userId}
+              walletId={wallet.id ?? ""}
+              estateId={estateId}
+              defaultAccountNumber={wallet.accountNumber ?? ""}
+              bankCode={wallet.bankCode ?? ""}
+              bankName={walletBankName}
+              maxWithdrawableAmount={
+                wallet.withdrawableBalance ?? wallet.temporaryBalance ?? 0
+              }
+              creditsPage={creditsPage}
+              sortBy={sortBy}
+              sortOrder={sortOrder}
+              onClose={() => setWithdrawOpen(false)}
+            />
+          ) : (
+            <p className="text-center text-gray-500 p-6">Loading form...</p>
+          )}
+        </div>
+      </Modal>
 
       <Modal visible={createWalletModalOpen} onClose={handleCloseCreateWalletModal}>
         <div className="rounded-md shadow-md w-full max-w-md mx-auto mt-12 pb-8 px-4">

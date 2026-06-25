@@ -3,6 +3,8 @@ import {
   createEnergyProviderWallet,
   getEnergyProviderWallet,
   getEnergyProviderCredits,
+  requestEnergyProviderWithdrawOtp,
+  transferEnergyProviderFunds,
 } from "./energy-provider-wallet-mgt";
 
 export interface EnergyProviderWalletData {
@@ -51,6 +53,8 @@ export interface EnergyProviderWalletState {
   createWalletState: "idle" | "isLoading" | "succeeded" | "failed";
   getWalletState: "idle" | "isLoading" | "succeeded" | "failed";
   getCreditsState: "idle" | "isLoading" | "succeeded" | "failed";
+  requestOtpState: "idle" | "isLoading" | "succeeded" | "failed";
+  transferFundsState: "idle" | "isLoading" | "succeeded" | "failed";
   wallet: EnergyProviderWalletData | null;
   credits: EnergyProviderCreditsResponse | null;
   error: string | null;
@@ -60,6 +64,8 @@ const initialState: EnergyProviderWalletState = {
   createWalletState: "idle",
   getWalletState: "idle",
   getCreditsState: "idle",
+  requestOtpState: "idle",
+  transferFundsState: "idle",
   wallet: null,
   credits: null,
   error: null,
@@ -128,6 +134,34 @@ const energyProviderWalletSlice = createSlice({
           (action.payload as { message?: string })?.message ??
           action.error.message ??
           "Failed to fetch wallet history";
+      })
+
+      .addCase(requestEnergyProviderWithdrawOtp.pending, (state) => {
+        state.requestOtpState = "isLoading";
+      })
+      .addCase(requestEnergyProviderWithdrawOtp.fulfilled, (state) => {
+        state.requestOtpState = "succeeded";
+      })
+      .addCase(requestEnergyProviderWithdrawOtp.rejected, (state, action) => {
+        state.requestOtpState = "failed";
+        state.error =
+          (action.payload as { message?: string })?.message ??
+          action.error.message ??
+          null;
+      })
+
+      .addCase(transferEnergyProviderFunds.pending, (state) => {
+        state.transferFundsState = "isLoading";
+      })
+      .addCase(transferEnergyProviderFunds.fulfilled, (state) => {
+        state.transferFundsState = "succeeded";
+      })
+      .addCase(transferEnergyProviderFunds.rejected, (state, action) => {
+        state.transferFundsState = "failed";
+        state.error =
+          (action.payload as { message?: string })?.message ??
+          action.error.message ??
+          null;
       });
   },
 });

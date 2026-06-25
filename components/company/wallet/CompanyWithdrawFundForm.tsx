@@ -9,7 +9,6 @@ import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "@/redux/store";
 import {
-  createCompanyWithdrawAudit,
   getCompanyCredits,
   getCompanyWallet,
   requestCompanyWithdrawOtp,
@@ -18,9 +17,15 @@ import {
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import OtpVerification from "@/components/otp-modal/otp-verification/page";
 
-const DEFAULT_COUNTRY = "NG";
 const DEFAULT_CURRENCY = "NGN";
 const CREDITS_LIMIT = 10;
+
+function createTxRef(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return `tx-${crypto.randomUUID()}`;
+  }
+  return `tx-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
 
 interface CompanyWithdrawFundFormProps {
   userId: string;
@@ -134,29 +139,7 @@ export default function CompanyWithdrawFundForm({
     setSubmitting(true);
 
     try {
-      const createRes = await dispatch(
-        createCompanyWithdrawAudit({
-          walletId,
-          type: "debit",
-          amount,
-          description,
-          userId,
-          role: "company",
-          balanceType: "withdrawableBalance",
-          isAuditOnly: true,
-        }),
-      ).unwrap();
-
-      const resBody = createRes as Record<string, unknown> | undefined;
-      const resData = resBody?.data as Record<string, unknown> | undefined;
-      let tx_ref =
-        (resData?.tx_ref as string) ?? (resBody?.tx_ref as string) ?? "";
-      if (!tx_ref && typeof crypto !== "undefined" && crypto.randomUUID) {
-        tx_ref = `tx-${crypto.randomUUID()}`;
-      }
-      if (!tx_ref) {
-        tx_ref = `tx-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-      }
+      const tx_ref = createTxRef();
       setTxRef(tx_ref);
 
       await dispatch(

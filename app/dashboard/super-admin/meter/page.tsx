@@ -103,6 +103,10 @@ function getAddressColumns(data: AdminMeterData[]) {
       if (value == null || String(value).trim() === "") return "—";
       return String(value);
     },
+    exportValue: (item: AdminMeterData) => {
+      const value = toAddressData(item.addressId)?.[key];
+      return value == null ? "" : String(value);
+    },
   }));
 }
 

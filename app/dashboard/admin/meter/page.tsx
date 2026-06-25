@@ -354,6 +354,7 @@ export default function AdminMeterManagement() {
         .replace(/([A-Z])/g, " $1")
         .replace(/^./, (c) => c.toUpperCase()),
       render: (item: AdminMeterData) => item.addressId?.data?.[key] ?? "-",
+      exportValue: (item: AdminMeterData) => item.addressId?.data?.[key] ?? "",
     }));
   };
 
@@ -394,6 +395,7 @@ export default function AdminMeterManagement() {
     {
       key: "actions",
       header: "Assign Meter",
+      exportable: false,
       render: (item: AdminMeterData) => (
           <Button
             variant="ghost"
@@ -409,6 +411,7 @@ export default function AdminMeterManagement() {
     {
       key: "energyUsage",
       header: "Energy Usage",
+      exportable: false,
       render: (item: AdminMeterData) => (
         <Button
           variant="ghost"

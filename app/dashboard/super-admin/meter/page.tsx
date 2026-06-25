@@ -6,14 +6,22 @@ import Modal from "@/components/modal/page";
 import Table from "@/components/tables/list/page";
 import { toast } from "react-toastify";
 import { RootState, AppDispatch } from "@/redux/store";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import Select from "react-select";
 import { Plus, Search, Trash, Eye } from "lucide-react";
 import { MeterEnergyUsageSection } from "@/components/charts/meter-energy-usage-section";
+import { EstatePowerUsageSection } from "@/components/charts/estate-power-usage-section";
+import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
+import type { EnergyConsumptionPeriod } from "@/lib/energy-consumption-chart";
+import type { EstateEnergyUsageRange } from "@/lib/estate-energy-usage-chart";
+import Tab from "@/components/tabs/page";
 import {
   getMeterUsage,
   type MeterUsageRange,
 } from "@/redux/slice/resident/meter-mgt/meter-mgt";
+import { getSuperAdminEnergyConsumptionChart } from "@/redux/slice/super-admin/energy-consumption/super-admin-energy-consumption";
+import { getSuperAdminEstateEnergyUsage } from "@/redux/slice/super-admin/estate-energy-usage/super-admin-estate-energy-usage";
 import {
   deleteMeter,
   getAllMeters,
@@ -98,6 +106,10 @@ function getAddressColumns(data: AdminMeterData[]) {
   }));
 }
 
+type EstateOption = { label: string; value: string };
+
+const METER_TAB_TITLES = ["Chart Overview", "Meter Management"] as const;
+
 export default function AdminMeterManagement() {
   const dispatch = useDispatch<AppDispatch>();
   const [open, setOpen] = useState(false);
@@ -114,6 +126,12 @@ export default function AdminMeterManagement() {
   );
   const [meterUsageRange, setMeterUsageRange] =
     useState<MeterUsageRange>("weekly");
+  const [estatesLoading, setEstatesLoading] = useState(true);
+  const [selectedChartEstateId, setSelectedChartEstateId] = useState("");
+  const [usageRange, setUsageRange] = useState<EstateEnergyUsageRange>("weekly");
+  const [usageRefreshing, setUsageRefreshing] = useState(false);
+  const [energyPeriod, setEnergyPeriod] =
+    useState<EnergyConsumptionPeriod>("weekly");
   const [estateNameById, setEstateNameById] = useState<Record<string, string>>(
     {},
   );
@@ -144,6 +162,42 @@ export default function AdminMeterManagement() {
     }),
   );
 
+  const { energyConsumptionChart, energyChartLoading } = useSelector(
+    (state: RootState) => ({
+      energyConsumptionChart: state.superAdminEnergyConsumption.chart,
+      energyChartLoading:
+        state.superAdminEnergyConsumption.chartStatus === "isLoading",
+    }),
+  );
+
+  const {
+    estateEnergyUsage,
+    estateEnergyUsageLoading,
+    estateEnergyUsageProgress,
+    estateEnergyUsageMessage,
+    estateEnergyUsageError,
+  } = useSelector((state: RootState) => ({
+    estateEnergyUsage: state.superAdminEstateEnergyUsage.usage,
+    estateEnergyUsageLoading:
+      state.superAdminEstateEnergyUsage.status === "isLoading",
+    estateEnergyUsageProgress: state.superAdminEstateEnergyUsage.progress,
+    estateEnergyUsageMessage: state.superAdminEstateEnergyUsage.message,
+    estateEnergyUsageError: state.superAdminEstateEnergyUsage.error,
+  }));
+
+  const estateOptions = useMemo<EstateOption[]>(
+    () =>
+      Object.entries(estateNameById)
+        .map(([value, label]) => ({ value, label }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [estateNameById],
+  );
+
+  const selectedChartEstate = useMemo(
+    () => estateOptions.find((o) => o.value === selectedChartEstateId) ?? null,
+    [estateOptions, selectedChartEstateId],
+  );
+
   // Fetch meters on mount
   useEffect(() => {
     const fetchMeters = async () => {
@@ -166,6 +220,7 @@ export default function AdminMeterManagement() {
   // Fetch estates map (id -> name) for display
   useEffect(() => {
     const loadEstateNames = async () => {
+      setEstatesLoading(true);
       try {
         const res = await dispatch(
           getAllEstates({
@@ -184,10 +239,73 @@ export default function AdminMeterManagement() {
         setEstateNameById(map);
       } catch (e) {
         // non-blocking: table can still render estateId if name isn't available
+      } finally {
+        setEstatesLoading(false);
       }
     };
     loadEstateNames();
   }, [dispatch]);
+
+  useEffect(() => {
+    if (selectedChartEstateId || !estateOptions.length) return;
+    setSelectedChartEstateId(estateOptions[0].value);
+  }, [estateOptions, selectedChartEstateId]);
+
+  useEffect(() => {
+    if (!selectedChartEstateId) return;
+    dispatch(
+      getSuperAdminEstateEnergyUsage({
+        estateId: selectedChartEstateId,
+        range: usageRange,
+      }),
+    ).catch((error: { message?: string }) => {
+      toast.error(error?.message ?? "Failed to load estate energy usage.");
+    });
+  }, [dispatch, selectedChartEstateId, usageRange]);
+
+  useEffect(() => {
+    if (!selectedChartEstateId) return;
+    dispatch(
+      getSuperAdminEnergyConsumptionChart({
+        estateId: selectedChartEstateId,
+        period: energyPeriod,
+      }),
+    ).catch((error: { message?: string }) => {
+      toast.error(
+        error?.message ?? "Failed to load energy consumption chart.",
+      );
+    });
+  }, [dispatch, selectedChartEstateId, energyPeriod]);
+
+  const handleRefreshUsage = async () => {
+    if (!selectedChartEstateId) return;
+    setUsageRefreshing(true);
+    try {
+      await dispatch(
+        getSuperAdminEstateEnergyUsage({
+          estateId: selectedChartEstateId,
+          range: usageRange,
+          refresh: true,
+        }),
+      ).unwrap();
+    } catch (error: any) {
+      toast.error(error?.message ?? "Failed to refresh estate energy usage.");
+    } finally {
+      setUsageRefreshing(false);
+    }
+  };
+
+  const chartEmptyMessage = useMemo(() => {
+    if (estatesLoading) return "Loading estates…";
+    if (!estateOptions.length) return "No estates found.";
+    if (!selectedChartEstateId) return "Select an estate to view energy data.";
+    return undefined;
+  }, [estatesLoading, estateOptions.length, selectedChartEstateId]);
+
+  const vendChartEmptyMessage = useMemo(() => {
+    if (chartEmptyMessage) return chartEmptyMessage;
+    return "No vending data for this period yet.";
+  }, [chartEmptyMessage]);
 
   const handleRefresh = async () => {
     try {
@@ -359,167 +477,262 @@ export default function AdminMeterManagement() {
   ];
 
   return (
-    <div className="relative">
-      {loading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader label="Loading meters..." />
+    <div className="relative space-y-6">
+      <div className="flex flex-col md:flex-row gap-5 md:gap-0 items-start md:items-center justify-between">
+        <div>
+          <h1 className="font-heading text-3xl font-bold">Energy Management</h1>
+          <p className="text-muted-foreground mt-1">
+            Monitor energy usage and manage meters across estates.
+          </p>
         </div>
-      )}
+        <Button
+          onClick={handleAssignMeter}
+          className="flex items-center gap-2 cursor-pointer"
+        >
+          <Plus className="w-4 h-4" /> Add Meter
+        </Button>
+      </div>
 
-      <div
-        className={[
-          "space-y-6",
-          loading ? "blur-sm opacity-60 pointer-events-none select-none" : "",
-        ].join(" ")}
-      >
-        <div className="flex flex-col md:flex-row gap-5 md:gap-0 items-start md:items-center justify-between">
-          <div>
-          <h1 className="font-heading text-3xl font-bold">Meter Management</h1>
-          <p className="text-muted-foreground mt-1">Overview of meters</p>
-          </div>
-          {/* Add Meter button can open a modal for adding meter if implemented */}
-          <Button
-            onClick={handleAssignMeter}
-            className="flex items-center gap-2 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" /> Add Meter
-          </Button>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {(() => {
+          const meters = allSuperAdminMeters as AdminMeterData[];
 
-        {/* stats cards */}
+          const stats = [
+            {
+              label: "Total Meters",
+              value: pagination?.total ?? 0,
+              icon: IoSpeedometerOutline,
+              color: "bg-[#D0DFF280]",
+            },
+            {
+              label: "Active Meters",
+              value:
+                meters?.filter((meter: AdminMeterData) => meter.isActive)
+                  ?.length || 0,
+              icon: IoSpeedometerOutline,
+              color: "bg-[#CCE4DB80]",
+            },
+          ];
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {(() => {
-            const meters = allSuperAdminMeters as AdminMeterData[];
-
-            const stats = [
-              {
-                label: "Total Meters",
-                value: pagination?.total ?? 0,
-                icon: IoSpeedometerOutline,
-                color: "bg-[#D0DFF280]",
-              },
-              {
-                label: "Active Estates",
-                value:
-                  meters?.filter((meter: AdminMeterData) => meter.isActive)
-                    ?.length || 0,
-                icon: IoSpeedometerOutline,
-                color: "bg-[#CCE4DB80]",
-              },
-            ];
-
-            return stats.map((stat, i) => {
-              const Icon = stat.icon;
-              return (
-                <Card key={i} className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        {stat.label}
-                      </p>
-                      <p className="font-heading text-2xl font-bold mt-2">
-                        {stat.value}
-                      </p>
-                    </div>
-                    <div className={`p-3 rounded-lg ${stat.color}`}>
-                      <Icon className="w-6 h-6" />
-                    </div>
+          return stats.map((stat, i) => {
+            const Icon = stat.icon;
+            return (
+              <Card key={i} className="p-6">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      {stat.label}
+                    </p>
+                    <p className="font-heading text-2xl font-bold mt-2">
+                      {stat.value}
+                    </p>
                   </div>
-                </Card>
+                  <div className={`p-3 rounded-lg ${stat.color}`}>
+                    <Icon className="w-6 h-6" />
+                  </div>
+                </div>
+              </Card>
+            );
+          });
+        })()}
+      </div>
+
+      <Tab
+        titles={[...METER_TAB_TITLES]}
+        renderContent={(activeTab) => {
+          switch (activeTab) {
+            case "Chart Overview":
+              return (
+                <div className="space-y-6">
+                  <Card className="p-4">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          Filter by estate
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Charts below reflect the selected estate.
+                        </p>
+                      </div>
+                      <div className="w-full min-w-[12rem] sm:max-w-xs">
+                        <Select
+                          options={estateOptions}
+                          placeholder="Select estate"
+                          value={selectedChartEstate}
+                          onChange={(option) =>
+                            setSelectedChartEstateId(option?.value ?? "")
+                          }
+                          isSearchable
+                          isDisabled={
+                            !estateOptions.length || estatesLoading
+                          }
+                          styles={{
+                            control: (base) => ({ ...base, cursor: "pointer" }),
+                            option: (base) => ({ ...base, cursor: "pointer" }),
+                            dropdownIndicator: (base) => ({
+                              ...base,
+                              cursor: "pointer",
+                            }),
+                            clearIndicator: (base) => ({
+                              ...base,
+                              cursor: "pointer",
+                            }),
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </Card>
+
+                  <EstatePowerUsageSection
+                    data={estateEnergyUsage}
+                    loading={
+                      estatesLoading ||
+                      (!!selectedChartEstateId && estateEnergyUsageLoading)
+                    }
+                    progress={estateEnergyUsageProgress}
+                    range={usageRange}
+                    onRangeChange={setUsageRange}
+                    onRefresh={
+                      selectedChartEstateId ? handleRefreshUsage : undefined
+                    }
+                    refreshing={usageRefreshing}
+                    exportFileName={
+                      selectedChartEstate
+                        ? `estate_${selectedChartEstate.label.replace(/[^a-z0-9-_]/gi, "_")}_energy_usage`
+                        : "estate_energy_usage"
+                    }
+                    emptyMessage={
+                      chartEmptyMessage ??
+                      estateEnergyUsageError ??
+                      estateEnergyUsageMessage ??
+                      "No energy usage data for this period."
+                    }
+                  />
+                  <EnergyConsumptionOverTimeCard
+                    data={energyConsumptionChart}
+                    loading={
+                      estatesLoading ||
+                      (!!selectedChartEstateId && energyChartLoading)
+                    }
+                    period={energyPeriod}
+                    onPeriodChange={setEnergyPeriod}
+                    emptyMessage={vendChartEmptyMessage}
+                  />
+                </div>
               );
-            });
-          })()}
-        </div>
+            case "Meter Management":
+              return (
+                <div className="relative space-y-6">
+                  {loading && (
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm rounded-lg">
+                      <Loader label="Loading meters..." />
+                    </div>
+                  )}
 
-        <div className="bg-white p-4 rounded-lg">
-          <div className="relative w-full max-w-sm flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
-                placeholder="Search by meter number."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    setSearchQuery(searchInput);
-                    dispatch(
-                      getAllMeters({
-                        page: 1,
-                        limit: Number(pagination?.pageSize) || 10,
-                        search: searchInput || undefined,
-                      }),
-                    );
-                  }
-                  if (e.key === "Escape") {
-                    setSearchInput("");
-                    setSearchQuery("");
-                    dispatch(
-                      getAllMeters({
-                        page: 1,
-                        limit: Number(pagination?.pageSize) || 10,
-                        search: undefined,
-                      }),
-                    );
-                  }
-                }}
-                className="w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
+                  <div
+                    className={[
+                      "space-y-6",
+                      loading
+                        ? "blur-sm opacity-60 pointer-events-none select-none"
+                        : "",
+                    ].join(" ")}
+                  >
+                    <Card className="p-4">
+                      <div className="relative w-full max-w-sm flex items-center gap-2">
+                        <div className="relative flex-1">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <input
+                            placeholder="Search by meter number."
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                setSearchQuery(searchInput);
+                                dispatch(
+                                  getAllMeters({
+                                    page: 1,
+                                    limit: Number(pagination?.pageSize) || 10,
+                                    search: searchInput || undefined,
+                                  }),
+                                );
+                              }
+                              if (e.key === "Escape") {
+                                setSearchInput("");
+                                setSearchQuery("");
+                                dispatch(
+                                  getAllMeters({
+                                    page: 1,
+                                    limit: Number(pagination?.pageSize) || 10,
+                                    search: undefined,
+                                  }),
+                                );
+                              }
+                            }}
+                            className="w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        </div>
 
-            {searchInput.trim().length > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery(searchInput);
-                  dispatch(
-                    getAllMeters({
-                      page: 1,
-                      limit: Number(pagination?.pageSize) || 10,
-                      search: searchInput || undefined,
-                    }),
-                  );
-                }}
-                className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:opacity-90 transition"
-              >
-                Search
-              </button>
-            )}
-          </div>
-        </div>
+                        {searchInput.trim().length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSearchQuery(searchInput);
+                              dispatch(
+                                getAllMeters({
+                                  page: 1,
+                                  limit: Number(pagination?.pageSize) || 10,
+                                  search: searchInput || undefined,
+                                }),
+                              );
+                            }}
+                            className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:opacity-90 transition"
+                          >
+                            Search
+                          </button>
+                        )}
+                      </div>
+                    </Card>
 
-        <Card className="p-4">
-          <Table
-            columns={columns}
-            data={allSuperAdminMeters}
-            emptyMessage="No meters found."
-            showPagination
-            onSearch={(value) => setSearchInput(value)}
-            paginationInfo={{
-              total: pagination?.total || 0,
-              current: Number(pagination?.currentPage) || 1,
-              pageSize: Number(pagination?.pageSize) || 10,
-            }}
-            onPageChange={(page) => {
-              dispatch(
-                getAllMeters({
-                  page,
-                  limit: Number(pagination?.pageSize) || 10,
-                }),
+                    <Card className="p-4">
+                      <Table
+                        columns={columns}
+                        data={allSuperAdminMeters}
+                        emptyMessage="No meters found."
+                        showPagination
+                        onSearch={(value) => setSearchInput(value)}
+                        paginationInfo={{
+                          total: pagination?.total || 0,
+                          current: Number(pagination?.currentPage) || 1,
+                          pageSize: Number(pagination?.pageSize) || 10,
+                        }}
+                        onPageChange={(page) => {
+                          dispatch(
+                            getAllMeters({
+                              page,
+                              limit: Number(pagination?.pageSize) || 10,
+                            }),
+                          );
+                        }}
+                        enableExport
+                        exportFileName="meters"
+                        onExportRequest={async () => {
+                          const res = await dispatch(
+                            getAllMeters({ page: 1, limit: 50000 }),
+                          ).unwrap();
+                          return res?.data ?? [];
+                        }}
+                      />
+                    </Card>
+                  </div>
+                </div>
               );
-            }}
-            enableExport
-            exportFileName="meters"
-            onExportRequest={async () => {
-              const res = await dispatch(
-                getAllMeters({ page: 1, limit: 50000 }),
-              ).unwrap();
-              return res?.data ?? [];
-            }}
-          />
-        </Card>
+            default:
+              return null;
+          }
+        }}
+      />
 
-        {open && selectedMeter && (
+      {open && selectedMeter && (
           <Modal visible={open} onClose={handleCloseModal}>
             <div className="space-y-4 p-4">
               <h2 className="text-lg font-semibold">Remove Meter</h2>
@@ -667,7 +880,6 @@ export default function AdminMeterManagement() {
             ) : null}
           </div>
         </Modal>
-      </div>
     </div>
   );
 }

@@ -9,6 +9,11 @@ import { RootState, AppDispatch } from "@/redux/store";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Plus, Search, Trash, Eye } from "lucide-react";
+import { MeterEnergyUsageSection } from "@/components/charts/meter-energy-usage-section";
+import {
+  getMeterUsage,
+  type MeterUsageRange,
+} from "@/redux/slice/resident/meter-mgt/meter-mgt";
 import {
   deleteMeter,
   getAllMeters,
@@ -66,6 +71,33 @@ function formatAddressData(
   return entries.map(([k, v]) => `${k}: ${String(v)}`).join(", ");
 }
 
+function getAllAddressKeys(data: AdminMeterData[]): string[] {
+  const keys = new Set<string>();
+  data.forEach((item) => {
+    const addressData = toAddressData(item.addressId);
+    if (addressData) {
+      Object.keys(addressData).forEach((key) => keys.add(key));
+    }
+  });
+  return Array.from(keys);
+}
+
+function getAddressColumns(data: AdminMeterData[]) {
+  if (!data.length) return [];
+  const addressKeys = getAllAddressKeys(data);
+  return addressKeys.map((key) => ({
+    key: `address_${key}`,
+    header: key
+      .replace(/([A-Z])/g, " $1")
+      .replace(/^./, (c) => c.toUpperCase()),
+    render: (item: AdminMeterData) => {
+      const value = toAddressData(item.addressId)?.[key];
+      if (value == null || String(value).trim() === "") return "—";
+      return String(value);
+    },
+  }));
+}
+
 export default function AdminMeterManagement() {
   const dispatch = useDispatch<AppDispatch>();
   const [open, setOpen] = useState(false);
@@ -77,6 +109,11 @@ export default function AdminMeterManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [detailsAddressId, setDetailsAddressId] = useState<string | null>(null);
+  const [detailsMeterNumber, setDetailsMeterNumber] = useState<string | null>(
+    null,
+  );
+  const [meterUsageRange, setMeterUsageRange] =
+    useState<MeterUsageRange>("weekly");
   const [estateNameById, setEstateNameById] = useState<Record<string, string>>(
     {},
   );
@@ -97,6 +134,15 @@ export default function AdminMeterManagement() {
       detailsLoading: superAdminMeter?.getMeterByAddressIdState === "isLoading",
     };
   });
+
+  const { meterUsage, meterUsageLoading, meterUsageMessage } = useSelector(
+    (state: RootState) => ({
+      meterUsage: state.residentMeter.meterUsage,
+      meterUsageLoading:
+        state.residentMeter.getMeterUsageState === "isLoading",
+      meterUsageMessage: state.residentMeter.meterUsageMessage,
+    }),
+  );
 
   // Fetch meters on mount
   useEffect(() => {
@@ -199,6 +245,8 @@ export default function AdminMeterManagement() {
       return;
     }
     setDetailsAddressId(addressIdStr);
+    setDetailsMeterNumber(meter.meterNumber);
+    setMeterUsageRange("weekly");
     setDetailsModalOpen(true);
     dispatch(getMeterByAddressId(addressIdStr)).catch((err: any) => {
       toast.error(err?.message ?? "Failed to load meter details");
@@ -208,7 +256,17 @@ export default function AdminMeterManagement() {
   const handleCloseDetailsModal = () => {
     setDetailsModalOpen(false);
     setDetailsAddressId(null);
+    setDetailsMeterNumber(null);
   };
+
+  useEffect(() => {
+    if (!detailsModalOpen || !detailsMeterNumber) return;
+    dispatch(
+      getMeterUsage({ meterNumber: detailsMeterNumber, range: meterUsageRange }),
+    ).catch((error: { message?: string }) => {
+      toast.error(error?.message ?? "Failed to load meter energy usage.");
+    });
+  }, [dispatch, detailsModalOpen, detailsMeterNumber, meterUsageRange]);
 
   const handleDeleteMeter = async (meterId: string) => {
     if (!meterId) {
@@ -229,6 +287,7 @@ export default function AdminMeterManagement() {
   const columns = [
     { key: "createdAt", header: "Created Date" },
     { key: "meterNumber", header: "Meter Number" },
+    ...getAddressColumns(allSuperAdminMeters as AdminMeterData[]),
     {
       key: "estateId",
       header: "Estate",
@@ -490,15 +549,19 @@ export default function AdminMeterManagement() {
         )}
 
         {/* View details modal */}
-        <Modal visible={detailsModalOpen} onClose={handleCloseDetailsModal}>
-          <div className="space-y-4 p-4 min-w-[320px] max-w-lg">
+        <Modal
+          visible={detailsModalOpen}
+          onClose={handleCloseDetailsModal}
+          contentClassName="md:w-[min(720px,95vw)] lg:w-[min(800px,95vw)]"
+        >
+          <div className="space-y-6 p-4 pr-8">
             <h2 className="text-lg font-semibold">Meter details</h2>
             {detailsLoading ? (
               <div className="py-6 flex justify-center">
                 <Loader label="Loading details..." />
               </div>
             ) : meterDetails ? (
-              <dl className="grid grid-cols-1 gap-3 text-sm">
+              <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                 <div>
                   <dt className="text-muted-foreground">Meter number</dt>
                   <dd className="font-medium">
@@ -586,6 +649,21 @@ export default function AdminMeterManagement() {
               <p className="text-muted-foreground py-4">
                 Could not load meter details.
               </p>
+            ) : null}
+
+            {detailsMeterNumber ? (
+              <MeterEnergyUsageSection
+                data={meterUsage}
+                loading={meterUsageLoading}
+                range={meterUsageRange}
+                onRangeChange={setMeterUsageRange}
+                exportFileName={`meter_${detailsMeterNumber}_energy_usage`}
+                emptyMessage={
+                  meterUsageMessage ||
+                  meterUsage?.hint ||
+                  "No energy usage data for this period. The meter may be offline or have no history yet."
+                }
+              />
             ) : null}
           </div>
         </Modal>

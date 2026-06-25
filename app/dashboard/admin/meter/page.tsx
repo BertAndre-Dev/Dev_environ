@@ -9,7 +9,12 @@ import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useState } from "react";
 import type { EstateEnergyUsageRange } from "@/lib/estate-energy-usage-chart";
 import { useDispatch, useSelector } from "react-redux";
-import { Link, Search, Zap } from "lucide-react";
+import { Eye, Link, Search, Zap } from "lucide-react";
+import { MeterEnergyUsageSection } from "@/components/charts/meter-energy-usage-section";
+import {
+  getMeterUsage,
+  type MeterUsageRange,
+} from "@/redux/slice/resident/meter-mgt/meter-mgt";
 import {
   getAllEstateMeter,
   getVendingStatsByEstate,
@@ -76,6 +81,10 @@ export default function AdminMeterManagement() {
   const [usageRefreshing, setUsageRefreshing] = useState(false);
   const [energyPeriod, setEnergyPeriod] =
     useState<EnergyConsumptionPeriod>("weekly");
+  const [usageModalOpen, setUsageModalOpen] = useState(false);
+  const [usageMeterNumber, setUsageMeterNumber] = useState<string | null>(null);
+  const [meterUsageRange, setMeterUsageRange] =
+    useState<MeterUsageRange>("weekly");
 
   const { allAdminMeters, pagination } = useSelector((state: RootState) => {
     const adminMeterState = state.adminMeter as any;
@@ -102,6 +111,17 @@ export default function AdminMeterManagement() {
     estateRealtimeReadings: state.adminEstateRealtimeReadings.readings,
     estateRealtimeReadingsLoading:
       state.adminEstateRealtimeReadings.status === "isLoading",
+  }));
+
+  const {
+    meterUsage,
+    meterUsageLoading,
+    meterUsageMessage,
+  } = useSelector((state: RootState) => ({
+    meterUsage: state.residentMeter.meterUsage,
+    meterUsageLoading:
+      state.residentMeter.getMeterUsageState === "isLoading",
+    meterUsageMessage: state.residentMeter.meterUsageMessage,
   }));
 
   const {
@@ -295,6 +315,26 @@ export default function AdminMeterManagement() {
     setOpen(false);
   };
 
+  const handleOpenUsageModal = (meter: AdminMeterData) => {
+    setUsageMeterNumber(meter.meterNumber);
+    setMeterUsageRange("weekly");
+    setUsageModalOpen(true);
+  };
+
+  const handleCloseUsageModal = () => {
+    setUsageModalOpen(false);
+    setUsageMeterNumber(null);
+  };
+
+  useEffect(() => {
+    if (!usageModalOpen || !usageMeterNumber) return;
+    dispatch(
+      getMeterUsage({ meterNumber: usageMeterNumber, range: meterUsageRange }),
+    ).catch((error: { message?: string }) => {
+      toast.error(error?.message ?? "Failed to load meter energy usage.");
+    });
+  }, [dispatch, usageModalOpen, usageMeterNumber, meterUsageRange]);
+
   const getAllAddressKeys = (data: AdminMeterData[]) => {
     const keys = new Set<string>();
     data.forEach((item) => {
@@ -361,12 +401,26 @@ export default function AdminMeterManagement() {
             size="sm"
             onClick={() => handleOpenModal(item)}
             className="hover:bg-blue-100"
+            title="Assign meter"
           >
             <Link className="w-4 h-4 text-blue-600" />
           </Button>
         </div>
       ),
     },
+    {
+      key: "energyUsage",
+      header: "Energy Usage",
+      render: (item: AdminMeterData) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleOpenUsageModal(item)}
+        >
+          <Eye className="w-4 h-4 text-emerald-600" />
+        </Button>
+      ),
+    }
   ];
 
   return (
@@ -549,6 +603,38 @@ export default function AdminMeterManagement() {
             refresh={handleRefresh}
             meterNumber={selectedMeter.meterNumber}
           />
+        </Modal>
+      )}
+
+      {usageModalOpen && usageMeterNumber && (
+        <Modal
+          visible={usageModalOpen}
+          onClose={handleCloseUsageModal}
+          contentClassName="md:w-[min(720px,95vw)] lg:w-[min(800px,95vw)]"
+        >
+          <div className="space-y-4 pr-6">
+            <div>
+              <h2 className="font-heading text-xl font-bold">Energy Usage</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Meter{" "}
+                <span className="font-medium text-foreground">
+                  {usageMeterNumber}
+                </span>
+              </p>
+            </div>
+            <MeterEnergyUsageSection
+              data={meterUsage}
+              loading={meterUsageLoading}
+              range={meterUsageRange}
+              onRangeChange={setMeterUsageRange}
+              exportFileName={`meter_${usageMeterNumber}_energy_usage`}
+              emptyMessage={
+                meterUsageMessage ||
+                meterUsage?.hint ||
+                "No energy usage data for this period. The meter may be offline or have no history yet."
+              }
+            />
+          </div>
         </Modal>
       )}
       </div>

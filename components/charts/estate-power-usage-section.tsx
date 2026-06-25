@@ -26,6 +26,7 @@ export interface EstatePowerUsageSectionProps {
   readonly refreshing?: boolean;
   readonly emptyMessage?: string | null;
   readonly className?: string;
+  readonly exportFileName?: string;
 }
 
 export function EstatePowerUsageSection({
@@ -38,6 +39,7 @@ export function EstatePowerUsageSection({
   refreshing = false,
   emptyMessage,
   className,
+  exportFileName = "estate_energy_usage",
 }: EstatePowerUsageSectionProps) {
   const powerUsage = useMemo(
     () => mapEstateEnergyUsageToPowerUsage(data),
@@ -95,6 +97,7 @@ export function EstatePowerUsageSection({
       subtitle={!loading && dateRangeLabel ? dateRangeLabel : undefined}
       headerActions={headerActions}
       emptyMessage={emptyMessage ?? "No energy usage data for this period."}
+      exportFileName={exportFileName}
     />
   );
 }

@@ -99,3 +99,52 @@ export function mapMeterUsageToPowerUsage(
 
   return { points, totalKwh };
 }
+
+function csvEscape(value: string | number): string {
+  const str = String(value);
+  if (/[",\r\n]/.test(str)) {
+    return `"${str.replaceAll('"', '""')}"`;
+  }
+  return str;
+}
+
+export function exportPowerUsageToCsv(
+  data: PowerUsageDataPoint[],
+  options?: {
+    fileName?: string;
+    totalUsageKwh?: number;
+  },
+): boolean {
+  if (!data.length) return false;
+
+  const headers = ["Period", "Date", "Usage (kWh)"];
+  const body = data.map((point) =>
+    [
+      csvEscape(point.label),
+      csvEscape(point.date ?? point.label),
+      csvEscape(formatPowerUsageKwh(point.usageKwh)),
+    ].join(","),
+  );
+
+  if (typeof options?.totalUsageKwh === "number") {
+    body.push(
+      ["Total", "", csvEscape(formatPowerUsageKwh(options.totalUsageKwh))].join(
+        ",",
+      ),
+    );
+  }
+
+  const csv = [headers.join(","), ...body].join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const baseName = (options?.fileName ?? "energy_usage").replace(
+    /[^a-z0-9-_]/gi,
+    "_",
+  );
+  a.download = `${baseName}_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  return true;
+}

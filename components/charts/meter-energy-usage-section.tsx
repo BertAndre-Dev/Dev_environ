@@ -16,6 +16,7 @@ export interface MeterEnergyUsageSectionProps {
   readonly emptyMessage?: string | null;
   readonly className?: string;
   readonly showPeriodFilter?: boolean;
+  readonly exportFileName?: string;
 }
 
 export function MeterEnergyUsageSection({
@@ -26,6 +27,7 @@ export function MeterEnergyUsageSection({
   emptyMessage,
   className,
   showPeriodFilter = true,
+  exportFileName,
 }: MeterEnergyUsageSectionProps) {
   const energyUsage = useMemo(() => mapMeterUsageToPowerUsage(data), [data]);
   const dateRangeLabel = formatEstateUsageDateRange(data?.from, data?.to);
@@ -50,6 +52,7 @@ export function MeterEnergyUsageSection({
       emptyMessage={
         emptyMessage ?? "No energy usage data for this period."
       }
+      exportFileName={exportFileName}
     />
   );
 }

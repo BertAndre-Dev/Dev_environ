@@ -162,6 +162,7 @@ export default function SuperAdminUserPage() {
     "suspend",
   );
   const [statusSubmitting, setStatusSubmitting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // ✅ Map estates for dropdown
   const estateOptions: EstateOption[] =
@@ -191,7 +192,12 @@ export default function SuperAdminUserPage() {
           startDate: shouldApplyDate ? startDate : undefined,
           endDate: shouldApplyDate ? endDate : undefined,
         }),
-      ).unwrap();
+      )
+        .unwrap()
+        .then((result) => {
+          setCurrentPage(page);
+          return result;
+        });
     },
     [dispatch, selectedEstate?.value, pageSize, roleFilter, startDate, endDate],
   );
@@ -213,10 +219,11 @@ export default function SuperAdminUserPage() {
   // ✅ Fetch users for the selected estate
   useEffect(() => {
     if (!selectedEstate?.value) return;
+    setCurrentPage(1);
     fetchUsers(1).catch(() =>
       toast.error("Failed to fetch users for selected estate"),
     );
-  }, [selectedEstate?.value, fetchUsers]);
+  }, [selectedEstate?.value, roleFilter, fetchUsers]);
 
   const handleEstateModal = (user?: SuperAdminUserData) => {
     setSelectedUser(user || null);
@@ -530,11 +537,12 @@ export default function SuperAdminUserPage() {
             onDateRangeChange={({ startDate, endDate }) => {
               setStartDate(startDate);
               setEndDate(endDate);
+              setCurrentPage(1);
             }}
             showPagination={true}
             paginationInfo={{
               total: userPagination?.total || 0,
-              current: Number(userPagination?.currentPage) || 1,
+              current: currentPage,
               pageSize: Number(userPagination?.pageSize) || 10,
             }}
             onPageChange={(page) => {

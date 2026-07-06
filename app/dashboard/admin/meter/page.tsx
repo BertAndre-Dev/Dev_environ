@@ -549,7 +549,7 @@ export default function AdminMeterManagement() {
                         <button
                           type="button"
                           onClick={handleSearchSubmit}
-                          className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:opacity-90 transition shrink-0"
+                          className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:opacity-90 transition shrink-0 cursor-pointer"
                         >
                           Search
                         </button>

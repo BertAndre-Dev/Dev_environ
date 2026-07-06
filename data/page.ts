@@ -104,11 +104,11 @@ export const superAdminNav = [
 ];
 
 export const energyProviderNav = [
-  {
-    label: "Overview",
-    icon: FiHome,
-    path: "/dashboard/energy-provider/dashboard",
-  },
+  // {
+  //   label: "Overview",
+  //   icon: FiHome,
+  //   path: "/dashboard/energy-provider/dashboard",
+  // },
   {
     label: "Transactions",
     icon: ArrowLeftRight,

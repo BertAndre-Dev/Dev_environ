@@ -16,6 +16,30 @@ export type BlogPostMeta = {
 
 export const blogPosts: BlogPostMeta[] = [
   {
+    slug: "5-practical-ways-estate-managers-can-make-communities-more-sustainable",
+    title:
+      "5 Practical Ways Estate Managers Can Make Their Communities More Sustainable",
+    excerpt:
+      "Sustainability goes beyond appearances. From going paperless to preventive maintenance and resident engagement, here are five practical steps estate managers can take to build greener, more efficient communities.",
+    hook: "A truly sustainable estate uses its resources wisely — and meaningful change often starts with simple operational decisions.",
+    publishedAt: "2026-07-07",
+    readTimeMinutes: 4,
+    wordCount: 380,
+    category: "Estate Management",
+    author: "Bertahub Team",
+    featuredImage: "/assets/blog/blog-4.jpeg",
+    featuredImageAlt:
+      "Well-managed residential estate with green spaces and sustainable community practices",
+    keywords: [
+      "sustainable estate management",
+      "green estate communities",
+      "estate sustainability practices",
+      "digital estate management",
+      "preventive maintenance estates",
+      "sustainable property management Nigeria",
+    ],
+  },
+  {
     slug: "why-resident-experience-should-be-every-estate-managers-priority",
     title: "Why Resident Experience Should Be Every Estate Manager's Priority",
     excerpt:

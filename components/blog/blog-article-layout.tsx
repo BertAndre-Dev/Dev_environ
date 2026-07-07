@@ -77,8 +77,7 @@ export default function BlogArticleLayout({
               src={post.featuredImage}
               alt={post.featuredImageAlt ?? post.title}
               priority
-              fit="contain"
-              aspectClassName="aspect-[16/9] sm:aspect-[2/1]"
+              aspectClassName="aspect-[16/9]"
               className="my-0 shadow-xl"
             />
           </div>

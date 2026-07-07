@@ -216,14 +216,19 @@ export default function SuperAdminUserPage() {
     setSelectedEstate(estateOptions[0]);
   }, [estateOptions, selectedEstate?.value]);
 
-  // ✅ Fetch users for the selected estate
+  // ✅ Fetch users when estate/role changes, or when a complete date range is set/cleared
   useEffect(() => {
     if (!selectedEstate?.value) return;
+
+    const partialDate =
+      (Boolean(startDate) && !endDate) || (!startDate && Boolean(endDate));
+    if (partialDate) return;
+
     setCurrentPage(1);
     fetchUsers(1).catch(() =>
       toast.error("Failed to fetch users for selected estate"),
     );
-  }, [selectedEstate?.value, roleFilter, fetchUsers]);
+  }, [selectedEstate?.value, roleFilter, startDate, endDate, fetchUsers]);
 
   const handleEstateModal = (user?: SuperAdminUserData) => {
     setSelectedUser(user || null);
@@ -537,7 +542,6 @@ export default function SuperAdminUserPage() {
             onDateRangeChange={({ startDate, endDate }) => {
               setStartDate(startDate);
               setEndDate(endDate);
-              setCurrentPage(1);
             }}
             showPagination={true}
             paginationInfo={{

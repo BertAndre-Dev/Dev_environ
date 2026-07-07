@@ -122,15 +122,39 @@ const estateSlice = createSlice({
         state.status = "succeeded";
 
         const pagination = action.payload?.pagination;
+        const requestedPage = Number(action.meta.arg?.page) || 1;
+        const requestedLimit = Number(action.meta.arg?.limit) || 10;
+        const pageSize =
+          Number(pagination?.pageSize ?? pagination?.limit ?? requestedLimit) ||
+          requestedLimit;
+        const allData = Array.isArray(action.payload?.data)
+          ? action.payload.data
+          : [];
+        const total =
+          Number(pagination?.total ?? allData.length ?? 0) || 0;
+        const shouldPaginateClientSide =
+          requestedLimit <= 100 && allData.length > pageSize;
+        const data = shouldPaginateClientSide
+          ? allData.slice(
+              (requestedPage - 1) * pageSize,
+              requestedPage * pageSize,
+            )
+          : allData;
+
         state.allEstates = {
             success: action.payload?.success ?? true,
             message: action.payload?.message ?? "Estates retrieved successfully",
-            data: action.payload?.data || [],
+            data,
             pagination: {
-                total: pagination?.total ?? (action.payload?.data?.length ?? 0),
-                currentPage: Number(pagination?.currentPage) || 1,
-                totalPages: Number(pagination?.totalPages) || 1,
-                pageSize: Number(pagination?.pageSize) || 10,
+                total,
+                currentPage:
+                  Number(
+                    pagination?.currentPage ?? pagination?.page ?? requestedPage,
+                  ) || requestedPage,
+                totalPages:
+                  Number(pagination?.totalPages ?? pagination?.pages) ||
+                  Math.max(1, Math.ceil(total / pageSize)),
+                pageSize,
             },
         };
       })

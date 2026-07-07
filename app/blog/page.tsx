@@ -59,7 +59,7 @@ export default function BlogPage() {
                     alt={post.featuredImageAlt ?? post.title}
                     fill
                     sizes="(max-width: 768px) 100vw, 768px"
-                    className="object-contain bg-white p-4 transition-transform duration-300 group-hover:scale-[1.01]"
+                    className="object-cover object-center transition-transform duration-300 group-hover:scale-[1.02]"
                   />
                 </Link>
               )}

@@ -9,12 +9,14 @@ import { store, persistor } from "@/redux/store";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { BookDemoProvider } from "@/components/landing-page/book-demo-provider";
+import { purgeLegacySharedAuthStorage } from "@/utils/session-guard";
 
 export default function ClientProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
   const pathName = usePathname();
 
   useEffect(() => {
+    purgeLegacySharedAuthStorage();
     setMounted(true);
   }, []);
 

@@ -25,7 +25,7 @@ import {
 import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Modal from "@/components/modal/page";
 import EstateForm from "@/components/super-admin/estate-form/page";
 import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
@@ -40,6 +40,8 @@ type EstateTableRow = Omit<EstateData, "modules"> & {
   visitorVerificationMode?: string;
 };
 
+const PAGE_SIZE = 10;
+
 export default function EstatePage() {
   const dispatch = useDispatch<AppDispatch>();
 
@@ -51,7 +53,7 @@ export default function EstatePage() {
       return {
         allEstates: Array.isArray(data) ? data : [],
         pagination,
-        loading: estateState.loading || false,
+        loading: estateState.getAllEstatesState === "isLoading",
       };
     },
   );
@@ -65,20 +67,53 @@ export default function EstatePage() {
   const [statusSubmitting, setStatusSubmitting] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const fetchEstates = useCallback(
+    (page = 1, search = searchQuery) => {
+      const shouldApplyDate = Boolean(startDate && endDate);
+      return dispatch(
+        getAllEstates({
+          page,
+          limit: PAGE_SIZE,
+          search: search.trim() || undefined,
+          startDate: shouldApplyDate ? startDate : undefined,
+          endDate: shouldApplyDate ? endDate : undefined,
+        }),
+      )
+        .unwrap()
+        .then((result) => {
+          setCurrentPage(page);
+          return result;
+        });
+    },
+    [dispatch, startDate, endDate, searchQuery],
+  );
 
   useEffect(() => {
-    const shouldApplyDate = Boolean(startDate && endDate);
-    dispatch(
-      getAllEstates({
-        page: 1,
-        limit: Number(pagination?.pageSize) || 10,
-        startDate: shouldApplyDate ? startDate : undefined,
-        endDate: shouldApplyDate ? endDate : undefined,
-      }),
-    )
-      .unwrap()
-      .catch(() => toast.error("Failed to fetch estates"));
-  }, [dispatch, startDate, endDate]);
+    fetchEstates(1).catch(() => toast.error("Failed to fetch estates"));
+  }, [fetchEstates]);
+
+  const applySearch = useCallback(() => {
+    setSearchQuery(searchInput.trim());
+    setCurrentPage(1);
+  }, [searchInput]);
+
+  const clearSearch = useCallback(() => {
+    setSearchInput("");
+    setSearchQuery("");
+    setCurrentPage(1);
+  }, []);
+
+  const handleSearchInputChange = (value: string) => {
+    setSearchInput(value);
+    if (!value.trim() && searchQuery) {
+      setSearchQuery("");
+      setCurrentPage(1);
+    }
+  };
 
   const handleEstateModal = (estate?: EstateTableRow) => {
     setSelectedEstate(estate || null);
@@ -114,9 +149,7 @@ export default function EstatePage() {
         toast.success("Estate created successfully!");
       }
       handleCloseModal();
-      await dispatch(
-        getAllEstates({ page: 1, limit: Number(pagination?.pageSize) || 10 }),
-      ).unwrap();
+      await fetchEstates(1);
     } catch (err: any) {
       toast.error(err?.message || "Failed to save estate");
     }
@@ -150,9 +183,7 @@ export default function EstatePage() {
         toast.success(`${estate.name} has been activated.`);
       }
       closeStatusModal();
-      await dispatch(
-        getAllEstates({ page: 1, limit: Number(pagination?.pageSize) || 10 }),
-      ).unwrap();
+      await fetchEstates(1);
     } catch (err: any) {
       toast.error(err?.message || "Failed to update estate status.");
     } finally {
@@ -169,9 +200,7 @@ export default function EstatePage() {
       onConfirm: async () => {
         await dispatch(deleteEstate(id)).unwrap();
         toast.success(`${name} deleted successfully!`);
-        await dispatch(
-          getAllEstates({ page: 1, limit: Number(pagination?.pageSize) || 10 }),
-        ).unwrap();
+        await fetchEstates(1);
       },
     });
   };
@@ -371,15 +400,29 @@ export default function EstatePage() {
         })()}
       </div>
 
-      <div className="bg-white p-4 rounded-lg">
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            placeholder="Search by estate name, address, city etc..."
-            className="w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-          />
+      <Card className="p-4">
+        <div className="relative w-full max-w-sm flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              placeholder="Search by estate name, address, city etc..."
+              value={searchInput}
+              onChange={(e) => handleSearchInputChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") applySearch();
+                if (e.key === "Escape") clearSearch();
+              }}
+              className="w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          {searchInput.trim().length > 0 && (
+            <Button type="button" onClick={applySearch} className="cursor-pointer">
+              Search
+            </Button>
+          )}
         </div>
-      </div>
+      </Card>
 
       {/* Estates Table */}
       <Card className="p-4">
@@ -398,19 +441,14 @@ export default function EstatePage() {
           showPagination={true}
           paginationInfo={{
             total: pagination?.total || 0,
-            current: Number(pagination?.currentPage) || 1,
-            pageSize: Number(pagination?.pageSize) || 10,
+            current: currentPage,
+            pageSize: PAGE_SIZE,
           }}
-          onPageChange={(page) =>
-            dispatch(
-              getAllEstates({
-                page,
-                limit: Number(pagination?.pageSize) || 10,
-                startDate: startDate && endDate ? startDate : undefined,
-                endDate: startDate && endDate ? endDate : undefined,
-              }),
-            )
-          }
+          onPageChange={(page) => {
+            fetchEstates(page).catch(() =>
+              toast.error("Failed to change page"),
+            );
+          }}
           enableExport
           exportFileName="estates"
           onExportRequest={async () => {
@@ -419,6 +457,7 @@ export default function EstatePage() {
               getAllEstates({
                 page: 1,
                 limit: 50000,
+                search: searchQuery.trim() || undefined,
                 startDate: shouldApplyDate ? startDate : undefined,
                 endDate: shouldApplyDate ? endDate : undefined,
               }),
@@ -460,12 +499,7 @@ export default function EstatePage() {
             onCancel={handleCloseModulesModal}
             onSuccess={async () => {
               handleCloseModulesModal();
-              await dispatch(
-                getAllEstates({
-                  page: 1,
-                  limit: Number(pagination?.pageSize) || 10,
-                }),
-              ).unwrap();
+              await fetchEstates(1);
             }}
           />
         </Modal>

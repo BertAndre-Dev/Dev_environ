@@ -1,3 +1,5 @@
+import { clearTabSessionOwner } from "@/utils/session-guard";
+
 export const AUTH_STORAGE_KEY = "auth";
 export const USER_STORAGE_KEY = "user";
 
@@ -34,6 +36,7 @@ export function clearStoredAuth(): void {
   if (typeof window === "undefined") return;
   sessionStorage.removeItem(AUTH_STORAGE_KEY);
   sessionStorage.removeItem(USER_STORAGE_KEY);
+  clearTabSessionOwner();
 }
 
 export function readStoredUser(): unknown | null {

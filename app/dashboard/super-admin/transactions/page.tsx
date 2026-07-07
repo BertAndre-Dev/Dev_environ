@@ -19,6 +19,16 @@ import { formatDateTime } from "@/lib/format-date";
 
 const PAGE_SIZE = 10;
 
+function getResidentName(userId?: {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+}) {
+  if (!userId) return "";
+  const name = `${userId.firstName || ""} ${userId.lastName || ""}`.trim();
+  return name || userId.email || "";
+}
+
 export default function SuperAdminTransactionsPage() {
   const dispatch = useDispatch<AppDispatch>();
   const [currentPage, setCurrentPage] = useState(1);
@@ -137,16 +147,15 @@ export default function SuperAdminTransactionsPage() {
       }
 
       if (format === "csv") {
-        const header = ["Date","Type","Amount","Status","Resident Name","Estate","Description","Reference"];
+        const header = ["Date","Type","Amount","Status","Resident Name","Email","Estate","Description","Reference"];
         const csvRows = rows.map((item) => {
           const date = formatDateTime(item.createdAt, "");
-          const name = item.user
-            ? `${item.user.firstName || ""} ${item.user.lastName || ""}`.trim()
-            : "";
+          const name = getResidentName(item.userId);
           const values = [
             date, item.type || "", item.amount ?? "",
             item.paymentStatus || "", name,
-            item.estate?.name || "", item.description || "", item.tx_ref || "",
+            item.userId?.email || "",
+            item.estateId?.name || "", item.description || "", item.tx_ref || "",
           ];
           return values
             .map((v) => {
@@ -171,12 +180,12 @@ export default function SuperAdminTransactionsPage() {
         if (!printWindow) return;
         const tableRows = rows.map((item) => {
           const date = formatDateTime(item.createdAt, "");
-          const name = item.user
-            ? `${item.user.firstName || ""} ${item.user.lastName || ""}`.trim() : "";
+          const name = getResidentName(item.userId);
           return `<tr>
             <td>${date}</td><td>${item.type || ""}</td><td>${item.amount ?? ""}</td>
             <td>${item.paymentStatus || ""}</td><td>${name}</td>
-            <td>${item.estate?.name || ""}</td><td>${item.description || ""}</td>
+            <td>${item.userId?.email || ""}</td>
+            <td>${item.estateId?.name || ""}</td><td>${item.description || ""}</td>
             <td>${item.tx_ref || ""}</td>
           </tr>`;
         }).join("");
@@ -185,7 +194,7 @@ export default function SuperAdminTransactionsPage() {
           <style>table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px;font-size:12px}th{background:#f5f5f5}</style>
           </head><body><h3>Transactions Export</h3>
           <table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Status</th>
-          <th>Resident Name</th><th>Estate</th><th>Description</th><th>Reference</th></tr></thead>
+          <th>Resident Name</th><th>Email</th><th>Estate</th><th>Description</th><th>Reference</th></tr></thead>
           <tbody>${tableRows}</tbody></table></body></html>`);
         printWindow.document.close();
         printWindow.focus();
@@ -203,23 +212,24 @@ export default function SuperAdminTransactionsPage() {
       render: (item: any) => formatDateTime(item.createdAt, "-"),
     },
     {
-      key: "residentEstate",
-      header: "Resident / Estate",
-      render: (item: any) => (
-        <div>
+      key: "resident",
+      header: "Resident",
+      render: (item: any) => {
+        const name = getResidentName(item.userId);
+        return (
           <div>
-            {item.user?.firstName || item.user?.lastName
-              ? `${item.user.firstName || ""} ${item.user.lastName || ""}`.trim()
-              : "-"}
+            <div>{name || "-"}</div>
+            <div className="text-muted-foreground text-sm">
+              {item.userId?.email || "-"}
+            </div>
           </div>
-          <div className="text-muted-foreground text-sm">
-            {item.user?.email || "-"}
-          </div>
-          <div className="text-muted-foreground text-sm">
-            {item.estate?.name || "-"}
-          </div>
-        </div>
-      ),
+        );
+      },
+    },
+    {
+      key: "estate",
+      header: "Estate",
+      render: (item: any) => item.estateId?.name || "-",
     },
     {
       key: "description",

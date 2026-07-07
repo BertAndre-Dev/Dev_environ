@@ -12,6 +12,18 @@ import { Button } from "@/components/ui/button"
 import { CheckCircle } from "lucide-react"
 import { formatDateTime } from "@/lib/format-date"
 
+interface TransactionUser {
+  id?: string
+  firstName?: string
+  lastName?: string
+  email?: string
+}
+
+interface TransactionEstate {
+  id?: string
+  name?: string
+}
+
 interface Transaction {
   id?: string
   _id?: string
@@ -21,6 +33,8 @@ interface Transaction {
   paymentStatus?: string
   description?: string
   createdAt?: string
+  userId?: TransactionUser
+  estateId?: TransactionEstate
 }
 
 interface TransactionDetailsDialogProps {
@@ -62,6 +76,12 @@ export function TransactionDetailsDialog({
     }
   }
 
+  const getResidentName = (userId?: TransactionUser) => {
+    if (!userId) return "-"
+    const name = `${userId.firstName || ""} ${userId.lastName || ""}`.trim()
+    return name || userId.email || "-"
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl">
@@ -86,6 +106,21 @@ export function TransactionDetailsDialog({
               <DetailItem
                 label="Reference"
                 value={transaction.tx_ref}
+              />
+
+              <DetailItem
+                label="Resident Name"
+                value={getResidentName(transaction.userId)}
+              />
+
+              <DetailItem
+                label="Email"
+                value={transaction.userId?.email || "-"}
+              />
+
+              <DetailItem
+                label="Estate"
+                value={transaction.estateId?.name || "-"}
               />
 
               <DetailItem

@@ -147,7 +147,7 @@ export default function SuperAdminTransactionsPage() {
       }
 
       if (format === "csv") {
-        const header = ["Date","Type","Amount","Status","Resident Name","Email","Estate","Description","Reference"];
+        const header = ["Date","Type","Amount","Status","User Details","Email","Estate","Description","Reference"];
         const csvRows = rows.map((item) => {
           const date = formatDateTime(item.createdAt, "");
           const name = getResidentName(item.userId);
@@ -194,7 +194,7 @@ export default function SuperAdminTransactionsPage() {
           <style>table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px;font-size:12px}th{background:#f5f5f5}</style>
           </head><body><h3>Transactions Export</h3>
           <table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Status</th>
-          <th>Resident Name</th><th>Email</th><th>Estate</th><th>Description</th><th>Reference</th></tr></thead>
+          <th>User Details</th><th>Email</th><th>Estate</th><th>Description</th><th>Reference</th></tr></thead>
           <tbody>${tableRows}</tbody></table></body></html>`);
         printWindow.document.close();
         printWindow.focus();
@@ -212,8 +212,8 @@ export default function SuperAdminTransactionsPage() {
       render: (item: any) => formatDateTime(item.createdAt, "-"),
     },
     {
-      key: "resident",
-      header: "Resident",
+      key: "user",
+      header: "User Details",
       render: (item: any) => {
         const name = getResidentName(item.userId);
         return (

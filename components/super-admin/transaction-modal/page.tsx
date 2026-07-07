@@ -109,7 +109,7 @@ export function TransactionDetailsDialog({
               />
 
               <DetailItem
-                label="Resident Name"
+                label="Name"
                 value={getResidentName(transaction.userId)}
               />
 

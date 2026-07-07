@@ -1,22 +1,29 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 
+export interface TransactionUser {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+}
+
+export interface TransactionEstate {
+  id: string;
+  name?: string;
+}
+
 export interface TransactionData {
-  _id: string;
+  id: string;
+  _id?: string;
   type: "debit" | "credit";
   amount: number;
   paymentStatus: "paid" | "pending" | "failed";
   tx_ref: string;
   description: string;
   createdAt: string;
-  user: {
-    firstName?: string;
-    lastName?: string;
-    email?: string;
-  };
-  estate: {
-    name?: string;
-  };
+  userId?: TransactionUser;
+  estateId?: TransactionEstate;
 }
 
 export interface TransactionPagination {

@@ -188,7 +188,7 @@ export default function LoginPage() {
           )}
         </Button>
 
-        <p className="text-center text-sm text-gray-600">
+        {/* <p className="text-center text-sm text-gray-600">
           Don&apos;t have an account?
         </p>
 
@@ -201,7 +201,7 @@ export default function LoginPage() {
             Create Account
             <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
           </Button>
-        </Link>
+        </Link> */}
       </form>
 
       <p className="text-right text-xs">

@@ -4,10 +4,13 @@ import { BlogArticleJsonLd } from "@/components/blog/blog-json-ld";
 import DevelopersBuildEstatesArticle from "@/components/blog/articles/developers-build-estates-article";
 import DigitalOperatingSystemArticle from "@/components/blog/articles/digital-operating-system-article";
 import ResidentExperiencePriorityArticle from "@/components/blog/articles/resident-experience-priority-article";
+import SustainableEstatesArticle from "@/components/blog/articles/sustainable-estates-article";
 import { getBlogPost, getAllBlogSlugs } from "@/lib/blog/posts";
 import { createBlogPostMetadata } from "@/lib/blog/seo";
 
 const articleComponents: Record<string, React.ComponentType> = {
+  "5-practical-ways-estate-managers-can-make-communities-more-sustainable":
+    SustainableEstatesArticle,
   "why-resident-experience-should-be-every-estate-managers-priority":
     ResidentExperiencePriorityArticle,
   "developers-build-estates-communities-built-afterward":

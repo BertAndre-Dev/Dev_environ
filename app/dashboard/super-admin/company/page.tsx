@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { Plus, Edit, Trash2, Power, PowerOff } from "lucide-react";
+import { Plus, Edit, Trash2, Power, PowerOff, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -152,7 +152,8 @@ export default function SuperAdminCompanyPage() {
   const [statusSubmitting, setStatusSubmitting] = useState(false);
 
   const [page, setPage] = useState(1);
-  const [searchCommitted, setSearchCommitted] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -177,41 +178,49 @@ export default function SuperAdminCompanyPage() {
       );
   }, [dispatch, open]);
 
-  const fetchList = (
-    opts?: Partial<{
-      page: number;
-      search: string;
-      startDate: string;
-      endDate: string;
-    }>,
-  ) => {
-    const shouldApplyDate = Boolean(
-      (opts?.startDate ?? startDate) && (opts?.endDate ?? endDate),
-    );
-    return dispatch(
-      getCompanies({
-        page: opts?.page ?? page,
-        limit: effectivePageSize,
-        search: (opts?.search ?? searchCommitted) || undefined,
-        startDate: shouldApplyDate ? (opts?.startDate ?? startDate) : undefined,
-        endDate: shouldApplyDate ? (opts?.endDate ?? endDate) : undefined,
-      }),
-    )
-      .unwrap()
-      .catch((err: any) =>
-        toast.error(err?.message ?? "Failed to fetch companies"),
-      );
+  const fetchList = useCallback(
+    (targetPage: number) => {
+      const shouldApplyDate = Boolean(startDate && endDate);
+      return dispatch(
+        getCompanies({
+          page: targetPage,
+          limit: effectivePageSize,
+          search: searchQuery.trim() || undefined,
+          startDate: shouldApplyDate ? startDate : undefined,
+          endDate: shouldApplyDate ? endDate : undefined,
+        }),
+      )
+        .unwrap()
+        .catch((err: any) =>
+          toast.error(err?.message ?? "Failed to fetch companies"),
+        );
+    },
+    [dispatch, effectivePageSize, searchQuery, startDate, endDate],
+  );
+
+  useEffect(() => {
+    setPage(1);
+    fetchList(1);
+  }, [fetchList]);
+
+  const applySearch = useCallback(() => {
+    setSearchQuery(searchInput.trim());
+    setPage(1);
+  }, [searchInput]);
+
+  const clearSearch = useCallback(() => {
+    setSearchInput("");
+    setSearchQuery("");
+    setPage(1);
+  }, []);
+
+  const handleSearchInputChange = (value: string) => {
+    setSearchInput(value);
+    if (!value.trim() && searchQuery) {
+      setSearchQuery("");
+      setPage(1);
+    }
   };
-
-  useEffect(() => {
-    fetchList({ page: 1 });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dispatch, effectivePageSize, searchCommitted, startDate, endDate]);
-
-  useEffect(() => {
-    fetchList();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
 
   const openCreate = () => {
     setEditingCompany(null);
@@ -268,7 +277,7 @@ export default function SuperAdminCompanyPage() {
       }
       closeModal();
       setPage(1);
-      await fetchList({ page: 1 });
+      await fetchList(1);
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to save company");
     }
@@ -300,7 +309,7 @@ export default function SuperAdminCompanyPage() {
       }
       closeStatusModal();
       setPage(1);
-      await fetchList({ page: 1 });
+      await fetchList(1);
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to update company status.");
     } finally {
@@ -317,7 +326,7 @@ export default function SuperAdminCompanyPage() {
         await dispatch(deleteCompany(id)).unwrap();
         toast.success(`${item.name ?? "Company"} deleted successfully!`);
         setPage(1);
-        await fetchList({ page: 1 });
+        await fetchList(1);
       },
     });
   };
@@ -465,15 +474,34 @@ export default function SuperAdminCompanyPage() {
         />
 
         <Card className="p-4">
+          <div className="relative w-full max-w-sm flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                placeholder="Search by company name, address, city etc..."
+                value={searchInput}
+                onChange={(e) => handleSearchInputChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") applySearch();
+                  if (e.key === "Escape") clearSearch();
+                }}
+                className="w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            {searchInput.trim().length > 0 && (
+              <Button type="button" onClick={applySearch} className="cursor-pointer">
+                Search
+              </Button>
+            )}
+          </div>
+        </Card>
+
+        <Card className="p-4">
           <Table
             columns={columns as any}
             data={list ?? []}
             emptyMessage={emptyMessage}
-            enableSearch
-            onSearch={(value) => {
-              setSearchCommitted(value);
-              setPage(1);
-            }}
             enableDateRangeFilter
             defaultDateRangeDays={0}
             startDate={startDate}
@@ -489,7 +517,10 @@ export default function SuperAdminCompanyPage() {
               current: pagination?.currentPage ?? page,
               pageSize: pagination?.pageSize ?? effectivePageSize,
             }}
-            onPageChange={(p) => setPage(p)}
+            onPageChange={(p) => {
+              setPage(p);
+              fetchList(p);
+            }}
             enableExport
             exportFileName="companies"
             onExportRequest={async () => {
@@ -498,7 +529,7 @@ export default function SuperAdminCompanyPage() {
                 getCompanies({
                   page: 1,
                   limit: 99999,
-                  search: searchCommitted || undefined,
+                  search: searchQuery.trim() || undefined,
                   startDate: shouldApplyDate ? startDate : undefined,
                   endDate: shouldApplyDate ? endDate : undefined,
                 }),

@@ -4,11 +4,6 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/redux/store';
 import { clearStoredAuth, readStoredAuth, writeStoredAuth, writeStoredUser } from '@/utils/auth-storage';
 import {
-  bindTabSessionOwner,
-  ensureTabSessionOwner,
-  isTabSessionValid,
-} from '@/utils/session-guard';
-import {
   signIn,
   signOut,
   getSignedInUser,
@@ -68,16 +63,10 @@ const authSlice = createSlice({
       const parsed = readStoredAuth();
       state.user = parsed?.user ?? null;
       state.token = (parsed?.token as string | null | undefined) ?? null;
-      const userEmail = (parsed?.user as { email?: unknown } | null)?.email;
-      ensureTabSessionOwner(userEmail);
     },
 
     setToken: (state, action: PayloadAction<string>) => {
       state.token = action.payload;
-      if (typeof window !== 'undefined') {
-        const parsed = readStoredAuth() ?? {};
-        writeStoredAuth({ ...parsed, token: action.payload });
-      }
     },
 
     logoutLocally: (state) => {
@@ -103,7 +92,6 @@ const authSlice = createSlice({
         state.token = token;
 
         if (typeof window !== "undefined") {
-          bindTabSessionOwner(user?.email);
           writeStoredUser(user);
           writeStoredAuth({ user, token });
         }
@@ -116,19 +104,9 @@ const authSlice = createSlice({
       .addCase(getSignedInUser.fulfilled, (state, action) => {
         state.getSignedInUserStatus = 'succeeded';
         const user = action.payload?.data ?? null;
-        const token = state.token;
-
-        if (user && !isTabSessionValid(user?.email, token)) {
-          state.user = null;
-          state.token = null;
-          if (typeof window !== 'undefined') clearStoredAuth();
-          return;
-        }
-
         state.user = user;
 
         if (typeof window !== 'undefined') {
-          ensureTabSessionOwner(user?.email);
           const parsed = readStoredAuth() ?? {};
           writeStoredUser(user);
           writeStoredAuth({ ...parsed, user });

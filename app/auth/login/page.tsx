@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
@@ -10,11 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { signIn } from "@/redux/slice/auth-mgt/auth-mgt";
 import type { AppDispatch, RootState } from "@/redux/store";
-import {
-  bindTabSessionOwner,
-  consumeAuthLogoutReason,
-  SESSION_CONFLICT_REASON,
-} from "@/utils/session-guard";
 
 interface FormState {
   email: string;
@@ -33,14 +28,6 @@ export default function LoginPage() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (consumeAuthLogoutReason() === SESSION_CONFLICT_REASON) {
-      toast.info(
-        "You were signed out because another account was signed in elsewhere in this browser.",
-      );
-    }
-  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -70,7 +57,6 @@ export default function LoginPage() {
 
         // Store user per-tab so multiple logins in different tabs don't mix.
         sessionStorage.setItem("user", JSON.stringify(user));
-        bindTabSessionOwner(user.email);
 
         toast.success(res.message || "Signed in successfully");
 

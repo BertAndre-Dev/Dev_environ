@@ -7,12 +7,6 @@ import {
   updateCsrfFromResponseHeaders,
 } from "@/utils/csrf";
 import { getStoredUserEmail } from "@/utils/auth-storage";
-import {
-  decodeAccessTokenEmail,
-  getTabSessionOwner,
-  isTabSessionValid,
-  markSessionConflictLogout,
-} from "@/utils/session-guard";
 
 // On the client, use a relative base URL so every request goes through the
 // Next.js rewrite proxy (/api/v1/* → https://bertahubdev.com/api/v1/*).
@@ -45,11 +39,7 @@ async function getAuthActions() {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function normalizeRefreshEmail(email: string): string {
-  return email.trim().toLowerCase();
-}
-
-/** Reads the stored email — Redux state first, sessionStorage as fallback. */
+/** Reads the stored email — Redux state first, localStorage as fallback. */
 function getEmail(): string | null {
   // 1) Try Redux (works after first render / rehydration)
   try {
@@ -122,7 +112,7 @@ async function doRefresh(): Promise<string | null> {
   const email = getEmail();
 
   if (!email) {
-    console.warn("[auth] doRefresh: email not found in Redux state or sessionStorage — cannot refresh");
+    console.warn("[auth] doRefresh: email not found in Redux state or localStorage — cannot refresh");
     return null;
   }
 
@@ -153,42 +143,6 @@ async function doRefresh(): Promise<string | null> {
     const newToken = res.data?.accessToken ?? null;
 
     if (newToken) {
-      const tabOwner = getTabSessionOwner();
-      const tokenEmail = decodeAccessTokenEmail(newToken);
-      const refreshEmail = normalizeRefreshEmail(email);
-
-      if (
-        tabOwner &&
-        tokenEmail &&
-        tokenEmail !== tabOwner
-      ) {
-        console.warn(
-          "[auth] Refresh returned token for a different user — session conflict",
-          { tabOwner, tokenEmail },
-        );
-        markSessionConflictLogout();
-        return null;
-      }
-
-      if (
-        tabOwner &&
-        refreshEmail &&
-        refreshEmail !== tabOwner
-      ) {
-        console.warn(
-          "[auth] Refresh email does not match tab session owner — session conflict",
-          { tabOwner, refreshEmail },
-        );
-        markSessionConflictLogout();
-        return null;
-      }
-
-      if (!isTabSessionValid(refreshEmail, newToken)) {
-        console.warn("[auth] Refreshed token failed tab session validation");
-        markSessionConflictLogout();
-        return null;
-      }
-
       const { setToken } = await getAuthActions();
       dispatchToStore(setToken(newToken));
       if (typeof window !== "undefined") {

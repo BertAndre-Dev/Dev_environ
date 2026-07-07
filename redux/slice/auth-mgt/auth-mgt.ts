@@ -2,7 +2,6 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import { getStoredUserEmail } from "@/utils/auth-storage";
 import { clearCsrfToken, fetchCsrfToken } from "@/utils/csrf";
-import { isTabSessionValid, markSessionConflictLogout } from "@/utils/session-guard";
 
 export interface InvitedUserData {
   estateId?: string;
@@ -69,18 +68,9 @@ export const resendOtp = createAsyncThunk(
 // get signed in user
 export const getSignedInUser = createAsyncThunk(
   "auth-mgt/getSignedInUser",
-  async (_, { rejectWithValue, getState }) => {
+  async (_, { rejectWithValue }) => {
     try {
       const res = await axiosInstance.get("/api/v1/auth-mgt/me");
-      const user = res.data?.data;
-      const state = getState() as { auth?: { token?: string | null } };
-      const token = state.auth?.token ?? null;
-
-      if (user && !isTabSessionValid(user?.email, token)) {
-        markSessionConflictLogout();
-        return rejectWithValue("SESSION_CONFLICT");
-      }
-
       return res.data;
     } catch (error: any) {
       return rejectWithValue(error.res?.data?.message);

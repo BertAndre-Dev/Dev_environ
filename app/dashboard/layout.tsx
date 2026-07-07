@@ -26,7 +26,6 @@ import {
 } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 import { getSignedInUser, signOut } from "@/redux/slice/auth-mgt/auth-mgt";
 import { clearCsrfToken, ensureCsrfToken } from "@/utils/csrf";
-import { ensureTabSessionOwner } from "@/utils/session-guard";
 import { disconnectSocket } from "@/lib/socket";
 import { CommunityChatSocketProvider } from "@/components/providers/CommunityChatSocketProvider";
 import { WalletRequiredAlert } from "@/components/wallet/WalletRequiredAlert";
@@ -111,11 +110,10 @@ export default function DashboardLayout({
       return;
     }
     setUser(user);
-    ensureTabSessionOwner(user?.email);
     setLoading(false);
   }, [router]);
 
-  // 🔹 Hydrate Redux state from sessionStorage
+  // 🔹 Hydrate Redux state from localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
       dispatch(hydrateAuthFromStorage());
@@ -145,12 +143,8 @@ export default function DashboardLayout({
       hasFetchedUser.current = true;
       dispatch(getSignedInUser())
         .unwrap()
-        .catch((err) => {
-          const message =
-            err === "SESSION_CONFLICT"
-              ? "This tab was signed out because another account is active in this browser."
-              : "Session expired. Please sign in again.";
-          toast.error(message);
+        .catch(() => {
+          toast.error("Session expired. Please sign in again.");
           dispatch(logoutLocally());
           router.push("/auth/login");
         });

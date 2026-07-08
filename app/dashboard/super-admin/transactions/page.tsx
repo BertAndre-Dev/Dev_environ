@@ -39,8 +39,8 @@ export default function SuperAdminTransactionsPage() {
   const [toDate, setToDate] = useState<string | null>(null);
 
   // ✅ Track grand total separately — never let it overwrite the list
-  const [grandTotalAmount, setGrandTotalAmount] = useState(0);
-  const grandTotalFetched = useRef(false);
+  // const [grandTotalAmount, setGrandTotalAmount] = useState(0);
+  // const grandTotalFetched = useRef(false);
 
   const { allTransactionHistory, loading } = useSelector((state: RootState) => {
     const s: any = state.superAdminTransaction;
@@ -66,30 +66,30 @@ export default function SuperAdminTransactionsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // ✅ Fetch grand total ONCE, separately, without touching the list state
-  useEffect(() => {
-    if (grandTotalFetched.current) return;
-    grandTotalFetched.current = true;
+  // useEffect(() => {
+  //   if (grandTotalFetched.current) return;
+  //   grandTotalFetched.current = true;
 
-    dispatch(
-      getAllTransactionHistory({
-        page: 1,
-        limit: 99999,
-        type: "",
-        search: "",
-        forGrandTotal: true,
-      }),
-    )
-      .unwrap()
-      .then((res: any) => {
-        // Sum up from the raw response so it never touches allTransactionHistory
-        const rows: any[] = res?.data || [];
-        const total = rows.reduce((acc: number, t: any) => acc + (t.amount ?? 0), 0);
-        setGrandTotalAmount(total);
-      })
-      .catch(() => {
-        // silently ignore — grand total is non-critical
-      });
-  }, [dispatch]);
+  //   dispatch(
+  //     getAllTransactionHistory({
+  //       page: 1,
+  //       limit: 99999,
+  //       type: "",
+  //       search: "",
+  //       forGrandTotal: true,
+  //     }),
+  //   )
+  //     .unwrap()
+  //     .then((res: any) => {
+  //       // Sum up from the raw response so it never touches allTransactionHistory
+  //       const rows: any[] = res?.data || [];
+  //       const total = rows.reduce((acc: number, t: any) => acc + (t.amount ?? 0), 0);
+  //       setGrandTotalAmount(total);
+  //     })
+  //     .catch(() => {
+  //       // silently ignore — grand total is non-critical
+  //     });
+  // }, [dispatch]);
 
   // ✅ Fixed: ALL filter deps included so every filter change triggers a re-fetch
   useEffect(() => {
@@ -319,7 +319,7 @@ export default function SuperAdminTransactionsPage() {
       </div>
 
       {/* ✅ Uses local grandTotalAmount state, not Redux — no overwrite risk */}
-      <TotalTransactionsCard grandTotal={grandTotalAmount} />
+      {/* <TotalTransactionsCard grandTotal={grandTotalAmount} /> */}
 
       <TransactionsSearchCard
         placeholder="Search by name, email, estate, description, reference or amount..."

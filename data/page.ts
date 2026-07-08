@@ -122,6 +122,30 @@ export const energyProviderNav = [
     moduleKey: "wallet",
   },
   {
+    label: "Address Management",
+    icon: FiMapPin,
+    path: "/dashboard/energy-provider/address",
+    moduleKey: "address",
+  },
+  {
+    label: "User Management",
+    icon: UserCog,
+    path: "/dashboard/energy-provider/user",
+    moduleKey: "users",
+  },
+  {
+    label: "Estate Management",
+    icon: BsBuildings,
+    path: "/dashboard/energy-provider/estate",
+    moduleKey: "estate",
+  },
+  {
+    label: "Energy Management",
+    icon: IoSpeedometerOutline,
+    path: "/dashboard/energy-provider/meter",
+    moduleKey: "meter",
+  },
+  {
     label: "Settings",
     icon: FiSettings,
     path: "/dashboard/settings",

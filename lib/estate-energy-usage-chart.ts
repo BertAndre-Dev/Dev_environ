@@ -19,6 +19,7 @@ export const ESTATE_ENERGY_USAGE_RANGE_OPTIONS: {
 export interface EstateEnergyUsagePoint {
   time: string;
   usageKwh: number;
+  label?: string;
 }
 
 export interface EstateEnergyUsageData {
@@ -106,7 +107,7 @@ export function mapEstateEnergyUsageToChartPoints(
   return [...usage.points]
     .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
     .map((point) => ({
-      label: formatPointLabel(point.time, range),
+      label: point.label?.trim() || formatPointLabel(point.time, range),
       date: point.time,
       usageKwh: Math.max(0, Number(point.usageKwh) || 0),
     }));
@@ -153,12 +154,13 @@ function parseUsagePayload(value: unknown): EstateEnergyUsageData | null {
       return {
         time: typeof p.time === "string" ? p.time : "",
         usageKwh: Number(p.usageKwh) || 0,
+        label: typeof p.label === "string" ? p.label : undefined,
       };
     }),
   };
 }
 
-/** Parses POST /api/v1/meters/estate/{estateId}/hes/usage/jobs response. */
+/** Parses HES estate usage job responses (usage/jobs and hes/jobs/{jobId}). */
 export function parseEstateEnergyUsageJobResponse(
   value: unknown,
 ): EstateEnergyUsageData | null {

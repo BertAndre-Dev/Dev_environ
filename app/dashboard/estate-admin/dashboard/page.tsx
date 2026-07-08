@@ -170,40 +170,40 @@ export default function DummyDashboard() {
   };
 
   /** 🔥 Dummy Stats */
-  const stats = [
-    {
-      title: "Total Revenue",
-      value: `12500000`,
-      change: "this month",
-      trend: "up",
-      icon: DollarSign,
-      color: "bg-[#D0DFF280] text-[#0150AC]",
-    },
-    {
-      title: "Transactions",
-      value: 1240,
-      change: "this month",
-      trend: "up",
-      icon: Users,
-      color: "bg-[#E6F4EA] text-[#007A4D]",
-    },
-    {
-      title: "Paid Bills",
-      value: `8900000`,
-      change: "320 active",
-      trend: "up",
-      icon: FileText,
-      color: "bg-[#E6F4EA] text-[#007A4D]",
-    },
-    {
-      title: "Pending",
-      value: `3600000`,
-      change: "120 unpaid",
-      trend: "up",
-      icon: FileText,
-      color: "bg-[#FFF4E5] text-[#FF8A00]",
-    },
-  ];
+  // const stats = [
+  //   {
+  //     title: "Total Revenue",
+  //     value: `12500000`,
+  //     change: "this month",
+  //     trend: "up",
+  //     icon: DollarSign,
+  //     color: "bg-[#D0DFF280] text-[#0150AC]",
+  //   },
+  //   {
+  //     title: "Transactions",
+  //     value: 1240,
+  //     change: "this month",
+  //     trend: "up",
+  //     icon: Users,
+  //     color: "bg-[#E6F4EA] text-[#007A4D]",
+  //   },
+  //   {
+  //     title: "Paid Bills",
+  //     value: `8900000`,
+  //     change: "320 active",
+  //     trend: "up",
+  //     icon: FileText,
+  //     color: "bg-[#E6F4EA] text-[#007A4D]",
+  //   },
+  //   {
+  //     title: "Pending",
+  //     value: `3600000`,
+  //     change: "120 unpaid",
+  //     trend: "up",
+  //     icon: FileText,
+  //     color: "bg-[#FFF4E5] text-[#FF8A00]",
+  //   },
+  // ];
 
   return (
     <div className="space-y-8">
@@ -235,7 +235,7 @@ export default function DummyDashboard() {
         })}
       </div> */}
 
-      <TransactionSummaryCard
+      {/* <TransactionSummaryCard
         data={transactionSummary}
         loading={transactionSummaryLoading}
         emptyMessage={
@@ -243,7 +243,7 @@ export default function DummyDashboard() {
             ? "No estate linked to your account."
             : "No transaction data to display."
         }
-      />
+      /> */}
 
       <div className="space-y-6">
         <EstatePowerUsageSection

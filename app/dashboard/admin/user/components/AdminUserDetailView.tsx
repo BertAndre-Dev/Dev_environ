@@ -38,6 +38,8 @@ import {
 } from "@/redux/slice/admin/user-mgt/user";
 import type { AdminUserDetails } from "@/redux/slice/admin/user-mgt/user-slice";
 import { getResidentBills } from "@/redux/slice/resident/bill-mgt/bills-mgt";
+import { getMeterByAddress } from "@/redux/slice/resident/meter-mgt/meter-mgt";
+import type { ResidentMeterData } from "@/redux/slice/resident/meter-mgt/meter-mgt-slice";
 import { getComplaintsByAddress } from "@/redux/slice/resident/maintenance/resident-complaints";
 import type { ResidentComplaintItem } from "@/redux/slice/resident/maintenance/resident-complaints";
 
@@ -116,6 +118,31 @@ function getUserAddresses(user: AdminUserDetails): AddressOption[] {
       data: raw.data,
     }))
     .filter((addr) => addr.id.length > 0);
+}
+
+function normalizeMeter(data: unknown): ResidentMeterData | null {
+  if (!data) return null;
+  if (Array.isArray(data)) return (data[0] as ResidentMeterData) ?? null;
+  return data as ResidentMeterData;
+}
+
+function MeterNumberValue({ meterNumber }: { meterNumber: string | null }) {
+  if (!meterNumber) {
+    return (
+      <span className="text-sm text-muted-foreground italic">Not assigned</span>
+    );
+  }
+  return (
+    <div className="flex items-center justify-end gap-2">
+      <span className="font-mono text-sm font-semibold">{meterNumber}</span>
+      <CopyButton
+        value={meterNumber}
+        label="Copy"
+        copiedLabel="Copied"
+        title="Copy meter number"
+      />
+    </div>
+  );
 }
 
 function DetailField({
@@ -207,10 +234,12 @@ function UserProfileDetails({
   user,
   phoneDisplay,
   userAddresses,
+  meterByAddressId,
 }: {
   user: AdminUserDetails;
   phoneDisplay: string;
   userAddresses: AddressOption[];
+  meterByAddressId: Record<string, string | null>;
 }) {
   return (
     <>
@@ -297,6 +326,14 @@ function UserProfileDetails({
                       <dd className="font-medium text-right">{val || "—"}</dd>
                     </div>
                   ))}
+                  <div className="flex justify-between gap-4 border-t border-border/60 pt-2 mt-2 text-sm">
+                    <dt className="text-muted-foreground">Meter number</dt>
+                    <dd className="text-right">
+                      <MeterNumberValue
+                        meterNumber={meterByAddressId[addr.id] ?? null}
+                      />
+                    </dd>
+                  </div>
                 </dl>
               </div>
             ))}
@@ -326,6 +363,9 @@ export default function AdminUserDetailView({
   const [relatedLoading, setRelatedLoading] = useState(false);
   const [bills, setBills] = useState<UserBillRow[]>([]);
   const [complaints, setComplaints] = useState<ResidentComplaintItem[]>([]);
+  const [meterByAddressId, setMeterByAddressId] = useState<
+    Record<string, string | null>
+  >({});
 
   const [suspendOpen, setSuspendOpen] = useState(false);
   const [suspendSubmitting, setSuspendSubmitting] = useState(false);
@@ -374,9 +414,22 @@ export default function AdminUserDetailView({
         }
       });
 
-      const [billsRes, complaintGroups] = await Promise.all([
+      const meterPromises = addresses.map(async (addr) => {
+        try {
+          const res = await dispatch(
+            getMeterByAddress({ addressId: addr.id }),
+          ).unwrap();
+          const meter = normalizeMeter(res?.data);
+          return [addr.id, meter?.meterNumber ?? null] as const;
+        } catch {
+          return [addr.id, null] as const;
+        }
+      });
+
+      const [billsRes, complaintGroups, meterEntries] = await Promise.all([
         billPromise,
         Promise.all(complaintPromises),
+        Promise.all(meterPromises),
       ]);
 
       setBills(
@@ -391,6 +444,8 @@ export default function AdminUserDetailView({
           lastPaymentDate: bill.lastPaymentDate as string | null | undefined,
         })),
       );
+
+      setMeterByAddressId(Object.fromEntries(meterEntries));
 
       const seen = new Set<string>();
       const merged = complaintGroups.flat().filter((c) => {
@@ -647,6 +702,7 @@ export default function AdminUserDetailView({
                         user={user}
                         phoneDisplay={phoneDisplay}
                         userAddresses={userAddresses}
+                        meterByAddressId={meterByAddressId}
                       />
                     </div>
                   ) : null}

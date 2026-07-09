@@ -276,12 +276,6 @@ function UserProfileDetails({
               value={formatLabel(user.residentType)}
             />
           ) : null}
-          {user.serviceCharge !== undefined ? (
-            <DetailField
-              label="Service charge"
-              value={user.serviceCharge ? "Yes" : "No"}
-            />
-          ) : null}
         </div>
 
         <div>
@@ -974,7 +968,7 @@ export default function UserDetailView({
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-1 overflow-x-auto border-b border-border">
+            <div className="flex gap-1 overflow-x-auto border-b border-border pt-4">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}

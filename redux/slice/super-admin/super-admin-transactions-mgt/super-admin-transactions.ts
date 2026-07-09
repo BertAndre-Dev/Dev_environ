@@ -114,6 +114,44 @@ export const getAllTransactionHistory = createAsyncThunk(
   }
 );
 
+/** GET /api/v1/transaction-mgt/history?userId= — paginated history for one user */
+export const getUserTransactionHistory = createAsyncThunk(
+  "super-admin-transactions/getUserTransactionHistory",
+  async (
+    {
+      userId,
+      page = 1,
+      limit = 10,
+      startDate,
+      endDate,
+    }: {
+      userId: string;
+      page?: number;
+      limit?: number;
+      startDate?: string;
+      endDate?: string;
+    },
+    { rejectWithValue },
+  ) => {
+    try {
+      const res = await axiosInstance.get("/api/v1/transaction-mgt/history", {
+        params: {
+          userId,
+          page,
+          limit,
+          startDate,
+          endDate,
+        },
+      });
+      return res.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data || { message: "Failed to fetch user transactions" },
+      );
+    }
+  },
+);
+
 // Get single transaction by ID
 export const getTransactionById = createAsyncThunk(
   "super-admin-transactions/getTransactionById",

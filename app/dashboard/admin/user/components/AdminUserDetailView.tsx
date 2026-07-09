@@ -13,6 +13,7 @@ import {
   Phone,
   Power,
   PowerOff,
+  Receipt,
   Trash2,
   User,
 } from "lucide-react";
@@ -37,8 +38,15 @@ import { getMeterByAddress } from "@/redux/slice/resident/meter-mgt/meter-mgt";
 import type { ResidentMeterData } from "@/redux/slice/resident/meter-mgt/meter-mgt-slice";
 import { getComplaintsByAddress } from "@/redux/slice/resident/maintenance/resident-complaints";
 import type { ResidentComplaintItem } from "@/redux/slice/resident/maintenance/resident-complaints";
+import { TransactionDetailsDialog } from "@/components/super-admin/transaction-modal/page";
+import {
+  getTransactionById,
+  getUserTransactionHistory,
+  verifyTransaction,
+} from "@/redux/slice/super-admin/super-admin-transactions-mgt/super-admin-transactions";
+import { formatDateTime as formatUtcDateTime } from "@/lib/format-date";
 
-type DetailTab = "bills" | "complaints";
+type DetailTab = "bills" | "complaints" | "transactions";
 
 interface UserBillRow {
   id: string;
@@ -51,7 +59,18 @@ interface UserBillRow {
   lastPaymentDate?: string | null;
 }
 
-const TABS: { id: DetailTab; label: string }[] = [
+interface UserTransactionRow {
+  id: string;
+  type?: string;
+  amount?: number;
+  paymentStatus?: string;
+  description?: string;
+  tx_ref?: string;
+  createdAt?: string;
+  estateId?: { name?: string };
+}
+
+const BASE_TABS: { id: DetailTab; label: string }[] = [
   { id: "bills", label: "Bills" },
   { id: "complaints", label: "Complaints" },
 ];
@@ -132,7 +151,7 @@ function MeterNumberValue({ meterNumber }: { meterNumber: string | null }) {
       <span className="font-mono text-sm font-semibold">{meterNumber}</span>
       <CopyButton
         value={meterNumber}
-        label="Copy"
+        // label="Copy"
         copiedLabel="Copied"
         title="Copy meter number"
       />
@@ -157,7 +176,7 @@ function DetailField({
         {copyValue ? (
           <CopyButton
             value={copyValue}
-            label="Copy"
+            // label="Copy"
             copiedLabel="Copied"
             title={`Copy ${label.toLowerCase()}`}
           />
@@ -354,6 +373,7 @@ export interface UserDetailViewProps {
   userLoading: boolean;
   listPath: string;
   actions: UserMgtActions;
+  showTransactionsTab?: boolean;
 }
 
 export default function UserDetailView({
@@ -362,6 +382,7 @@ export default function UserDetailView({
   userLoading,
   listPath,
   actions,
+  showTransactionsTab = false,
 }: UserDetailViewProps) {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
@@ -371,6 +392,19 @@ export default function UserDetailView({
   const [relatedLoading, setRelatedLoading] = useState(false);
   const [bills, setBills] = useState<UserBillRow[]>([]);
   const [complaints, setComplaints] = useState<ResidentComplaintItem[]>([]);
+  const [transactions, setTransactions] = useState<UserTransactionRow[]>([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [transactionsPage, setTransactionsPage] = useState(1);
+  const [transactionsTotal, setTransactionsTotal] = useState(0);
+  const [transactionsPageSize, setTransactionsPageSize] = useState(10);
+  const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<
+    Record<string, unknown> | null
+  >(null);
+  const [transactionDialogLoading, setTransactionDialogLoading] =
+    useState(false);
+  const [verifyTransactionLoading, setVerifyTransactionLoading] =
+    useState(false);
   const [meterByAddressId, setMeterByAddressId] = useState<
     Record<string, string | null>
   >({});
@@ -474,6 +508,66 @@ export default function UserDetailView({
     fetchRelatedData().catch(() => {});
   }, [fetchRelatedData]);
 
+  const fetchTransactions = useCallback(
+    async (page = 1) => {
+      const uid = getUserId(user);
+      if (!uid || !showTransactionsTab) return;
+
+      setTransactionsLoading(true);
+      try {
+        const res = await dispatch(
+          getUserTransactionHistory({ userId: uid, page, limit: 10 }),
+        ).unwrap();
+
+        const pagination = (res?.pagination ?? {}) as Record<string, unknown>;
+        setTransactions(
+          (res?.data ?? []).map(
+            (transaction: Record<string, unknown>, index: number) => ({
+              id: String(transaction.id ?? transaction._id ?? index),
+              type: transaction.type as string | undefined,
+              amount: transaction.amount as number | undefined,
+              paymentStatus: transaction.paymentStatus as string | undefined,
+              description: transaction.description as string | undefined,
+              tx_ref: transaction.tx_ref as string | undefined,
+              createdAt: transaction.createdAt as string | undefined,
+              estateId: transaction.estateId as
+                | { name?: string }
+                | undefined,
+            }),
+          ),
+        );
+        setTransactionsPage(
+          Number(pagination.page ?? pagination.currentPage ?? page),
+        );
+        setTransactionsPageSize(
+          Number(pagination.limit ?? pagination.pageSize ?? 10),
+        );
+        setTransactionsTotal(Number(pagination.total ?? 0));
+      } catch {
+        toast.error("Failed to load transaction history.");
+      } finally {
+        setTransactionsLoading(false);
+      }
+    },
+    [dispatch, showTransactionsTab, user],
+  );
+
+  useEffect(() => {
+    if (!showTransactionsTab || !user) return;
+    fetchTransactions(1).catch(() => {});
+  }, [fetchTransactions, showTransactionsTab, user]);
+
+  const tabs = useMemo(
+    () =>
+      showTransactionsTab
+        ? [
+            ...BASE_TABS,
+            { id: "transactions" as const, label: "Transactions" },
+          ]
+        : BASE_TABS,
+    [showTransactionsTab],
+  );
+
   const displayName = useMemo(() => {
     if (!user) return "User";
     const name = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim();
@@ -536,6 +630,47 @@ export default function UserDetailView({
     });
   };
 
+  const handleViewTransaction = async (transactionId: string) => {
+    if (!transactionId) return;
+    setTransactionDialogOpen(true);
+    setTransactionDialogLoading(true);
+    setSelectedTransaction(null);
+    try {
+      const res = await dispatch(getTransactionById(transactionId)).unwrap();
+      setSelectedTransaction((res?.data ?? res) as Record<string, unknown>);
+    } catch (err: unknown) {
+      toast.error(
+        (err as { message?: string })?.message ??
+          "Failed to load transaction details.",
+      );
+      setTransactionDialogOpen(false);
+    } finally {
+      setTransactionDialogLoading(false);
+    }
+  };
+
+  const handleVerifyTransaction = async (tx_ref: string) => {
+    if (!tx_ref) return;
+    setVerifyTransactionLoading(true);
+    try {
+      await dispatch(verifyTransaction(tx_ref)).unwrap();
+      toast.success("Transaction verified successfully.");
+      const id = selectedTransaction?.id || selectedTransaction?._id;
+      if (typeof id === "string") {
+        const res = await dispatch(getTransactionById(id)).unwrap();
+        setSelectedTransaction((res?.data ?? res) as Record<string, unknown>);
+      }
+      await fetchTransactions(transactionsPage);
+    } catch (err: unknown) {
+      toast.error(
+        (err as { message?: string })?.message ??
+          "Failed to verify transaction.",
+      );
+    } finally {
+      setVerifyTransactionLoading(false);
+    }
+  };
+
   const billColumns = [
     { key: "billName", header: "Bill Name" },
     {
@@ -580,7 +715,78 @@ export default function UserDetailView({
     },
   ];
 
-  const pageLoading = userLoading || relatedLoading;
+  const transactionColumns = [
+    {
+      key: "createdAt",
+      header: "Date",
+      render: (item: UserTransactionRow) =>
+        formatUtcDateTime(item.createdAt, "—"),
+    },
+    {
+      key: "type",
+      header: "Type",
+      render: (item: UserTransactionRow) => formatLabel(item.type),
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      render: (item: UserTransactionRow) =>
+        new Intl.NumberFormat("en-NG", {
+          style: "currency",
+          currency: "NGN",
+        }).format(item.amount ?? 0),
+    },
+    {
+      key: "paymentStatus",
+      header: "Status",
+      render: (item: UserTransactionRow) => {
+        const status = (item.paymentStatus ?? "").toLowerCase();
+        const paid =
+          status === "paid" ||
+          status === "successful" ||
+          status === "completed";
+        return (
+          <StatusPill tone={paid ? "green" : "amber"}>
+            {formatLabel(item.paymentStatus) || "Pending"}
+          </StatusPill>
+        );
+      },
+    },
+    {
+      key: "description",
+      header: "Description",
+      render: (item: UserTransactionRow) => (
+        <span className="max-w-[220px] break-words whitespace-normal">
+          {item.description || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "tx_ref",
+      header: "Reference",
+      render: (item: UserTransactionRow) => (
+        <span className="font-mono text-xs">{item.tx_ref || "—"}</span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Action",
+      render: (item: UserTransactionRow) => (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleViewTransaction(item.id)}
+        >
+          View details
+        </Button>
+      ),
+    },
+  ];
+
+  const pageLoading =
+    userLoading ||
+    relatedLoading ||
+    (showTransactionsTab && transactionsLoading && activeTab === "transactions");
 
   return (
     <div className="relative space-y-6">
@@ -736,7 +942,12 @@ export default function UserDetailView({
         {user ? (
           <>
             {/* Quick stats */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 pt-8">
+            <div
+              className={cn(
+                "grid grid-cols-1 gap-3 pt-8 sm:grid-cols-2",
+                showTransactionsTab && "lg:grid-cols-3",
+              )}
+            >
               <SummaryCard
                 label="Bills"
                 value={bills.length}
@@ -751,11 +962,20 @@ export default function UserDetailView({
                 active={activeTab === "complaints"}
                 onClick={() => setActiveTab("complaints")}
               />
+              {showTransactionsTab ? (
+                <SummaryCard
+                  label="Transactions"
+                  value={transactionsTotal || transactions.length}
+                  icon={Receipt}
+                  active={activeTab === "transactions"}
+                  onClick={() => setActiveTab("transactions")}
+                />
+              ) : null}
             </div>
 
             {/* Tabs */}
             <div className="flex gap-1 overflow-x-auto border-b border-border">
-              {TABS.map((tab) => (
+              {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
@@ -773,6 +993,9 @@ export default function UserDetailView({
                     : ""}
                   {tab.id === "complaints" && complaints.length > 0
                     ? ` (${complaints.length})`
+                    : ""}
+                  {tab.id === "transactions" && transactionsTotal > 0
+                    ? ` (${transactionsTotal})`
                     : ""}
                 </button>
               ))}
@@ -814,9 +1037,39 @@ export default function UserDetailView({
                 )}
               </div>
             ) : null}
+
+            {activeTab === "transactions" && showTransactionsTab ? (
+              <Card className="p-4">
+                <Table
+                  columns={transactionColumns}
+                  data={transactions}
+                  emptyMessage="No transactions found for this user."
+                  showPagination
+                  paginationInfo={{
+                    total: transactionsTotal,
+                    current: transactionsPage,
+                    pageSize: transactionsPageSize,
+                  }}
+                  onPageChange={(page) => {
+                    fetchTransactions(page).catch(() => {});
+                  }}
+                />
+              </Card>
+            ) : null}
           </>
         ) : null}
       </div>
+
+      <TransactionDetailsDialog
+        open={transactionDialogOpen}
+        onOpenChange={setTransactionDialogOpen}
+        transaction={selectedTransaction}
+        loading={transactionDialogLoading}
+        onVerify={
+          showTransactionsTab ? handleVerifyTransaction : undefined
+        }
+        verifyLoading={verifyTransactionLoading}
+      />
 
       <SuspendRentModal
         visible={suspendOpen}

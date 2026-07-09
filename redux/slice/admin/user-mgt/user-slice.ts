@@ -8,22 +8,32 @@ import {
 } from './user';
 
 
+export interface AdminUserAddressRef {
+  id: string;
+  data: Record<string, string>;
+}
+
 export interface AdminUserDetails {
   firstName: string;
   lastName: string;
   email: string;
   countryCode: string;
-  dateOfBirth: string; 
+  dateOfBirth: string;
   gender: string;
   phoneNumber: string;
   address: string;
-  role: string; 
-  image?: string; 
+  role: string;
+  image?: string;
   isActive?: boolean;
   createdAt?: string;
   invitationStatus?: string;
   updatedAt?: string;
   id?: string;
+  _id?: string;
+  addressId?: string;
+  addressIds?: AdminUserAddressRef[];
+  residentType?: string;
+  serviceCharge?: boolean;
 }
 
 

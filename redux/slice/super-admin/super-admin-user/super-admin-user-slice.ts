@@ -14,18 +14,22 @@ export interface SuperAdminUserDetails {
   lastName: string;
   email: string;
   countryCode: string;
-  dateOfBirth: string; 
+  dateOfBirth: string;
   gender: string;
   phoneNumber: string;
   address: string;
-  role: string; 
-  image?: string; 
+  role: string;
+  image?: string;
   isActive?: boolean;
   serviceCharge?: boolean;
   invitationStatus?: string;
   createdAt?: string;
   updatedAt?: string;
   id?: string;
+  _id?: string;
+  addressId?: string;
+  addressIds?: { id: string; data: Record<string, string> }[];
+  residentType?: string;
 }
 
 

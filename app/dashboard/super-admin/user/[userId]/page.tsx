@@ -10,24 +10,24 @@ import {
   deleteUser,
   getUser,
   suspendUser,
-} from "@/redux/slice/admin/user-mgt/user";
+} from "@/redux/slice/super-admin/super-admin-user/super-admin-user";
 import UserDetailView from "@/app/dashboard/admin/user/components/AdminUserDetailView";
 
-const ADMIN_USER_ACTIONS = {
+const SUPER_ADMIN_USER_ACTIONS = {
   getUser,
   activateUser,
   suspendUser,
   deleteUser,
 };
 
-export default function AdminUserDetailPage() {
+export default function SuperAdminUserDetailPage() {
   const dispatch = useDispatch<AppDispatch>();
   const params = useParams<{ userId: string }>();
   const userId = params?.userId ?? "";
 
   const { user, loading } = useSelector((state: RootState) => ({
-    user: state.adminUser.user,
-    loading: state.adminUser.getUserState === "isLoading",
+    user: state.superAdminUser.user,
+    loading: state.superAdminUser.getUserState === "isLoading",
   }));
 
   const fetchUser = useCallback(async () => {
@@ -50,8 +50,8 @@ export default function AdminUserDetailPage() {
       userId={userId}
       user={user}
       userLoading={loading}
-      listPath="/dashboard/admin/user"
-      actions={ADMIN_USER_ACTIONS}
+      listPath="/dashboard/super-admin/user"
+      actions={SUPER_ADMIN_USER_ACTIONS}
     />
   );
 }

@@ -14,6 +14,7 @@ import {
   Trash2,
   UsersRound,
   Search,
+  Eye,
 } from "lucide-react";
 import Table from "@/components/tables/list/page";
 import Select from "react-select";
@@ -28,6 +29,7 @@ import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Modal from "@/components/modal/page";
 import InviteUserForm from "@/components/super-admin/user-form/page";
 import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
@@ -38,6 +40,8 @@ import {
   ESTATE_USER_ROLE_FILTER_OPTIONS,
   type EstateUserRoleFilter,
 } from "@/lib/estate-user-roles";
+import { formatUserMeterNumbers } from "@/lib/user-address-meters";
+import { useUserListMeterNumbers } from "@/hooks/useUserListMeterNumbers";
 
 interface UserAddress {
   id: string;
@@ -120,6 +124,7 @@ const ESTATE_FILTER_FETCH_LIMIT = 500;
 
 export default function SuperAdminUserPage() {
   const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
 
   const { allSuperAdminUsers, userPagination, loading } = useSelector(
     (state: RootState) => {
@@ -144,6 +149,9 @@ export default function SuperAdminUserPage() {
   });
 
   const pageLoading = estateLoading || loading;
+
+  const { meterByAddressId, loading: metersLoading } =
+    useUserListMeterNumbers(allSuperAdminUsers);
 
   const [open, setOpen] = useState(false);
   const [selectedEstate, setSelectedEstate] = useState<EstateOption | null>(
@@ -307,6 +315,22 @@ export default function SuperAdminUserPage() {
     { key: "firstName", header: "First Name" },
     { key: "lastName", header: "Last Name" },
     { key: "email", header: "Email" },
+    {
+      key: "meterNumber",
+      header: "Meter Number",
+      render: (item: SuperAdminUserData) => {
+        if (metersLoading) {
+          return <span className="text-xs text-muted-foreground">...</span>;
+        }
+        const value = formatUserMeterNumbers(item, meterByAddressId);
+        if (value === "—") return "—";
+        return <span className="font-mono text-sm">{value}</span>;
+      },
+      exportValue: (item: SuperAdminUserData) => {
+        const value = formatUserMeterNumbers(item, meterByAddressId);
+        return value === "—" ? "" : value;
+      },
+    },
     { key: "role", header: "Role" },
     {
       key: "residentType",
@@ -375,6 +399,19 @@ export default function SuperAdminUserPage() {
       header: "Actions",
       render: (item: SuperAdminUserData) => (
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            className="cursor-pointer"
+            size="sm"
+            onClick={() => {
+              const id = item.id || (item as { _id?: string })._id;
+              if (id) router.push(`/dashboard/super-admin/user/${id}`);
+            }}
+            title="View user details"
+            disabled={!item.id && !(item as { _id?: string })._id}
+          >
+            <Eye className="w-4 h-4 text-[#0150AC]" />
+          </Button>
           <Button
             variant="ghost"
             className="cursor-pointer"

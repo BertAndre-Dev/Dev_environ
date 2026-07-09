@@ -2,7 +2,16 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Power, PowerOff, Trash2, Plus, UsersRound } from "lucide-react";
+import {
+  Power,
+  PowerOff,
+  Trash2,
+  Plus,
+  UsersRound,
+  Search,
+  Eye,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
 import Table from "@/components/tables/list/page";
 import {
   getAllUsersByEstate,
@@ -59,6 +68,7 @@ const PAGE_LIMIT = 10;
 
 export default function AdminUserPage() {
   const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
 
   const [user, setUser] = useState<any>(null);
   const [estateName, setEstateName] = useState("Estate");
@@ -67,7 +77,8 @@ export default function AdminUserPage() {
     null,
   );
   const [selectedUser, setSelectedUser] = useState<AdminUserData | null>(null);
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [suspendUserItem, setSuspendUserItem] = useState<AdminUserData | null>(
     null,
@@ -104,14 +115,14 @@ export default function AdminUserPage() {
           page,
           limit: PAGE_LIMIT,
           role: roleFilter,
-          search: search || undefined,
+          search: searchQuery || undefined,
           startDate: shouldApplyDate ? startDate : undefined,
           endDate: shouldApplyDate ? endDate : undefined,
         }),
       ).unwrap();
       setCurrentPage(page);
     },
-    [dispatch, selectedEstate?.value, search, startDate, endDate, roleFilter],
+    [dispatch, selectedEstate?.value, searchQuery, startDate, endDate, roleFilter],
   );
 
   // Bootstrap signed-in user and estate only (no user list fetch here).
@@ -312,6 +323,18 @@ export default function AdminUserPage() {
       exportable: false,
       render: (item: AdminUserData) => (
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (item.id) router.push(`/dashboard/admin/user/${item.id}`);
+            }}
+            title="View user details"
+            disabled={!item.id}
+          >
+            <Eye className="w-4 h-4 text-[#0150AC]" />
+          </Button>
+
           {item.isActive ? (
             <Button
               variant="ghost"
@@ -438,14 +461,36 @@ export default function AdminUserPage() {
 
         {/* Search */}
         <Card className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <input
-              type="text"
-              placeholder="Search users by name, email, block or apartment..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full max-w-sm px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            />
+          <div className="relative w-full max-w-sm flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground cursor-pointer" />
+              <input
+                type="text"
+                placeholder="Search users by name, email, block or apartment..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setSearchQuery(searchInput);
+                  }
+                  if (e.key === "Escape") {
+                    setSearchInput("");
+                    setSearchQuery("");
+                  }
+                }}
+                className="w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            {searchInput.trim().length > 0 && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery(searchInput)}
+                className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:opacity-90 transition cursor-pointer"
+              >
+                Search
+              </button>
+            )}
           </div>
         </Card>
 
@@ -489,7 +534,7 @@ export default function AdminUserPage() {
                         page: 1,
                         limit: 50000,
                         role: roleFilter,
-                        search,
+                        search: searchQuery || undefined,
                         startDate: shouldApplyDate ? startDate : undefined,
                         endDate: shouldApplyDate ? endDate : undefined,
                       }),

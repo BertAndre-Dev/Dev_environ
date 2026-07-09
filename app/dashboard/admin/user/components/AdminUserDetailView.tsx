@@ -1,0 +1,824 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState, type ElementType } from "react";
+import { useRouter } from "next/navigation";
+import { useDispatch } from "react-redux";
+import { toast } from "react-toastify";
+import Image from "next/image";
+import {
+  ChevronDown,
+  FileText,
+  MapPin,
+  MessageSquareWarning,
+  Phone,
+  Power,
+  PowerOff,
+  Trash2,
+  User,
+} from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import Loader from "@/components/ui/Loader";
+import Table from "@/components/tables/list/page";
+import { CopyButton } from "@/components/ui/copy-button";
+import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
+import { MaintenanceRequestCard } from "@/components/admin/maintenance/maintenance-request-card";
+import { cn } from "@/lib/utils";
+import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
+import {
+  normalizeAddresses,
+  type AddressOption,
+} from "@/lib/address";
+import type { AppDispatch } from "@/redux/store";
+import {
+  activateUser,
+  deleteUser,
+  getUser,
+  suspendUser,
+} from "@/redux/slice/admin/user-mgt/user";
+import type { AdminUserDetails } from "@/redux/slice/admin/user-mgt/user-slice";
+import { getResidentBills } from "@/redux/slice/resident/bill-mgt/bills-mgt";
+import { getMeterByAddress } from "@/redux/slice/resident/meter-mgt/meter-mgt";
+import type { ResidentMeterData } from "@/redux/slice/resident/meter-mgt/meter-mgt-slice";
+import { getComplaintsByAddress } from "@/redux/slice/resident/maintenance/resident-complaints";
+import type { ResidentComplaintItem } from "@/redux/slice/resident/maintenance/resident-complaints";
+
+type DetailTab = "bills" | "complaints";
+
+interface UserBillRow {
+  id: string;
+  billName?: string;
+  frequency?: string;
+  amountPaid?: number;
+  status?: string;
+  startDate?: string;
+  nextDueDate?: string;
+  lastPaymentDate?: string | null;
+}
+
+const TABS: { id: DetailTab; label: string }[] = [
+  { id: "bills", label: "Bills" },
+  { id: "complaints", label: "Complaints" },
+];
+
+function getUserId(user: AdminUserDetails | null | undefined) {
+  return user?.id || user?._id || "";
+}
+
+function formatDate(value?: string) {
+  if (!value) return "—";
+  const d = new Date(value);
+  return Number.isNaN(d.getTime())
+    ? "—"
+    : d.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+}
+
+function formatDateTime(value?: string) {
+  if (!value) return "—";
+  const d = new Date(value);
+  return Number.isNaN(d.getTime())
+    ? "—"
+    : d.toLocaleString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+}
+
+function formatLabel(value?: string) {
+  if (!value) return "—";
+  return value
+    .split(/[\s_-]+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function getInitials(user: AdminUserDetails) {
+  const first = user.firstName?.charAt(0) ?? "";
+  const last = user.lastName?.charAt(0) ?? "";
+  return (first + last).toUpperCase() || "?";
+}
+
+function getUserAddresses(user: AdminUserDetails): AddressOption[] {
+  const normalized = normalizeAddresses(
+    user as unknown as Record<string, unknown>,
+  );
+  if (normalized.length > 0) return normalized;
+
+  const legacy = user.addressIds ?? [];
+  return legacy
+    .map((raw) => ({
+      id: raw.id || (raw as { _id?: string })._id || "",
+      data: raw.data,
+    }))
+    .filter((addr) => addr.id.length > 0);
+}
+
+function normalizeMeter(data: unknown): ResidentMeterData | null {
+  if (!data) return null;
+  if (Array.isArray(data)) return (data[0] as ResidentMeterData) ?? null;
+  return data as ResidentMeterData;
+}
+
+function MeterNumberValue({ meterNumber }: { meterNumber: string | null }) {
+  if (!meterNumber) {
+    return (
+      <span className="text-sm text-muted-foreground italic">Not assigned</span>
+    );
+  }
+  return (
+    <div className="flex items-center justify-end gap-2">
+      <span className="font-mono text-sm font-semibold">{meterNumber}</span>
+      <CopyButton
+        value={meterNumber}
+        label="Copy"
+        copiedLabel="Copied"
+        title="Copy meter number"
+      />
+    </div>
+  );
+}
+
+function DetailField({
+  label,
+  value,
+  copyValue,
+}: {
+  label: string;
+  value: React.ReactNode;
+  copyValue?: string;
+}) {
+  return (
+    <div className="py-3 border-b border-border/50 last:border-0">
+      <p className="text-xs text-muted-foreground mb-1">{label}</p>
+      <div className="text-sm font-medium flex flex-wrap items-center gap-2">
+        {value}
+        {copyValue ? (
+          <CopyButton
+            value={copyValue}
+            label="Copy"
+            copiedLabel="Copied"
+            title={`Copy ${label.toLowerCase()}`}
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function StatusPill({
+  children,
+  tone,
+}: {
+  children: React.ReactNode;
+  tone: "green" | "red" | "amber" | "blue" | "slate";
+}) {
+  const tones = {
+    green: "bg-green-50 text-green-700 ring-green-200",
+    red: "bg-red-50 text-red-700 ring-red-200",
+    amber: "bg-amber-50 text-amber-700 ring-amber-200",
+    blue: "bg-blue-50 text-blue-700 ring-blue-200",
+    slate: "bg-slate-100 text-slate-600 ring-slate-200",
+  };
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${tones[tone]}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function SummaryCard({
+  label,
+  value,
+  icon: Icon,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  icon: ElementType;
+  active?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "flex items-center gap-3 rounded-lg border p-4 text-left transition-all cursor-pointer",
+        active
+          ? "border-primary bg-primary/5 shadow-sm"
+          : "border-border bg-card hover:border-primary/40 hover:bg-muted/30",
+      ].join(" ")}
+    >
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+        <Icon className="h-5 w-5 text-primary" />
+      </div>
+      <div>
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-xl font-bold">{value}</p>
+      </div>
+    </button>
+  );
+}
+
+function UserProfileDetails({
+  user,
+  phoneDisplay,
+  userAddresses,
+  meterByAddressId,
+}: {
+  user: AdminUserDetails;
+  phoneDisplay: string;
+  userAddresses: AddressOption[];
+  meterByAddressId: Record<string, string | null>;
+}) {
+  return (
+    <>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div>
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+            <User className="h-4 w-4 text-primary" />
+            Personal details
+          </h2>
+          <DetailField label="First name" value={user.firstName || "—"} />
+          <DetailField label="Last name" value={user.lastName || "—"} />
+          <DetailField
+            label="Date of birth"
+            value={formatDate(user.dateOfBirth)}
+          />
+          <DetailField label="Gender" value={formatLabel(user.gender)} />
+          {user.role?.toLowerCase() === "resident" ? (
+            <DetailField
+              label="Resident type"
+              value={formatLabel(user.residentType)}
+            />
+          ) : null}
+          {user.serviceCharge !== undefined ? (
+            <DetailField
+              label="Service charge"
+              value={user.serviceCharge ? "Yes" : "No"}
+            />
+          ) : null}
+        </div>
+
+        <div>
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+            <Phone className="h-4 w-4 text-primary" />
+            Contact & account
+          </h2>
+          <DetailField
+            label="Email"
+            value={user.email || "—"}
+            copyValue={user.email || undefined}
+          />
+          <DetailField
+            label="Phone"
+            value={phoneDisplay}
+            copyValue={phoneDisplay !== "—" ? phoneDisplay : undefined}
+          />
+          {user.address ? (
+            <DetailField label="Address" value={user.address} />
+          ) : null}
+          <DetailField
+            label="Member since"
+            value={formatDateTime(user.createdAt)}
+          />
+          <DetailField
+            label="Last updated"
+            value={formatDateTime(user.updatedAt)}
+          />
+        </div>
+      </div>
+
+      {userAddresses.length > 0 ? (
+        <div className="mt-6 border-t border-border pt-6">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+            <MapPin className="h-4 w-4 text-primary" />
+            Addresses linked to this user
+          </h2>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {userAddresses.map((addr, index) => (
+              <div
+                key={addr.id || index}
+                className="rounded-lg border p-4"
+              >
+                <p className="mb-2 text-xs font-medium text-muted-foreground">
+                  Address {index + 1}
+                </p>
+                <dl className="space-y-1">
+                  {Object.entries(addr.data ?? {}).map(([key, val]) => (
+                    <div
+                      key={key}
+                      className="flex justify-between gap-4 text-sm"
+                    >
+                      <dt className="text-muted-foreground capitalize">
+                        {key.replace(/([A-Z])/g, " $1")}
+                      </dt>
+                      <dd className="font-medium text-right">{val || "—"}</dd>
+                    </div>
+                  ))}
+                  <div className="flex justify-between gap-4 border-t border-border/60 pt-2 mt-2 text-sm">
+                    <dt className="text-muted-foreground">Meter number</dt>
+                    <dd className="text-right">
+                      <MeterNumberValue
+                        meterNumber={meterByAddressId[addr.id] ?? null}
+                      />
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+interface AdminUserDetailViewProps {
+  userId: string;
+  user: AdminUserDetails | null;
+  userLoading: boolean;
+}
+
+export default function AdminUserDetailView({
+  userId,
+  user,
+  userLoading,
+}: AdminUserDetailViewProps) {
+  const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
+
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<DetailTab>("bills");
+  const [relatedLoading, setRelatedLoading] = useState(false);
+  const [bills, setBills] = useState<UserBillRow[]>([]);
+  const [complaints, setComplaints] = useState<ResidentComplaintItem[]>([]);
+  const [meterByAddressId, setMeterByAddressId] = useState<
+    Record<string, string | null>
+  >({});
+
+  const [suspendOpen, setSuspendOpen] = useState(false);
+  const [suspendSubmitting, setSuspendSubmitting] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [selectedComplaintId, setSelectedComplaintId] = useState<string | null>(
+    null,
+  );
+
+  const fetchUser = useCallback(async () => {
+    if (!userId) return;
+    try {
+      await dispatch(getUser(userId)).unwrap();
+    } catch (err: unknown) {
+      toast.error(
+        (err as { message?: string })?.message ?? "Failed to load user details.",
+      );
+    }
+  }, [dispatch, userId]);
+
+  const userAddresses = useMemo(
+    () => (user ? getUserAddresses(user) : []),
+    [user],
+  );
+
+  const fetchRelatedData = useCallback(async () => {
+    if (!user) return;
+    const uid = getUserId(user);
+    const addresses = getUserAddresses(user);
+
+    setRelatedLoading(true);
+    try {
+      const billPromise = uid
+        ? dispatch(
+            getResidentBills({ residentId: uid, page: 1, limit: 100 }),
+          ).unwrap()
+        : Promise.resolve({ data: [] });
+
+      const complaintPromises = addresses.map(async (addr) => {
+        try {
+          const res = await dispatch(
+            getComplaintsByAddress({ addressId: addr.id, page: 1, limit: 100 }),
+          ).unwrap();
+          return (res?.data ?? []) as ResidentComplaintItem[];
+        } catch {
+          return [];
+        }
+      });
+
+      const meterPromises = addresses.map(async (addr) => {
+        try {
+          const res = await dispatch(
+            getMeterByAddress({ addressId: addr.id }),
+          ).unwrap();
+          const meter = normalizeMeter(res?.data);
+          return [addr.id, meter?.meterNumber ?? null] as const;
+        } catch {
+          return [addr.id, null] as const;
+        }
+      });
+
+      const [billsRes, complaintGroups, meterEntries] = await Promise.all([
+        billPromise,
+        Promise.all(complaintPromises),
+        Promise.all(meterPromises),
+      ]);
+
+      setBills(
+        (billsRes?.data ?? []).map((bill: Record<string, unknown>, i: number) => ({
+          id: String(bill.id ?? bill._id ?? bill.billId ?? i),
+          billName: (bill.billName ?? bill.name) as string | undefined,
+          frequency: bill.frequency as string | undefined,
+          amountPaid: bill.amountPaid as number | undefined,
+          status: bill.status as string | undefined,
+          startDate: bill.startDate as string | undefined,
+          nextDueDate: bill.nextDueDate as string | undefined,
+          lastPaymentDate: bill.lastPaymentDate as string | null | undefined,
+        })),
+      );
+
+      setMeterByAddressId(Object.fromEntries(meterEntries));
+
+      const seen = new Set<string>();
+      const merged = complaintGroups.flat().filter((c) => {
+        const id = c.id || c._id;
+        if (!id || seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      });
+      setComplaints(merged);
+    } catch {
+      toast.error("Failed to load bills or complaints.");
+    } finally {
+      setRelatedLoading(false);
+    }
+  }, [dispatch, user]);
+
+  useEffect(() => {
+    fetchRelatedData().catch(() => {});
+  }, [fetchRelatedData]);
+
+  const displayName = useMemo(() => {
+    if (!user) return "User";
+    const name = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim();
+    return name || user.email || "User";
+  }, [user]);
+
+  const phoneDisplay = useMemo(() => {
+    if (!user) return "—";
+    const code = user.countryCode?.trim();
+    const number = user.phoneNumber?.trim();
+    if (code && number) return `${code} ${number}`;
+    return number || code || "—";
+  }, [user]);
+
+  const handleActivate = async () => {
+    const id = getUserId(user);
+    if (!id) return;
+    setActionLoading(true);
+    try {
+      await dispatch(activateUser(id)).unwrap();
+      toast.success(`${displayName} has been activated.`);
+      await fetchUser();
+    } catch (err: unknown) {
+      toast.error(
+        (err as { message?: string })?.message ?? "Failed to activate user.",
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSuspendConfirm = async (_reason: string) => {
+    const id = getUserId(user);
+    if (!id) return;
+    setSuspendSubmitting(true);
+    try {
+      await dispatch(suspendUser(id)).unwrap();
+      toast.info(`${displayName} has been suspended.`);
+      setSuspendOpen(false);
+      await fetchUser();
+    } catch (err: unknown) {
+      toast.error(
+        (err as { message?: string })?.message ?? "Failed to suspend user.",
+      );
+    } finally {
+      setSuspendSubmitting(false);
+    }
+  };
+
+  const handleDelete = () => {
+    const id = getUserId(user);
+    if (!id) return;
+    confirmDeleteToast({
+      name: displayName,
+      onConfirm: async () => {
+        await dispatch(deleteUser(id)).unwrap();
+        toast.success(`${displayName} deleted successfully.`);
+        router.push("/dashboard/admin/user");
+      },
+    });
+  };
+
+  const billColumns = [
+    { key: "billName", header: "Bill Name" },
+    {
+      key: "frequency",
+      header: "Frequency",
+      render: (item: UserBillRow) => formatLabel(item.frequency),
+    },
+    {
+      key: "amountPaid",
+      header: "Amount Paid",
+      render: (item: UserBillRow) =>
+        `₦${Number(item.amountPaid ?? 0).toLocaleString()}`,
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (item: UserBillRow) => {
+        const paid =
+          (item.status ?? "").toLowerCase() === "paid" ||
+          Number(item.amountPaid ?? 0) > 0;
+        return (
+          <StatusPill tone={paid ? "green" : "amber"}>
+            {formatLabel(item.status) || (paid ? "Paid" : "Pending")}
+          </StatusPill>
+        );
+      },
+    },
+    {
+      key: "startDate",
+      header: "Start Date",
+      render: (item: UserBillRow) => formatDateTime(item.startDate),
+    },
+    {
+      key: "nextDueDate",
+      header: "Next Due",
+      render: (item: UserBillRow) => formatDateTime(item.nextDueDate),
+    },
+    {
+      key: "lastPaymentDate",
+      header: "Last Payment",
+      render: (item: UserBillRow) => formatDateTime(item.lastPaymentDate ?? undefined),
+    },
+  ];
+
+  const pageLoading = userLoading || relatedLoading;
+
+  return (
+    <div className="relative space-y-6">
+      {pageLoading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
+          <Loader
+            label={
+              userLoading ? "Loading user..." : "Loading activity data..."
+            }
+          />
+        </div>
+      )}
+
+      <div
+        className={pageLoading ? "blur-sm opacity-60 pointer-events-none" : ""}
+      >
+
+        <Card className="p-4 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-3">
+            <button
+              type="button"
+              aria-label="Back to user management"
+              onClick={() => router.push("/dashboard/admin/user")}
+              className="grid h-10 w-10 shrink-0 place-items-center self-start rounded-full bg-[#F2F2F2] hover:opacity-80 cursor-pointer"
+            >
+              <Image src="/arrow.svg" alt="" width={20} height={20} />
+            </button>
+
+            <div className="flex min-w-0 flex-1 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex min-w-0 items-start gap-3 sm:items-center">
+                {user ? (
+                  <>
+                    {user.image ? (
+                      <img
+                        src={user.image}
+                        alt={displayName}
+                        className="h-11 w-11 shrink-0 rounded-full object-cover sm:h-12 sm:w-12"
+                      />
+                    ) : (
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground sm:h-12 sm:w-12">
+                        {getInitials(user)}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <h1 className="font-heading text-lg font-bold break-words sm:text-xl lg:text-2xl">
+                        {displayName}
+                      </h1>
+                      <p className="mt-0.5 text-sm text-muted-foreground break-all">
+                        {user.email}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        <StatusPill tone={user.isActive ? "green" : "red"}>
+                          {user.isActive ? "Active" : "Suspended"}
+                        </StatusPill>
+                        <StatusPill tone="blue">
+                          {formatLabel(user.role)}
+                        </StatusPill>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <h1 className="font-heading text-lg font-bold sm:text-xl">
+                    User Details
+                  </h1>
+                )}
+              </div>
+
+              {user ? (
+                <div className="relative w-full shrink-0 lg:w-auto">
+                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      aria-expanded={profileOpen}
+                      aria-label={
+                        profileOpen
+                          ? "Hide profile details"
+                          : "Show profile details"
+                      }
+                      onClick={() => setProfileOpen((open) => !open)}
+                    >
+                      <User className="h-4 w-4" />
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 transition-transform",
+                          profileOpen && "rotate-180",
+                        )}
+                      />
+                    </Button>
+
+                    {user.isActive ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        disabled={actionLoading}
+                        onClick={() => setSuspendOpen(true)}
+                      >
+                        <PowerOff className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        disabled={actionLoading}
+                        onClick={() => handleActivate()}
+                      >
+                        <Power className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="gap-2"
+                      disabled={actionLoading}
+                      onClick={handleDelete}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {profileOpen ? (
+                    <div className="absolute left-0 right-0 top-full z-20 mt-2 max-h-[70vh] overflow-y-auto rounded-lg border border-border bg-card p-4 shadow-lg sm:left-auto sm:right-0 sm:w-[min(calc(100vw-2rem),40rem)]">
+                      <UserProfileDetails
+                        user={user}
+                        phoneDisplay={phoneDisplay}
+                        userAddresses={userAddresses}
+                        meterByAddressId={meterByAddressId}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </Card>
+
+        {!userLoading && !user ? (
+          <Card className="p-8 text-center">
+            <p className="text-muted-foreground">User not found.</p>
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={() => router.push("/dashboard/admin/user")}
+            >
+              Back to users
+            </Button>
+          </Card>
+        ) : null}
+
+        {user ? (
+          <>
+            {/* Quick stats */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 pt-8">
+              <SummaryCard
+                label="Bills"
+                value={bills.length}
+                icon={FileText}
+                active={activeTab === "bills"}
+                onClick={() => setActiveTab("bills")}
+              />
+              <SummaryCard
+                label="Complaints"
+                value={complaints.length}
+                icon={MessageSquareWarning}
+                active={activeTab === "complaints"}
+                onClick={() => setActiveTab("complaints")}
+              />
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-1 overflow-x-auto border-b border-border">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={[
+                    "px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors cursor-pointer",
+                    activeTab === tab.id
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground",
+                  ].join(" ")}
+                >
+                  {tab.label}
+                  {tab.id === "bills" && bills.length > 0
+                    ? ` (${bills.length})`
+                    : ""}
+                  {tab.id === "complaints" && complaints.length > 0
+                    ? ` (${complaints.length})`
+                    : ""}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab content */}
+            {activeTab === "bills" ? (
+              <Card className="p-4">
+                <Table
+                  columns={billColumns}
+                  data={bills}
+                  emptyMessage="No bills found for this user."
+                />
+              </Card>
+            ) : null}
+
+            {activeTab === "complaints" ? (
+              <div className="space-y-3">
+                {complaints.length === 0 ? (
+                  <Card className="p-8 text-center text-muted-foreground">
+                    No complaints submitted by this user.
+                  </Card>
+                ) : (
+                  complaints.map((complaint) => {
+                    const id = complaint.id || complaint._id || "";
+                    return (
+                      <MaintenanceRequestCard
+                        key={id}
+                        complaint={complaint}
+                        isSelected={selectedComplaintId === id}
+                        onSelect={() =>
+                          setSelectedComplaintId((prev) =>
+                            prev === id ? null : id,
+                          )
+                        }
+                      />
+                    );
+                  })
+                )}
+              </div>
+            ) : null}
+          </>
+        ) : null}
+      </div>
+
+      <SuspendRentModal
+        visible={suspendOpen}
+        onClose={() => setSuspendOpen(false)}
+        tenantName={displayName}
+        title="Suspend user"
+        confirmLabel="Suspend"
+        onConfirm={handleSuspendConfirm}
+        loading={suspendSubmitting}
+      />
+    </div>
+  );
+}

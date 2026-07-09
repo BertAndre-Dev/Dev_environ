@@ -55,10 +55,12 @@ export const getAllMeters = createAsyncThunk(
       page = 1,
       limit = 10,
       search = "",
+      estateId,
     }: {
       page: number;
       limit: number;
       search?: string;
+      estateId?: string;
     },
     { rejectWithValue }
   ) => {
@@ -72,9 +74,11 @@ export const getAllMeters = createAsyncThunk(
         params.append("search", search);
       }
 
-      const res = await axiosInstance.get(
-        `/api/v1/meters?${params.toString()}`
-      );
+      const baseUrl = estateId
+        ? `/api/v1/meters/estate/${estateId}`
+        : "/api/v1/meters";
+
+      const res = await axiosInstance.get(`${baseUrl}?${params.toString()}`);
 
       return res.data;
     } catch (error: any) {

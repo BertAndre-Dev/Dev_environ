@@ -62,7 +62,7 @@ interface SuperAdminUserData {
   gender: string;
   phoneNumber: string;
   address: string;
-  role: string;
+  // role: string;
   image?: string;
   isActive?: boolean;
   serviceCharge?: boolean;
@@ -331,7 +331,7 @@ export default function SuperAdminUserPage() {
         return value === "—" ? "" : value;
       },
     },
-    { key: "role", header: "Role" },
+    // { key: "role", header: "Role" },
     {
       key: "residentType",
       header: "Resident Type",

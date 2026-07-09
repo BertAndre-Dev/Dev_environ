@@ -60,7 +60,7 @@ function parseRealtimePayload(value: unknown): EstateRealtimeReadingsData | null
   };
 }
 
-/** Parses POST /api/v1/meters/estate/{estateId}/hes/realtime/jobs response. */
+/** Parses HES estate realtime job responses. */
 export function parseEstateRealtimeReadingsJobResponse(
   value: unknown,
 ): EstateRealtimeReadingsData | null {

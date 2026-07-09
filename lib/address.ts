@@ -14,9 +14,12 @@ export function formatAddressLabel(addr: AddressOption): string {
 export function normalizeAddresses(meData: Record<string, unknown> | null | undefined): AddressOption[] {
   const rawIds = (meData?.addressIds ?? (meData?.addressId != null ? [meData.addressId] : [])) as unknown;
   if (!Array.isArray(rawIds)) return [];
-  return (rawIds as (string | { id?: string; data?: Record<string, string> })[])
+  return (rawIds as (string | { id?: string; _id?: string; data?: Record<string, string> })[])
     .map((raw) => ({
-      id: typeof raw === "string" ? raw : raw?.id ?? "",
+      id:
+        typeof raw === "string"
+          ? raw
+          : raw?.id ?? (raw as { _id?: string })._id ?? "",
       data: typeof raw === "object" && raw !== null && "data" in raw ? (raw as { data?: Record<string, string> }).data : undefined,
     }))
     .filter((a) => a.id.length > 0);

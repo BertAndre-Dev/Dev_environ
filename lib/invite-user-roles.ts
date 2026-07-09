@@ -20,6 +20,36 @@ export const COMPANY_INVITE_ROLE_OPTIONS = [
   { value: ENERGY_PROVIDER_ROLE, label: "Energy Provider" },
 ] as const;
 
+export const ENERGY_PROVIDER_INVITE_ROLE_OPTIONS = [
+  { value: "resident", label: "Home owner" },
+] as const;
+
+/** Payload for energy provider inviting a home owner (residentType: owner). */
+export function buildEnergyProviderInviteHomeOwnerPayload(params: {
+  firstName: string;
+  lastName: string;
+  email: string;
+  estateId: string;
+  companyId?: string;
+  addressIds: string[];
+}): InvitedUserData {
+  const estateId = params.estateId.trim();
+  const trimmedCompanyId = params.companyId?.trim();
+
+  return {
+    firstName: params.firstName.trim(),
+    lastName: params.lastName.trim(),
+    email: params.email.trim(),
+    role: "resident",
+    residentType: "owner",
+    estateId,
+    ...(trimmedCompanyId ? { companyId: trimmedCompanyId } : {}),
+    addressIds: params.addressIds
+      .map((id) => String(id).trim())
+      .filter(Boolean),
+  };
+}
+
 export function isEnergyProviderRole(role: string): boolean {
   return role.trim().toLowerCase() === ENERGY_PROVIDER_ROLE;
 }

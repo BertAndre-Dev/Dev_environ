@@ -29,14 +29,9 @@ import {
   normalizeAddresses,
   type AddressOption,
 } from "@/lib/address";
+import type { AsyncThunk } from "@reduxjs/toolkit";
 import type { AppDispatch } from "@/redux/store";
-import {
-  activateUser,
-  deleteUser,
-  getUser,
-  suspendUser,
-} from "@/redux/slice/admin/user-mgt/user";
-import type { AdminUserDetails } from "@/redux/slice/admin/user-mgt/user-slice";
+import type { DashboardUserDetails } from "@/lib/dashboard-user-details";
 import { getResidentBills } from "@/redux/slice/resident/bill-mgt/bills-mgt";
 import { getMeterByAddress } from "@/redux/slice/resident/meter-mgt/meter-mgt";
 import type { ResidentMeterData } from "@/redux/slice/resident/meter-mgt/meter-mgt-slice";
@@ -61,7 +56,7 @@ const TABS: { id: DetailTab; label: string }[] = [
   { id: "complaints", label: "Complaints" },
 ];
 
-function getUserId(user: AdminUserDetails | null | undefined) {
+function getUserId(user: DashboardUserDetails | null | undefined) {
   return user?.id || user?._id || "";
 }
 
@@ -99,13 +94,13 @@ function formatLabel(value?: string) {
     .join(" ");
 }
 
-function getInitials(user: AdminUserDetails) {
+function getInitials(user: DashboardUserDetails) {
   const first = user.firstName?.charAt(0) ?? "";
   const last = user.lastName?.charAt(0) ?? "";
   return (first + last).toUpperCase() || "?";
 }
 
-function getUserAddresses(user: AdminUserDetails): AddressOption[] {
+function getUserAddresses(user: DashboardUserDetails): AddressOption[] {
   const normalized = normalizeAddresses(
     user as unknown as Record<string, unknown>,
   );
@@ -236,7 +231,7 @@ function UserProfileDetails({
   userAddresses,
   meterByAddressId,
 }: {
-  user: AdminUserDetails;
+  user: DashboardUserDetails;
   phoneDisplay: string;
   userAddresses: AddressOption[];
   meterByAddressId: Record<string, string | null>;
@@ -344,17 +339,30 @@ function UserProfileDetails({
   );
 }
 
-interface AdminUserDetailViewProps {
+type UserIdThunk = AsyncThunk<unknown, string, object>;
+
+export type UserMgtActions = {
+  getUser: UserIdThunk;
+  activateUser: UserIdThunk;
+  suspendUser: UserIdThunk;
+  deleteUser: UserIdThunk;
+};
+
+export interface UserDetailViewProps {
   userId: string;
-  user: AdminUserDetails | null;
+  user: DashboardUserDetails | null;
   userLoading: boolean;
+  listPath: string;
+  actions: UserMgtActions;
 }
 
-export default function AdminUserDetailView({
+export default function UserDetailView({
   userId,
   user,
   userLoading,
-}: AdminUserDetailViewProps) {
+  listPath,
+  actions,
+}: UserDetailViewProps) {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
 
@@ -377,13 +385,13 @@ export default function AdminUserDetailView({
   const fetchUser = useCallback(async () => {
     if (!userId) return;
     try {
-      await dispatch(getUser(userId)).unwrap();
+      await dispatch(actions.getUser(userId)).unwrap();
     } catch (err: unknown) {
       toast.error(
         (err as { message?: string })?.message ?? "Failed to load user details.",
       );
     }
-  }, [dispatch, userId]);
+  }, [actions, dispatch, userId]);
 
   const userAddresses = useMemo(
     () => (user ? getUserAddresses(user) : []),
@@ -485,7 +493,7 @@ export default function AdminUserDetailView({
     if (!id) return;
     setActionLoading(true);
     try {
-      await dispatch(activateUser(id)).unwrap();
+      await dispatch(actions.activateUser(id)).unwrap();
       toast.success(`${displayName} has been activated.`);
       await fetchUser();
     } catch (err: unknown) {
@@ -502,7 +510,7 @@ export default function AdminUserDetailView({
     if (!id) return;
     setSuspendSubmitting(true);
     try {
-      await dispatch(suspendUser(id)).unwrap();
+      await dispatch(actions.suspendUser(id)).unwrap();
       toast.info(`${displayName} has been suspended.`);
       setSuspendOpen(false);
       await fetchUser();
@@ -521,9 +529,9 @@ export default function AdminUserDetailView({
     confirmDeleteToast({
       name: displayName,
       onConfirm: async () => {
-        await dispatch(deleteUser(id)).unwrap();
+        await dispatch(actions.deleteUser(id)).unwrap();
         toast.success(`${displayName} deleted successfully.`);
-        router.push("/dashboard/admin/user");
+        router.push(listPath);
       },
     });
   };
@@ -595,7 +603,7 @@ export default function AdminUserDetailView({
             <button
               type="button"
               aria-label="Back to user management"
-              onClick={() => router.push("/dashboard/admin/user")}
+              onClick={() => router.push(listPath)}
               className="grid h-10 w-10 shrink-0 place-items-center self-start rounded-full bg-[#F2F2F2] hover:opacity-80 cursor-pointer"
             >
               <Image src="/arrow.svg" alt="" width={20} height={20} />
@@ -718,7 +726,7 @@ export default function AdminUserDetailView({
             <Button
               variant="outline"
               className="mt-4"
-              onClick={() => router.push("/dashboard/admin/user")}
+              onClick={() => router.push(listPath)}
             >
               Back to users
             </Button>

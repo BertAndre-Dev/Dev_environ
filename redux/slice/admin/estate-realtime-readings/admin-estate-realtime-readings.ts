@@ -5,7 +5,6 @@ import {
   type EstateRealtimeReadingsData,
 } from "@/lib/estate-realtime-readings";
 
-const DEFAULT_WAIT_MS = 120_000;
 const POLL_INTERVAL_MS = 2_000;
 const MAX_POLL_ATTEMPTS = 90;
 
@@ -32,59 +31,86 @@ function extractJobMeta(value: unknown): EstateRealtimeReadingsJobMeta {
   };
 }
 
-async function pollJobResult(
-  pollUrl: string,
+function isJobCompleted(value: unknown): boolean {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    (value as { completed?: boolean }).completed === true
+  );
+}
+
+function resolvePollUrl(value: unknown, fallbackUrl: string): string {
+  if (value && typeof value === "object") {
+    const pollUrl = (value as { pollUrl?: unknown }).pollUrl;
+    if (typeof pollUrl === "string" && pollUrl.trim()) {
+      return pollUrl;
+    }
+  }
+  return fallbackUrl;
+}
+
+async function pollJob(
+  fetchJob: () => Promise<unknown>,
 ): Promise<{ body: unknown; meta: EstateRealtimeReadingsJobMeta }> {
   let attempts = 0;
+  let lastBody: unknown;
+  let lastMeta: EstateRealtimeReadingsJobMeta = {};
 
   while (attempts < MAX_POLL_ATTEMPTS) {
-    const res = await axiosInstance.get(pollUrl);
-    const body = res.data;
-    const meta = extractJobMeta(body);
+    lastBody = await fetchJob();
+    lastMeta = extractJobMeta(lastBody);
 
-    if (body?.completed === true) {
-      return { body, meta };
+    if (isJobCompleted(lastBody)) {
+      return { body: lastBody, meta: lastMeta };
     }
-
-    const nextUrl =
-      typeof body?.pollUrl === "string" && body.pollUrl.trim()
-        ? body.pollUrl
-        : pollUrl;
 
     attempts += 1;
     await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
-    pollUrl = nextUrl;
   }
 
   throw new Error("Estate realtime readings aggregation timed out.");
 }
 
-/** POST /api/v1/meters/estate/{estateId}/hes/realtime/jobs */
+/**
+ * GET /api/v1/meters/estate/{estateId}/hes/realtime/jobs — queue realtime job,
+ * then poll the same GET URL until completed.
+ */
 export const getEstateRealtimeReadings = createAsyncThunk(
   "admin-estate-realtime-readings/getReadings",
   async (
     {
       estateId,
-      waitMs = DEFAULT_WAIT_MS,
+      refresh,
     }: {
       estateId: string;
-      waitMs?: number;
+      refresh?: boolean;
     },
     { rejectWithValue },
   ) => {
     try {
-      const res = await axiosInstance.post(
-        `/api/v1/meters/estate/${estateId}/hes/realtime/jobs`,
-        {},
-        { params: { waitMs: String(waitMs) } },
-      );
+      const params: Record<string, string> = {};
+      if (refresh) {
+        params.refresh = "1";
+      }
 
-      let body: unknown = res.data;
+      const realtimeJobsUrl = `/api/v1/meters/estate/${estateId}/hes/realtime/jobs`;
+      const initialRes = await axiosInstance.get(realtimeJobsUrl, { params });
+      let body: unknown = initialRes.data;
       let meta = extractJobMeta(body);
 
-      const record = body as { completed?: boolean; pollUrl?: string };
-      if (record?.completed !== true && record?.pollUrl) {
-        const polled = await pollJobResult(record.pollUrl);
+      if (!isJobCompleted(body)) {
+        let pollUrl = resolvePollUrl(body, realtimeJobsUrl);
+
+        const polled = await pollJob(async () => {
+          const res =
+            pollUrl === realtimeJobsUrl
+              ? await axiosInstance.get(realtimeJobsUrl, { params })
+              : await axiosInstance.get(pollUrl);
+          const nextBody = res.data;
+          pollUrl = resolvePollUrl(nextBody, pollUrl);
+          return nextBody;
+        });
+
         body = polled.body;
         meta = { ...meta, ...polled.meta };
       }

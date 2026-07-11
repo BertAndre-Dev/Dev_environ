@@ -194,7 +194,7 @@ export default function VendPowerForm({
                 placeholder="Enter amount"
                 disabled={tariffLoading}
               />
-              <div className="flex flex-row items-center gap-2">
+              <div className="flex flex-row items-center gap-1">
                 <p className="mt-1 text-sm text-muted-foreground">
                   Price per kWh:{" "}
                   <strong>
@@ -204,7 +204,7 @@ export default function VendPowerForm({
                   </strong>
                 </p>
                 <p className="mt-1 text-sm font-semibold text-red-500">
-                  Tariff is VAT exclusive.
+                  (Tariff is VAT exclusive.)
                 </p>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">

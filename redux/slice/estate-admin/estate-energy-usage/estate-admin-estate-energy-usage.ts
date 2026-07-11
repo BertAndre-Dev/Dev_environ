@@ -6,7 +6,6 @@ import {
   type EstateEnergyUsageRange,
 } from "@/lib/estate-energy-usage-chart";
 
-const DEFAULT_WAIT_MS = 180_000;
 const POLL_INTERVAL_MS = 2_000;
 const MAX_POLL_ATTEMPTS = 90;
 
@@ -33,73 +32,158 @@ function extractJobMeta(value: unknown): EstateAdminEnergyUsageJobMeta {
   };
 }
 
-async function pollJobResult(
-  pollUrl: string,
+function isJobCompleted(value: unknown): boolean {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    (value as { completed?: boolean }).completed === true
+  );
+}
+
+function resolvePollUrl(value: unknown, fallbackUrl: string): string {
+  if (value && typeof value === "object") {
+    const pollUrl = (value as { pollUrl?: unknown }).pollUrl;
+    if (typeof pollUrl === "string" && pollUrl.trim()) {
+      return pollUrl;
+    }
+  }
+  return fallbackUrl;
+}
+
+function buildUsageJobParams({
+  range,
+  refresh,
+  year,
+  month,
+}: {
+  range: EstateEnergyUsageRange;
+  refresh?: boolean;
+  year?: number;
+  month?: number;
+}): Record<string, string> {
+  const params: Record<string, string> = { range };
+  const now = new Date();
+
+  const resolvedYear = year ?? now.getFullYear();
+  const resolvedMonth = month ?? now.getMonth() + 1;
+
+  if (range === "monthly" || range === "yearly") {
+    params.year = String(resolvedYear);
+  }
+  if (range === "monthly") {
+    params.month = String(resolvedMonth);
+  }
+  if (refresh) {
+    params.refresh = "1";
+  }
+
+  return params;
+}
+
+async function pollJob(
+  fetchJob: () => Promise<unknown>,
+  shouldStop: (body: unknown) => boolean,
 ): Promise<{ body: unknown; meta: EstateAdminEnergyUsageJobMeta }> {
   let attempts = 0;
+  let lastBody: unknown;
+  let lastMeta: EstateAdminEnergyUsageJobMeta = {};
 
   while (attempts < MAX_POLL_ATTEMPTS) {
-    const res = await axiosInstance.get(pollUrl);
-    const body = res.data;
-    const meta = extractJobMeta(body);
+    lastBody = await fetchJob();
+    lastMeta = extractJobMeta(lastBody);
 
-    if (body?.completed === true) {
-      return { body, meta };
+    if (shouldStop(lastBody)) {
+      return { body: lastBody, meta: lastMeta };
     }
-
-    const nextUrl =
-      typeof body?.pollUrl === "string" && body.pollUrl.trim()
-        ? body.pollUrl
-        : pollUrl;
 
     attempts += 1;
     await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
-    pollUrl = nextUrl;
   }
 
   throw new Error("Estate energy usage aggregation timed out.");
 }
 
-/** POST /api/v1/meters/estate/{estateId}/hes/usage/jobs (estate admin overview) */
+function hasJobId(value: unknown): boolean {
+  return !!extractJobMeta(value).jobId;
+}
+
+/**
+ * GET /api/v1/meters/estate/{estateId}/hes/usage/jobs — queue usage job, then
+ * GET /api/v1/meters/estate/hes/jobs/{jobId} until completed.
+ */
 export const getEstateAdminEstateEnergyUsage = createAsyncThunk(
   "estate-admin-estate-energy-usage/getUsage",
   async (
     {
       estateId,
       range = "weekly",
+      year,
+      month,
       refresh,
-      waitMs = DEFAULT_WAIT_MS,
     }: {
       estateId: string;
       range?: EstateEnergyUsageRange;
+      year?: number;
+      month?: number;
       refresh?: boolean;
-      waitMs?: number;
     },
     { rejectWithValue },
   ) => {
     try {
-      const params: Record<string, string> = {
-        range,
-        waitMs: String(waitMs),
-      };
-      if (refresh) {
-        params.refresh = "true";
-      }
+      const params = buildUsageJobParams({ range, refresh, year, month });
+      const usageJobsUrl = `/api/v1/meters/estate/${estateId}/hes/usage/jobs`;
 
-      const res = await axiosInstance.post(
-        `/api/v1/meters/estate/${estateId}/hes/usage/jobs`,
-        {},
-        { params },
-      );
-
-      let body: unknown = res.data;
+      const initialRes = await axiosInstance.get(usageJobsUrl, { params });
+      let body: unknown = initialRes.data;
       let meta = extractJobMeta(body);
 
-      const record = body as { completed?: boolean; pollUrl?: string };
-      if (record?.completed !== true && record?.pollUrl) {
-        const polled = await pollJobResult(record.pollUrl);
-        body = polled.body;
-        meta = { ...meta, ...polled.meta };
+      if (!isJobCompleted(body) && !hasJobId(body)) {
+        let pollUrl = resolvePollUrl(body, usageJobsUrl);
+
+        const usageJobPoll = await pollJob(
+          async () => {
+            const res =
+              pollUrl === usageJobsUrl
+                ? await axiosInstance.get(usageJobsUrl, { params })
+                : await axiosInstance.get(pollUrl);
+            const nextBody = res.data;
+            pollUrl = resolvePollUrl(nextBody, pollUrl);
+            return nextBody;
+          },
+          (nextBody) => isJobCompleted(nextBody) || hasJobId(nextBody),
+        );
+
+        body = usageJobPoll.body;
+        meta = { ...meta, ...usageJobPoll.meta };
+      }
+
+      if (!isJobCompleted(body)) {
+        const jobId =
+          meta.jobId ??
+          (body &&
+          typeof body === "object" &&
+          typeof (body as { jobId?: unknown }).jobId === "string"
+            ? (body as { jobId: string }).jobId
+            : undefined);
+
+        if (!jobId) {
+          return rejectWithValue({
+            message: "Estate energy usage job did not return a job id.",
+          });
+        }
+
+        const jobPoll = await pollJob(
+          async () => {
+            const res = await axiosInstance.get(
+              `/api/v1/meters/estate/hes/jobs/${jobId}`,
+            );
+            return res.data;
+          },
+          (nextBody) => isJobCompleted(nextBody),
+        );
+
+        body = jobPoll.body;
+        meta = { ...meta, ...jobPoll.meta };
       }
 
       const usage = parseEstateEnergyUsageJobResponse(body);

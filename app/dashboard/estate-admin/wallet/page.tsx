@@ -62,9 +62,14 @@ export default function EstateAdminWalletPage() {
   const wallet = useSelector(
     (state: RootState) => state.estateAdminWallet?.wallet ?? null,
   );
+  const getWalletState = useSelector(
+    (state: RootState) => state.estateAdminWallet?.getWalletState ?? "idle",
+  );
   const createWalletState = useSelector(
     (state: RootState) => state.estateAdminWallet?.createWalletState ?? "idle",
   );
+  const walletLoading =
+    getWalletState === "idle" || getWalletState === "isLoading";
   const estateCredits = useSelector(
     (state: RootState) => state.estateAdminWallet?.estateCredits ?? null,
   );
@@ -117,15 +122,16 @@ export default function EstateAdminWalletPage() {
         }
         setEstateId(estateIdFromUser);
 
-        await dispatch(getWallet(estateIdFromUser)).unwrap();
-
-        await dispatch(
-          getEstateCredits({
-            estateId: estateIdFromUser,
-            page: 1,
-            limit: LIMIT,
-          }),
-        ).unwrap();
+        await Promise.all([
+          dispatch(getWallet(estateIdFromUser)),
+          dispatch(
+            getEstateCredits({
+              estateId: estateIdFromUser,
+              page: 1,
+              limit: LIMIT,
+            }),
+          ),
+        ]);
       } catch (err: any) {
         // When user does not have a wallet, do not show error toast
       }
@@ -341,6 +347,7 @@ export default function EstateAdminWalletPage() {
         wallet={wallet}
         onWithdraw={handleOpenModal}
         onCreateWallet={() => setCreateWalletModalOpen(true)}
+        walletLoading={walletLoading}
         createWalletLoading={createWalletState === "isLoading"}
         filterExportSlot={
           <div className="space-y-3">

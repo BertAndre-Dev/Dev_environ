@@ -66,7 +66,7 @@ export const initializePayment = createAsyncThunk(
             return res.data; 
         } catch (error: any) {
             return rejectWithValue({
-                message: error.res?.data?.message || "Payment initialized successfully."
+                message: error.res?.data?.message
             })
         }
     }

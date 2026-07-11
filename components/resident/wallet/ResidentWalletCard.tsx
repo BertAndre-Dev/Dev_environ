@@ -36,6 +36,8 @@ type Props = {
   formatNaira: (value: number) => string;
   /** Default "full". Use "fundOnly" to show only balance + fund button. */
   variant?: "full" | "fundOnly";
+  /** True while wallet fetch has not finished — avoid flashing Create Wallet. */
+  walletLoading?: boolean;
   createWalletState: string;
   createWalletModalOpen: boolean;
   onFundWalletClick: () => void;
@@ -49,6 +51,7 @@ export function ResidentWalletCard({
   isOwner,
   formatNaira,
   variant = "full",
+  walletLoading = false,
   createWalletState,
   createWalletModalOpen,
   onFundWalletClick,
@@ -198,6 +201,8 @@ export function ResidentWalletCard({
               )}
             </div>
           </div>
+        ) : walletLoading ? (
+          <p className="text-sm text-muted-foreground py-2">Loading wallet...</p>
         ) : (
           <Button
             onClick={onCreateWalletClick}

@@ -107,15 +107,21 @@ export default function PayBillsPage() {
   const wallet = useSelector(
     (state: RootState) => state.wallet.wallet,
   ) as WalletData | null;
+  const getWalletState = useSelector(
+    (state: RootState) => state.wallet.getWalletState,
+  );
   const createWalletState = useSelector(
     (state: RootState) => state.wallet.createWalletState,
   );
+  const walletLoading =
+    getWalletState === "idle" || getWalletState === "isLoading";
 
   const billsPayment = useSelector(
     (state: RootState) => state.residentBillsPayment,
   ) as ResidentBillsPaymentState;
 
   const pageLoading =
+    walletLoading ||
     String(createWalletState) === "isLoading" ||
     billsPayment?.getCategoriesStatus === "isLoading" ||
     billsPayment?.getBillersStatus === "isLoading" ||
@@ -408,6 +414,7 @@ export default function PayBillsPage() {
             isOwner={isOwner}
             formatNaira={formatNaira}
             variant="fundOnly"
+            walletLoading={walletLoading}
             createWalletState={String(createWalletState)}
             createWalletModalOpen={createWalletModalOpen}
             onFundWalletClick={handleOpenModal}

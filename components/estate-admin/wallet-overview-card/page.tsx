@@ -24,6 +24,8 @@ interface EstateWalletOverviewCardProps {
   billStats?: WalletOverviewBillStats | null;
   onWithdraw: () => void;
   onCreateWallet?: () => void;
+  /** True while wallet fetch has not finished — avoid flashing Create Wallet. */
+  walletLoading?: boolean;
   createWalletLoading?: boolean;
   filterExportSlot?: React.ReactNode;
 }
@@ -34,6 +36,7 @@ export default function EstateWalletOverviewCard({
   wallet,
   onWithdraw,
   onCreateWallet,
+  walletLoading = false,
   createWalletLoading = false,
   filterExportSlot,
 }: EstateWalletOverviewCardProps) {
@@ -79,6 +82,10 @@ export default function EstateWalletOverviewCard({
                 </Button>
               </div>
             </>
+          ) : walletLoading ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Loading wallet...
+            </p>
           ) : (
             <div className="flex justify-center py-4">
               <Button

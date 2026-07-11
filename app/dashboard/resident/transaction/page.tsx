@@ -67,17 +67,22 @@ export default function TransactionPage() {
     (state: RootState) => state.residentTransaction.allTransactions?.pagination,
   );
   const wallet = useSelector((state: RootState) => state.wallet.wallet) as WalletData | null;
+  const getWalletState = useSelector(
+    (state: RootState) => state.wallet.getWalletState,
+  );
   const createWalletState = useSelector(
     (state: RootState) => state.wallet.createWalletState,
   );
   const residentBanks = useSelector(
     (state: RootState) => state.residentPaymentMgt.banks,
   );
+  const walletLoading =
+    getWalletState === "idle" || getWalletState === "isLoading";
   const loading =
     useSelector(
       (state: RootState) =>
         state.residentTransaction.getTransactionHistoryState,
-    ) === "isLoading";
+    ) === "isLoading" || walletLoading;
 
   // 🔹 Fetch signed-in user and wallet on mount
   useEffect(() => {
@@ -109,22 +114,20 @@ export default function TransactionPage() {
         setResidentType(rType ?? null);
         setOwnerEstateId(estateId ?? null);
 
-        // ✅ Fetch transactions (paginated)
-        await dispatch(getTransactionHistory({ userId: id, page: 1, limit }));
+        const [walletRes] = await Promise.all([
+          dispatch(getWallet(id)).unwrap(),
+          dispatch(getTransactionHistory({ userId: id, page: 1, limit })),
+          dispatch(getResidentBanks("NG")),
+        ]);
 
-        // ✅ Fetch wallet
-        const walletRes = await dispatch(getWallet(id)).unwrap();
         if (!walletRes?.data?.id)
           toast.warning("No wallet found for this user.");
-
-        // Load banks for displaying bank name in withdraw modal
-        await dispatch(getResidentBanks("NG")).unwrap();
       } catch (err) {
         // console.error("❌ Initialization error:", err);
         toast.error("Failed to load data.");
       }
     })();
-  }, [dispatch]);
+  }, [dispatch, limit]);
 
   // 🔹 Pagination Handler
   const handlePageChange = async (newPage: number) => {
@@ -451,6 +454,7 @@ export default function TransactionPage() {
           wallet={wallet}
           isOwner={isOwner}
           formatNaira={formatNaira}
+          walletLoading={walletLoading}
           createWalletState={String(createWalletState)}
           createWalletModalOpen={createWalletModalOpen}
           onFundWalletClick={handleOpenModal}

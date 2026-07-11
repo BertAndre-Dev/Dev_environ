@@ -64,9 +64,14 @@ export default function CompanyWalletPage() {
   const creditsData = useSelector(selectCompanyCredits);
   const creditsPagination = useSelector(selectCompanyCreditsPagination);
   const creditsLoading = useSelector(selectCompanyCreditsLoading);
+  const getWalletState = useSelector(
+    (state: RootState) => state.companyWallet?.getWalletState ?? "idle",
+  );
   const createWalletState = useSelector(
     (state: RootState) => state.companyWallet?.createWalletState ?? "idle",
   );
+  const walletLoading =
+    getWalletState === "idle" || getWalletState === "isLoading";
   const { banks, getBanksState } = useSelector(
     (state: RootState) => state.estateAdminFundWallet,
   );
@@ -101,18 +106,16 @@ export default function CompanyWalletPage() {
         setCompanyId(company.id);
         setCompanyName(company.name);
 
-        await dispatch(getCompanyWallet(company.id))
-          .unwrap()
-          .catch(() => {});
-        await dispatch(
-          getCompanyCredits({
-            companyId: company.id,
-            page: 1,
-            limit: LIMIT,
-          }),
-        )
-          .unwrap()
-          .catch(() => {});
+        await Promise.all([
+          dispatch(getCompanyWallet(company.id)),
+          dispatch(
+            getCompanyCredits({
+              companyId: company.id,
+              page: 1,
+              limit: LIMIT,
+            }),
+          ),
+        ]);
       } catch {
         // wallet may not exist yet
       }
@@ -281,6 +284,7 @@ export default function CompanyWalletPage() {
         wallet={wallet}
         onWithdraw={() => setOpen((prev) => !prev)}
         onCreateWallet={() => setCreateWalletModalOpen(true)}
+        walletLoading={walletLoading}
         createWalletLoading={createWalletState === "isLoading"}
       />
 

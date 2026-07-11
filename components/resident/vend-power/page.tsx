@@ -137,7 +137,9 @@ export default function VendPowerForm({
 
       const data = res as Record<string, unknown> | undefined;
       const inner = data?.data as Record<string, unknown> | undefined;
-      const energyList = inner?.energyList as Array<{ token?: string }> | undefined;
+      const energyList = inner?.energyList as
+        | Array<{ token?: string }>
+        | undefined;
       const firstEnergy = energyList?.[0];
       const token =
         (firstEnergy?.token as string) ??
@@ -192,17 +194,19 @@ export default function VendPowerForm({
                 placeholder="Enter amount"
                 disabled={tariffLoading}
               />
-              <p className="mt-1 text-sm text-muted-foreground">
-                Price per kWh:{" "}
-                <strong>
-                  {effectiveTariffPrice != null
-                    ? `₦${Number(effectiveTariffPrice).toLocaleString()}`
-                    : "—"}
-                </strong>
-              </p>
-              <p className="mt-1 text-sm font-semibold text-red-500">
-                Tariff is VAT exclusive.
-              </p>
+              <div className="flex flex-row items-center gap-2">
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Price per kWh:{" "}
+                  <strong>
+                    {effectiveTariffPrice != null
+                      ? `₦${Number(effectiveTariffPrice).toLocaleString()}`
+                      : "—"}
+                  </strong>
+                </p>
+                <p className="mt-1 text-sm font-semibold text-red-500">
+                  Tariff is VAT exclusive.
+                </p>
+              </div>
               <p className="mt-1 text-sm text-muted-foreground">
                 You will get <strong>{kwh} kWh</strong> for this amount.
               </p>

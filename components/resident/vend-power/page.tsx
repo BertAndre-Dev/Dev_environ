@@ -199,7 +199,7 @@ export default function VendPowerForm({
                     ? `₦${Number(effectiveTariffPrice).toLocaleString()}`
                     : "—"}
                 </strong>
-                <span className="ml-1">(VAT exclusive)</span>
+                <span className="ml-1 text-red-500 font-semibold">(VAT exclusive)</span>
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
                 You will get <strong>{kwh} kWh</strong> for this amount.

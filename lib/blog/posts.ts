@@ -16,12 +16,35 @@ export type BlogPostMeta = {
 
 export const blogPosts: BlogPostMeta[] = [
   {
+    slug: "how-estate-managers-can-prepare-for-the-next-decade",
+    title: "How Estate Managers Can Prepare for the Next Decade",
+    excerpt:
+      "Resident expectations, rising costs, and digital demand are reshaping estate management. Here are six ways estate managers can prepare for the decade ahead — from digital tools and sustainability to leadership and community.",
+    hook: "The question is no longer whether change is coming. The question is whether estate managers are ready for it.",
+    publishedAt: "2026-07-13",
+    readTimeMinutes: 8,
+    wordCount: 1150,
+    category: "Estate Management",
+    author: "Bertahub Team",
+    featuredImage: "/assets/blog/blog-5.jpeg",
+    featuredImageAlt:
+      "Modern residential estate preparing for the future of estate management",
+    keywords: [
+      "future of estate management",
+      "digital transformation estates",
+      "estate manager skills",
+      "sustainable estate operations",
+      "resident experience estate management",
+      "estate management Nigeria",
+    ],
+  },
+  {
     slug: "5-practical-ways-estate-managers-can-make-communities-more-sustainable",
     title:
       "5 Practical Ways Estate Managers Can Make Their Communities More Sustainable",
     excerpt:
       "Sustainability goes beyond appearances. From going paperless to preventive maintenance and resident engagement, here are five practical steps estate managers can take to build greener, more efficient communities.",
-    hook: "A truly sustainable estate uses its resources wisely — and meaningful change often starts with simple operational decisions.",
+    hook: "A truly sustainable estate uses its resources wisely, and meaningful change often starts with simple operational decisions.",
     publishedAt: "2026-07-07",
     readTimeMinutes: 4,
     wordCount: 380,

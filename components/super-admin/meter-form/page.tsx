@@ -29,6 +29,8 @@ interface SelectOption {
 }
 
 // ---------- Component ----------
+const ESTATE_FETCH_LIMIT = 500;
+
 const AssignMeterForm: React.FC<AssignMeterFormProps> = ({ close, refresh }) => {
   const dispatch = useDispatch<AppDispatch>();
   const [formData, setFormData] = useState<AssignMeterFormData>({
@@ -44,8 +46,9 @@ const AssignMeterForm: React.FC<AssignMeterFormProps> = ({ close, refresh }) => 
     const loadEstates = async () => {
       try {
         setLoading(true);
-        const res = await  dispatch(getAllEstates({ page: 1, limit: 10 })).unwrap()
-
+        const res = await dispatch(
+          getAllEstates({ page: 1, limit: ESTATE_FETCH_LIMIT }),
+        ).unwrap();
 
         if (res?.success && res.data) {
           const options = res.data.map((estate: any) => ({

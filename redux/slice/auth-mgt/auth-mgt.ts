@@ -79,6 +79,9 @@ export const getSignedInUser = createAsyncThunk(
 );
 
 export type Membership = {
+  /** Present on estate/company list items from `/me/memberships`. */
+  id?: string | null;
+  name?: string | null;
   estateId?: string | { id?: string; _id?: string; name?: string } | null;
   companyId?: string | { id?: string; _id?: string; name?: string } | null;
   estateName?: string | null;
@@ -87,6 +90,8 @@ export type Membership = {
   residentType?: string | null;
   addressIds?: string[];
   isActive?: boolean;
+  /** Which membership is the user's current context. */
+  isCurrent?: boolean;
 };
 
 export type SwitchMembershipPayload = {

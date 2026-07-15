@@ -146,10 +146,27 @@ const authSlice = createSlice({
         } else if (Array.isArray(data?.memberships)) {
           state.memberships = data.memberships;
         } else if (Array.isArray(data?.estates) || Array.isArray(data?.companies)) {
-          state.memberships = [
-            ...(Array.isArray(data?.estates) ? data.estates : []),
-            ...(Array.isArray(data?.companies) ? data.companies : []),
-          ];
+          // API returns estate/company list items with top-level `id`/`name`/
+          // `isCurrent` — map into the Membership shape the UI expects.
+          const estates = Array.isArray(data?.estates)
+            ? data.estates.map((e: Membership & { id?: string; name?: string; isCurrent?: boolean }) => ({
+                ...e,
+                estateId: e.estateId ?? e.id ?? null,
+                estateName: e.estateName ?? e.name ?? null,
+                companyId: e.companyId ?? null,
+                isActive: e.isCurrent ?? e.isActive,
+              }))
+            : [];
+          const companies = Array.isArray(data?.companies)
+            ? data.companies.map((c: Membership & { id?: string; name?: string; isCurrent?: boolean }) => ({
+                ...c,
+                companyId: c.companyId ?? c.id ?? null,
+                companyName: c.companyName ?? c.name ?? null,
+                estateId: c.estateId ?? null,
+                isActive: c.isCurrent ?? c.isActive,
+              }))
+            : [];
+          state.memberships = [...estates, ...companies];
         } else {
           state.memberships = [];
         }

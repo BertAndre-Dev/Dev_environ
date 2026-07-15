@@ -251,6 +251,8 @@ export default function CompanyUsersPage() {
     });
   };
 
+  const showResidentColumns = roleFilter === "resident";
+
   const columns = useMemo(
     () => [
       {
@@ -264,14 +266,18 @@ export default function CompanyUsersPage() {
       { key: "lastName" as const, header: "Last Name" },
       { key: "email" as const, header: "Email" },
       { key: "role" as const, header: "Role" },
-      {
-        key: "serviceCharge" as const,
-        header: "Service charge",
-        render: (item: CompanyUserDetails) =>
-          String(Boolean(item.serviceCharge)),
-        exportValue: (item: CompanyUserDetails) =>
-          String(Boolean(item.serviceCharge)),
-      },
+      ...(showResidentColumns
+        ? [
+            {
+              key: "serviceCharge" as const,
+              header: "Service charge",
+              render: (item: CompanyUserDetails) =>
+                String(Boolean(item.serviceCharge)),
+              exportValue: (item: CompanyUserDetails) =>
+                String(Boolean(item.serviceCharge)),
+            },
+          ]
+        : []),
       {
         key: "invitationStatus" as const,
         header: "Invitation",
@@ -336,7 +342,7 @@ export default function CompanyUsersPage() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pagination?.currentPage],
+    [pagination?.currentPage, showResidentColumns],
   );
 
   const stats = useMemo(

@@ -283,6 +283,8 @@ export default function AdminUserPage() {
     }));
   };
 
+  const showResidentColumns = roleFilter === "resident";
+
   const columns = [
     {
       key: "createdAt",
@@ -300,31 +302,41 @@ export default function AdminUserPage() {
     { key: "lastName", header: "Last Name" },
     { key: "email", header: "Email" },
     ...getAddressColumns(allAdminUsers),
-    {
-      key: "meterNumber",
-      header: "Meter Number",
-      render: (item: AdminUserData) => {
-        if (metersLoading) {
-          return <span className="text-xs text-muted-foreground">...</span>;
-        }
-        const value = formatUserMeterNumbers(item, meterByAddressId);
-        if (value === "—") return "-";
-        return <span className="font-mono text-sm">{value}</span>;
-      },
-      exportValue: (item: AdminUserData) => {
-        const value = formatUserMeterNumbers(item, meterByAddressId);
-        return value === "—" ? "" : value;
-      },
-    },
+    ...(showResidentColumns
+      ? [
+          {
+            key: "meterNumber",
+            header: "Meter Number",
+            render: (item: AdminUserData) => {
+              if (metersLoading) {
+                return (
+                  <span className="text-xs text-muted-foreground">...</span>
+                );
+              }
+              const value = formatUserMeterNumbers(item, meterByAddressId);
+              if (value === "—") return "-";
+              return <span className="font-mono text-sm">{value}</span>;
+            },
+            exportValue: (item: AdminUserData) => {
+              const value = formatUserMeterNumbers(item, meterByAddressId);
+              return value === "—" ? "" : value;
+            },
+          },
+        ]
+      : []),
     { key: "role", header: "Role" },
-    {
-      key: "residentType",
-      header: "Resident Type",
-      render: (item: AdminUserData) =>
-        item.role?.toLowerCase() === "resident"
-          ? item.residentType || "-"
-          : "-",
-    },
+    ...(showResidentColumns
+      ? [
+          {
+            key: "residentType",
+            header: "Resident Type",
+            render: (item: AdminUserData) =>
+              item.role?.toLowerCase() === "resident"
+                ? item.residentType || "-"
+                : "-",
+          },
+        ]
+      : []),
     {
       key: "invitationStatus",
       header: "Invitation Status",

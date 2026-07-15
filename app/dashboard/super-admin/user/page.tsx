@@ -304,6 +304,8 @@ export default function SuperAdminUserPage() {
     });
   };
 
+  const showResidentColumns = roleFilter === "resident";
+
   const columns = [
     {
       key: "createdAt",
@@ -315,62 +317,70 @@ export default function SuperAdminUserPage() {
     { key: "firstName", header: "First Name" },
     { key: "lastName", header: "Last Name" },
     { key: "email", header: "Email" },
-    {
-      key: "meterNumber",
-      header: "Meter Number",
-      render: (item: SuperAdminUserData) => {
-        if (metersLoading) {
-          return <span className="text-xs text-muted-foreground">...</span>;
-        }
-        const value = formatUserMeterNumbers(item, meterByAddressId);
-        if (value === "—") return "—";
-        return <span className="font-mono text-sm">{value}</span>;
-      },
-      exportValue: (item: SuperAdminUserData) => {
-        const value = formatUserMeterNumbers(item, meterByAddressId);
-        return value === "—" ? "" : value;
-      },
-    },
-    // { key: "role", header: "Role" },
-    {
-      key: "residentType",
-      header: "Resident Type",
-      render: (item: SuperAdminUserData) => {
-        const value = item.residentType;
-        if (!value) return "—";
-        return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
-      },
-      exportValue: (item: SuperAdminUserData) => item.residentType || "",
-    },
-    {
-      key: "serviceCharge",
-      header: "Service charge",
-      render: (item: SuperAdminUserData) => String(Boolean(item.serviceCharge)),
-      exportValue: (item: SuperAdminUserData) =>
-        String(Boolean(item.serviceCharge)),
-    },
-    {
-      key: "serviceChargesPaidForAddresses",
-      header: "Service Charges Paid (Addresses)",
-      render: (item: SuperAdminUserData) => {
-        const labels = resolvePaidAddressLabels(item);
-        if (!labels.length) return "—";
-        return (
-          <div className="flex flex-col gap-0.5 max-w-[220px]">
-            {labels.map((label) => (
-              <span
-                key={label}
-                className="text-xs px-2 py-0.5 rounded-md bg-green-100 text-green-700 w-fit"
-              >
-                {label}
-              </span>
-            ))}
-          </div>
-        );
-      },
-      exportValue: (item: SuperAdminUserData) =>
-        resolvePaidAddressLabels(item).join("; "),
-    },
+    ...(showResidentColumns
+      ? [
+          {
+            key: "meterNumber",
+            header: "Meter Number",
+            render: (item: SuperAdminUserData) => {
+              if (metersLoading) {
+                return (
+                  <span className="text-xs text-muted-foreground">...</span>
+                );
+              }
+              const value = formatUserMeterNumbers(item, meterByAddressId);
+              if (value === "—") return "—";
+              return <span className="font-mono text-sm">{value}</span>;
+            },
+            exportValue: (item: SuperAdminUserData) => {
+              const value = formatUserMeterNumbers(item, meterByAddressId);
+              return value === "—" ? "" : value;
+            },
+          },
+          {
+            key: "residentType",
+            header: "Resident Type",
+            render: (item: SuperAdminUserData) => {
+              const value = item.residentType;
+              if (!value) return "—";
+              return (
+                value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
+              );
+            },
+            exportValue: (item: SuperAdminUserData) => item.residentType || "",
+          },
+          {
+            key: "serviceCharge",
+            header: "Service charge",
+            render: (item: SuperAdminUserData) =>
+              String(Boolean(item.serviceCharge)),
+            exportValue: (item: SuperAdminUserData) =>
+              String(Boolean(item.serviceCharge)),
+          },
+          {
+            key: "serviceChargesPaidForAddresses",
+            header: "Service Charges Paid (Addresses)",
+            render: (item: SuperAdminUserData) => {
+              const labels = resolvePaidAddressLabels(item);
+              if (!labels.length) return "—";
+              return (
+                <div className="flex flex-col gap-0.5 max-w-[220px]">
+                  {labels.map((label) => (
+                    <span
+                      key={label}
+                      className="text-xs px-2 py-0.5 rounded-md bg-green-100 text-green-700 w-fit"
+                    >
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              );
+            },
+            exportValue: (item: SuperAdminUserData) =>
+              resolvePaidAddressLabels(item).join("; "),
+          },
+        ]
+      : []),
     {
       key: "invitationStatus",
       header: "Invitation",

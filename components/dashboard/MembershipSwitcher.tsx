@@ -108,14 +108,15 @@ export function MembershipSwitcher({
       window.location.assign(path);
     } catch (err: unknown) {
       const message =
-        (err &&
-          typeof err === "object" &&
-          "message" in err &&
-          typeof (err as { message?: unknown }).message === "string" &&
-          (err as { message: string }).message) ||
-        (typeof err === "string" ? err : null) ||
-        "Failed to switch membership";
-      toast.error(message);
+        typeof err === "string"
+          ? err
+          : err &&
+              typeof err === "object" &&
+              "message" in err &&
+              typeof (err as { message?: unknown }).message === "string"
+            ? (err as { message: string }).message
+            : null;
+      if (message) toast.error(message);
     }
   };
 

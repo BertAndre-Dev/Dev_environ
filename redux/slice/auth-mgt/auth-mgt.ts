@@ -129,10 +129,7 @@ export const switchMembership = createAsyncThunk(
       }
       return res.data;
     } catch (error: any) {
-      const apiError = error.response?.data;
-      return rejectWithValue(
-        apiError?.message ?? apiError ?? error.message ?? "Failed to switch membership",
-      );
+      return rejectWithValue(error.response?.data?.message);
     }
   },
 );

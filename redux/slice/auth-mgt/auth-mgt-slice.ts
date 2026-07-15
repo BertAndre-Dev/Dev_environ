@@ -182,8 +182,7 @@ const authSlice = createSlice({
       .addCase(switchMembership.rejected, (state, action) => {
         state.switchMembershipStatus = 'failed';
         state.error =
-          (typeof action.payload === 'string' ? action.payload : null) ??
-          'Failed to switch membership';
+          typeof action.payload === 'string' ? action.payload : null;
       })
 
       // ===== SIGN OUT =====

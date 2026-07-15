@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,10 +22,13 @@ import {
   toCreateRecurringPayload,
 } from "@/lib/asset-maintenance-recurring";
 import MaintenanceRecurringFields from "@/components/maintenance/MaintenanceRecurringFields";
-import type {
-  AssetMaintenanceRecord,
-  CreateMaintenancePayload,
+import {
+  getAssetMaintenanceComments,
+  type AssetMaintenanceComment,
+  type AssetMaintenanceRecord,
+  type CreateMaintenancePayload,
 } from "@/redux/slice/admin/asset-maintenance/admin-asset-maintenance";
+import { selectAdminAssetMaintenance } from "@/redux/slice/admin/asset-maintenance/admin-asset-maintenance-slice";
 
 const SELECT_CLASS =
   "h-10 w-full cursor-pointer rounded-md border border-border bg-background px-3 text-sm disabled:cursor-not-allowed";
@@ -49,6 +52,7 @@ type EditFormState = {
   lastMaintenanceDate: string;
   frequency: string;
   note: string;
+  feedback: string;
 };
 
 type Props = {
@@ -64,6 +68,7 @@ type Props = {
     lastMaintenanceDate: string;
     frequency: string;
     note?: string;
+    feedback?: string;
   }) => Promise<void> | void;
 };
 
@@ -131,6 +136,24 @@ function resolveCategoryName(
   return categories.find((c) => getId(c) === raw)?.name ?? raw;
 }
 
+function commentText(c: AssetMaintenanceComment) {
+  return (c.comment ?? c.text ?? "").trim();
+}
+
+function commentAuthor(c: AssetMaintenanceComment) {
+  if (c.userName?.trim()) return c.userName.trim();
+  const name = [c.user?.firstName, c.user?.lastName].filter(Boolean).join(" ");
+  if (name) return name;
+  return c.user?.email ?? "User";
+}
+
+function formatCommentDate(iso?: string) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString();
+}
+
 export default function MaintenanceFormModal({
   visible,
   onClose,
@@ -144,6 +167,11 @@ export default function MaintenanceFormModal({
 }: Readonly<Props>) {
   const dispatch = useDispatch<AppDispatch>();
   const isEdit = Boolean(initial);
+  const maintenanceId = getId(initial ?? undefined);
+  const { commentsByMaintenanceId, getCommentsStatus } = useSelector(
+    selectAdminAssetMaintenance,
+  );
+  const comments = commentsByMaintenanceId[maintenanceId] ?? [];
 
   const initialCreate: CreateFormState = useMemo(
     () => ({
@@ -164,6 +192,7 @@ export default function MaintenanceFormModal({
       lastMaintenanceDate: toDateInputValue(initial?.lastMaintenanceDate),
       frequency: toApiMaintenanceFrequency(initial?.frequency),
       note: initial?.note ?? "",
+      feedback: "",
     }),
     [initial],
   );
@@ -179,6 +208,20 @@ export default function MaintenanceFormModal({
     setEditForm(initialEdit);
     setEstateAssets([]);
   }, [initialCreate, initialEdit, visible]);
+
+  useEffect(() => {
+    if (!visible || !isEdit || !maintenanceId) return;
+    dispatch(
+      getAssetMaintenanceComments({
+        maintenanceId,
+        estateId: estateId || undefined,
+        page: 1,
+        limit: 20,
+      }),
+    )
+      .unwrap()
+      .catch(() => {});
+  }, [dispatch, estateId, isEdit, maintenanceId, visible]);
 
   useEffect(() => {
     if (!visible || isEdit || !estateId) return;
@@ -315,6 +358,46 @@ export default function MaintenanceFormModal({
                 value={editForm.note}
                 onChange={(e) => setEditForm((s) => ({ ...s, note: e.target.value }))}
                 placeholder="Maintenance instructions..."
+              />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <p className="text-sm font-medium">Previous feedback</p>
+              {getCommentsStatus === "isLoading" ? (
+                <p className="text-sm text-muted-foreground">Loading feedback...</p>
+              ) : comments.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No feedback yet.</p>
+              ) : (
+                <ul className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-border bg-muted/20 p-3">
+                  {comments.map((c) => {
+                    const id = getId(c) || `${c.createdAt}-${commentText(c)}`;
+                    const text = commentText(c);
+                    if (!text) return null;
+                    return (
+                      <li key={id} className="text-sm">
+                        <p className="text-foreground whitespace-pre-wrap">{text}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {[commentAuthor(c), formatCommentDate(c.createdAt)]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <label htmlFor="maint-feedback-edit" className="text-sm font-medium">
+                Asset maintenance feedback
+              </label>
+              <textarea
+                id="maint-feedback-edit"
+                className="min-h-[80px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                value={editForm.feedback}
+                onChange={(e) =>
+                  setEditForm((s) => ({ ...s, feedback: e.target.value }))
+                }
+                placeholder="Replaced air filters during this maintenance cycle."
               />
             </div>
           </div>
@@ -493,6 +576,7 @@ export default function MaintenanceFormModal({
                   lastMaintenanceDate: fromDateInputValue(editForm.lastMaintenanceDate),
                   frequency: editForm.frequency,
                   note: editForm.note.trim() || undefined,
+                  feedback: editForm.feedback.trim() || undefined,
                 });
               } else {
                 await onCreate({

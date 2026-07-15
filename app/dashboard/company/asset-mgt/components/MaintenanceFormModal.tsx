@@ -50,6 +50,7 @@ type EditFormState = {
   lastMaintenanceDate: string;
   frequency: string;
   note: string;
+  feedback: string;
 };
 
 type Props = {
@@ -65,6 +66,7 @@ type Props = {
     lastMaintenanceDate: string;
     frequency: string;
     note?: string;
+    feedback?: string;
   }) => Promise<void> | void;
 };
 
@@ -175,6 +177,7 @@ export default function MaintenanceFormModal({
       lastMaintenanceDate: toDateInputValue(initial?.lastMaintenanceDate),
       frequency: toApiMaintenanceFrequency(initial?.frequency),
       note: initial?.note ?? "",
+      feedback: "",
     }),
     [initial],
   );
@@ -343,6 +346,20 @@ export default function MaintenanceFormModal({
                 value={editForm.note}
                 onChange={(e) => setEditForm((s) => ({ ...s, note: e.target.value }))}
                 placeholder="Maintenance instructions..."
+              />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <label htmlFor="maint-feedback-edit" className="text-sm font-medium">
+                Asset maintenance feedback
+              </label>
+              <textarea
+                id="maint-feedback-edit"
+                className="min-h-[80px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                value={editForm.feedback}
+                onChange={(e) =>
+                  setEditForm((s) => ({ ...s, feedback: e.target.value }))
+                }
+                placeholder="Replaced air filters during this maintenance cycle."
               />
             </div>
           </div>
@@ -539,6 +556,7 @@ export default function MaintenanceFormModal({
                   lastMaintenanceDate: fromDateInputValue(editForm.lastMaintenanceDate),
                   frequency: editForm.frequency,
                   note: editForm.note.trim() || undefined,
+                  feedback: editForm.feedback.trim() || undefined,
                 });
               } else {
                 await onCreate({

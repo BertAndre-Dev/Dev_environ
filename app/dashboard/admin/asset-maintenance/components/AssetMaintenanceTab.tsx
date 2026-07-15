@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import type { AppDispatch } from "@/redux/store";
 import { getAssetCategories, getAssets, type AssetCategory } from "@/redux/slice/admin/asset-mgt/admin-asset";
 import {
+  addAssetMaintenanceComment,
   createAssetMaintenance,
   getAssetMaintenanceList,
   updateAssetMaintenance,
@@ -46,7 +47,9 @@ export default function AssetMaintenanceTab({
   );
   const [recordsRefreshKey, setRecordsRefreshKey] = useState(0);
 
-  const { createStatus, updateStatus } = useSelector(selectAdminAssetMaintenance);
+  const { createStatus, updateStatus, addCommentStatus } = useSelector(
+    selectAdminAssetMaintenance,
+  );
 
   const fetchScheduleRecords = useCallback(
     async (id: string) => {
@@ -180,7 +183,11 @@ export default function AssetMaintenanceTab({
           setModalOpen(false);
           setEditing(null);
         }}
-        loading={createStatus === "isLoading" || updateStatus === "isLoading"}
+        loading={
+          createStatus === "isLoading" ||
+          updateStatus === "isLoading" ||
+          addCommentStatus === "isLoading"
+        }
         estateId={estateId}
         estateName={estateName}
         categories={categories}
@@ -200,11 +207,21 @@ export default function AssetMaintenanceTab({
         onUpdate={async (payload) => {
           const id = getId(editing ?? undefined);
           if (!id) return;
+          const { feedback, ...updatePayload } = payload;
           try {
             await dispatch(
-              updateAssetMaintenance({ maintenanceId: id, ...payload }),
+              updateAssetMaintenance({ maintenanceId: id, ...updatePayload }),
             ).unwrap();
-            toast.success("Maintenance record updated.");
+            if (feedback) {
+              await dispatch(
+                addAssetMaintenanceComment({ maintenanceId: id, comment: feedback }),
+              ).unwrap();
+            }
+            toast.success(
+              feedback
+                ? "Maintenance record updated and feedback added."
+                : "Maintenance record updated.",
+            );
             setModalOpen(false);
             setEditing(null);
             bumpRecordsRefresh();

@@ -9,7 +9,7 @@ import {
   getMemberships,
   switchMembership,
 } from "@/redux/slice/auth-mgt/auth-mgt";
-import { getDashboardPathForRole } from "@/lib/auth-dashboard-path";
+import { getPostMembershipSwitchPath } from "@/lib/auth-dashboard-path";
 import {
   membershipMatchesUser,
   normalizeMemberships,
@@ -100,11 +100,20 @@ export function MembershipSwitcher({
         | { role?: string }
         | null
         | undefined;
-      const path = getDashboardPathForRole(nextUser?.role ?? membership.role);
+      const previousRole =
+        typeof (user as { role?: unknown } | null)?.role === "string"
+          ? (user as { role: string }).role
+          : active?.role;
+      const path = getPostMembershipSwitchPath(
+        window.location.pathname,
+        nextUser?.role ?? membership.role,
+        previousRole,
+      );
 
       toast.success(res?.message || `Switched to ${membership.label}`);
       setOpen(false);
-      // Hard navigation clears estate-scoped client state after token scope change.
+      // Hard navigation clears estate-scoped client state after token scope change,
+      // while keeping the user on the same page when the role stays the same.
       window.location.assign(path);
     } catch (err: unknown) {
       const message =

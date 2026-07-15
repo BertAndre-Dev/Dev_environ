@@ -485,314 +485,200 @@ export default function BillPage() {
     },
   );
 
-  const pageLoading =
-    activeTab === "create" ? loading : loadingAssigned;
+  const pageLoading = activeTab === "create" ? loading : loadingAssigned;
 
   return (
     <div className="relative">
       {pageLoading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader
-            label={
-              activeTab === "create"
-                ? "Loading bills..."
-                : "Loading assigned bills..."
-            }
-          />
-        </div>
+        <Loader
+          fullScreen
+          label={
+            activeTab === "create"
+              ? "Loading bills..."
+              : "Loading assigned bills..."
+          }
+        />
       )}
 
       <div
         className={[
           "space-y-6",
-          pageLoading ? "blur-sm opacity-60 pointer-events-none select-none" : "",
+          pageLoading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="font-heading text-3xl font-bold">Bills Management</h1>
-          <p className="text-muted-foreground mt-1">
-            Create, track, and manage estate bills and payments in{" "}
-            <span className="text-[18px] font-bold underline uppercase text-black">
-              {estateName}
-            </span>
-            .
-          </p>
-        </div>
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <Button
-            onClick={() => handleOpenModal()}
-            className="flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Create Bill
-          </Button>
-          <Button
-            variant="outline"
-            className="flex items-center gap-2"
-            onClick={() => {
-              if (!allBills?.length) {
-                toast.info("No bills available. Create a bill first.");
-                return;
-              }
-              const firstActive =
-                allBills.find((b: BillData) => b.isActive) ?? allBills[0];
-              openAssignModal(firstActive);
-            }}
-          >
-            <ScrollText className="w-4 h-4" />
-            Assign Bill
-          </Button>
-        </div>
-      </div>
-
-      {/* Stats Card */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {(() => {
-          const stats = [
-            {
-              label: "Total Bills",
-              value: pagination?.total ?? 0,
-              icon: ScrollText,
-              color: "bg-[#D0DFF280]",
-            },
-            {
-              label: "Total Assigned Bills",
-              value: assignedPagination?.total ?? 0,
-              icon: ScrollText,
-              color: "bg-[#D0DFF280]",
-            },
-          ];
-
-          return stats.map((stat, i) => {
-            const Icon = stat.icon;
-            return (
-              <Card key={i} className="p-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      {stat.label}
-                    </p>
-                    <p className="font-heading text-2xl font-bold mt-2">
-                      {stat.value}
-                    </p>
-                  </div>
-                  <div className={`p-3 rounded-lg ${stat.color}`}>
-                    <Icon className="w-6 h-6" />
-                  </div>
-                </div>
-              </Card>
-            );
-          });
-        })()}
-      </div>
-
-      <Card className="p-4">
-        {/* Search */}
-        <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <Input
-            type="text"
-            placeholder={
-              activeTab === "create"
-                ? "Search bills by name or description..."
-                : "Search assigned bills by bill name or frequency..."
-            }
-            value={activeTab === "create" ? billSearch : assignSearch}
-            onChange={(e) =>
-              activeTab === "create"
-                ? setBillSearch(e.target.value)
-                : setAssignSearch(e.target.value)
-            }
-            className="w-full sm:w-80"
-          />
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-2 border-b border-border overflow-x-auto mb-4">
-          {[
-            { id: "create" as const, label: "Create Bills" },
-            { id: "assign" as const, label: "Assigned Bills" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-3 text-sm font-medium cursor-pointer border-b-2 transition-colors whitespace-nowrap ${
-                activeTab === tab.id
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="font-heading text-3xl font-bold">
+              Bills Management
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Create, track, and manage estate bills and payments in{" "}
+              <span className="text-[18px] font-bold underline uppercase text-black">
+                {estateName}
+              </span>
+              .
+            </p>
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <Button
+              onClick={() => handleOpenModal()}
+              className="flex items-center gap-2"
             >
-              {tab.label}
-            </button>
-          ))}
+              <Plus className="w-4 h-4" />
+              Create Bill
+            </Button>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={() => {
+                if (!allBills?.length) {
+                  toast.info("No bills available. Create a bill first.");
+                  return;
+                }
+                const firstActive =
+                  allBills.find((b: BillData) => b.isActive) ?? allBills[0];
+                openAssignModal(firstActive);
+              }}
+            >
+              <ScrollText className="w-4 h-4" />
+              Assign Bill
+            </Button>
+          </div>
         </div>
 
-        {/* Create Bills Tab */}
-        {activeTab === "create" && (
-          <Table
-            columns={columns}
-            data={filteredBills}
-            emptyMessage="No bills found."
-            enableDateRangeFilter
-            defaultDateRangeDays={0}
-            startDate={billsStartDate}
-            endDate={billsEndDate}
-            onDateRangeChange={({ startDate, endDate }) => {
-              setBillsStartDate(startDate);
-              setBillsEndDate(endDate);
-            }}
-            showPagination
-            paginationInfo={{
-              total: pagination?.total || 0,
-              current: Number(pagination?.page) || 1,
-              pageSize: Number(pagination?.limit) || 10,
-            }}
-            onPageChange={(page) => {
-              if (!estateId) return;
-              const shouldApplyDate = Boolean(billsStartDate && billsEndDate);
-              dispatch(
-                getBillsByEstate({
-                  estateId,
-                  page,
-                  limit: 10,
-                  startDate: shouldApplyDate ? billsStartDate : undefined,
-                  endDate: shouldApplyDate ? billsEndDate : undefined,
-                }),
-              )
-                .unwrap()
-                .catch(() => toast.error("Failed to change page"));
-            }}
-            enableExport
-            exportFileName="bills"
-            onExportRequest={
-              estateId
-                ? async () => {
-                    const shouldApplyDate = Boolean(
-                      billsStartDate && billsEndDate,
-                    );
-                    const res = await dispatch(
-                      getBillsByEstate({
-                        estateId,
-                        page: 1,
-                        limit: 50000,
-                        startDate: shouldApplyDate ? billsStartDate : undefined,
-                        endDate: shouldApplyDate ? billsEndDate : undefined,
-                      }),
-                    ).unwrap();
-                    return res?.data ?? [];
-                  }
-                : undefined
-            }
-          />
-        )}
+        {/* Stats Card */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {(() => {
+            const stats = [
+              {
+                label: "Total Bills",
+                value: pagination?.total ?? 0,
+                icon: ScrollText,
+                color: "bg-[#D0DFF280]",
+              },
+              {
+                label: "Total Assigned Bills",
+                value: assignedPagination?.total ?? 0,
+                icon: ScrollText,
+                color: "bg-[#D0DFF280]",
+              },
+            ];
 
-        {/* Assigned Bills Tab */}
-        {activeTab === "assign" && (
-          <div className="space-y-4">
-            <Table
-              columns={[
-                {
-                  key: "createdAt",
-                  header: "Created At",
-                  render: (item: BillsForAddressItem) =>
-                    item.createdAt
-                      ? new Date(item.createdAt).toLocaleString()
-                      : "—",
-                },
-                {
-                  key: "billName",
-                  header: "Bill Name",
-                  render: (item: BillsForAddressItem) =>
-                    item.billName ?? item.billId ?? "—",
-                },
-                {
-                  key: "frequency",
-                  header: "Frequency",
-                  render: (item: BillsForAddressItem) => item.frequency ?? "—",
-                },
-                {
-                  key: "amountPaid",
-                  header: "Amount Paid (₦)",
-                  render: (item: BillsForAddressItem) =>
-                    item.amountPaid != null
-                      ? Number(item.amountPaid).toLocaleString()
-                      : "—",
-                },
-                {
-                  key: "startDate",
-                  header: "Start Date",
-                  render: (item: BillsForAddressItem) =>
-                    item.startDate
-                      ? new Date(item.startDate).toLocaleDateString()
-                      : "—",
-                },
-                {
-                  key: "nextDueDate",
-                  header: "Next Due Date",
-                  render: (item: BillsForAddressItem) =>
-                    item.nextDueDate
-                      ? new Date(item.nextDueDate).toLocaleDateString()
-                      : "—",
-                },
-              ]}
-              data={filteredAssignedBills}
-              emptyMessage={
-                assignAddressId
-                  ? "No bills assigned to this address."
-                  : "Select an address to view assigned bills."
+            return stats.map((stat, i) => {
+              const Icon = stat.icon;
+              return (
+                <Card key={i} className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        {stat.label}
+                      </p>
+                      <p className="font-heading text-2xl font-bold mt-2">
+                        {stat.value}
+                      </p>
+                    </div>
+                    <div className={`p-3 rounded-lg ${stat.color}`}>
+                      <Icon className="w-6 h-6" />
+                    </div>
+                  </div>
+                </Card>
+              );
+            });
+          })()}
+        </div>
+
+        <Card className="p-4">
+          {/* Search */}
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <Input
+              type="text"
+              placeholder={
+                activeTab === "create"
+                  ? "Search bills by name or description..."
+                  : "Search assigned bills by bill name or frequency..."
               }
+              value={activeTab === "create" ? billSearch : assignSearch}
+              onChange={(e) =>
+                activeTab === "create"
+                  ? setBillSearch(e.target.value)
+                  : setAssignSearch(e.target.value)
+              }
+              className="w-full sm:w-80"
+            />
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-2 border-b border-border overflow-x-auto mb-4">
+            {[
+              { id: "create" as const, label: "Create Bills" },
+              { id: "assign" as const, label: "Assigned Bills" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-3 text-sm font-medium cursor-pointer border-b-2 transition-colors whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Create Bills Tab */}
+          {activeTab === "create" && (
+            <Table
+              columns={columns}
+              data={filteredBills}
+              emptyMessage="No bills found."
               enableDateRangeFilter
               defaultDateRangeDays={0}
-              startDate={assignedStartDate}
-              endDate={assignedEndDate}
+              startDate={billsStartDate}
+              endDate={billsEndDate}
               onDateRangeChange={({ startDate, endDate }) => {
-                setAssignedStartDate(startDate);
-                setAssignedEndDate(endDate);
+                setBillsStartDate(startDate);
+                setBillsEndDate(endDate);
               }}
               showPagination
               paginationInfo={{
-                total: assignedPagination?.total || 0,
-                current: assignedPagination?.page || 1,
-                pageSize: assignedPagination?.limit || 10,
+                total: pagination?.total || 0,
+                current: Number(pagination?.page) || 1,
+                pageSize: Number(pagination?.limit) || 10,
               }}
               onPageChange={(page) => {
-                if (!estateId || !assignAddressId) return;
-                const shouldApplyDate = Boolean(
-                  assignedStartDate && assignedEndDate,
-                );
+                if (!estateId) return;
+                const shouldApplyDate = Boolean(billsStartDate && billsEndDate);
                 dispatch(
-                  getBillsForAddress({
-                    addressId: assignAddressId,
+                  getBillsByEstate({
                     estateId,
                     page,
-                    limit: assignedPagination?.limit || 10,
-                    startDate: shouldApplyDate ? assignedStartDate : undefined,
-                    endDate: shouldApplyDate ? assignedEndDate : undefined,
+                    limit: 10,
+                    startDate: shouldApplyDate ? billsStartDate : undefined,
+                    endDate: shouldApplyDate ? billsEndDate : undefined,
                   }),
                 )
                   .unwrap()
                   .catch(() => toast.error("Failed to change page"));
               }}
               enableExport
-              exportFileName="assigned-bills"
+              exportFileName="bills"
               onExportRequest={
-                estateId && assignAddressId
+                estateId
                   ? async () => {
                       const shouldApplyDate = Boolean(
-                        assignedStartDate && assignedEndDate,
+                        billsStartDate && billsEndDate,
                       );
                       const res = await dispatch(
-                        getBillsForAddress({
-                          addressId: assignAddressId,
+                        getBillsByEstate({
                           estateId,
                           page: 1,
                           limit: 50000,
                           startDate: shouldApplyDate
-                            ? assignedStartDate
+                            ? billsStartDate
                             : undefined,
-                          endDate: shouldApplyDate
-                            ? assignedEndDate
-                            : undefined,
+                          endDate: shouldApplyDate ? billsEndDate : undefined,
                         }),
                       ).unwrap();
                       return res?.data ?? [];
@@ -800,40 +686,159 @@ export default function BillPage() {
                   : undefined
               }
             />
-          </div>
+          )}
+
+          {/* Assigned Bills Tab */}
+          {activeTab === "assign" && (
+            <div className="space-y-4">
+              <Table
+                columns={[
+                  {
+                    key: "createdAt",
+                    header: "Created At",
+                    render: (item: BillsForAddressItem) =>
+                      item.createdAt
+                        ? new Date(item.createdAt).toLocaleString()
+                        : "—",
+                  },
+                  {
+                    key: "billName",
+                    header: "Bill Name",
+                    render: (item: BillsForAddressItem) =>
+                      item.billName ?? item.billId ?? "—",
+                  },
+                  {
+                    key: "frequency",
+                    header: "Frequency",
+                    render: (item: BillsForAddressItem) =>
+                      item.frequency ?? "—",
+                  },
+                  {
+                    key: "amountPaid",
+                    header: "Amount Paid (₦)",
+                    render: (item: BillsForAddressItem) =>
+                      item.amountPaid != null
+                        ? Number(item.amountPaid).toLocaleString()
+                        : "—",
+                  },
+                  {
+                    key: "startDate",
+                    header: "Start Date",
+                    render: (item: BillsForAddressItem) =>
+                      item.startDate
+                        ? new Date(item.startDate).toLocaleDateString()
+                        : "—",
+                  },
+                  {
+                    key: "nextDueDate",
+                    header: "Next Due Date",
+                    render: (item: BillsForAddressItem) =>
+                      item.nextDueDate
+                        ? new Date(item.nextDueDate).toLocaleDateString()
+                        : "—",
+                  },
+                ]}
+                data={filteredAssignedBills}
+                emptyMessage={
+                  assignAddressId
+                    ? "No bills assigned to this address."
+                    : "Select an address to view assigned bills."
+                }
+                enableDateRangeFilter
+                defaultDateRangeDays={0}
+                startDate={assignedStartDate}
+                endDate={assignedEndDate}
+                onDateRangeChange={({ startDate, endDate }) => {
+                  setAssignedStartDate(startDate);
+                  setAssignedEndDate(endDate);
+                }}
+                showPagination
+                paginationInfo={{
+                  total: assignedPagination?.total || 0,
+                  current: assignedPagination?.page || 1,
+                  pageSize: assignedPagination?.limit || 10,
+                }}
+                onPageChange={(page) => {
+                  if (!estateId || !assignAddressId) return;
+                  const shouldApplyDate = Boolean(
+                    assignedStartDate && assignedEndDate,
+                  );
+                  dispatch(
+                    getBillsForAddress({
+                      addressId: assignAddressId,
+                      estateId,
+                      page,
+                      limit: assignedPagination?.limit || 10,
+                      startDate: shouldApplyDate
+                        ? assignedStartDate
+                        : undefined,
+                      endDate: shouldApplyDate ? assignedEndDate : undefined,
+                    }),
+                  )
+                    .unwrap()
+                    .catch(() => toast.error("Failed to change page"));
+                }}
+                enableExport
+                exportFileName="assigned-bills"
+                onExportRequest={
+                  estateId && assignAddressId
+                    ? async () => {
+                        const shouldApplyDate = Boolean(
+                          assignedStartDate && assignedEndDate,
+                        );
+                        const res = await dispatch(
+                          getBillsForAddress({
+                            addressId: assignAddressId,
+                            estateId,
+                            page: 1,
+                            limit: 50000,
+                            startDate: shouldApplyDate
+                              ? assignedStartDate
+                              : undefined,
+                            endDate: shouldApplyDate
+                              ? assignedEndDate
+                              : undefined,
+                          }),
+                        ).unwrap();
+                        return res?.data ?? [];
+                      }
+                    : undefined
+                }
+              />
+            </div>
+          )}
+        </Card>
+
+        {open && estateId && (
+          <Modal visible={open} onClose={handleCloseModal}>
+            <BillsForm
+              estateId={estateId}
+              initialData={selectedBill}
+              onSubmit={handleSubmitBill}
+            />
+          </Modal>
         )}
-      </Card>
 
-      {open && estateId && (
-        <Modal visible={open} onClose={handleCloseModal}>
-          <BillsForm
-            estateId={estateId}
-            initialData={selectedBill}
-            onSubmit={handleSubmitBill}
-          />
-        </Modal>
-      )}
+        {assignBill && estateId && (
+          <Modal visible={!!assignBill} onClose={closeAssignModal}>
+            <BillForAddressForm
+              estateId={estateId}
+              billName={assignBill.name}
+              onSubmit={handleAssignBillForAddress}
+              onClose={closeAssignModal}
+            />
+          </Modal>
+        )}
 
-      {assignBill && estateId && (
-        <Modal visible={!!assignBill} onClose={closeAssignModal}>
-          <BillForAddressForm
-            estateId={estateId}
-            billName={assignBill.name}
-            onSubmit={handleAssignBillForAddress}
-            onClose={closeAssignModal}
-          />
-        </Modal>
-      )}
-
-      <SuspendRentModal
-        visible={!!suspendBillItem}
-        onClose={() => setSuspendBillItem(null)}
-        tenantName={suspendBillItem?.name ?? "this bill"}
-        title="Suspend bill"
-        confirmLabel="Suspend"
-        onConfirm={handleSuspendConfirm}
-        loading={suspendSubmitting}
-      />
+        <SuspendRentModal
+          visible={!!suspendBillItem}
+          onClose={() => setSuspendBillItem(null)}
+          tenantName={suspendBillItem?.name ?? "this bill"}
+          title="Suspend bill"
+          confirmLabel="Suspend"
+          onConfirm={handleSuspendConfirm}
+          loading={suspendSubmitting}
+        />
       </div>
     </div>
   );

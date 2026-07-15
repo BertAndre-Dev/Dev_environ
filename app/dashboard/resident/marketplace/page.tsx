@@ -105,16 +105,12 @@ export default function ResidentMarketplacePage() {
 
   return (
     <div className="relative">
-      {pageLoading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader label="Loading marketplace..." />
-        </div>
-      )}
+      {pageLoading && <Loader fullScreen label="Loading marketplace..." />}
 
       <div
         className={[
           "space-y-6 sm:space-y-8 pb-8",
-          pageLoading ? "blur-sm opacity-60 pointer-events-none select-none" : "",
+          pageLoading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
         <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-[#0150AC] to-[#0A387E] text-white p-6 sm:p-8">

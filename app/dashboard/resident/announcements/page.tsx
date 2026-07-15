@@ -179,18 +179,12 @@ export default function ResidentAnnouncementsPage() {
 
   return (
     <div className="relative">
-      {fullPageLoading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader label="Loading announcements..." />
-        </div>
-      )}
+      {fullPageLoading && <Loader fullScreen label="Loading announcements..." />}
 
       <div
         className={[
           "space-y-6 pb-8",
-          fullPageLoading
-            ? "blur-sm opacity-60 pointer-events-none select-none"
-            : "",
+          fullPageLoading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
         <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-[#0150AC] to-[#0A387E] text-white p-6 sm:p-8">

@@ -327,14 +327,10 @@ export default function AssetCategoryDetailPage() {
 
   return (
     <div className="relative">
-      {pageLoading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader label="Loading assets..." />
-        </div>
-      )}
+      {pageLoading && <Loader fullScreen label="Loading assets..." />}
 
       <div
-        className={`space-y-6${pageLoading ? " blur-sm opacity-60 pointer-events-none select-none" : ""}`}
+        className={`space-y-6${pageLoading ? " pointer-events-none select-none" : ""}`}
       >
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-2">

@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ElementType } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ElementType,
+} from "react";
 import { useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
@@ -26,10 +32,7 @@ import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import { MaintenanceRequestCard } from "@/components/admin/maintenance/maintenance-request-card";
 import { cn } from "@/lib/utils";
 import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
-import {
-  normalizeAddresses,
-  type AddressOption,
-} from "@/lib/address";
+import { normalizeAddresses, type AddressOption } from "@/lib/address";
 import type { AsyncThunk } from "@reduxjs/toolkit";
 import type { AppDispatch } from "@/redux/store";
 import type { DashboardUserDetails } from "@/lib/dashboard-user-details";
@@ -315,10 +318,7 @@ function UserProfileDetails({
           </h2>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {userAddresses.map((addr, index) => (
-              <div
-                key={addr.id || index}
-                className="rounded-lg border p-4"
-              >
+              <div key={addr.id || index} className="rounded-lg border p-4">
                 <p className="mb-2 text-xs font-medium text-muted-foreground">
                   Address {index + 1}
                 </p>
@@ -392,9 +392,10 @@ export default function UserDetailView({
   const [transactionsTotal, setTransactionsTotal] = useState(0);
   const [transactionsPageSize, setTransactionsPageSize] = useState(10);
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState<
-    Record<string, unknown> | null
-  >(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
   const [transactionDialogLoading, setTransactionDialogLoading] =
     useState(false);
   const [verifyTransactionLoading, setVerifyTransactionLoading] =
@@ -416,7 +417,8 @@ export default function UserDetailView({
       await dispatch(actions.getUser(userId)).unwrap();
     } catch (err: unknown) {
       toast.error(
-        (err as { message?: string })?.message ?? "Failed to load user details.",
+        (err as { message?: string })?.message ??
+          "Failed to load user details.",
       );
     }
   }, [actions, dispatch, userId]);
@@ -469,16 +471,18 @@ export default function UserDetailView({
       ]);
 
       setBills(
-        (billsRes?.data ?? []).map((bill: Record<string, unknown>, i: number) => ({
-          id: String(bill.id ?? bill._id ?? bill.billId ?? i),
-          billName: (bill.billName ?? bill.name) as string | undefined,
-          frequency: bill.frequency as string | undefined,
-          amountPaid: bill.amountPaid as number | undefined,
-          status: bill.status as string | undefined,
-          startDate: bill.startDate as string | undefined,
-          nextDueDate: bill.nextDueDate as string | undefined,
-          lastPaymentDate: bill.lastPaymentDate as string | null | undefined,
-        })),
+        (billsRes?.data ?? []).map(
+          (bill: Record<string, unknown>, i: number) => ({
+            id: String(bill.id ?? bill._id ?? bill.billId ?? i),
+            billName: (bill.billName ?? bill.name) as string | undefined,
+            frequency: bill.frequency as string | undefined,
+            amountPaid: bill.amountPaid as number | undefined,
+            status: bill.status as string | undefined,
+            startDate: bill.startDate as string | undefined,
+            nextDueDate: bill.nextDueDate as string | undefined,
+            lastPaymentDate: bill.lastPaymentDate as string | null | undefined,
+          }),
+        ),
       );
 
       setMeterByAddressId(Object.fromEntries(meterEntries));
@@ -524,9 +528,7 @@ export default function UserDetailView({
               description: transaction.description as string | undefined,
               tx_ref: transaction.tx_ref as string | undefined,
               createdAt: transaction.createdAt as string | undefined,
-              estateId: transaction.estateId as
-                | { name?: string }
-                | undefined,
+              estateId: transaction.estateId as { name?: string } | undefined,
             }),
           ),
         );
@@ -554,10 +556,7 @@ export default function UserDetailView({
   const tabs = useMemo(
     () =>
       showTransactionsTab
-        ? [
-            ...BASE_TABS,
-            { id: "transactions" as const, label: "Transactions" },
-          ]
+        ? [...BASE_TABS, { id: "transactions" as const, label: "Transactions" }]
         : BASE_TABS,
     [showTransactionsTab],
   );
@@ -705,7 +704,8 @@ export default function UserDetailView({
     {
       key: "lastPaymentDate",
       header: "Last Payment",
-      render: (item: UserBillRow) => formatDateTime(item.lastPaymentDate ?? undefined),
+      render: (item: UserBillRow) =>
+        formatDateTime(item.lastPaymentDate ?? undefined),
     },
   ];
 
@@ -780,24 +780,20 @@ export default function UserDetailView({
   const pageLoading =
     userLoading ||
     relatedLoading ||
-    (showTransactionsTab && transactionsLoading && activeTab === "transactions");
+    (showTransactionsTab &&
+      transactionsLoading &&
+      activeTab === "transactions");
 
   return (
     <div className="relative space-y-6">
       {pageLoading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader
-            label={
-              userLoading ? "Loading user..." : "Loading activity data..."
-            }
-          />
-        </div>
+        <Loader
+          fullScreen
+          label={userLoading ? "Loading user..." : "Loading activity data..."}
+        />
       )}
 
-      <div
-        className={pageLoading ? "blur-sm opacity-60 pointer-events-none" : ""}
-      >
-
+      <div className={pageLoading ? "pointer-events-none select-none" : ""}>
         <Card className="p-4 sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-3">
             <button
@@ -1059,9 +1055,7 @@ export default function UserDetailView({
         onOpenChange={setTransactionDialogOpen}
         transaction={selectedTransaction}
         loading={transactionDialogLoading}
-        onVerify={
-          showTransactionsTab ? handleVerifyTransaction : undefined
-        }
+        onVerify={showTransactionsTab ? handleVerifyTransaction : undefined}
         verifyLoading={verifyTransactionLoading}
       />
 

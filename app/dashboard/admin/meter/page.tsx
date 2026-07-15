@@ -428,16 +428,12 @@ export default function AdminMeterManagement() {
 
   return (
     <div className="relative">
-      {pageLoading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader label="Loading estate meters..." />
-        </div>
-      )}
+      {pageLoading && <Loader fullScreen label="Loading estate meters..." />}
 
       <div
         className={[
           "space-y-6",
-          pageLoading ? "blur-sm opacity-60 pointer-events-none select-none" : "",
+          pageLoading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
       {/* Header */}

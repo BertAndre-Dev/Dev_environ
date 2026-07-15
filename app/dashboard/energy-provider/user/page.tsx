@@ -401,18 +401,12 @@ export default function EnergyProviderUserPage() {
 
   return (
     <div className="relative">
-      {pageLoading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader label="Loading users..." />
-        </div>
-      )}
+      {pageLoading && <Loader fullScreen label="Loading users..." />}
 
       <div
         className={[
           "space-y-6",
-          pageLoading
-            ? "blur-sm opacity-60 pointer-events-none select-none"
-            : "",
+          pageLoading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between flex-wrap gap-4">

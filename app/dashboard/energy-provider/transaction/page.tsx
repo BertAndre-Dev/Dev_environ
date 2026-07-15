@@ -80,16 +80,12 @@ export default function EnergyProviderTransactionPage() {
 
   return (
     <div className="relative space-y-6">
-      {loading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader label="Loading..." />
-        </div>
-      )}
+      {loading && <Loader fullScreen label="Loading..." />}
 
       <div
         className={[
           "space-y-6",
-          loading ? "blur-sm opacity-60 pointer-events-none select-none" : "",
+          loading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
         <div>

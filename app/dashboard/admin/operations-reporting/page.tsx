@@ -207,16 +207,12 @@ export default function AdminOperationsReportingPage() {
 
   return (
     <div className="relative space-y-6">
-      {estateLoading && (
-        <div className="absolute inset-0 z-50 flex min-h-[200px] items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader label="Loading..." />
-        </div>
-      )}
+      {estateLoading && <Loader fullScreen label="Loading..." />}
 
       <div
         className={
           estateLoading
-            ? "pointer-events-none select-none blur-sm opacity-60"
+            ? "pointer-events-none select-none"
             : ""
         }
       >

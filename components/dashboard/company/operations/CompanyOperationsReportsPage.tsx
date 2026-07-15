@@ -84,15 +84,11 @@ export default function CompanyOperationsReportsPage() {
 
   return (
     <div className="relative space-y-6">
-      {estatesLoading ? (
-        <div className="absolute inset-0 z-50 flex min-h-[200px] items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader label="Loading operations reports..." />
-        </div>
-      ) : null}
+      {estatesLoading && <Loader fullScreen label="Loading operations reports..." />}
 
       <div
         className={
-          estatesLoading ? "pointer-events-none select-none blur-sm opacity-60" : ""
+          estatesLoading ? "pointer-events-none select-none" : ""
         }
       >
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between flex-wrap gap-4">

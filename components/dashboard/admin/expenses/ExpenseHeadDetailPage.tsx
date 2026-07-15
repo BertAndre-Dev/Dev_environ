@@ -332,100 +332,97 @@ export default function ExpenseHeadDetailPage() {
   return (
     <div className="relative">
       {pageLoading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader
-            label={
-              headsLoading && !headId
-                ? "Loading expense details..."
-                : "Loading expenses..."
-            }
-          />
-        </div>
+        <Loader
+          fullScreen
+          label={
+            headsLoading && !headId
+              ? "Loading expense details..."
+              : "Loading expenses..."
+          }
+        />
       )}
 
       <div
         className={[
           "space-y-6",
-          pageLoading
-            ? "blur-sm opacity-60 pointer-events-none select-none"
-            : "",
+          pageLoading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
-      <ExpensesHeader
-        showImage
-        title={`Expenses Head - ${headName}`}
-        estateName={estateName}
-        onAddExpense={openAdd}
-        actionLabel="Add Expense Entry"
-      />
+        <ExpensesHeader
+          showImage
+          title={`Expenses Head - ${headName}`}
+          estateName={estateName}
+          onAddExpense={openAdd}
+          actionLabel="Add Expense Entry"
+        />
 
-      <ExpensesFiltersBar
-        startDate={startDate}
-        endDate={endDate}
-        search={search}
-        defaultDateRangeDays={0}
-        onStartDateChange={(v) => setStartDate(v)}
-        onEndDateChange={(v) => setEndDate(v)}
-        onResetDates={() => {
-          setStartDate("");
-          setEndDate("");
-        }}
-        onSearchChange={setSearch}
-      />
+        <ExpensesFiltersBar
+          startDate={startDate}
+          endDate={endDate}
+          search={search}
+          defaultDateRangeDays={0}
+          onStartDateChange={(v) => setStartDate(v)}
+          onEndDateChange={(v) => setEndDate(v)}
+          onResetDates={() => {
+            setStartDate("");
+            setEndDate("");
+          }}
+          onSearchChange={setSearch}
+        />
 
-      <TotalExpensesCard total={totalExpenses} />
+        <TotalExpensesCard total={totalExpenses} />
 
-      <ExpenseEntriesTable
-        headName={headName}
-        items={filteredEntries}
-        loading={pageLoading ? false : entriesLoading}
-        total={pagination?.total ?? filteredEntries.length ?? 0}
-        currentPage={pagination?.currentPage ?? page}
-        pageSize={pagination?.pageSize ?? limit}
-        onPageChange={setPage}
-        onView={handleView}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-      />
+        <ExpenseEntriesTable
+          headName={headName}
+          items={filteredEntries}
+          loading={pageLoading ? false : entriesLoading}
+          total={pagination?.total ?? filteredEntries.length ?? 0}
+          currentPage={pagination?.currentPage ?? page}
+          pageSize={pagination?.pageSize ?? limit}
+          onPageChange={setPage}
+          onView={handleView}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
 
-      <AddExpenseModal
-        open={addOpen}
-        saving={saving}
-        headName={headName}
-        drafts={drafts}
-        onOpenChange={(open) => (open ? setAddOpen(true) : closeAdd())}
-        onDraftChange={onDraftChange}
-        onAddDraft={addDraft}
-        onRemoveDraft={removeDraft}
-        onSubmit={submitCreate}
-        showDateAndUpload={false}
-      />
+        <AddExpenseModal
+          open={addOpen}
+          saving={saving}
+          headName={headName}
+          drafts={drafts}
+          onOpenChange={(open) => (open ? setAddOpen(true) : closeAdd())}
+          onDraftChange={onDraftChange}
+          onAddDraft={addDraft}
+          onRemoveDraft={removeDraft}
+          onSubmit={submitCreate}
+          showDateAndUpload={false}
+        />
 
-      <EditExpenseModal
-        open={editOpen}
-        saving={saving}
-        headName={headName}
-        description={formDescription}
-        amount={formAmount}
-        documentNumber={formDocumentNumber}
-        onOpenChange={(open) => (open ? setEditOpen(true) : closeEdit())}
-        onDescriptionChange={setFormDescription}
-        onAmountChange={setFormAmount}
-        onDocumentNumberChange={setFormDocumentNumber}
-        onSubmit={submitUpdate}
-      />
+        <EditExpenseModal
+          open={editOpen}
+          saving={saving}
+          headName={headName}
+          description={formDescription}
+          amount={formAmount}
+          documentNumber={formDocumentNumber}
+          onOpenChange={(open) => (open ? setEditOpen(true) : closeEdit())}
+          onDescriptionChange={setFormDescription}
+          onAmountChange={setFormAmount}
+          onDocumentNumberChange={setFormDocumentNumber}
+          onSubmit={submitUpdate}
+        />
 
-      <ViewExpenseEntryModal
-        open={viewOpen}
-        loading={false}
-        item={viewItem}
-        onOpenChange={(open) => {
-          setViewOpen(open);
-          if (!open) {
-            setViewItem(null);
-          }
-        }}
-      />
+        <ViewExpenseEntryModal
+          open={viewOpen}
+          loading={false}
+          item={viewItem}
+          onOpenChange={(open) => {
+            setViewOpen(open);
+            if (!open) {
+              setViewItem(null);
+            }
+          }}
+        />
       </div>
     </div>
   );

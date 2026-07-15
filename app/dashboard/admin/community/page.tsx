@@ -574,16 +574,12 @@ export default function AdminCommunityChatPage() {
 
   return (
     <div className="relative mx-auto max-w-[1400px] space-y-6">
-      {pageLoading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm rounded-xl">
-          <Loader label="Loading community..." />
-        </div>
-      )}
+      {pageLoading && <Loader fullScreen label="Loading community..." />}
 
       <div
         className={[
           "space-y-6",
-          pageLoading ? "blur-sm opacity-60 pointer-events-none select-none" : "",
+          pageLoading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
       <CommunityPageHeader

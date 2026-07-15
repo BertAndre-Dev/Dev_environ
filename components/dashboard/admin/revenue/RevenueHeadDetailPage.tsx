@@ -332,100 +332,97 @@ export default function RevenueHeadDetailPage() {
   return (
     <div className="relative">
       {pageLoading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader
-            label={
-              headsLoading && !headId
-                ? "Loading revenue details..."
-                : "Loading revenue..."
-            }
-          />
-        </div>
+        <Loader
+          fullScreen
+          label={
+            headsLoading && !headId
+              ? "Loading revenue details..."
+              : "Loading revenue..."
+          }
+        />
       )}
 
       <div
         className={[
           "space-y-6",
-          pageLoading
-            ? "blur-sm opacity-60 pointer-events-none select-none"
-            : "",
+          pageLoading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
-      <RevenueHeader
-        showImage
-        title={`Revenue Head - ${headName}`}
-        estateName={estateName}
-        onAddRevenue={openAdd}
-        actionLabel="Add Revenue Entry"
-      />
+        <RevenueHeader
+          showImage
+          title={`Revenue Head - ${headName}`}
+          estateName={estateName}
+          onAddRevenue={openAdd}
+          actionLabel="Add Revenue Entry"
+        />
 
-      <RevenueFiltersBar
-        startDate={startDate}
-        endDate={endDate}
-        search={search}
-        defaultDateRangeDays={0}
-        onStartDateChange={(v) => setStartDate(v)}
-        onEndDateChange={(v) => setEndDate(v)}
-        onResetDates={() => {
-          setStartDate("");
-          setEndDate("");
-        }}
-        onSearchChange={setSearch}
-      />
+        <RevenueFiltersBar
+          startDate={startDate}
+          endDate={endDate}
+          search={search}
+          defaultDateRangeDays={0}
+          onStartDateChange={(v) => setStartDate(v)}
+          onEndDateChange={(v) => setEndDate(v)}
+          onResetDates={() => {
+            setStartDate("");
+            setEndDate("");
+          }}
+          onSearchChange={setSearch}
+        />
 
-      <TotalRevenueCard total={totalRevenue} />
+        <TotalRevenueCard total={totalRevenue} />
 
-      <RevenueEntriesTable
-        headName={headName}
-        items={filteredEntries}
-        loading={pageLoading ? false : entriesLoading}
-        total={pagination?.total ?? filteredEntries.length ?? 0}
-        currentPage={pagination?.currentPage ?? page}
-        pageSize={pagination?.pageSize ?? limit}
-        onPageChange={setPage}
-        onView={handleView}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-      />
+        <RevenueEntriesTable
+          headName={headName}
+          items={filteredEntries}
+          loading={pageLoading ? false : entriesLoading}
+          total={pagination?.total ?? filteredEntries.length ?? 0}
+          currentPage={pagination?.currentPage ?? page}
+          pageSize={pagination?.pageSize ?? limit}
+          onPageChange={setPage}
+          onView={handleView}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
 
-      <AddRevenueModal
-        open={addOpen}
-        saving={saving}
-        headName={headName}
-        drafts={drafts}
-        onOpenChange={(open) => (open ? setAddOpen(true) : closeAdd())}
-        onDraftChange={onDraftChange}
-        onAddDraft={addDraft}
-        onRemoveDraft={removeDraft}
-        onSubmit={submitCreate}
-        showDateAndUpload={false}
-      />
+        <AddRevenueModal
+          open={addOpen}
+          saving={saving}
+          headName={headName}
+          drafts={drafts}
+          onOpenChange={(open) => (open ? setAddOpen(true) : closeAdd())}
+          onDraftChange={onDraftChange}
+          onAddDraft={addDraft}
+          onRemoveDraft={removeDraft}
+          onSubmit={submitCreate}
+          showDateAndUpload={false}
+        />
 
-      <EditRevenueModal
-        open={editOpen}
-        saving={saving}
-        headName={headName}
-        description={formDescription}
-        amount={formAmount}
-        documentNumber={formDocumentNumber}
-        onOpenChange={(open) => (open ? setEditOpen(true) : closeEdit())}
-        onDescriptionChange={setFormDescription}
-        onAmountChange={setFormAmount}
-        onDocumentNumberChange={setFormDocumentNumber}
-        onSubmit={submitUpdate}
-      />
+        <EditRevenueModal
+          open={editOpen}
+          saving={saving}
+          headName={headName}
+          description={formDescription}
+          amount={formAmount}
+          documentNumber={formDocumentNumber}
+          onOpenChange={(open) => (open ? setEditOpen(true) : closeEdit())}
+          onDescriptionChange={setFormDescription}
+          onAmountChange={setFormAmount}
+          onDocumentNumberChange={setFormDocumentNumber}
+          onSubmit={submitUpdate}
+        />
 
-      <ViewRevenueEntryModal
-        open={viewOpen}
-        loading={false}
-        item={viewItem}
-        onOpenChange={(open) => {
-          setViewOpen(open);
-          if (!open) {
-            setViewItem(null);
-          }
-        }}
-      />
+        <ViewRevenueEntryModal
+          open={viewOpen}
+          loading={false}
+          item={viewItem}
+          onOpenChange={(open) => {
+            setViewOpen(open);
+            if (!open) {
+              setViewItem(null);
+            }
+          }}
+        />
       </div>
     </div>
   );

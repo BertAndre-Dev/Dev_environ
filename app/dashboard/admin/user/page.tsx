@@ -408,16 +408,12 @@ export default function AdminUserPage() {
 
   return (
     <div className="relative">
-      {loading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader label="Loading users..." />
-        </div>
-      )}
+      {loading && <Loader fullScreen label="Loading users..." />}
 
       <div
         className={[
           "space-y-6",
-          loading ? "blur-sm opacity-60 pointer-events-none select-none" : "",
+          loading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
         {/* Header */}

@@ -65,6 +65,38 @@ export type UpdateMaintenancePayload = {
   note?: string;
 };
 
+export type AddMaintenanceCommentPayload = {
+  maintenanceId: string;
+  comment: string;
+};
+
+export type AssetMaintenanceComment = {
+  id?: string;
+  _id?: string;
+  maintenanceId?: string;
+  comment?: string;
+  text?: string;
+  userId?: string;
+  userName?: string;
+  user?: { firstName?: string; lastName?: string; email?: string };
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type GetMaintenanceCommentsParams = {
+  maintenanceId: string;
+  estateId?: string;
+  page?: number;
+  limit?: number;
+};
+
+export type MaintenanceCommentsResponse = {
+  success?: boolean;
+  message?: string;
+  data?: AssetMaintenanceComment[];
+  pagination?: ApiPagination;
+};
+
 const normalizeId = (id: string | undefined) => id ?? "";
 
 /** POST /api/v1/asset-maintenance */
@@ -202,6 +234,52 @@ export const activateAssetMaintenance = createAsyncThunk(
       const err = error as { response?: { data?: { message?: string } } };
       return rejectWithValue({
         message: err?.response?.data?.message ?? "Failed to activate maintenance record",
+      });
+    }
+  },
+);
+
+/** GET /api/v1/asset-maintenance/{maintenanceId}/comments */
+export const getAssetMaintenanceComments = createAsyncThunk(
+  "admin-asset-maintenance/getComments",
+  async (params: GetMaintenanceCommentsParams, { rejectWithValue }) => {
+    try {
+      const { maintenanceId, estateId, page = 1, limit = 20 } = params;
+      const res = await axiosInstance.get<MaintenanceCommentsResponse>(
+        `/api/v1/asset-maintenance/${normalizeId(maintenanceId)}/comments`,
+        {
+          params: {
+            estateId: estateId?.trim() || undefined,
+            page,
+            limit,
+          },
+        },
+      );
+      return { ...res.data, maintenanceId };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue({
+        message: err?.response?.data?.message ?? "Failed to fetch maintenance comments",
+      });
+    }
+  },
+);
+
+/** POST /api/v1/asset-maintenance/{maintenanceId}/comments */
+export const addAssetMaintenanceComment = createAsyncThunk(
+  "admin-asset-maintenance/addComment",
+  async (payload: AddMaintenanceCommentPayload, { rejectWithValue }) => {
+    try {
+      const { maintenanceId, comment } = payload;
+      const res = await axiosInstance.post(
+        `/api/v1/asset-maintenance/${normalizeId(maintenanceId)}/comments`,
+        { comment },
+      );
+      return { ...(res.data as object), maintenanceId };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue({
+        message: err?.response?.data?.message ?? "Failed to add maintenance feedback",
       });
     }
   },

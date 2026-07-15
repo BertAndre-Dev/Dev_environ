@@ -2,12 +2,15 @@ import { createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
 import {
   activateAssetMaintenance,
+  addAssetMaintenanceComment,
   createAssetMaintenance,
   deleteAssetMaintenance,
+  getAssetMaintenanceComments,
   getAssetMaintenanceList,
   suspendAssetMaintenance,
   updateAssetMaintenance,
   type ApiPagination,
+  type AssetMaintenanceComment,
   type AssetMaintenanceRecord,
 } from "./company-asset-maintenance";
 
@@ -16,24 +19,32 @@ type AsyncStatus = "idle" | "isLoading" | "succeeded" | "failed";
 export interface CompanyAssetMaintenanceState {
   records: AssetMaintenanceRecord[];
   pagination: ApiPagination | null;
+  commentsByMaintenanceId: Record<string, AssetMaintenanceComment[]>;
+  commentsPagination: ApiPagination | null;
   getListStatus: AsyncStatus;
   createStatus: AsyncStatus;
   updateStatus: AsyncStatus;
   deleteStatus: AsyncStatus;
   suspendStatus: AsyncStatus;
   activateStatus: AsyncStatus;
+  getCommentsStatus: AsyncStatus;
+  addCommentStatus: AsyncStatus;
   error: string | null;
 }
 
 const initialState: CompanyAssetMaintenanceState = {
   records: [],
   pagination: null,
+  commentsByMaintenanceId: {},
+  commentsPagination: null,
   getListStatus: "idle",
   createStatus: "idle",
   updateStatus: "idle",
   deleteStatus: "idle",
   suspendStatus: "idle",
   activateStatus: "idle",
+  getCommentsStatus: "idle",
+  addCommentStatus: "idle",
   error: null,
 };
 
@@ -52,12 +63,30 @@ function mergeRecord(
   return list.map((r, i) => (i === idx ? { ...r, ...updated, id } : r));
 }
 
+function asComment(
+  value: unknown,
+  maintenanceId?: string,
+): AssetMaintenanceComment | null {
+  if (!value || typeof value !== "object") return null;
+  const c = value as AssetMaintenanceComment;
+  return {
+    ...c,
+    id: getId(c) || undefined,
+    maintenanceId: c.maintenanceId ?? maintenanceId,
+  };
+}
+
 const companyAssetMaintenanceSlice = createSlice({
   name: "companyAssetMaintenance",
   initialState,
   reducers: {
     clearCompanyAssetMaintenanceError: (state) => {
       state.error = null;
+    },
+    clearCompanyAssetMaintenanceComments: (state) => {
+      state.commentsByMaintenanceId = {};
+      state.commentsPagination = null;
+      state.getCommentsStatus = "idle";
     },
   },
   extraReducers: (builder) => {
@@ -123,7 +152,10 @@ const companyAssetMaintenanceSlice = createSlice({
       .addCase(deleteAssetMaintenance.fulfilled, (state, action) => {
         state.deleteStatus = "succeeded";
         const id = (action.payload as { deletedId?: string })?.deletedId;
-        if (id) state.records = state.records.filter((r) => getId(r) !== id);
+        if (id) {
+          state.records = state.records.filter((r) => getId(r) !== id);
+          delete state.commentsByMaintenanceId[id];
+        }
       })
       .addCase(deleteAssetMaintenance.rejected, (state, action) => {
         state.deleteStatus = "failed";
@@ -169,12 +201,63 @@ const companyAssetMaintenanceSlice = createSlice({
           (action.payload as { message?: string } | undefined)?.message ??
           action.error.message ??
           "Failed to activate record";
+      })
+      .addCase(getAssetMaintenanceComments.pending, (state) => {
+        state.getCommentsStatus = "isLoading";
+        state.error = null;
+      })
+      .addCase(getAssetMaintenanceComments.fulfilled, (state, action) => {
+        state.getCommentsStatus = "succeeded";
+        const maintenanceId = action.payload?.maintenanceId ?? "";
+        if (maintenanceId) {
+          state.commentsByMaintenanceId[maintenanceId] =
+            action.payload?.data ?? [];
+        }
+        state.commentsPagination = action.payload?.pagination ?? null;
+      })
+      .addCase(getAssetMaintenanceComments.rejected, (state, action) => {
+        state.getCommentsStatus = "failed";
+        state.error =
+          (action.payload as { message?: string } | undefined)?.message ??
+          action.error.message ??
+          "Failed to fetch maintenance comments";
+      })
+      .addCase(addAssetMaintenanceComment.pending, (state) => {
+        state.addCommentStatus = "isLoading";
+        state.error = null;
+      })
+      .addCase(addAssetMaintenanceComment.fulfilled, (state, action) => {
+        state.addCommentStatus = "succeeded";
+        const payload = action.payload as {
+          data?: AssetMaintenanceComment | AssetMaintenanceComment[];
+          maintenanceId?: string;
+        };
+        const maintenanceId = payload.maintenanceId ?? "";
+        if (!maintenanceId) return;
+
+        const created = Array.isArray(payload.data)
+          ? payload.data[0]
+          : payload.data;
+        const comment = asComment(created, maintenanceId);
+        if (!comment) return;
+
+        const existing = state.commentsByMaintenanceId[maintenanceId] ?? [];
+        state.commentsByMaintenanceId[maintenanceId] = [comment, ...existing];
+      })
+      .addCase(addAssetMaintenanceComment.rejected, (state, action) => {
+        state.addCommentStatus = "failed";
+        state.error =
+          (action.payload as { message?: string } | undefined)?.message ??
+          action.error.message ??
+          "Failed to add maintenance feedback";
       });
   },
 });
 
-export const { clearCompanyAssetMaintenanceError } =
-  companyAssetMaintenanceSlice.actions;
+export const {
+  clearCompanyAssetMaintenanceError,
+  clearCompanyAssetMaintenanceComments,
+} = companyAssetMaintenanceSlice.actions;
 export default companyAssetMaintenanceSlice.reducer;
 
 export const selectCompanyAssetMaintenance = (state: RootState) =>

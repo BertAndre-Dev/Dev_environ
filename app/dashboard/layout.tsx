@@ -32,6 +32,7 @@ import { WalletRequiredAlert } from "@/components/wallet/WalletRequiredAlert";
 import { MembershipSwitcher } from "@/components/dashboard/MembershipSwitcher";
 import { filterNavItemsByEstateModules } from "@/lib/nav-module-filter";
 import Image from "next/image";
+import Loader from "@/components/ui/Loader";
 
 export default function DashboardLayout({
   children,
@@ -451,7 +452,7 @@ export default function DashboardLayout({
         <WalletRequiredAlert />
 
         {/* Page Content */}
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<Loader fullScreen label="Loading..." />}>
           <CommunityChatSocketProvider>
             <div className="p-4 md:p-6">{children}</div>
           </CommunityChatSocketProvider>

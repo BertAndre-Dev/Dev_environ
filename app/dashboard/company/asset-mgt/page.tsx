@@ -74,9 +74,10 @@ export default function CompanyAssetMaintenancePage() {
           }),
         ).unwrap();
         setScheduleRecords(res?.data ?? []);
-      } catch {
+      } catch (err: unknown) {
         setScheduleRecords([]);
-        toast.error("Failed to load maintenance schedule.");
+        const message = (err as { message?: string })?.message;
+        if (message) toast.error(message);
       } finally {
         setScheduleLoading(false);
       }
@@ -109,8 +110,9 @@ export default function CompanyAssetMaintenancePage() {
             getCompanyEstates({ page: 1, limit: 200 }),
           ).unwrap();
           options = mapCompanyEstateRows(res?.data);
-        } catch {
-          toast.error("Failed to fetch company estates.");
+        } catch (err: unknown) {
+          const message = (err as { message?: string })?.message;
+          if (message) toast.error(message);
         }
         if (!options.length) options = parseCompanyEstates(data);
 
@@ -118,8 +120,9 @@ export default function CompanyAssetMaintenancePage() {
         if (options.length) {
           setSelectedEstate({ label: options[0].name, value: options[0].id });
         }
-      } catch {
-        toast.error("Failed to load company information.");
+      } catch (err: unknown) {
+        const message = (err as { message?: string })?.message;
+        if (message) toast.error(message);
       } finally {
         setEstatesLoading(false);
       }

@@ -99,6 +99,16 @@ export type MaintenanceCommentsResponse = {
 
 const normalizeId = (id: string | undefined) => id ?? "";
 
+function getApiErrorMessage(error: unknown): string | undefined {
+  const err = error as {
+    response?: { data?: { message?: string | string[] } };
+  };
+  const msg = err?.response?.data?.message;
+  if (Array.isArray(msg)) return msg[0];
+  if (typeof msg === "string" && msg.trim()) return msg;
+  return undefined;
+}
+
 /** POST /api/v1/asset-maintenance */
 export const createAssetMaintenance = createAsyncThunk(
   "admin-asset-maintenance/create",
@@ -107,11 +117,7 @@ export const createAssetMaintenance = createAsyncThunk(
       const res = await axiosInstance.post("/api/v1/asset-maintenance", payload);
       return res.data as { success?: boolean; message?: string; data?: AssetMaintenanceRecord };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string | string[] } } };
-      const msg = err?.response?.data?.message;
-      return rejectWithValue({
-        message: Array.isArray(msg) ? msg[0] : msg ?? "Failed to create maintenance record",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -124,7 +130,7 @@ export const getAssetMaintenanceList = createAsyncThunk(
       const { estateId, page = 1, limit = 10, isActive } = params;
       const estateIdValue = normalizeId(estateId).trim();
       if (!estateIdValue) {
-        return rejectWithValue({ message: "Estate is required." });
+        return rejectWithValue({});
       }
       const res = await axiosInstance.get<MaintenanceListResponse>(
         "/api/v1/asset-maintenance",
@@ -139,10 +145,7 @@ export const getAssetMaintenanceList = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to fetch maintenance records",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -157,10 +160,7 @@ export const getAssetMaintenanceById = createAsyncThunk(
       );
       return res.data as { success?: boolean; message?: string; data?: AssetMaintenanceRecord };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to fetch maintenance record",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -177,10 +177,7 @@ export const updateAssetMaintenance = createAsyncThunk(
       );
       return { ...(res.data as object), maintenanceId };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to update maintenance record",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -195,10 +192,7 @@ export const deleteAssetMaintenance = createAsyncThunk(
       );
       return { ...(res.data as object), deletedId: maintenanceId };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to delete maintenance record",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -213,10 +207,7 @@ export const suspendAssetMaintenance = createAsyncThunk(
       );
       return { ...(res.data as object), maintenanceId };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to suspend maintenance record",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -231,10 +222,7 @@ export const activateAssetMaintenance = createAsyncThunk(
       );
       return { ...(res.data as object), maintenanceId };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to activate maintenance record",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -257,10 +245,7 @@ export const getAssetMaintenanceComments = createAsyncThunk(
       );
       return { ...res.data, maintenanceId };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to fetch maintenance comments",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -277,10 +262,7 @@ export const addAssetMaintenanceComment = createAsyncThunk(
       );
       return { ...(res.data as object), maintenanceId };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to add maintenance feedback",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );

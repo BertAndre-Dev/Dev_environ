@@ -68,9 +68,10 @@ export default function AssetMaintenanceTab({
           }),
         ).unwrap();
         setScheduleRecords(res?.data ?? []);
-      } catch {
+      } catch (err: unknown) {
         setScheduleRecords([]);
-        toast.error("Failed to load maintenance schedule.");
+        const message = (err as { message?: string })?.message;
+        if (message) toast.error(message);
       } finally {
         setScheduleLoading(false);
       }
@@ -199,9 +200,8 @@ export default function AssetMaintenanceTab({
             setModalOpen(false);
             bumpRecordsRefresh();
           } catch (err: unknown) {
-            toast.error(
-              (err as { message?: string })?.message ?? "Failed to create record.",
-            );
+            const message = (err as { message?: string })?.message;
+            if (message) toast.error(message);
           }
         }}
         onUpdate={async (payload) => {
@@ -226,9 +226,8 @@ export default function AssetMaintenanceTab({
             setEditing(null);
             bumpRecordsRefresh();
           } catch (err: unknown) {
-            toast.error(
-              (err as { message?: string })?.message ?? "Failed to update record.",
-            );
+            const message = (err as { message?: string })?.message;
+            if (message) toast.error(message);
           }
         }}
       />

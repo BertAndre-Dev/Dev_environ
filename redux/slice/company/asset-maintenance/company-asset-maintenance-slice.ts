@@ -107,7 +107,7 @@ const companyAssetMaintenanceSlice = createSlice({
         state.error =
           (action.payload as { message?: string } | undefined)?.message ??
           action.error.message ??
-          "Failed to fetch maintenance records";
+          null;
       })
       .addCase(createAssetMaintenance.pending, (state) => {
         state.createStatus = "isLoading";
@@ -123,7 +123,7 @@ const companyAssetMaintenanceSlice = createSlice({
         state.error =
           (action.payload as { message?: string } | undefined)?.message ??
           action.error.message ??
-          "Failed to create maintenance record";
+          null;
       })
       .addCase(updateAssetMaintenance.pending, (state) => {
         state.updateStatus = "isLoading";
@@ -143,7 +143,7 @@ const companyAssetMaintenanceSlice = createSlice({
         state.error =
           (action.payload as { message?: string } | undefined)?.message ??
           action.error.message ??
-          "Failed to update maintenance record";
+          null;
       })
       .addCase(deleteAssetMaintenance.pending, (state) => {
         state.deleteStatus = "isLoading";
@@ -162,7 +162,7 @@ const companyAssetMaintenanceSlice = createSlice({
         state.error =
           (action.payload as { message?: string } | undefined)?.message ??
           action.error.message ??
-          "Failed to delete maintenance record";
+          null;
       })
       .addCase(suspendAssetMaintenance.pending, (state) => {
         state.suspendStatus = "isLoading";
@@ -181,7 +181,7 @@ const companyAssetMaintenanceSlice = createSlice({
         state.error =
           (action.payload as { message?: string } | undefined)?.message ??
           action.error.message ??
-          "Failed to suspend record";
+          null;
       })
       .addCase(activateAssetMaintenance.pending, (state) => {
         state.activateStatus = "isLoading";
@@ -200,7 +200,7 @@ const companyAssetMaintenanceSlice = createSlice({
         state.error =
           (action.payload as { message?: string } | undefined)?.message ??
           action.error.message ??
-          "Failed to activate record";
+          null;
       })
       .addCase(getAssetMaintenanceComments.pending, (state) => {
         state.getCommentsStatus = "isLoading";
@@ -220,7 +220,7 @@ const companyAssetMaintenanceSlice = createSlice({
         state.error =
           (action.payload as { message?: string } | undefined)?.message ??
           action.error.message ??
-          "Failed to fetch maintenance comments";
+          null;
       })
       .addCase(addAssetMaintenanceComment.pending, (state) => {
         state.addCommentStatus = "isLoading";
@@ -249,7 +249,7 @@ const companyAssetMaintenanceSlice = createSlice({
         state.error =
           (action.payload as { message?: string } | undefined)?.message ??
           action.error.message ??
-          "Failed to add maintenance feedback";
+          null;
       });
   },
 });

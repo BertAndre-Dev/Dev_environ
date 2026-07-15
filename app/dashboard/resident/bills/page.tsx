@@ -166,16 +166,12 @@ export default function BillPage() {
 
   return (
     <div className="relative">
-      {loading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader label="Loading bills..." />
-        </div>
-      )}
+      {loading && <Loader fullScreen label="Loading bills..." />}
 
       <div
         className={[
           "space-y-6",
-          loading ? "blur-sm opacity-60 pointer-events-none select-none" : "",
+          loading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
         <div className="flex items-center justify-between">
@@ -198,7 +194,7 @@ export default function BillPage() {
         /> */}
 
         {/* Payable bills - cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {!loading && payableBills.length === 0 ? (
             <p className="text-muted-foreground">
               No payable bills for this estate.

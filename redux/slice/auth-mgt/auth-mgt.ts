@@ -78,6 +78,62 @@ export const getSignedInUser = createAsyncThunk(
   },
 );
 
+export type Membership = {
+  estateId?: string | { id?: string; _id?: string; name?: string } | null;
+  companyId?: string | { id?: string; _id?: string; name?: string } | null;
+  estateName?: string | null;
+  companyName?: string | null;
+  role?: string | null;
+  residentType?: string | null;
+  addressIds?: string[];
+  isActive?: boolean;
+};
+
+export type SwitchMembershipPayload = {
+  estateId?: string | null;
+  companyId?: string | null;
+};
+
+/** List estates and companies the signed-in user belongs to. */
+export const getMemberships = createAsyncThunk(
+  "auth-mgt/getMemberships",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.get("/api/v1/auth-mgt/me/memberships");
+      return res.data;
+    } catch (error: any) {
+      const apiError = error.response?.data;
+      return rejectWithValue(
+        apiError?.message ?? apiError ?? error.message ?? "Failed to load memberships",
+      );
+    }
+  },
+);
+
+/** Switch active estate/company membership and receive a new scoped access token. */
+export const switchMembership = createAsyncThunk(
+  "auth-mgt/switchMembership",
+  async (data: SwitchMembershipPayload, { rejectWithValue }) => {
+    try {
+      const body: Record<string, string> = {};
+      if (data.estateId) body.estateId = data.estateId;
+      if (data.companyId) body.companyId = data.companyId;
+
+      const res = await axiosInstance.post(
+        "/api/v1/auth-mgt/me/switch-membership",
+        body,
+      );
+      const accessToken = res.data?.accessToken as string | undefined;
+      if (accessToken) {
+        await fetchCsrfToken(accessToken);
+      }
+      return res.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message);
+    }
+  },
+);
+
 // reset password
 export const resetPassword = createAsyncThunk(
   "auth-mgt/resetPassword",

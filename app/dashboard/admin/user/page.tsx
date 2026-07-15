@@ -33,6 +33,7 @@ import Select from "react-select";
 import {
   DEFAULT_ESTATE_USER_ROLE,
   ESTATE_USER_ROLE_FILTER_OPTIONS,
+  getEstateUserRoleTotalLabel,
   type EstateUserRoleFilter,
 } from "@/lib/estate-user-roles";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
@@ -283,6 +284,8 @@ export default function AdminUserPage() {
     }));
   };
 
+  const showResidentColumns = roleFilter === "resident";
+
   const columns = [
     {
       key: "createdAt",
@@ -300,31 +303,41 @@ export default function AdminUserPage() {
     { key: "lastName", header: "Last Name" },
     { key: "email", header: "Email" },
     ...getAddressColumns(allAdminUsers),
-    {
-      key: "meterNumber",
-      header: "Meter Number",
-      render: (item: AdminUserData) => {
-        if (metersLoading) {
-          return <span className="text-xs text-muted-foreground">...</span>;
-        }
-        const value = formatUserMeterNumbers(item, meterByAddressId);
-        if (value === "—") return "-";
-        return <span className="font-mono text-sm">{value}</span>;
-      },
-      exportValue: (item: AdminUserData) => {
-        const value = formatUserMeterNumbers(item, meterByAddressId);
-        return value === "—" ? "" : value;
-      },
-    },
+    ...(showResidentColumns
+      ? [
+          {
+            key: "meterNumber",
+            header: "Meter Number",
+            render: (item: AdminUserData) => {
+              if (metersLoading) {
+                return (
+                  <span className="text-xs text-muted-foreground">...</span>
+                );
+              }
+              const value = formatUserMeterNumbers(item, meterByAddressId);
+              if (value === "—") return "-";
+              return <span className="font-mono text-sm">{value}</span>;
+            },
+            exportValue: (item: AdminUserData) => {
+              const value = formatUserMeterNumbers(item, meterByAddressId);
+              return value === "—" ? "" : value;
+            },
+          },
+        ]
+      : []),
     { key: "role", header: "Role" },
-    {
-      key: "residentType",
-      header: "Resident Type",
-      render: (item: AdminUserData) =>
-        item.role?.toLowerCase() === "resident"
-          ? item.residentType || "-"
-          : "-",
-    },
+    ...(showResidentColumns
+      ? [
+          {
+            key: "residentType",
+            header: "Resident Type",
+            render: (item: AdminUserData) =>
+              item.role?.toLowerCase() === "resident"
+                ? item.residentType || "-"
+                : "-",
+          },
+        ]
+      : []),
     {
       key: "invitationStatus",
       header: "Invitation Status",
@@ -455,7 +468,7 @@ export default function AdminUserPage() {
           {(() => {
             const stats = [
               {
-                label: "Total Users",
+                label: getEstateUserRoleTotalLabel(roleFilter),
                 value: pagination?.total ?? 0,
                 icon: UsersRound,
                 color: "bg-[#FEE6D480]",

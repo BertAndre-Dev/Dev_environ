@@ -406,14 +406,14 @@ export default function DashboardLayout({
 
             <div className="flex shrink-0 items-center gap-2 sm:gap-4">
               <MembershipSwitcher className="hidden sm:block" />
-              <div className="hidden items-center gap-2 rounded-lg bg-muted px-4 py-2 md:flex">
+              {/* <div className="hidden items-center gap-2 rounded-lg bg-muted px-4 py-2 md:flex">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <input
                   type="text"
                   placeholder="Search..."
                   className="w-48 bg-transparent text-sm outline-none"
                 />
-              </div>
+              </div> */}
               {/* <button
                 type="button"
                 title="Notifications"

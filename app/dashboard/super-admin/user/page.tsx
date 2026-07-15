@@ -38,6 +38,7 @@ import { UserStatusModal } from "./components/UserStatusModal";
 import {
   DEFAULT_ESTATE_USER_ROLE,
   ESTATE_USER_ROLE_FILTER_OPTIONS,
+  getEstateUserRoleTotalLabel,
   type EstateUserRoleFilter,
 } from "@/lib/estate-user-roles";
 import { formatUserMeterNumbers } from "@/lib/user-address-meters";
@@ -536,7 +537,7 @@ export default function SuperAdminUserPage() {
           {(() => {
             const stats = [
               {
-                label: "Total Users",
+                label: getEstateUserRoleTotalLabel(roleFilter),
                 value: userPagination?.total ?? 0,
                 icon: UsersRound,
                 color: "bg-[#FEE6D480]",

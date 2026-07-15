@@ -19,7 +19,7 @@ export const blogPosts: BlogPostMeta[] = [
     slug: "how-estate-managers-can-prepare-for-the-next-decade",
     title: "How Estate Managers Can Prepare for the Next Decade",
     excerpt:
-      "Resident expectations, rising costs, and digital demand are reshaping estate management. Here are six ways estate managers can prepare for the decade ahead — from digital tools and sustainability to leadership and community.",
+      "Resident expectations, rising costs, and digital demand are reshaping estate management. Here are six ways estate managers can prepare for the decade ahead, from digital tools and sustainability to leadership and community.",
     hook: "The question is no longer whether change is coming. The question is whether estate managers are ready for it.",
     publishedAt: "2026-07-13",
     readTimeMinutes: 8,

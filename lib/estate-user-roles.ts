@@ -23,6 +23,14 @@ export const ESTATE_USER_ROLE_FILTER_OPTIONS: {
   { label: "Estate admins", value: "estate admin" },
 ];
 
+/** Stats card label for the active role filter, e.g. "Total Residents". */
+export function getEstateUserRoleTotalLabel(
+  role: EstateUserRoleFilter,
+): string {
+  const option = ESTATE_USER_ROLE_FILTER_OPTIONS.find((o) => o.value === role);
+  return option ? `Total ${option.label}` : "Total Users";
+}
+
 export function chatGroupRoleToApiRole(
   role: ChatGroupRoleToAdd,
 ): EstateUserRoleFilter {

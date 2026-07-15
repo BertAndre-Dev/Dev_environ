@@ -39,9 +39,9 @@ import { UserStatusModal } from "./components/UserStatusModal";
 import {
   DEFAULT_ESTATE_USER_ROLE,
   ESTATE_USER_ROLE_FILTER_OPTIONS,
+  getEstateUserRoleTotalLabel,
   type EstateUserRoleFilter,
 } from "@/lib/estate-user-roles";
-
 interface EstateOption {
   label: string;
   value: string;
@@ -348,13 +348,13 @@ export default function CompanyUsersPage() {
   const stats = useMemo(
     () => [
       {
-        label: "Total Users",
+        label: getEstateUserRoleTotalLabel(roleFilter),
         value: pagination?.total ?? 0,
         icon: UsersRound,
         color: "bg-[#FEE6D480]",
       },
     ],
-    [pagination?.total],
+    [pagination?.total, roleFilter],
   );
 
   return (

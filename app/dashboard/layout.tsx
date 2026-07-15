@@ -29,6 +29,7 @@ import { clearCsrfToken, ensureCsrfToken } from "@/utils/csrf";
 import { disconnectSocket } from "@/lib/socket";
 import { CommunityChatSocketProvider } from "@/components/providers/CommunityChatSocketProvider";
 import { WalletRequiredAlert } from "@/components/wallet/WalletRequiredAlert";
+import { MembershipSwitcher } from "@/components/dashboard/MembershipSwitcher";
 import { filterNavItemsByEstateModules } from "@/lib/nav-module-filter";
 import Image from "next/image";
 
@@ -404,6 +405,7 @@ export default function DashboardLayout({
             </div>
 
             <div className="flex shrink-0 items-center gap-2 sm:gap-4">
+              <MembershipSwitcher className="hidden sm:block" />
               <div className="hidden items-center gap-2 rounded-lg bg-muted px-4 py-2 md:flex">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <input
@@ -420,6 +422,7 @@ export default function DashboardLayout({
                 <Bell className="h-5 w-5" />
                 <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-accent" />
               </button> */}
+              <MembershipSwitcher collapsed className="sm:hidden" />
               <button
                 type="button"
                 title="Open menu"

@@ -7,13 +7,17 @@ import {
   signIn,
   signOut,
   getSignedInUser,
+  getMemberships,
+  switchMembership,
   iniviteUser,
   verifyInivitedUser,
+  type Membership,
 } from './auth-mgt';
 
 interface AuthState {
   user: any | null;
   token: string | null;
+  memberships: Membership[];
   signInStatus: 'idle' | 'isLoading' | 'succeeded' | 'failed';
   signOutStatus: 'idle' | 'isLoading' | 'succeeded' | 'failed';
   verifyOtpStatus: 'idle' | 'isLoading' | 'succeeded' | 'failed';
@@ -21,6 +25,8 @@ interface AuthState {
   resetPasswordStatus: 'idle' | 'isLoading' | 'succeeded' | 'failed';
   forgotPasswordStatus: 'idle' | 'isLoading' | 'succeeded' | 'failed';
   getSignedInUserStatus: 'idle' | 'isLoading' | 'succeeded' | 'failed';
+  getMembershipsStatus: 'idle' | 'isLoading' | 'succeeded' | 'failed';
+  switchMembershipStatus: 'idle' | 'isLoading' | 'succeeded' | 'failed';
   iniviteUserStatus: 'idle' | 'isLoading' | 'succeeded' | 'failed';
   verifyInivitedUserStatus: 'idle' | 'isLoading' | 'succeeded' | 'failed';
   error: string | null;
@@ -29,6 +35,7 @@ interface AuthState {
 const initialState: AuthState = {
   user: null,
   token: null,
+  memberships: [],
   signInStatus: 'idle',
   signOutStatus: 'idle',
   verifyOtpStatus: 'idle',
@@ -36,6 +43,8 @@ const initialState: AuthState = {
   resetPasswordStatus: 'idle',
   forgotPasswordStatus: 'idle',
   getSignedInUserStatus: 'idle',
+  getMembershipsStatus: 'idle',
+  switchMembershipStatus: 'idle',
   iniviteUserStatus: 'idle',
   verifyInivitedUserStatus: 'idle',
   error: null,
@@ -53,6 +62,8 @@ const authSlice = createSlice({
       state.resetPasswordStatus = 'idle';
       state.forgotPasswordStatus = 'idle';
       state.getSignedInUserStatus = 'idle';
+      state.getMembershipsStatus = 'idle';
+      state.switchMembershipStatus = 'idle';
       state.iniviteUserStatus = 'idle';
       state.verifyInivitedUserStatus = 'idle';
       state.error = null;
@@ -72,6 +83,7 @@ const authSlice = createSlice({
     logoutLocally: (state) => {
       state.user = null;
       state.token = null;
+      state.memberships = [];
       if (typeof window !== 'undefined') {
         clearStoredAuth();
       }
@@ -120,6 +132,59 @@ const authSlice = createSlice({
         if (typeof window !== 'undefined') clearStoredAuth();
       })
 
+      // ===== MEMBERSHIPS =====
+      .addCase(getMemberships.pending, (state) => {
+        state.getMembershipsStatus = 'isLoading';
+        state.error = null;
+      })
+      .addCase(getMemberships.fulfilled, (state, action) => {
+        state.getMembershipsStatus = 'succeeded';
+        const payload = action.payload;
+        const data = payload?.data ?? payload;
+        if (Array.isArray(data)) {
+          state.memberships = data;
+        } else if (Array.isArray(data?.memberships)) {
+          state.memberships = data.memberships;
+        } else if (Array.isArray(data?.estates) || Array.isArray(data?.companies)) {
+          state.memberships = [
+            ...(Array.isArray(data?.estates) ? data.estates : []),
+            ...(Array.isArray(data?.companies) ? data.companies : []),
+          ];
+        } else {
+          state.memberships = [];
+        }
+      })
+      .addCase(getMemberships.rejected, (state, action) => {
+        state.getMembershipsStatus = 'failed';
+        state.error =
+          (typeof action.payload === 'string' ? action.payload : null) ??
+          'Failed to load memberships';
+      })
+
+      .addCase(switchMembership.pending, (state) => {
+        state.switchMembershipStatus = 'isLoading';
+        state.error = null;
+      })
+      .addCase(switchMembership.fulfilled, (state, action) => {
+        state.switchMembershipStatus = 'succeeded';
+        const user = action.payload?.data ?? state.user;
+        const token =
+          (action.payload?.accessToken as string | undefined) ?? state.token;
+
+        state.user = user;
+        state.token = token;
+
+        if (typeof window !== 'undefined') {
+          writeStoredUser(user);
+          writeStoredAuth({ user, token });
+        }
+      })
+      .addCase(switchMembership.rejected, (state, action) => {
+        state.switchMembershipStatus = 'failed';
+        state.error =
+          (typeof action.payload === 'string' ? action.payload : null) ??
+          'Failed to switch membership';
+      })
 
       // ===== SIGN OUT =====
       .addCase(signOut.pending, (state) => {
@@ -130,6 +195,7 @@ const authSlice = createSlice({
         state.signOutStatus = 'succeeded';
         state.user = null;
         state.token = null;
+        state.memberships = [];
         if (typeof window !== 'undefined') clearStoredAuth();
       })
       .addCase(signOut.rejected, (state, action) => {

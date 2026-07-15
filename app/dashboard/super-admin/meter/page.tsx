@@ -615,18 +615,12 @@ export default function AdminMeterManagement() {
             case "Meter Management":
               return (
                 <div className="relative space-y-6">
-                  {loading && (
-                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm rounded-lg">
-                      <Loader label="Loading meters..." />
-                    </div>
-                  )}
+                  {loading && <Loader fullScreen label="Loading meters..." />}
 
                   <div
                     className={[
                       "space-y-6",
-                      loading
-                        ? "blur-sm opacity-60 pointer-events-none select-none"
-                        : "",
+                      loading ? "pointer-events-none select-none" : "",
                     ].join(" ")}
                   >
                     <Card className="p-4">

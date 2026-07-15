@@ -342,13 +342,9 @@ export default function CompanyMarketplacePage() {
   return (
     <>
       <div className="relative">
-        {pageLoading && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-            <Loader label="Loading marketplace..." />
-          </div>
-        )}
+        {pageLoading && <Loader fullScreen label="Loading marketplace..." />}
         <div
-          className={`space-y-6 sm:space-y-8 pb-8${pageLoading ? " blur-sm opacity-60 pointer-events-none select-none" : ""}`}
+          className={`space-y-6 sm:space-y-8 pb-8${pageLoading ? " pointer-events-none select-none" : ""}`}
         >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-2">

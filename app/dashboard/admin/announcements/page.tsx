@@ -228,18 +228,12 @@ export default function AdminAnnouncementsPage() {
 
   return (
     <div className="relative">
-      {fullPageLoading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader label="Loading announcements..." />
-        </div>
-      )}
+      {fullPageLoading && <Loader fullScreen label="Loading announcements..." />}
 
       <div
         className={[
           "space-y-6",
-          fullPageLoading
-            ? "blur-sm opacity-60 pointer-events-none select-none"
-            : "",
+          fullPageLoading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
         <AnnouncementsPageHeader

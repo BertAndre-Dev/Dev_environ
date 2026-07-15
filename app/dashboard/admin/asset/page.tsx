@@ -190,14 +190,10 @@ export default function AdminAssetPage() {
 
   return (
     <div className="relative">
-      {pageLoading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader label="Loading asset categories..." />
-        </div>
-      )}
+      {pageLoading && <Loader fullScreen label="Loading asset categories..." />}
 
       <div
-        className={`space-y-6${pageLoading ? " blur-sm opacity-60 pointer-events-none select-none" : ""}`}
+        className={`space-y-6${pageLoading ? " pointer-events-none select-none" : ""}`}
       >
         <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
           <div>

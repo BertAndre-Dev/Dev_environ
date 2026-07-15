@@ -212,16 +212,12 @@ export default function SuperAdminEnergyProviderPage() {
 
   return (
     <div className="relative space-y-6">
-      {tabLoading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader label="Loading..." />
-        </div>
-      )}
+      {tabLoading && <Loader fullScreen label="Loading..." />}
 
       <div
         className={[
           "space-y-6",
-          tabLoading ? "blur-sm opacity-60 pointer-events-none select-none" : "",
+          tabLoading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

@@ -233,18 +233,12 @@ export default function StaffMaintenancePage() {
 
   return (
     <div className="relative">
-      {pageLoading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader label="Loading maintenance requests..." />
-        </div>
-      )}
+      {pageLoading && <Loader fullScreen label="Loading maintenance requests..." />}
 
       <div
         className={[
           "space-y-6",
-          pageLoading
-            ? "blur-sm opacity-60 pointer-events-none select-none"
-            : "",
+          pageLoading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
         <div>

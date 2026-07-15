@@ -295,14 +295,10 @@ export default function CompanyRevenueHeadsPage() {
 
   return (
     <div className="relative">
-      {pageLoading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader label="Loading revenue..." />
-        </div>
-      )}
+      {pageLoading && <Loader fullScreen label="Loading revenue..." />}
 
       <div
-        className={`space-y-6${pageLoading ? " blur-sm opacity-60 pointer-events-none select-none" : ""}`}
+        className={`space-y-6${pageLoading ? " pointer-events-none select-none" : ""}`}
       >
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between flex-wrap gap-4">
           <div>

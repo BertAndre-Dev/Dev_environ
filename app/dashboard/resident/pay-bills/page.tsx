@@ -292,18 +292,12 @@ export default function PayBillsPage() {
   if (!hasBillPaymentPin) {
     return (
       <div className="relative">
-        {pageLoading && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-            <Loader label="Loading pay bills..." />
-          </div>
-        )}
+        {pageLoading && <Loader fullScreen label="Loading pay bills..." />}
 
         <div
           className={[
             "space-y-6",
-            pageLoading
-              ? "blur-sm opacity-60 pointer-events-none select-none"
-              : "",
+            pageLoading ? "pointer-events-none select-none" : "",
           ].join(" ")}
         >
           <h1 className="text-2xl font-bold">Pay Bills</h1>
@@ -390,18 +384,12 @@ export default function PayBillsPage() {
 
   return (
     <div className="relative">
-      {pageLoading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader label="Loading pay bills..." />
-        </div>
-      )}
+      {pageLoading && <Loader fullScreen label="Loading pay bills..." />}
 
       <div
         className={[
           "space-y-6",
-          pageLoading
-            ? "blur-sm opacity-60 pointer-events-none select-none"
-            : "",
+          pageLoading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
         <h1 className="text-2xl font-bold">Pay Bills</h1>

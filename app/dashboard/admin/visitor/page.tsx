@@ -240,7 +240,8 @@ export default function AdminVisitorManagement() {
       header: "Visit Type",
       key: "visitingType",
       render: (item: any) => {
-        if (!item.visitingType) return <span className="text-gray-500 text-xs">—</span>;
+        if (!item.visitingType)
+          return <span className="text-gray-500 text-xs">—</span>;
         return (
           <span
             className={`px-2 py-1 rounded text-xs font-semibold ${
@@ -378,210 +379,212 @@ export default function AdminVisitorManagement() {
 
   return (
     <div className="relative">
-      {loading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-          <Loader label="Loading visitors..." />
-        </div>
-      )}
+      {loading && <Loader fullScreen label="Loading visitors..." />}
 
       <div
         className={[
           "space-y-6",
-          loading ? "blur-sm opacity-60 pointer-events-none select-none" : "",
+          loading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-3xl font-bold">
-            Visitor Management
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Welcome back! Here's is an overview on{" "}
-            <span className="text-[18px] font-bold underline uppercase text-black">
-              {estateName}
-            </span>
-            .
-          </p>
-        </div>
-        <Button
-          onClick={() => setAddVisitorOpen(true)}
-          disabled={!estateId}
-          className="gap-2"
-        >
-          <UserPlus className="w-4 h-4" />
-          Add Visitor
-        </Button>
-      </div>
-
-      {/* Stats Card */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {(() => {
-          const stats = [
-            {
-              label: "Total Visitors",
-              value: pagination?.total ?? 0,
-              icon: UserPlus2,
-              color: "bg-[#FEE6D480]",
-            },
-            {
-              label: "Viewed Visitors",
-              value:
-                filteredVisitors?.filter((v: any) => v.viewedBy)?.length || 0,
-              icon: Eye,
-              color: "bg-[#CCE4DB80]",
-            },
-            {
-              label: "Verified Visitors",
-              value:
-                filteredVisitors?.filter((v: any) => v.isVerified)?.length || 0,
-              icon: ShieldCheckIcon,
-              color: "bg-[#D0DFF280]",
-            },
-          ];
-
-          return stats.map((stat, i) => {
-            const Icon = stat.icon;
-            return (
-              <Card key={i} className="p-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      {stat.label}
-                    </p>
-                    <p className="font-heading text-2xl font-bold mt-2">
-                      {stat.value}
-                    </p>
-                  </div>
-                  <div className={`p-3 rounded-lg ${stat.color}`}>
-                    <Icon className="w-6 h-6" />
-                  </div>
-                </div>
-              </Card>
-            );
-          });
-        })()}
-      </div>
-
-      {/* Search */}
-      <Card className="p-4">
-        <input
-          type="text"
-          placeholder="Search visitor by name or visitor code"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-sm px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        />
-      </Card>
-
-      <Modal visible={addVisitorOpen} onClose={() => setAddVisitorOpen(false)}>
-        {estateId && (
-          <AdminVisitorForm
-            estateId={estateId}
-            onSubmitSuccess={refreshVisitors}
-            onClose={() => setAddVisitorOpen(false)}
-          />
-        )}
-      </Modal>
-
-      {/* Verify visitor confirmation modal */}
-      <Modal
-        visible={!!verifyModalVisitor}
-        onClose={() => setVerifyModalVisitor(null)}
-      >
-        <div className="p-4 space-y-4">
-          <h2 className="font-heading text-xl font-bold">Verify visitor</h2>
-          <p className="text-sm text-muted-foreground">
-            Are you sure you want to verify{" "}
-            <strong>
-              {verifyModalVisitor
-                ? `${verifyModalVisitor.firstName ?? ""} ${verifyModalVisitor.lastName ?? ""}`.trim() ||
-                  verifyModalVisitor.visitorCode
-                : "this visitor"}
-            </strong>
-            ?
-          </p>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setVerifyModalVisitor(null)}
-              className="cursor-pointer"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleVerifyConfirm}
-              className="cursor-pointer gap-1"
-            >
-              <ShieldCheck className="w-4 h-4" />
-              Verify
-            </Button>
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <h1 className="font-heading text-3xl font-bold">
+              Visitor Management
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Welcome back! Here's is an overview on{" "}
+              <span className="text-[18px] font-bold underline uppercase text-black">
+                {estateName}
+              </span>
+              .
+            </p>
           </div>
+          <Button
+            onClick={() => setAddVisitorOpen(true)}
+            disabled={!estateId}
+            className="gap-2"
+          >
+            <UserPlus className="w-4 h-4" />
+            Add Visitor
+          </Button>
         </div>
-      </Modal>
 
-      <DeleteModal
-        visible={!!visitorToDelete}
-        onClose={handleCloseDeleteModal}
-        itemName={
-          visitorToDelete
-            ? `${visitorToDelete.firstName || ""} ${
-                visitorToDelete.lastName || ""
-              }`.trim() || visitorToDelete.visitorCode || "this visitor"
-            : ""
-        }
-        title="Delete visitor"
-        onConfirm={handleConfirmDelete}
-      />
+        {/* Stats Card */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {(() => {
+            const stats = [
+              {
+                label: "Total Visitors",
+                value: pagination?.total ?? 0,
+                icon: UserPlus2,
+                color: "bg-[#FEE6D480]",
+              },
+              {
+                label: "Viewed Visitors",
+                value:
+                  filteredVisitors?.filter((v: any) => v.viewedBy)?.length || 0,
+                icon: Eye,
+                color: "bg-[#CCE4DB80]",
+              },
+              {
+                label: "Verified Visitors",
+                value:
+                  filteredVisitors?.filter((v: any) => v.isVerified)?.length ||
+                  0,
+                icon: ShieldCheckIcon,
+                color: "bg-[#D0DFF280]",
+              },
+            ];
 
-      <VisitorQrCodeModal
-        open={!!qrCodeVisitor}
-        visitor={qrCodeVisitor}
-        onClose={() => setQrCodeVisitor(null)}
-      />
+            return stats.map((stat, i) => {
+              const Icon = stat.icon;
+              return (
+                <Card key={i} className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        {stat.label}
+                      </p>
+                      <p className="font-heading text-2xl font-bold mt-2">
+                        {stat.value}
+                      </p>
+                    </div>
+                    <div className={`p-3 rounded-lg ${stat.color}`}>
+                      <Icon className="w-6 h-6" />
+                    </div>
+                  </div>
+                </Card>
+              );
+            });
+          })()}
+        </div>
 
-      <Card className="p-4">
-        <Table
-          columns={columns}
-          data={filteredVisitors}
-          emptyMessage="No visitors found."
-          enableDateRangeFilter
-          defaultDateRangeDays={0}
-          startDate={startDate}
-          endDate={endDate}
-          startDatePlaceholder={DATE_RANGE_PLACEHOLDERS.start}
-          endDatePlaceholder={DATE_RANGE_PLACEHOLDERS.end}
-          onDateRangeChange={({ startDate, endDate }) => {
-            setStartDate(startDate);
-            setEndDate(endDate);
-          }}
-          showPagination
-          paginationInfo={{
-            total: pagination.total,
-            current: pagination.page,
-            pageSize: pagination.limit,
-          }}
-          onPageChange={handlePageChange}
-          enableExport
-          exportFileName="visitors"
-          onExportRequest={
-            estateId
-              ? async () => {
-                  const shouldApplyDate = Boolean(startDate && endDate);
-                  const res = await dispatch(
-                    getVisitorsByEstate({
-                      estateId,
-                      page: 1,
-                      limit: 50000,
-                      startDate: shouldApplyDate ? startDate : undefined,
-                      endDate: shouldApplyDate ? endDate : undefined,
-                    }),
-                  ).unwrap();
-                  return res?.data ?? [];
-                }
-              : undefined
+        {/* Search */}
+        <Card className="p-4">
+          <input
+            type="text"
+            placeholder="Search visitor by name or visitor code"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full max-w-sm px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </Card>
+
+        <Modal
+          visible={addVisitorOpen}
+          onClose={() => setAddVisitorOpen(false)}
+        >
+          {estateId && (
+            <AdminVisitorForm
+              estateId={estateId}
+              onSubmitSuccess={refreshVisitors}
+              onClose={() => setAddVisitorOpen(false)}
+            />
+          )}
+        </Modal>
+
+        {/* Verify visitor confirmation modal */}
+        <Modal
+          visible={!!verifyModalVisitor}
+          onClose={() => setVerifyModalVisitor(null)}
+        >
+          <div className="p-4 space-y-4">
+            <h2 className="font-heading text-xl font-bold">Verify visitor</h2>
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to verify{" "}
+              <strong>
+                {verifyModalVisitor
+                  ? `${verifyModalVisitor.firstName ?? ""} ${verifyModalVisitor.lastName ?? ""}`.trim() ||
+                    verifyModalVisitor.visitorCode
+                  : "this visitor"}
+              </strong>
+              ?
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setVerifyModalVisitor(null)}
+                className="cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleVerifyConfirm}
+                className="cursor-pointer gap-1"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                Verify
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        <DeleteModal
+          visible={!!visitorToDelete}
+          onClose={handleCloseDeleteModal}
+          itemName={
+            visitorToDelete
+              ? `${visitorToDelete.firstName || ""} ${
+                  visitorToDelete.lastName || ""
+                }`.trim() ||
+                visitorToDelete.visitorCode ||
+                "this visitor"
+              : ""
           }
+          title="Delete visitor"
+          onConfirm={handleConfirmDelete}
         />
-      </Card>
+
+        <VisitorQrCodeModal
+          open={!!qrCodeVisitor}
+          visitor={qrCodeVisitor}
+          onClose={() => setQrCodeVisitor(null)}
+        />
+
+        <Card className="p-4">
+          <Table
+            columns={columns}
+            data={filteredVisitors}
+            emptyMessage="No visitors found."
+            enableDateRangeFilter
+            defaultDateRangeDays={0}
+            startDate={startDate}
+            endDate={endDate}
+            startDatePlaceholder={DATE_RANGE_PLACEHOLDERS.start}
+            endDatePlaceholder={DATE_RANGE_PLACEHOLDERS.end}
+            onDateRangeChange={({ startDate, endDate }) => {
+              setStartDate(startDate);
+              setEndDate(endDate);
+            }}
+            showPagination
+            paginationInfo={{
+              total: pagination.total,
+              current: pagination.page,
+              pageSize: pagination.limit,
+            }}
+            onPageChange={handlePageChange}
+            enableExport
+            exportFileName="visitors"
+            onExportRequest={
+              estateId
+                ? async () => {
+                    const shouldApplyDate = Boolean(startDate && endDate);
+                    const res = await dispatch(
+                      getVisitorsByEstate({
+                        estateId,
+                        page: 1,
+                        limit: 50000,
+                        startDate: shouldApplyDate ? startDate : undefined,
+                        endDate: shouldApplyDate ? endDate : undefined,
+                      }),
+                    ).unwrap();
+                    return res?.data ?? [];
+                  }
+                : undefined
+            }
+          />
+        </Card>
       </div>
     </div>
   );

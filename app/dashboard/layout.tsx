@@ -320,7 +320,7 @@ export default function DashboardLayout({
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between pl-6 border-b border-sidebar-border py-2">
+          <div className="flex h-20 shrink-0 items-center justify-between border-b border-sidebar-border pl-6">
             <div
               className={`flex items-center ${!sidebarOpen && "justify-center w-full"}`}
             >
@@ -378,8 +378,8 @@ export default function DashboardLayout({
         className={`flex-1 overflow-auto transition-all duration-300 ml-0 ${sidebarOpen ? "sm:ml-64" : "sm:ml-20"}`}
       >
         {/* Topbar */}
-        <header className="sticky top-0 bg-background border-b border-border z-30">
-          <div className="flex items-center justify-between gap-3 px-6 py-5 md:py-5.5">
+        <header className="sticky top-0 z-30 border-b border-border bg-background">
+          <div className="flex h-20 items-center justify-between gap-3 px-6">
             <div className="flex min-w-0 flex-1 items-center gap-3 sm:flex-initial">
               <div className="shrink-0 sm:hidden">
                 <Image
@@ -405,15 +405,15 @@ export default function DashboardLayout({
             </div>
 
             <div className="flex shrink-0 items-center gap-2 sm:gap-4">
-              <MembershipSwitcher className="hidden sm:block" />
-              <div className="hidden items-center gap-2 rounded-lg bg-muted px-4 py-2 md:flex">
+              <MembershipSwitcher className="hidden sm:block cursor-pointer" />
+              {/* <div className="hidden items-center gap-2 rounded-lg bg-muted px-4 py-2 md:flex">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <input
                   type="text"
                   placeholder="Search..."
                   className="w-48 bg-transparent text-sm outline-none"
                 />
-              </div>
+              </div> */}
               {/* <button
                 type="button"
                 title="Notifications"

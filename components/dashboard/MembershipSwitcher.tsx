@@ -123,12 +123,32 @@ export function MembershipSwitcher({
   if (!token) return null;
   if (!loading && items.length === 0) return null;
 
+  const canSwitch = items.length > 1;
   const label = active?.label ?? (loading ? "Loading…" : "Select estate");
   const roleHint = active?.role
     ? active.role.charAt(0).toUpperCase() + active.role.slice(1)
     : null;
 
   if (collapsed) {
+    if (!canSwitch) {
+      return (
+        <div
+          className={cn(
+            "flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground",
+            className,
+          )}
+          title={label}
+          aria-label={`Current membership: ${label}`}
+        >
+          {switching || loading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Building2 className="h-4 w-4" />
+          )}
+        </div>
+      );
+    }
+
     return (
       <div className={cn("relative", className)} ref={rootRef}>
         <button
@@ -144,7 +164,7 @@ export function MembershipSwitcher({
             <Building2 className="h-4 w-4" />
           )}
         </button>
-        {open && items.length > 0 && (
+        {open && (
           <div className="absolute left-0 top-full z-50 mt-2 w-64 rounded-lg border border-border bg-background p-1 shadow-lg">
             {items.map((item) => (
               <MembershipOption
@@ -163,32 +183,54 @@ export function MembershipSwitcher({
 
   return (
     <div className={cn("relative min-w-0", className)} ref={rootRef}>
-      <button
-        type="button"
-        disabled={switching || (loading && items.length === 0)}
-        onClick={() => setOpen((v) => !v)}
-        className="flex max-w-[16rem] items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-left text-sm transition-colors hover:bg-muted disabled:opacity-50"
-        aria-label={`Current membership: ${label}`}
-      >
-        <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-medium text-foreground">
-            {label}
-          </span>
-          {roleHint && (
-            <span className="block truncate text-xs text-muted-foreground">
-              {roleHint}
+      {canSwitch ? (
+        <button
+          type="button"
+          disabled={switching || (loading && items.length === 0)}
+          onClick={() => setOpen((v) => !v)}
+          className="flex max-w-[16rem] items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-left text-sm transition-colors hover:bg-muted disabled:opacity-50"
+          aria-label={`Current membership: ${label}`}
+        >
+          <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-medium text-foreground">
+              {label}
             </span>
+            {roleHint && (
+              <span className="block truncate text-xs text-muted-foreground">
+                {roleHint}
+              </span>
+            )}
+          </span>
+          {switching || loading ? (
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
           )}
-        </span>
-        {switching || loading ? (
-          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
-        ) : (
-          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
-        )}
-      </button>
+        </button>
+      ) : (
+        <div
+          className="flex max-w-[16rem] items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-left text-sm"
+          aria-label={`Current membership: ${label}`}
+        >
+          <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-medium text-foreground">
+              {label}
+            </span>
+            {roleHint && (
+              <span className="block truncate text-xs text-muted-foreground">
+                {roleHint}
+              </span>
+            )}
+          </span>
+          {(switching || loading) && (
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+          )}
+        </div>
+      )}
 
-      {open && items.length > 0 && (
+      {canSwitch && open && (
         <div className="absolute right-0 top-full z-50 mt-2 w-72 max-h-72 overflow-y-auto rounded-lg border border-border bg-background p-1 shadow-lg">
           {items.map((item) => (
             <MembershipOption

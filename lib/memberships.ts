@@ -27,20 +27,68 @@ function extractNamedId(raw: unknown): { id: string | null; name: string | null 
   return { id: null, name: null };
 }
 
+/** Map an `/me/memberships` estate entry into a Membership record. */
+function fromEstateEntry(raw: Membership): Membership {
+  const id = normalizeUserId(raw.id) || null;
+  return {
+    ...raw,
+    estateId: raw.estateId ?? id,
+    estateName:
+      raw.estateName ??
+      (typeof raw.name === "string" ? raw.name : null),
+    companyId: raw.companyId ?? null,
+    isActive: raw.isCurrent ?? raw.isActive,
+  };
+}
+
+/** Map an `/me/memberships` company entry into a Membership record. */
+function fromCompanyEntry(raw: Membership): Membership {
+  const id = normalizeUserId(raw.id) || null;
+  return {
+    ...raw,
+    companyId: raw.companyId ?? id,
+    companyName:
+      raw.companyName ??
+      (typeof raw.name === "string" ? raw.name : null),
+    estateId: raw.estateId ?? null,
+    isActive: raw.isCurrent ?? raw.isActive,
+  };
+}
+
 function asMembershipArray(payload: unknown): Membership[] {
   if (!payload || typeof payload !== "object") return [];
   const root = payload as Record<string, unknown>;
   const data = root.data ?? root;
 
-  if (Array.isArray(data)) return data as Membership[];
+  if (Array.isArray(data)) {
+    // Already flattened (e.g. from Redux). Prefer explicit ids; otherwise treat
+    // top-level `id`/`name` as an estate membership (API estate list shape).
+    return (data as Membership[]).map((m) => {
+      if (m.estateId != null || m.companyId != null) {
+        return {
+          ...m,
+          isActive: m.isCurrent ?? m.isActive,
+        };
+      }
+      if (m.id) return fromEstateEntry(m);
+      return m;
+    });
+  }
   if (!data || typeof data !== "object") return [];
 
   const obj = data as Record<string, unknown>;
-  if (Array.isArray(obj.memberships)) return obj.memberships as Membership[];
+  if (Array.isArray(obj.memberships)) {
+    return (obj.memberships as Membership[]).map((m) => ({
+      ...m,
+      isActive: m.isCurrent ?? m.isActive,
+    }));
+  }
   if (Array.isArray(obj.estates) || Array.isArray(obj.companies)) {
-    const estates = Array.isArray(obj.estates) ? (obj.estates as Membership[]) : [];
+    const estates = Array.isArray(obj.estates)
+      ? (obj.estates as Membership[]).map(fromEstateEntry)
+      : [];
     const companies = Array.isArray(obj.companies)
-      ? (obj.companies as Membership[])
+      ? (obj.companies as Membership[]).map(fromCompanyEntry)
       : [];
     return [...estates, ...companies];
   }
@@ -83,7 +131,7 @@ export function normalizeMemberships(payload: unknown): NormalizedMembership[] {
         role,
         residentType:
           typeof m.residentType === "string" ? m.residentType : null,
-        isActive: Boolean(m.isActive),
+        isActive: Boolean(m.isCurrent ?? m.isActive),
       };
     })
     .filter((m) => m.estateId || m.companyId);

@@ -94,9 +94,10 @@ export default function MaintenanceRecordsTable({
 
   useEffect(() => {
     if (!estateId) return;
-    fetchList(estateId, page).catch(() =>
-      toast.error("Failed to load maintenance records."),
-    );
+    fetchList(estateId, page).catch((err: unknown) => {
+      const message = (err as { message?: string })?.message;
+      if (message) toast.error(message);
+    });
   }, [estateId, page, fetchList, refreshKey]);
 
   useEffect(() => {
@@ -227,9 +228,8 @@ export default function MaintenanceRecordsTable({
                     await fetchList(estateId, page);
                     onRecordsChange?.();
                   } catch (err: unknown) {
-                    toast.error(
-                      (err as { message?: string })?.message ?? "Action failed.",
-                    );
+                    const message = (err as { message?: string })?.message;
+                    if (message) toast.error(message);
                   }
                 }}
               >

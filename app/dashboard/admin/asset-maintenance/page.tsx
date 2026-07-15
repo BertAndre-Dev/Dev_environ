@@ -27,8 +27,9 @@ export default function AdminAssetMaintenancePage() {
         }
         setEstateId(estate.id);
         setEstateName(estate.name);
-      } catch {
-        toast.error("Failed to load estate information.");
+      } catch (err: unknown) {
+        const message = (err as { message?: string })?.message;
+        if (message) toast.error(message);
       } finally {
         setEstateLoading(false);
       }

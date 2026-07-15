@@ -12,7 +12,7 @@ export default function Loader({
   label = "Loading...",
 }: Readonly<LoaderProps>) {
   const wrapperClassName = fullScreen
-    ? "fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm"
+    ? "fixed inset-0 z-[100] flex items-center justify-center bg-background/40 backdrop-blur-sm"
     : "h-full w-full flex items-center justify-center";
 
   return (

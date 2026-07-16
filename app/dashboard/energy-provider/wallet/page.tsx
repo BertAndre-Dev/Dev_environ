@@ -89,10 +89,6 @@ export default function EnergyProviderWalletPage() {
   const verifyingAccount = verifyBankAccountState === "isLoading";
   const accountVerified =
     verifyBankAccountState === "succeeded" && !!verifiedAccountName;
-  const accountVerifyError =
-    verifyBankAccountState === "failed"
-      ? (verifyError ?? "Account not found")
-      : "";
 
   const fetchCredits = useCallback(
     (page: number) => {
@@ -141,7 +137,7 @@ export default function EnergyProviderWalletPage() {
   }, [userId, creditsPage, sortBy, sortOrder, fetchCredits]);
 
   useEffect(() => {
-    dispatch(getBanks("NG"));
+    dispatch(getBanks({ country: "NG", gatewayType: "flutterwave" }));
   }, [dispatch]);
 
   useEffect(() => {
@@ -158,6 +154,7 @@ export default function EnergyProviderWalletPage() {
         verifyBankAccount({
           accountNumber: createWalletAccountNumber.trim(),
           bankCode: createWalletBankCode,
+          gatewayType: "flutterwave",
         }),
       );
     }, 500);
@@ -183,9 +180,7 @@ export default function EnergyProviderWalletPage() {
 
   const handleCreateWallet = async () => {
     if (!accountVerified) {
-      toast.error(
-        "Please wait for account verification or check account details.",
-      );
+      if (verifyError) toast.error(verifyError);
       return;
     }
     if (!createWalletAccountNumber.trim()) {
@@ -474,13 +469,12 @@ export default function EnergyProviderWalletPage() {
                   Account name: {verifiedAccountName}
                 </p>
               )}
-              {accountVerifyError &&
+              {verifyBankAccountState === "failed" &&
+                verifyError &&
                 !verifyingAccount &&
                 createWalletAccountNumber.trim().length >= 10 &&
                 createWalletBankCode && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {accountVerifyError}
-                  </p>
+                  <p className="text-sm text-red-600 mt-1">{verifyError}</p>
                 )}
             </div>
             <div className="flex gap-2 justify-end">

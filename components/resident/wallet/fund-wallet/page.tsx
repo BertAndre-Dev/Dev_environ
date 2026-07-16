@@ -151,7 +151,7 @@ export default function FundWalletForm({
 
   const isFormValid =
     Boolean(userId && walletId) &&
-    Number(amount) > 0 &&
+    Number(amount) > 230 &&
     description.trim().length > 0 &&
     Boolean(country && currency && paymentOption);
 
@@ -181,7 +181,11 @@ export default function FundWalletForm({
             />
             {Number(amount) > 0 && (
               <p className="text-red-600 text-sm mt-1.5">
-                A service charge of ₦230 will be applied.
+                A service charge of ₦230 applies to every transaction. 
+                <br/>
+                <span className="text-xs text-red-500">The Pay
+                button will be enabled once you enter an amount of at least
+                ₦230.</span>
               </p>
             )}
           </div>

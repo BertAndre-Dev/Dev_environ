@@ -117,7 +117,7 @@ export default function TransactionPage() {
         const [walletRes] = await Promise.all([
           dispatch(getWallet(id)).unwrap(),
           dispatch(getTransactionHistory({ userId: id, page: 1, limit })),
-          dispatch(getResidentBanks("NG")),
+          dispatch(getResidentBanks({ country: "NG", gatewayType: "flutterwave" })),
         ]);
 
         if (!walletRes?.data?.id)

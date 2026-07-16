@@ -54,7 +54,7 @@ const fundWalletSlice = createSlice({
         state.error =
           (action.payload as { message?: string })?.message ||
           action.error.message ||
-          "Failed to load banks";
+          null;
       });
 
     // verifyBankAccount
@@ -74,7 +74,7 @@ const fundWalletSlice = createSlice({
         state.error =
           (action.payload as { message?: string })?.message ||
           action.error.message ||
-          "Account not found";
+          null;
       });
   },
 });

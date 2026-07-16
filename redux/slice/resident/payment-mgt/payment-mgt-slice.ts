@@ -54,7 +54,7 @@ const residentPaymentMgtSlice = createSlice({
         state.error =
           (action.payload as { message?: string })?.message ||
           action.error.message ||
-          "Failed to load banks";
+          null;
       })
       .addCase(verifyBankAccount.pending, (state) => {
         state.verifyBankAccountState = "isLoading";
@@ -71,7 +71,7 @@ const residentPaymentMgtSlice = createSlice({
         state.error =
           (action.payload as { message?: string })?.message ||
           action.error.message ||
-          "Account not found";
+          null;
       });
   },
 });

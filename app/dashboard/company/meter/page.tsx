@@ -121,7 +121,6 @@ const METER_TAB_TITLES = ["Chart Overview", "Meter Management"] as const;
 export default function CompanyMeterManagement() {
   const dispatch = useDispatch<AppDispatch>();
   const [companyId, setCompanyId] = useState("");
-  const [companyName, setCompanyName] = useState("Company");
   const [assignMeter, setAssignMeter] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -228,7 +227,6 @@ export default function CompanyMeterManagement() {
           return;
         }
         setCompanyId(company.id);
-        setCompanyName(company.name);
       } catch {
         toast.error("Failed to load company information.");
       }
@@ -685,7 +683,6 @@ export default function CompanyMeterManagement() {
         <Modal visible={assignMeter} onClose={handleAssignMeter}>
           <CompanyAssignMeterForm
             companyId={companyId}
-            companyName={companyName}
             close={handleAssignMeter}
             refresh={handleRefresh}
           />

@@ -12,11 +12,8 @@ import type { AppDispatch } from "@/redux/store";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
 import { addCompanyMeter } from "@/redux/slice/company/meter-mgt/company-meter";
 
-type AssignScope = "estate" | "company";
-
 type Props = {
   companyId: string;
-  companyName?: string;
   close: () => void;
   refresh: () => void;
 };
@@ -25,12 +22,10 @@ type SelectOption = { label: string; value: string };
 
 export default function CompanyAssignMeterForm({
   companyId,
-  companyName = "Company",
   close,
   refresh,
 }: Readonly<Props>) {
   const dispatch = useDispatch<AppDispatch>();
-  const [assignScope, setAssignScope] = useState<AssignScope>("estate");
   const [meterNumber, setMeterNumber] = useState("");
   const [estateId, setEstateId] = useState("");
   const [estateOptions, setEstateOptions] = useState<SelectOption[]>([]);
@@ -66,11 +61,6 @@ export default function CompanyAssignMeterForm({
     })();
   }, [dispatch]);
 
-  const handleScopeChange = (scope: AssignScope) => {
-    setAssignScope(scope);
-    if (scope === "company") setEstateId("");
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedMeter = meterNumber.trim();
@@ -82,7 +72,7 @@ export default function CompanyAssignMeterForm({
       toast.error("Company is required");
       return;
     }
-    if (assignScope === "estate" && !estateId) {
+    if (!estateId) {
       toast.error("Please select an estate");
       return;
     }
@@ -93,7 +83,7 @@ export default function CompanyAssignMeterForm({
         addCompanyMeter({
           meterNumber: trimmedMeter,
           companyId,
-          ...(assignScope === "estate" && estateId ? { estateId } : {}),
+          estateId,
         }),
       ).unwrap();
       toast.success(res?.message || "Meter assigned successfully.");
@@ -107,12 +97,6 @@ export default function CompanyAssignMeterForm({
       setSubmitting(false);
     }
   };
-
-  const canSubmit =
-    Boolean(meterNumber.trim()) &&
-    Boolean(companyId) &&
-    !submitting &&
-    (assignScope === "company" || Boolean(estateId));
 
   return (
     <Card className="max-w-lg mx-auto mt-6">
@@ -134,57 +118,25 @@ export default function CompanyAssignMeterForm({
             />
           </div>
 
-          <div className="space-y-3">
-            <Label>Assign to</Label>
-            <div className="flex items-center gap-6">
-              <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-                <input
-                  type="radio"
-                  name="companyAssignScope"
-                  value="estate"
-                  checked={assignScope === "estate"}
-                  onChange={() => handleScopeChange("estate")}
-                />
-                Estate
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-                <input
-                  type="radio"
-                  name="companyAssignScope"
-                  value="company"
-                  checked={assignScope === "company"}
-                  onChange={() => handleScopeChange("company")}
-                />
-                Company
-              </label>
-            </div>
+          <div className="space-y-2">
+            <Label>Assign to Estate</Label>
+            <Select
+              options={estateOptions}
+              value={estateOptions.find((o) => o.value === estateId) ?? null}
+              onChange={(opt) => setEstateId(opt?.value ?? "")}
+              isLoading={loadingEstates}
+              placeholder="Select an estate"
+              isDisabled={loadingEstates}
+            />
           </div>
 
-          {assignScope === "estate" ? (
-            <div className="space-y-2">
-              <Label>Assign to Estate</Label>
-              <Select
-                options={estateOptions}
-                value={estateOptions.find((o) => o.value === estateId) ?? null}
-                onChange={(opt) => setEstateId(opt?.value ?? "")}
-                isLoading={loadingEstates}
-                placeholder="Select an estate"
-                isDisabled={loadingEstates}
-              />
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <Label htmlFor="assign-to-company">Assign to Company</Label>
-              <Input
-                id="assign-to-company"
-                value={companyName}
-                readOnly
-                disabled
-              />
-            </div>
-          )}
-
-          <Button type="submit" disabled={!canSubmit} className="w-full">
+          <Button
+            type="submit"
+            disabled={
+              submitting || !meterNumber.trim() || !companyId || !estateId
+            }
+            className="w-full"
+          >
             {submitting ? "Assigning..." : "Assign Meter"}
           </Button>
         </form>

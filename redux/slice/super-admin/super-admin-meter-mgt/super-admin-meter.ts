@@ -7,10 +7,19 @@ interface SuperAdminMeterData {
     estateId: string;
 };
 
+/** Payload for POST /api/v1/meters/add-meter — company pool, estate, or both */
+export interface AddMeterPayload {
+    meterNumber: string;
+    companyId?: string;
+    estateId?: string;
+    userId?: string;
+    addressId?: string;
+    newEstateId?: string;
+}
 
 export const assignMeterToEstate = createAsyncThunk(
   "super-admin-meter/assignMeterToEstate",
-  async (data: SuperAdminMeterData, { rejectWithValue }) => {
+  async (data: AddMeterPayload, { rejectWithValue }) => {
     try {
       const res = await axiosInstance.post("/api/v1/meters/add-meter", data);
       return res.data;

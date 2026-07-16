@@ -216,6 +216,12 @@ export const companyNav = [
     path: "/dashboard/company/energy-provider",
   },
   {
+    label: "Energy Management",
+    icon: IoSpeedometerOutline,
+    path: "/dashboard/company/meter",
+    moduleKey: "meter",
+  },
+  {
     label: "Estate Management",
     icon: BsBuildings,
     path: "/dashboard/company/estate",

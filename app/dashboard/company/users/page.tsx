@@ -43,9 +43,9 @@ import {
   type EstateUserRoleFilter,
 } from "@/lib/estate-user-roles";
 
-/** Company user management: exclude estate admin from role filter. */
+/** Company user management: exclude estate admin & company from role filter. */
 const COMPANY_USER_ROLE_FILTER_OPTIONS = ESTATE_USER_ROLE_FILTER_OPTIONS.filter(
-  (o) => o.value !== "estate admin",
+  (o) => o.value !== "estate admin" && o.value !== "company",
 );
 
 interface EstateOption {

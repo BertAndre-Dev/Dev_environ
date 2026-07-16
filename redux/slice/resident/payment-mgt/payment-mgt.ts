@@ -32,6 +32,19 @@ export interface VerifyBankAccountResponse {
   data?: { account_name?: string; message?: string };
 }
 
+export interface PaymentGatewayItem {
+  id: string;
+  name: string;
+  enabled: boolean;
+}
+
+export interface GetPaymentGatewaysResponse {
+  success?: boolean;
+  message?: string;
+  data?: PaymentGatewayItem[];
+  defaultGateway?: string;
+}
+
 function getApiErrorMessage(error: unknown): string | undefined {
   const err = error as {
     response?: { data?: { message?: string | string[] } };
@@ -43,6 +56,26 @@ function getApiErrorMessage(error: unknown): string | undefined {
   if (typeof err?.message === "string" && err.message.trim()) return err.message;
   return undefined;
 }
+
+export const getPaymentGateways = createAsyncThunk(
+  "resident-payment-mgt/getPaymentGateways",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.get<GetPaymentGatewaysResponse>(
+        "/api/v1/payment-mgt/gateways"
+      );
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        return {
+          gateways: res.data.data,
+          defaultGateway: res.data.defaultGateway ?? null,
+        };
+      }
+      return rejectWithValue({ message: res.data?.message });
+    } catch (error: unknown) {
+      return rejectWithValue({ message: getApiErrorMessage(error) });
+    }
+  }
+);
 
 export const getBanks = createAsyncThunk(
   "resident-payment-mgt/getBanks",

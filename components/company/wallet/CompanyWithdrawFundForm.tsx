@@ -16,6 +16,7 @@ import {
 } from "@/redux/slice/company/wallet-mgt/company-wallet-mgt";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import OtpVerification from "@/components/otp-modal/otp-verification/page";
+import PaymentGatewaySelect from "@/components/payment/PaymentGatewaySelect";
 
 const DEFAULT_CURRENCY = "NGN";
 const CREDITS_LIMIT = 10;
@@ -60,6 +61,7 @@ export default function CompanyWithdrawFundForm({
   const [accountNumber, setAccountNumber] =
     useState<string>(defaultAccountNumber);
   const [description, setDescription] = useState<string>("");
+  const [gatewayType, setGatewayType] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [otpRequested, setOtpRequested] = useState(false);
   const [txRef, setTxRef] = useState<string | null>(null);
@@ -136,6 +138,11 @@ export default function CompanyWithdrawFundForm({
       return;
     }
 
+    if (!gatewayType) {
+      toast.error("Please select a payment gateway.");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -153,6 +160,7 @@ export default function CompanyWithdrawFundForm({
             description ||
             `Withdrawal of ${DEFAULT_CURRENCY} ${amount.toLocaleString()}`,
           tx_ref,
+          gatewayType,
         }),
       ).unwrap();
 
@@ -194,6 +202,7 @@ export default function CompanyWithdrawFundForm({
             description ||
             `Withdrawal of ${DEFAULT_CURRENCY} ${(amount ?? 0).toLocaleString()}`,
           tx_ref: txRef,
+          gatewayType,
           otp: code,
         }),
       ).unwrap();
@@ -232,6 +241,7 @@ export default function CompanyWithdrawFundForm({
             description ||
             `Withdrawal of ${DEFAULT_CURRENCY} ${(amount ?? 0).toLocaleString()}`,
           tx_ref: txRef,
+          gatewayType,
         }),
       ).unwrap();
     } catch (err: unknown) {
@@ -305,10 +315,17 @@ export default function CompanyWithdrawFundForm({
                 />
               </div>
 
+              <PaymentGatewaySelect
+                id="company-withdraw-payment-gateway"
+                value={gatewayType}
+                onChange={setGatewayType}
+                disabled={submitting}
+              />
+
               <Button
                 type="submit"
                 className="w-full mt-4"
-                disabled={submitting}
+                disabled={submitting || !gatewayType}
               >
                 {submitting ? "Processing..." : "Request OTP"}
               </Button>

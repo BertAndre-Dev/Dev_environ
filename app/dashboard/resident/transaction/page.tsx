@@ -21,7 +21,7 @@ import {
 } from "@/redux/slice/resident/transaction/transaction";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
-import { getBanks as getResidentBanks } from "@/redux/slice/resident/payment-mgt/payment-mgt";
+import { getBanks as getResidentBanks, getPaymentGateways } from "@/redux/slice/resident/payment-mgt/payment-mgt";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import Table from "@/components/tables/list/page";
@@ -234,6 +234,16 @@ export default function TransactionPage() {
     }
     setContinuingPaymentTxRef(tx_ref);
     try {
+      const gatewaysRes = await dispatch(getPaymentGateways()).unwrap();
+      const gatewayType =
+        gatewaysRes.defaultGateway ||
+        gatewaysRes.gateways.find((g) => g.enabled)?.id;
+      if (!gatewayType) {
+        toast.error("No payment gateway available.");
+        setContinuingPaymentTxRef(null);
+        return;
+      }
+
       const paymentRes = await dispatch(
         initializePayment({
           tx_ref,
@@ -242,6 +252,7 @@ export default function TransactionPage() {
           currency: "NGN",
           redirect_url: `${window.location.origin}/dashboard/resident/transaction`,
           payment_options: "card",
+          gatewayType,
           customer: { email },
           customizations: {
             title: "Wallet Funding",
@@ -269,6 +280,7 @@ export default function TransactionPage() {
     currency,
     paymentOption,
     country,
+    gatewayType,
   }: {
     userId: string;
     walletId: string;
@@ -278,16 +290,9 @@ export default function TransactionPage() {
     currency: string;
     paymentOption: string;
     country: string;
+    gatewayType: string;
   }) => {
     try {
-      // // ⚠️ Check if amount exceeds the maximum limit BEFORE any transaction
-      // const MAX_AMOUNT = 200_000;
-      // if (amount > MAX_AMOUNT) {
-      //   toast.error(`You cannot fund more than ${MAX_AMOUNT.toLocaleString()}`);
-      //   return; // Stop further execution
-      // }
-
-      // ✅ Only now we create a transaction
       const txRes = await dispatch(
         createTransaction({ userId, walletId, amount, description, type }),
       ).unwrap();
@@ -295,7 +300,6 @@ export default function TransactionPage() {
       const tx_ref = txRes?.data?.tx_ref;
       if (!tx_ref) throw new Error("Transaction reference not found");
 
-      // Initialize payment on Flutterwave
       const paymentRes = await dispatch(
         initializePayment({
           tx_ref,
@@ -304,6 +308,7 @@ export default function TransactionPage() {
           currency,
           redirect_url: `${window.location.origin}/dashboard/resident/transaction`,
           payment_options: paymentOption,
+          gatewayType,
           customer: { email },
           customizations: { title: "Wallet Funding", description },
         }),
@@ -312,10 +317,8 @@ export default function TransactionPage() {
       const paymentUrl = paymentRes?.data?.link || paymentRes?.data?.url;
       if (!paymentUrl) throw new Error("Payment URL not received");
 
-      // Redirect to Flutterwave
       window.location.href = paymentUrl;
     } catch (err: any) {
-      // console.error("❌ Fund wallet error:", err);
       toast.error(err?.message);
     }
   };

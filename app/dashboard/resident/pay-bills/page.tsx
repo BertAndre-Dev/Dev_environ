@@ -230,6 +230,7 @@ export default function PayBillsPage() {
     currency,
     paymentOption,
     country,
+    gatewayType,
   }: {
     userId: string;
     walletId: string;
@@ -239,6 +240,7 @@ export default function PayBillsPage() {
     currency: string;
     paymentOption: string;
     country: string;
+    gatewayType: string;
   }) => {
     try {
       const txRes = await dispatch(
@@ -256,6 +258,7 @@ export default function PayBillsPage() {
           currency,
           redirect_url: `${globalThis.location.origin}/dashboard/resident/pay-bills`,
           payment_options: paymentOption,
+          gatewayType,
           customer: { email },
           customizations: { title: "Wallet Funding", description },
         }),

@@ -38,6 +38,7 @@ interface PaymentPayload {
   currency: string;
   redirect_url: string;
   payment_options: string; // e.g., "card"
+  gatewayType: string;
   customer: PaymentCustomer;
   customizations: PaymentCustomizations;
 }
@@ -66,7 +67,7 @@ export const initializePayment = createAsyncThunk(
             return res.data; 
         } catch (error: any) {
             return rejectWithValue({
-                message: error.res?.data?.message
+                message: error?.response?.data?.message
             })
         }
     }
@@ -181,6 +182,7 @@ export interface ResidentTransferPayload {
   accountNumber: string;
   narration: string;
   tx_ref: string;
+  gatewayType: string;
   otp?: string;
 }
 
@@ -193,6 +195,7 @@ interface ResidentOwnerOtpPayload {
   accountNumber: string;
   narration: string;
   tx_ref: string;
+  gatewayType: string;
 }
 
 export const requestResidentOwnerWithdrawalOtp = createAsyncThunk(

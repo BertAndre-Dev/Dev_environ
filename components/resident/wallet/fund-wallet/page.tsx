@@ -1,11 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-toastify";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "@/redux/store";
+import { getPaymentGateways } from "@/redux/slice/resident/payment-mgt/payment-mgt";
 
 // Example country/currency/payment data (you can fetch dynamically from your backend)
 const countries = [
@@ -53,6 +56,7 @@ interface FundWalletFormProps {
     currency: string;
     paymentOption: string;
     country: string;
+    gatewayType: string;
   }) => Promise<void>;
   onClose?: () => void;
 }
@@ -63,15 +67,54 @@ export default function FundWalletForm({
   onSubmit,
   onClose,
 }: FundWalletFormProps) {
+  const dispatch = useDispatch<AppDispatch>();
+  const {
+    gateways,
+    defaultGateway,
+    getPaymentGatewaysState,
+    error: gatewaysError,
+  } = useSelector((state: RootState) => state.residentPaymentMgt);
+
   const [amount, setAmount] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [currency, setCurrency] = useState<string>("NGN");
   const [country, setCountry] = useState<string>("NG");
   const [paymentOption, setPaymentOption] = useState<string>("card");
+  const [gatewayType, setGatewayType] = useState<string>("");
   const [availablePaymentOptions, setAvailablePaymentOptions] = useState<
     { code: string; label: string }[]
   >(paymentOptionsMap["NGN"]);
   const [submitting, setSubmitting] = useState(false);
+
+  const enabledGateways = useMemo(
+    () => gateways.filter((g) => g.enabled),
+    [gateways],
+  );
+  const loadingGateways = getPaymentGatewaysState === "isLoading";
+
+  useEffect(() => {
+    dispatch(getPaymentGateways());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (enabledGateways.length === 0) return;
+    const preferred =
+      (defaultGateway &&
+        enabledGateways.find((g) => g.id === defaultGateway)?.id) ||
+      enabledGateways[0]?.id ||
+      "";
+    setGatewayType((current) =>
+      current && enabledGateways.some((g) => g.id === current)
+        ? current
+        : preferred,
+    );
+  }, [enabledGateways, defaultGateway]);
+
+  useEffect(() => {
+    if (getPaymentGatewaysState === "failed" && gatewaysError) {
+      toast.error(gatewaysError);
+    }
+  }, [getPaymentGatewaysState, gatewaysError]);
 
   // Update payment options when currency changes
   useEffect(() => {
@@ -120,11 +163,10 @@ export default function FundWalletForm({
       return;
     }
 
-    // const MAX_AMOUNT = 200_000;
-    // if (numAmount > MAX_AMOUNT) {
-    //   toast.error(`You cannot fund more than ${MAX_AMOUNT.toLocaleString()}`);
-    //   return;
-    // }
+    if (!gatewayType) {
+      toast.error("Please select a payment gateway.");
+      return;
+    }
 
     setSubmitting(true);
 
@@ -138,9 +180,9 @@ export default function FundWalletForm({
         currency,
         paymentOption,
         country,
+        gatewayType,
       });
 
-      //toast.success("Wallet funded successfully!");
       onClose?.();
     } catch (err: any) {
       toast.error(err?.message || "Failed to fund wallet.");
@@ -153,7 +195,7 @@ export default function FundWalletForm({
     Boolean(userId && walletId) &&
     Number(amount) > 230 &&
     description.trim().length > 0 &&
-    Boolean(country && currency && paymentOption);
+    Boolean(country && currency && paymentOption && gatewayType);
 
   return (
     <Card className="w-full max-w-md mx-auto">
@@ -181,11 +223,12 @@ export default function FundWalletForm({
             />
             {Number(amount) > 0 && (
               <p className="text-red-600 text-sm mt-1.5">
-                A service charge of ₦230 applies to every transaction. 
-                <br/>
-                <span className="text-xs text-red-500">The Pay
-                button will be enabled once you enter an amount of at least
-                ₦230.</span>
+                A service charge of ₦230 applies to every transaction.
+                <br />
+                <span className="text-xs text-red-500">
+                  The Pay button will be enabled once you enter an amount of at
+                  least ₦230.
+                </span>
               </p>
             )}
           </div>
@@ -219,6 +262,34 @@ export default function FundWalletForm({
               {countries.map((c) => (
                 <option key={c.code} value={c.code}>
                   {c.currency} - {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <Label htmlFor="fund-wallet-gateway">
+              Payment Gateway <span className="text-destructive">*</span>
+            </Label>
+            <select
+              id="fund-wallet-gateway"
+              title="Payment Gateway"
+              className="w-full border border-gray-300 rounded px-3 py-2"
+              value={gatewayType}
+              onChange={(e) => setGatewayType(e.target.value)}
+              disabled={loadingGateways || enabledGateways.length === 0}
+              required
+            >
+              <option value="">
+                {loadingGateways
+                  ? "Loading gateways..."
+                  : enabledGateways.length === 0
+                    ? "No gateways available"
+                    : "Select gateway"}
+              </option>
+              {enabledGateways.map((gateway) => (
+                <option key={gateway.id} value={gateway.id}>
+                  {gateway.name}
                 </option>
               ))}
             </select>

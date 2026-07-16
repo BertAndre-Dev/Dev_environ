@@ -40,6 +40,7 @@ export interface CompanyWithdrawOtpPayload {
   accountNumber: string;
   narration: string;
   tx_ref: string;
+  gatewayType: string;
 }
 
 export interface CompanyTransferPayload extends CompanyWithdrawOtpPayload {

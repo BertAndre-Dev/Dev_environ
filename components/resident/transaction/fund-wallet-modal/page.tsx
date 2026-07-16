@@ -23,6 +23,7 @@ export default function FundWalletModal({
     currency: string;
     paymentOption: string;
     country: string;
+    gatewayType: string;
   }) => Promise<void>;
 }) {
   return (

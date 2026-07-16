@@ -42,6 +42,12 @@ import {
   getEstateUserRoleTotalLabel,
   type EstateUserRoleFilter,
 } from "@/lib/estate-user-roles";
+
+/** Company user management: exclude estate admin from role filter. */
+const COMPANY_USER_ROLE_FILTER_OPTIONS = ESTATE_USER_ROLE_FILTER_OPTIONS.filter(
+  (o) => o.value !== "estate admin",
+);
+
 interface EstateOption {
   label: string;
   value: string;
@@ -379,9 +385,9 @@ export default function CompanyUsersPage() {
             </p>
             <div className="w-48 min-w-[12rem]">
               <Select
-                options={ESTATE_USER_ROLE_FILTER_OPTIONS}
+                options={COMPANY_USER_ROLE_FILTER_OPTIONS}
                 placeholder="Filter by role"
-                value={ESTATE_USER_ROLE_FILTER_OPTIONS.find(
+                value={COMPANY_USER_ROLE_FILTER_OPTIONS.find(
                   (o) => o.value === roleFilter,
                 )}
                 onChange={(option) =>

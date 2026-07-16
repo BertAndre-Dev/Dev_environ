@@ -15,7 +15,6 @@ export const SUPER_ADMIN_COMPANY_INVITE_ROLE_OPTIONS = [
 ] as const;
 
 export const COMPANY_INVITE_ROLE_OPTIONS = [
-  { value: "estate admin", label: "Estate Admin" },
   { value: "admin", label: "Admin" },
   { value: ENERGY_PROVIDER_ROLE, label: "Energy Provider" },
 ] as const;
@@ -110,7 +109,11 @@ export function buildInviteUserPayload(params: {
     return { ...base, estateId };
   }
   if (params.inviteContext === "company" && companyId) {
-    return { ...base, companyId };
+    return {
+      ...base,
+      companyId,
+      ...(estateId ? { estateId } : {}),
+    };
   }
 
   return base;

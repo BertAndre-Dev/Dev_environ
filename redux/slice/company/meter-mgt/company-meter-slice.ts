@@ -30,7 +30,7 @@ export interface CompanyMeterData {
   lastCredit?: number;
   createdAt?: string;
   updatedAt?: string;
-  addressId: string | { id: string; data?: Record<string, unknown> };
+  addressId?: string | { id: string; data?: Record<string, unknown> };
   vendorData?: VendorData;
 }
 

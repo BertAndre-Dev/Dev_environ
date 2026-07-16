@@ -44,10 +44,11 @@ interface CompanyMeterRow {
   isActive?: boolean;
   isAssigned?: boolean;
   estateId?: string;
+  companyId?: string;
   lastCredit?: number;
   createdAt?: string;
   updatedAt?: string;
-  addressId: AddressIdInput;
+  addressId?: AddressIdInput;
   vendorData?: {
     name?: string;
     utilityName?: string;
@@ -115,8 +116,15 @@ function getAddressColumns(data: CompanyMeterRow[]) {
 }
 
 type EstateOption = { label: string; value: string };
+type MeterListScope = "company" | "estate";
 
-const METER_TAB_TITLES = ["Chart Overview", "Meter Management"] as const;
+const METER_TAB_TITLES = [
+  "Chart Overview",
+  "Company Meter Management",
+  "Estate Meter Management",
+] as const;
+
+const COMPANY_METERS_ESTATE_ID = "all";
 
 export default function CompanyMeterManagement() {
   const dispatch = useDispatch<AppDispatch>();
@@ -124,6 +132,9 @@ export default function CompanyMeterManagement() {
   const [assignMeter, setAssignMeter] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTabTitle, setActiveTabTitle] = useState<string>(
+    METER_TAB_TITLES[0],
+  );
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [detailsAddressId, setDetailsAddressId] = useState<string | null>(null);
   const [detailsMeterNumber, setDetailsMeterNumber] = useState<string | null>(
@@ -201,15 +212,26 @@ export default function CompanyMeterManagement() {
 
   const pageSize = Number(pagination?.pageSize) || 10;
 
+  const activeMeterScope: MeterListScope | null = (() => {
+    if (activeTabTitle === "Company Meter Management") return "company";
+    if (activeTabTitle === "Estate Meter Management") return "estate";
+    return null;
+  })();
+
   const fetchMeters = useCallback(
-    async (page = 1, search = searchQuery) => {
-      if (!selectedEstateId) return;
+    async (
+      scope: MeterListScope,
+      page = 1,
+      search = searchQuery,
+    ) => {
+      if (scope === "estate" && !selectedEstateId) return;
       await dispatch(
         getCompanyMeters({
           page,
           limit: pageSize,
           search: search || undefined,
-          estateId: selectedEstateId,
+          estateId:
+            scope === "company" ? COMPANY_METERS_ESTATE_ID : selectedEstateId,
         }),
       ).unwrap();
     },
@@ -234,11 +256,19 @@ export default function CompanyMeterManagement() {
   }, [dispatch]);
 
   useEffect(() => {
-    if (!selectedEstateId) return;
-    fetchMeters(1).catch(() => {
-      toast.error("Failed to fetch meters");
+    if (activeMeterScope !== "company") return;
+    fetchMeters("company", 1, searchQuery).catch(() => {
+      toast.error("Failed to fetch company meters");
     });
-  }, [selectedEstateId, searchQuery, fetchMeters]);
+  }, [activeMeterScope, searchQuery, fetchMeters]);
+
+  useEffect(() => {
+    if (activeMeterScope !== "estate") return;
+    if (!selectedEstateId) return;
+    fetchMeters("estate", 1, searchQuery).catch(() => {
+      toast.error("Failed to fetch estate meters");
+    });
+  }, [activeMeterScope, selectedEstateId, searchQuery, fetchMeters]);
 
   useEffect(() => {
     const loadEstates = async () => {
@@ -334,8 +364,10 @@ export default function CompanyMeterManagement() {
   }, [chartEmptyMessage]);
 
   const handleRefresh = async () => {
+    const scope: MeterListScope =
+      activeMeterScope ?? (selectedEstateId ? "estate" : "company");
     try {
-      await fetchMeters(Number(pagination?.currentPage) || 1);
+      await fetchMeters(scope, Number(pagination?.currentPage) || 1, searchQuery);
     } catch {
       toast.error("Failed to refresh meter list");
     }
@@ -348,7 +380,7 @@ export default function CompanyMeterManagement() {
   const handleViewDetails = (meter: CompanyMeterRow) => {
     const addressIdStr = toAddressIdString(meter.addressId);
     if (!addressIdStr) {
-      toast.warning("No address ID for this meter");
+      toast.warning("No address linked to this meter yet");
       return;
     }
     setDetailsAddressId(addressIdStr);
@@ -393,21 +425,27 @@ export default function CompanyMeterManagement() {
     });
   };
 
-  const columns = [
+  const getColumns = (scope: MeterListScope) => [
     { key: "createdAt", header: "Created Date" },
     { key: "meterNumber", header: "Meter Number" },
     ...getAddressColumns(meters),
-    {
-      key: "estateId",
-      header: "Estate",
-      render: (item: CompanyMeterRow) => {
-        const id = item.estateId;
-        if (!id) return <span className="text-muted-foreground">—</span>;
-        return (
-          <span className="font-medium">{estateNameById[id] ?? id}</span>
-        );
-      },
-    },
+    ...(scope === "estate"
+      ? [
+          {
+            key: "estateId",
+            header: "Estate",
+            render: (item: CompanyMeterRow) => {
+              const id = item.estateId;
+              if (!id) return <span className="text-muted-foreground">—</span>;
+              return (
+                <span className="font-medium">
+                  {estateNameById[id] ?? id}
+                </span>
+              );
+            },
+          },
+        ]
+      : []),
     {
       key: "isActive",
       header: "Status",
@@ -449,6 +487,7 @@ export default function CompanyMeterManagement() {
             className="cursor-pointer gap-1"
             onClick={() => handleViewDetails(item)}
             title="View details"
+            disabled={!toAddressIdString(item.addressId)}
           >
             <Eye className="w-4 h-4" />
           </Button>
@@ -550,7 +589,108 @@ export default function CompanyMeterManagement() {
 
       <Tab
         titles={[...METER_TAB_TITLES]}
+        onTabChange={(_index, title) => {
+          setActiveTabTitle(title);
+          setSearchInput("");
+          setSearchQuery("");
+        }}
         renderContent={(activeTab) => {
+          const renderMeterTable = (scope: MeterListScope) => (
+            <div className="relative space-y-6">
+              {loading && <Loader fullScreen label="Loading meters..." />}
+
+              <div
+                className={[
+                  "space-y-6",
+                  loading ? "pointer-events-none select-none" : "",
+                ].join(" ")}
+              >
+                <Card className="p-4">
+                  <div className="relative w-full max-w-sm flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground cursor-pointer" />
+                      <input
+                        placeholder="Search by meter number."
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            setSearchQuery(searchInput);
+                          }
+                          if (e.key === "Escape") {
+                            setSearchInput("");
+                            setSearchQuery("");
+                          }
+                        }}
+                        className="w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+
+                    {searchInput.trim().length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery(searchInput);
+                        }}
+                        className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:opacity-90 transition"
+                      >
+                        Search
+                      </button>
+                    )}
+                  </div>
+                </Card>
+
+                <Card className="p-4">
+                  <Table
+                    columns={getColumns(scope)}
+                    data={meters}
+                    emptyMessage={
+                      scope === "company"
+                        ? "No company meters found."
+                        : "No estate meters found."
+                    }
+                    showPagination
+                    onSearch={(value) => setSearchInput(value)}
+                    paginationInfo={{
+                      total: pagination?.total || 0,
+                      current: Number(pagination?.currentPage) || 1,
+                      pageSize: Number(pagination?.pageSize) || 10,
+                    }}
+                    onPageChange={(page) => {
+                      fetchMeters(scope, page, searchQuery).catch(() =>
+                        toast.error(
+                          scope === "company"
+                            ? "Failed to fetch company meters"
+                            : "Failed to fetch estate meters",
+                        ),
+                      );
+                    }}
+                    enableExport
+                    exportFileName={
+                      scope === "company"
+                        ? "company-meters"
+                        : "estate-meters"
+                    }
+                    onExportRequest={async () => {
+                      if (scope === "estate" && !selectedEstateId) return [];
+                      const res = await dispatch(
+                        getCompanyMeters({
+                          page: 1,
+                          limit: 50000,
+                          estateId:
+                            scope === "company"
+                              ? COMPANY_METERS_ESTATE_ID
+                              : selectedEstateId,
+                        }),
+                      ).unwrap();
+                      return res?.data ?? [];
+                    }}
+                  />
+                </Card>
+              </div>
+            </div>
+          );
+
           switch (activeTab) {
             case "Chart Overview":
               return (
@@ -592,87 +732,10 @@ export default function CompanyMeterManagement() {
                   />
                 </div>
               );
-            case "Meter Management":
-              return (
-                <div className="relative space-y-6">
-                  {loading && <Loader fullScreen label="Loading meters..." />}
-
-                  <div
-                    className={[
-                      "space-y-6",
-                      loading ? "pointer-events-none select-none" : "",
-                    ].join(" ")}
-                  >
-                    <Card className="p-4">
-                      <div className="relative w-full max-w-sm flex items-center gap-2">
-                        <div className="relative flex-1">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground cursor-pointer" />
-                          <input
-                            placeholder="Search by meter number."
-                            value={searchInput}
-                            onChange={(e) => setSearchInput(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                setSearchQuery(searchInput);
-                              }
-                              if (e.key === "Escape") {
-                                setSearchInput("");
-                                setSearchQuery("");
-                              }
-                            }}
-                            className="w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                          />
-                        </div>
-
-                        {searchInput.trim().length > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSearchQuery(searchInput);
-                            }}
-                            className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:opacity-90 transition"
-                          >
-                            Search
-                          </button>
-                        )}
-                      </div>
-                    </Card>
-
-                    <Card className="p-4">
-                      <Table
-                        columns={columns}
-                        data={meters}
-                        emptyMessage="No meters found."
-                        showPagination
-                        onSearch={(value) => setSearchInput(value)}
-                        paginationInfo={{
-                          total: pagination?.total || 0,
-                          current: Number(pagination?.currentPage) || 1,
-                          pageSize: Number(pagination?.pageSize) || 10,
-                        }}
-                        onPageChange={(page) => {
-                          fetchMeters(page).catch(() =>
-                            toast.error("Failed to fetch meters"),
-                          );
-                        }}
-                        enableExport
-                        exportFileName="company-meters"
-                        onExportRequest={async () => {
-                          if (!selectedEstateId) return [];
-                          const res = await dispatch(
-                            getCompanyMeters({
-                              page: 1,
-                              limit: 50000,
-                              estateId: selectedEstateId,
-                            }),
-                          ).unwrap();
-                          return res?.data ?? [];
-                        }}
-                      />
-                    </Card>
-                  </div>
-                </div>
-              );
+            case "Company Meter Management":
+              return renderMeterTable("company");
+            case "Estate Meter Management":
+              return renderMeterTable("estate");
             default:
               return null;
           }

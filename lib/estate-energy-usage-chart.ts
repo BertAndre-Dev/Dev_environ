@@ -160,7 +160,7 @@ function parseUsagePayload(value: unknown): EstateEnergyUsageData | null {
   };
 }
 
-/** Parses HES estate usage job responses (usage/jobs and hes/jobs/{jobId}). */
+/** Parses HES estate usage job responses from usage/jobs. */
 export function parseEstateEnergyUsageJobResponse(
   value: unknown,
 ): EstateEnergyUsageData | null {

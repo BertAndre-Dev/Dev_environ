@@ -13,8 +13,6 @@ import { Plus, Search, Trash, Eye } from "lucide-react";
 import { MeterEnergyUsageSection } from "@/components/charts/meter-energy-usage-section";
 import { EstatePowerUsageSection } from "@/components/charts/estate-power-usage-section";
 import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
-import type { EnergyConsumptionPeriod } from "@/lib/energy-consumption-chart";
-import type { EstateEnergyUsageRange } from "@/lib/estate-energy-usage-chart";
 import Tab from "@/components/tabs/page";
 import {
   getMeterUsage,
@@ -28,11 +26,20 @@ import {
   getMeterByAddressId,
   removeEstateMeter,
 } from "@/redux/slice/super-admin/super-admin-meter-mgt/super-admin-meter";
+import {
+  applySuperAdminMeterSearch,
+  clearSuperAdminMeterSearch,
+  setSuperAdminMeterEnergyPeriod,
+  setSuperAdminMeterEstateId,
+  setSuperAdminMeterSearchInput,
+  setSuperAdminMeterUsageRange,
+} from "@/redux/slice/super-admin/super-admin-meter-mgt/super-admin-meter-slice";
 import AssignMeterForm from "@/components/super-admin/meter-form/page";
 import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import { IoSpeedometerOutline } from "react-icons/io5";
 import Loader from "@/components/ui/Loader";
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
+import { getCompanies } from "@/redux/slice/super-admin/company-mgt/company";
 
 /** addressId from list API can be a string or populated object with id */
 type AddressIdInput = string | { id: string; data?: Record<string, unknown> };
@@ -43,10 +50,11 @@ interface AdminMeterData {
   isActive?: boolean;
   isAssigned?: boolean;
   estateId?: string;
+  companyId?: string;
   lastCredit?: number;
   createdAt?: string;
   updatedAt?: string;
-  addressId: AddressIdInput;
+  addressId?: AddressIdInput;
   vendorData?: any;
 }
 
@@ -113,7 +121,7 @@ function getAddressColumns(data: AdminMeterData[]) {
 type EstateOption = { label: string; value: string };
 
 const ESTATE_FILTER_FETCH_LIMIT = 500;
-const METER_TAB_TITLES = ["Chart Overview", "Meter Management"] as const;
+const METER_TAB_TITLES = ["Meter Management", "Chart Overview"] as const;
 
 export default function AdminMeterManagement() {
   const dispatch = useDispatch<AppDispatch>();
@@ -122,8 +130,6 @@ export default function AdminMeterManagement() {
     null,
   );
   const [assignMeter, setAssignMeter] = useState(false);
-  const [searchInput, setSearchInput] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [detailsAddressId, setDetailsAddressId] = useState<string | null>(null);
   const [detailsMeterNumber, setDetailsMeterNumber] = useState<string | null>(
@@ -131,17 +137,7 @@ export default function AdminMeterManagement() {
   );
   const [meterUsageRange, setMeterUsageRange] =
     useState<MeterUsageRange>("weekly");
-  const [estatesLoading, setEstatesLoading] = useState(true);
-  const [selectedEstate, setSelectedEstate] = useState<EstateOption | null>(
-    null,
-  );
-  const [usageRange, setUsageRange] = useState<EstateEnergyUsageRange>("weekly");
   const [usageRefreshing, setUsageRefreshing] = useState(false);
-  const [energyPeriod, setEnergyPeriod] =
-    useState<EnergyConsumptionPeriod>("weekly");
-  const [estateNameById, setEstateNameById] = useState<Record<string, string>>(
-    {},
-  );
 
   const {
     allSuperAdminMeters,
@@ -149,16 +145,50 @@ export default function AdminMeterManagement() {
     loading,
     meterDetails,
     detailsLoading,
+    selectedEstateId,
+    searchInput,
+    searchQuery,
+    usageRange,
+    energyPeriod,
   } = useSelector((state: RootState) => {
-    const superAdminMeter = state.superAdminMeter as any;
+    const superAdminMeter = state.superAdminMeter;
+    const filters = superAdminMeter.filters ?? {
+      selectedEstateId: "",
+      searchInput: "",
+      searchQuery: "",
+      usageRange: "weekly" as const,
+      energyPeriod: "weekly" as const,
+    };
+    const selectedId = filters.selectedEstateId;
     return {
-      allSuperAdminMeters: superAdminMeter?.allSuperAdminMeter?.data || [],
-      pagination: superAdminMeter?.allSuperAdminMeter?.pagination || {},
+      allSuperAdminMeters: (superAdminMeter?.allSuperAdminMeter?.data ||
+        []) as AdminMeterData[],
+      pagination: superAdminMeter?.allSuperAdminMeter?.pagination ?? {
+        total: 0,
+        currentPage: 1,
+        totalPages: 1,
+        pageSize: 10,
+      },
       loading: superAdminMeter?.getAllMetersState === "isLoading",
       meterDetails: superAdminMeter?.superAdminMeter ?? null,
       detailsLoading: superAdminMeter?.getMeterByAddressIdState === "isLoading",
+      selectedEstateId:
+        selectedId && selectedId !== "all" ? selectedId : "",
+      searchInput: filters.searchInput,
+      searchQuery: filters.searchQuery,
+      usageRange: filters.usageRange,
+      energyPeriod: filters.energyPeriod,
     };
   });
+
+  const { allEstates, estatesLoading } = useSelector((state: RootState) => ({
+    allEstates: state.estate.allEstates?.data ?? [],
+    estatesLoading: state.estate.getAllEstatesState === "isLoading",
+  }));
+
+  const { allCompanies } = useSelector((state: RootState) => ({
+    allCompanies: state.superAdminCompany.list ?? [],
+  }));
 
   const { meterUsage, meterUsageLoading, meterUsageMessage } = useSelector(
     (state: RootState) => ({
@@ -192,7 +222,27 @@ export default function AdminMeterManagement() {
     estateEnergyUsageError: state.superAdminEstateEnergyUsage.error,
   }));
 
-  const selectedEstateId = selectedEstate?.value ?? "";
+  const estateNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const estate of allEstates) {
+      const id =
+        (estate as { id?: string; _id?: string })?.id ??
+        (estate as { _id?: string })?._id;
+      const name = (estate as { name?: string })?.name;
+      if (id && name) map[String(id)] = String(name);
+    }
+    return map;
+  }, [allEstates]);
+
+  const companyNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const company of allCompanies) {
+      const id = company.id ?? company._id;
+      const name = company.name;
+      if (id && name) map[String(id)] = String(name);
+    }
+    return map;
+  }, [allCompanies]);
 
   const estateOptions = useMemo<EstateOption[]>(
     () =>
@@ -202,65 +252,49 @@ export default function AdminMeterManagement() {
     [estateNameById],
   );
 
+  const selectedEstate =
+    estateOptions.find((o) => o.value === selectedEstateId) ?? null;
+
   const pageSize = Number(pagination?.pageSize) || 10;
 
   const fetchMeters = useCallback(
     async (page = 1, search = searchQuery) => {
-      if (!selectedEstateId) return;
       await dispatch(
         getAllMeters({
           page,
           limit: pageSize,
           search: search || undefined,
-          estateId: selectedEstateId,
         }),
       ).unwrap();
     },
-    [dispatch, selectedEstateId, pageSize, searchQuery],
+    [dispatch, pageSize, searchQuery],
   );
 
-  // Fetch meters when estate or search changes
   useEffect(() => {
-    if (!selectedEstateId) return;
-    fetchMeters(1).catch(() => {
-      toast.error("Failed to fetch meters");
-    });
-  }, [selectedEstateId, searchQuery, fetchMeters]);
-
-  // Fetch estates map (id -> name) for display
-  useEffect(() => {
-    const loadEstateNames = async () => {
-      setEstatesLoading(true);
-      try {
-        const res = await dispatch(
-          getAllEstates({
-            page: 1,
-            limit: ESTATE_FILTER_FETCH_LIMIT,
-          }),
-        ).unwrap();
-
-        const estates: any[] = res?.data ?? [];
-        const map: Record<string, string> = {};
-        for (const estate of estates) {
-          const id = estate?.id ?? estate?._id;
-          const name = estate?.name;
-          if (id && name) map[String(id)] = String(name);
-        }
-        setEstateNameById(map);
-      } catch (e) {
+    dispatch(getAllEstates({ page: 1, limit: ESTATE_FILTER_FETCH_LIMIT }))
+      .unwrap()
+      .catch(() => {
         // non-blocking: table can still render estateId if name isn't available
-      } finally {
-        setEstatesLoading(false);
-      }
-    };
-    loadEstateNames();
+      });
+    dispatch(getCompanies({ page: 1, limit: ESTATE_FILTER_FETCH_LIMIT }))
+      .unwrap()
+      .catch(() => {
+        // non-blocking: table can still render companyId if name isn't available
+      });
   }, [dispatch]);
 
+  // Default chart estate to the first option once estates load
   useEffect(() => {
-    if (selectedEstate?.value) return;
+    if (selectedEstateId) return;
     if (!estateOptions.length) return;
-    setSelectedEstate(estateOptions[0]);
-  }, [estateOptions, selectedEstate?.value]);
+    dispatch(setSuperAdminMeterEstateId(estateOptions[0].value));
+  }, [dispatch, estateOptions, selectedEstateId]);
+
+  useEffect(() => {
+    fetchMeters(1, searchQuery).catch(() => {
+      toast.error("Failed to fetch meters");
+    });
+  }, [searchQuery, fetchMeters]);
 
   useEffect(() => {
     if (!selectedEstateId) return;
@@ -320,8 +354,8 @@ export default function AdminMeterManagement() {
 
   const handleRefresh = async () => {
     try {
-      await fetchMeters(Number(pagination?.currentPage) || 1);
-    } catch (error: any) {
+      await fetchMeters(Number(pagination?.currentPage) || 1, searchQuery);
+    } catch {
       toast.error("Failed to refresh meter list");
     }
   };
@@ -364,7 +398,7 @@ export default function AdminMeterManagement() {
   const handleViewDetails = (meter: AdminMeterData) => {
     const addressIdStr = toAddressIdString(meter.addressId);
     if (!addressIdStr) {
-      toast.warning("No address ID for this meter");
+      toast.warning("No address linked to this meter yet");
       return;
     }
     setDetailsAddressId(addressIdStr);
@@ -410,18 +444,35 @@ export default function AdminMeterManagement() {
   const columns = [
     { key: "createdAt", header: "Created Date" },
     { key: "meterNumber", header: "Meter Number" },
-    ...getAddressColumns(allSuperAdminMeters as AdminMeterData[]),
+    ...getAddressColumns(allSuperAdminMeters),
     {
-      key: "estateId",
-      header: "Estate",
+      key: "estateOrCompany",
+      header: "Estate/Company",
       render: (item: AdminMeterData) => {
-        const id = item.estateId;
-        if (!id) return <span className="text-muted-foreground">—</span>;
-        return (
-          <span className="font-medium">
-            {estateNameById[id] ?? id}
-          </span>
-        );
+        if (item.estateId) {
+          return (
+            <span className="font-medium">
+              {estateNameById[item.estateId] ?? item.estateId}
+            </span>
+          );
+        }
+        if (item.companyId) {
+          return (
+            <span className="font-medium">
+              {companyNameById[item.companyId] ?? item.companyId}
+            </span>
+          );
+        }
+        return <span className="text-muted-foreground">—</span>;
+      },
+      exportValue: (item: AdminMeterData) => {
+        if (item.estateId) {
+          return estateNameById[item.estateId] ?? item.estateId;
+        }
+        if (item.companyId) {
+          return companyNameById[item.companyId] ?? item.companyId;
+        }
+        return "";
       },
     },
     {
@@ -465,6 +516,7 @@ export default function AdminMeterManagement() {
             className="cursor-pointer gap-1"
             onClick={() => handleViewDetails(item)}
             title="View details"
+            disabled={!toAddressIdString(item.addressId)}
           >
             <Eye className="w-4 h-4" />
           </Button>
@@ -491,33 +543,9 @@ export default function AdminMeterManagement() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
-          <div className="w-full sm:w-56">
-            <Select
-              options={estateOptions}
-              placeholder="Filter by estate"
-              value={selectedEstate}
-              onChange={(option) => setSelectedEstate(option)}
-              isSearchable
-              isLoading={estatesLoading}
-              isDisabled={!estateOptions.length || estatesLoading}
-              styles={{
-                control: (base) => ({ ...base, cursor: "pointer" }),
-                option: (base) => ({ ...base, cursor: "pointer" }),
-                dropdownIndicator: (base) => ({
-                  ...base,
-                  cursor: "pointer",
-                }),
-                clearIndicator: (base) => ({
-                  ...base,
-                  cursor: "pointer",
-                }),
-              }}
-            />
-          </div>
           <Button
             onClick={handleAssignMeter}
             className="flex items-center gap-2 cursor-pointer"
-            disabled={!selectedEstateId}
           >
             <Plus className="w-4 h-4" /> Add Meter
           </Button>
@@ -575,6 +603,33 @@ export default function AdminMeterManagement() {
             case "Chart Overview":
               return (
                 <div className="space-y-6">
+                  <div className="w-full max-w-xs">
+                    <Select
+                      options={estateOptions}
+                      placeholder="Filter by estate"
+                      value={selectedEstate}
+                      onChange={(option) =>
+                        dispatch(
+                          setSuperAdminMeterEstateId(option?.value ?? ""),
+                        )
+                      }
+                      isSearchable
+                      isLoading={estatesLoading}
+                      isDisabled={!estateOptions.length || estatesLoading}
+                      styles={{
+                        control: (base) => ({ ...base, cursor: "pointer" }),
+                        option: (base) => ({ ...base, cursor: "pointer" }),
+                        dropdownIndicator: (base) => ({
+                          ...base,
+                          cursor: "pointer",
+                        }),
+                        clearIndicator: (base) => ({
+                          ...base,
+                          cursor: "pointer",
+                        }),
+                      }}
+                    />
+                  </div>
                   <EstatePowerUsageSection
                     data={estateEnergyUsage}
                     loading={
@@ -583,7 +638,9 @@ export default function AdminMeterManagement() {
                     }
                     progress={estateEnergyUsageProgress}
                     range={usageRange}
-                    onRangeChange={setUsageRange}
+                    onRangeChange={(range) =>
+                      dispatch(setSuperAdminMeterUsageRange(range))
+                    }
                     onRefresh={
                       selectedEstateId ? handleRefreshUsage : undefined
                     }
@@ -607,7 +664,9 @@ export default function AdminMeterManagement() {
                       (!!selectedEstateId && energyChartLoading)
                     }
                     period={energyPeriod}
-                    onPeriodChange={setEnergyPeriod}
+                    onPeriodChange={(period) =>
+                      dispatch(setSuperAdminMeterEnergyPeriod(period))
+                    }
                     emptyMessage={vendChartEmptyMessage}
                   />
                 </div>
@@ -630,14 +689,17 @@ export default function AdminMeterManagement() {
                           <input
                             placeholder="Search by meter number."
                             value={searchInput}
-                            onChange={(e) => setSearchInput(e.target.value)}
+                            onChange={(e) =>
+                              dispatch(
+                                setSuperAdminMeterSearchInput(e.target.value),
+                              )
+                            }
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
-                                setSearchQuery(searchInput);
+                                dispatch(applySuperAdminMeterSearch());
                               }
                               if (e.key === "Escape") {
-                                setSearchInput("");
-                                setSearchQuery("");
+                                dispatch(clearSuperAdminMeterSearch());
                               }
                             }}
                             className="w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -647,9 +709,9 @@ export default function AdminMeterManagement() {
                         {searchInput.trim().length > 0 && (
                           <button
                             type="button"
-                            onClick={() => {
-                              setSearchQuery(searchInput);
-                            }}
+                            onClick={() =>
+                              dispatch(applySuperAdminMeterSearch())
+                            }
                             className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:opacity-90 transition"
                           >
                             Search
@@ -664,26 +726,27 @@ export default function AdminMeterManagement() {
                         data={allSuperAdminMeters}
                         emptyMessage="No meters found."
                         showPagination
-                        onSearch={(value) => setSearchInput(value)}
+                        onSearch={(value) =>
+                          dispatch(setSuperAdminMeterSearchInput(value))
+                        }
                         paginationInfo={{
                           total: pagination?.total || 0,
                           current: Number(pagination?.currentPage) || 1,
                           pageSize: Number(pagination?.pageSize) || 10,
                         }}
                         onPageChange={(page) => {
-                          fetchMeters(page).catch(() =>
+                          fetchMeters(page, searchQuery).catch(() =>
                             toast.error("Failed to fetch meters"),
                           );
                         }}
                         enableExport
                         exportFileName="meters"
                         onExportRequest={async () => {
-                          if (!selectedEstateId) return [];
                           const res = await dispatch(
                             getAllMeters({
                               page: 1,
                               limit: 50000,
-                              estateId: selectedEstateId,
+                              search: searchQuery || undefined,
                             }),
                           ).unwrap();
                           return res?.data ?? [];

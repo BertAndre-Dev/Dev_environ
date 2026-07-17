@@ -45,6 +45,23 @@ export const removeCompanyEstateMeter = createAsyncThunk(
   },
 );
 
+/** POST /api/v1/meters/assign-meter-to-address — assign company meter to an estate */
+export const assignCompanyMeterToEstate = createAsyncThunk(
+  "company-meter/assignMeterToEstate",
+  async (data: CompanyMeterEstatePayload, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.post(
+        "/api/v1/meters/assign-meter-to-address",
+        data,
+      );
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: unknown } };
+      return rejectWithValue(err.response?.data);
+    }
+  },
+);
+
 export const getCompanyMeters = createAsyncThunk(
   "company-meter/getMeters",
   async (

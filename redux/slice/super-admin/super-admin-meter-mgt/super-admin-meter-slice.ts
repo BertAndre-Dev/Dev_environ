@@ -1,4 +1,6 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import type { EnergyConsumptionPeriod } from "@/lib/energy-consumption-chart";
+import type { EstateEnergyUsageRange } from "@/lib/estate-energy-usage-chart";
 import {
     assignMeterToEstate,
     getAllMeters,
@@ -8,7 +10,6 @@ import {
     getMeterByAddressId,
     deleteMeter
 } from './super-admin-meter';
-
 
 interface VendorData {
   name: string;
@@ -29,10 +30,11 @@ interface SuperAdminMeterData {
   isActive?: boolean;
   isAssigned?: boolean;
   estateId?: string;
+  companyId?: string;
   lastCredit?: number;
   createdAt?: string; 
   updatedAt?: string; 
-  addressId: string;
+  addressId?: string | { id: string; data?: Record<string, unknown> };
   vendorData?: VendorData;
 }
 
@@ -53,6 +55,14 @@ export interface SuperAdminMeterResponse {
 }
 
 
+export interface SuperAdminMeterFilters {
+  selectedEstateId: string;
+  searchInput: string;
+  searchQuery: string;
+  usageRange: EstateEnergyUsageRange;
+  energyPeriod: EnergyConsumptionPeriod;
+}
+
 export interface SuperAdminMeterState {
     assignMeterToEstateState: "idle" | "isLoading" | "succeeded" | "failed";
     getAllMetersState: "idle" | "isLoading" | "succeeded" | "failed";
@@ -64,6 +74,7 @@ export interface SuperAdminMeterState {
     status: "idle" | "isLoading" | "succeeded" | "failed";
     superAdminMeter: SuperAdminMeterData | null;
     allSuperAdminMeter: SuperAdminMeterResponse | null;
+    filters: SuperAdminMeterFilters;
     error: string | null;
 }
 
@@ -79,6 +90,13 @@ const initialState: SuperAdminMeterState = {
     status: "idle",
     superAdminMeter: null,
     allSuperAdminMeter: null,
+    filters: {
+      selectedEstateId: "",
+      searchInput: "",
+      searchQuery: "",
+      usageRange: "weekly",
+      energyPeriod: "weekly",
+    },
     error: null,
 }
 
@@ -90,6 +108,41 @@ const superAdminMeterSlice = createSlice({
         resetSuperAdminMeterState: (state) => {
             state.status = 'idle';
             state.error = null;
+        },
+        setSuperAdminMeterEstateId: (state, action: PayloadAction<string>) => {
+          if (!state.filters) state.filters = { ...initialState.filters };
+          state.filters.selectedEstateId = action.payload?.trim() || "";
+        },
+        setSuperAdminMeterSearchInput: (state, action: PayloadAction<string>) => {
+          if (!state.filters) state.filters = { ...initialState.filters };
+          state.filters.searchInput = action.payload;
+        },
+        setSuperAdminMeterSearchQuery: (state, action: PayloadAction<string>) => {
+          if (!state.filters) state.filters = { ...initialState.filters };
+          state.filters.searchQuery = action.payload;
+        },
+        applySuperAdminMeterSearch: (state) => {
+          if (!state.filters) state.filters = { ...initialState.filters };
+          state.filters.searchQuery = state.filters.searchInput;
+        },
+        clearSuperAdminMeterSearch: (state) => {
+          if (!state.filters) state.filters = { ...initialState.filters };
+          state.filters.searchInput = "";
+          state.filters.searchQuery = "";
+        },
+        setSuperAdminMeterUsageRange: (
+          state,
+          action: PayloadAction<EstateEnergyUsageRange>,
+        ) => {
+          if (!state.filters) state.filters = { ...initialState.filters };
+          state.filters.usageRange = action.payload;
+        },
+        setSuperAdminMeterEnergyPeriod: (
+          state,
+          action: PayloadAction<EnergyConsumptionPeriod>,
+        ) => {
+          if (!state.filters) state.filters = { ...initialState.filters };
+          state.filters.energyPeriod = action.payload;
         },
     },
     extraReducers(builder) {
@@ -264,5 +317,14 @@ const superAdminMeterSlice = createSlice({
 });
 
 
-export const { resetSuperAdminMeterState } = superAdminMeterSlice.actions;
+export const {
+  resetSuperAdminMeterState,
+  setSuperAdminMeterEstateId,
+  setSuperAdminMeterSearchInput,
+  setSuperAdminMeterSearchQuery,
+  applySuperAdminMeterSearch,
+  clearSuperAdminMeterSearch,
+  setSuperAdminMeterUsageRange,
+  setSuperAdminMeterEnergyPeriod,
+} = superAdminMeterSlice.actions;
 export default superAdminMeterSlice.reducer;

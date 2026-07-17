@@ -1,11 +1,17 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import type { EnergyConsumptionPeriod } from "@/lib/energy-consumption-chart";
+import type { EstateEnergyUsageRange } from "@/lib/estate-energy-usage-chart";
 import {
   addCompanyMeter,
+  assignCompanyMeterToEstate,
   deleteCompanyMeter,
   getCompanyMeterByAddressId,
   getCompanyMeters,
   removeCompanyEstateMeter,
 } from "./company-meter";
+
+/** Path param for GET /meters/estate/{id} when listing company-pool meters. */
+export const ALL_METERS_ESTATE_ID = "all";
 
 interface VendorData {
   name: string;
@@ -48,14 +54,24 @@ export interface CompanyMeterListResponse {
   pagination: Pagination;
 }
 
+export interface CompanyMeterFilters {
+  selectedEstateId: string;
+  searchInput: string;
+  searchQuery: string;
+  usageRange: EstateEnergyUsageRange;
+  energyPeriod: EnergyConsumptionPeriod;
+}
+
 export interface CompanyMeterState {
   addMeterState: "idle" | "isLoading" | "succeeded" | "failed";
   getMetersState: "idle" | "isLoading" | "succeeded" | "failed";
   removeEstateMeterState: "idle" | "isLoading" | "succeeded" | "failed";
+  assignMeterToEstateState: "idle" | "isLoading" | "succeeded" | "failed";
   getMeterByAddressIdState: "idle" | "isLoading" | "succeeded" | "failed";
   deleteMeterState: "idle" | "isLoading" | "succeeded" | "failed";
   meterDetails: CompanyMeterData | null;
   meterList: CompanyMeterListResponse | null;
+  filters: CompanyMeterFilters;
   error: string | null;
 }
 
@@ -63,10 +79,18 @@ const initialState: CompanyMeterState = {
   addMeterState: "idle",
   getMetersState: "idle",
   removeEstateMeterState: "idle",
+  assignMeterToEstateState: "idle",
   getMeterByAddressIdState: "idle",
   deleteMeterState: "idle",
   meterDetails: null,
   meterList: null,
+  filters: {
+    selectedEstateId: ALL_METERS_ESTATE_ID,
+    searchInput: "",
+    searchQuery: "",
+    usageRange: "weekly",
+    energyPeriod: "weekly",
+  },
   error: null,
 };
 
@@ -76,6 +100,35 @@ const companyMeterSlice = createSlice({
   reducers: {
     resetCompanyMeterState: (state) => {
       state.error = null;
+    },
+    setCompanyMeterEstateId: (state, action: PayloadAction<string>) => {
+      state.filters.selectedEstateId =
+        action.payload?.trim() || ALL_METERS_ESTATE_ID;
+    },
+    setCompanyMeterSearchInput: (state, action: PayloadAction<string>) => {
+      state.filters.searchInput = action.payload;
+    },
+    setCompanyMeterSearchQuery: (state, action: PayloadAction<string>) => {
+      state.filters.searchQuery = action.payload;
+    },
+    applyCompanyMeterSearch: (state) => {
+      state.filters.searchQuery = state.filters.searchInput;
+    },
+    clearCompanyMeterSearch: (state) => {
+      state.filters.searchInput = "";
+      state.filters.searchQuery = "";
+    },
+    setCompanyMeterUsageRange: (
+      state,
+      action: PayloadAction<EstateEnergyUsageRange>,
+    ) => {
+      state.filters.usageRange = action.payload;
+    },
+    setCompanyMeterEnergyPeriod: (
+      state,
+      action: PayloadAction<EnergyConsumptionPeriod>,
+    ) => {
+      state.filters.energyPeriod = action.payload;
     },
   },
   extraReducers(builder) {
@@ -163,6 +216,29 @@ const companyMeterSlice = createSlice({
       });
 
     builder
+      .addCase(assignCompanyMeterToEstate.pending, (state) => {
+        state.assignMeterToEstateState = "isLoading";
+        state.error = null;
+      })
+      .addCase(assignCompanyMeterToEstate.fulfilled, (state, action) => {
+        state.assignMeterToEstateState = "succeeded";
+        const updated = action.payload?.data as CompanyMeterData | undefined;
+        if (updated && state.meterList?.data) {
+          state.meterList.data = state.meterList.data.map((meter) =>
+            meter.id === updated.id ||
+            meter.meterNumber === updated.meterNumber
+              ? { ...meter, ...updated }
+              : meter,
+          );
+        }
+      })
+      .addCase(assignCompanyMeterToEstate.rejected, (state, action) => {
+        state.assignMeterToEstateState = "failed";
+        state.error =
+          (action.payload as { message?: string } | undefined)?.message ?? null;
+      });
+
+    builder
       .addCase(getCompanyMeterByAddressId.pending, (state) => {
         state.getMeterByAddressIdState = "isLoading";
       })
@@ -203,5 +279,14 @@ const companyMeterSlice = createSlice({
   },
 });
 
-export const { resetCompanyMeterState } = companyMeterSlice.actions;
+export const {
+  resetCompanyMeterState,
+  setCompanyMeterEstateId,
+  setCompanyMeterSearchInput,
+  setCompanyMeterSearchQuery,
+  applyCompanyMeterSearch,
+  clearCompanyMeterSearch,
+  setCompanyMeterUsageRange,
+  setCompanyMeterEnergyPeriod,
+} = companyMeterSlice.actions;
 export default companyMeterSlice.reducer;

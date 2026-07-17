@@ -9,12 +9,10 @@ import type { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Select from "react-select";
-import { Plus, Search, Trash, Eye } from "lucide-react";
+import { Plus, Search, Trash, Eye, Building2 } from "lucide-react";
 import { MeterEnergyUsageSection } from "@/components/charts/meter-energy-usage-section";
 import { EstatePowerUsageSection } from "@/components/charts/estate-power-usage-section";
 import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
-import type { EnergyConsumptionPeriod } from "@/lib/energy-consumption-chart";
-import type { EstateEnergyUsageRange } from "@/lib/estate-energy-usage-chart";
 import Tab from "@/components/tabs/page";
 import {
   getMeterUsage,
@@ -27,8 +25,18 @@ import {
   getCompanyMeterByAddressId,
   getCompanyMeters,
 } from "@/redux/slice/company/meter-mgt/company-meter";
-import type { Pagination } from "@/redux/slice/company/meter-mgt/company-meter-slice";
+import {
+  ALL_METERS_ESTATE_ID,
+  applyCompanyMeterSearch,
+  clearCompanyMeterSearch,
+  setCompanyMeterEnergyPeriod,
+  setCompanyMeterEstateId,
+  setCompanyMeterSearchInput,
+  setCompanyMeterUsageRange,
+  type Pagination,
+} from "@/redux/slice/company/meter-mgt/company-meter-slice";
 import CompanyAssignMeterForm from "@/components/company/meter-form/page";
+import CompanyAssignMeterToEstateForm from "@/components/company/assign-meter-to-estate-form/page";
 import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import { IoSpeedometerOutline } from "react-icons/io5";
 import Loader from "@/components/ui/Loader";
@@ -116,25 +124,21 @@ function getAddressColumns(data: CompanyMeterRow[]) {
 }
 
 type EstateOption = { label: string; value: string };
-type MeterListScope = "company" | "estate";
 
-const METER_TAB_TITLES = [
-  "Chart Overview",
-  "Company Meter Management",
-  "Estate Meter Management",
-] as const;
+const METER_TAB_TITLES = ["Meter Management", "Chart Overview"] as const;
 
-const COMPANY_METERS_ESTATE_ID = "all";
+const ALL_ESTATES_OPTION: EstateOption = {
+  label: "All",
+  value: ALL_METERS_ESTATE_ID,
+};
+
+const ESTATE_FILTER_FETCH_LIMIT = 500;
 
 export default function CompanyMeterManagement() {
   const dispatch = useDispatch<AppDispatch>();
-  const [companyId, setCompanyId] = useState("");
   const [assignMeter, setAssignMeter] = useState(false);
-  const [searchInput, setSearchInput] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeTabTitle, setActiveTabTitle] = useState<string>(
-    METER_TAB_TITLES[0],
-  );
+  const [assignToEstateMeter, setAssignToEstateMeter] =
+    useState<CompanyMeterRow | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [detailsAddressId, setDetailsAddressId] = useState<string | null>(null);
   const [detailsMeterNumber, setDetailsMeterNumber] = useState<string | null>(
@@ -142,31 +146,53 @@ export default function CompanyMeterManagement() {
   );
   const [meterUsageRange, setMeterUsageRange] =
     useState<MeterUsageRange>("weekly");
-  const [estatesLoading, setEstatesLoading] = useState(true);
-  const [selectedEstate, setSelectedEstate] = useState<EstateOption | null>(
-    null,
-  );
-  const [usageRange, setUsageRange] = useState<EstateEnergyUsageRange>("weekly");
   const [usageRefreshing, setUsageRefreshing] = useState(false);
-  const [energyPeriod, setEnergyPeriod] =
-    useState<EnergyConsumptionPeriod>("weekly");
-  const [estateNameById, setEstateNameById] = useState<Record<string, string>>(
-    {},
-  );
 
-  const { meters, pagination, loading, meterDetails, detailsLoading } =
-    useSelector((state: RootState) => {
-      const companyMeter = state.companyMeter;
-      return {
-        meters: (companyMeter?.meterList?.data || []) as CompanyMeterRow[],
-        pagination: (companyMeter?.meterList?.pagination ??
-          null) as Pagination | null,
-        loading: companyMeter?.getMetersState === "isLoading",
-        meterDetails: companyMeter?.meterDetails ?? null,
-        detailsLoading:
-          companyMeter?.getMeterByAddressIdState === "isLoading",
-      };
-    });
+  const {
+    meters,
+    pagination,
+    loading,
+    meterDetails,
+    detailsLoading,
+    selectedEstateId,
+    searchInput,
+    searchQuery,
+    usageRange,
+    energyPeriod,
+  } = useSelector((state: RootState) => {
+    const companyMeter = state.companyMeter;
+    const filters = companyMeter.filters ?? {
+      selectedEstateId: ALL_METERS_ESTATE_ID,
+      searchInput: "",
+      searchQuery: "",
+      usageRange: "weekly" as const,
+      energyPeriod: "weekly" as const,
+    };
+    return {
+      meters: (companyMeter?.meterList?.data || []) as CompanyMeterRow[],
+      pagination: (companyMeter?.meterList?.pagination ??
+        null) as Pagination | null,
+      loading: companyMeter?.getMetersState === "isLoading",
+      meterDetails: companyMeter?.meterDetails ?? null,
+      detailsLoading: companyMeter?.getMeterByAddressIdState === "isLoading",
+      selectedEstateId: filters.selectedEstateId || ALL_METERS_ESTATE_ID,
+      searchInput: filters.searchInput,
+      searchQuery: filters.searchQuery,
+      usageRange: filters.usageRange,
+      energyPeriod: filters.energyPeriod,
+    };
+  });
+
+  const { allEstates, estatesLoading } = useSelector((state: RootState) => ({
+    allEstates: state.companyEstate.allEstates?.data ?? [],
+    estatesLoading: state.companyEstate.getAllEstatesStatus === "isLoading",
+  }));
+
+  const companyId = useSelector((state: RootState) => {
+    const user = state.auth.user as Record<string, unknown> | null;
+    if (!user) return "";
+    return parseCompanyFromUser(user)?.id ?? "";
+  });
 
   const { meterUsage, meterUsageLoading, meterUsageMessage } = useSelector(
     (state: RootState) => ({
@@ -200,38 +226,43 @@ export default function CompanyMeterManagement() {
     estateEnergyUsageError: state.companyEstateEnergyUsage.error,
   }));
 
-  const selectedEstateId = selectedEstate?.value ?? "";
+  const isAllEstates = selectedEstateId === ALL_METERS_ESTATE_ID;
+  const chartEstateId = isAllEstates ? "" : selectedEstateId;
+
+  const estateNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const estate of allEstates) {
+      const id = estate?.id ?? estate?._id;
+      const name = estate?.name;
+      if (id && name) map[String(id)] = String(name);
+    }
+    return map;
+  }, [allEstates]);
 
   const estateOptions = useMemo<EstateOption[]>(
-    () =>
-      Object.entries(estateNameById)
+    () => [
+      ALL_ESTATES_OPTION,
+      ...Object.entries(estateNameById)
         .map(([value, label]) => ({ value, label }))
         .sort((a, b) => a.label.localeCompare(b.label)),
+    ],
     [estateNameById],
   );
 
+  const selectedEstate =
+    estateOptions.find((o) => o.value === selectedEstateId) ??
+    ALL_ESTATES_OPTION;
+
   const pageSize = Number(pagination?.pageSize) || 10;
 
-  const activeMeterScope: MeterListScope | null = (() => {
-    if (activeTabTitle === "Company Meter Management") return "company";
-    if (activeTabTitle === "Estate Meter Management") return "estate";
-    return null;
-  })();
-
   const fetchMeters = useCallback(
-    async (
-      scope: MeterListScope,
-      page = 1,
-      search = searchQuery,
-    ) => {
-      if (scope === "estate" && !selectedEstateId) return;
+    async (page = 1, search = searchQuery) => {
       await dispatch(
         getCompanyMeters({
           page,
           limit: pageSize,
           search: search || undefined,
-          estateId:
-            scope === "company" ? COMPANY_METERS_ESTATE_ID : selectedEstateId,
+          estateId: selectedEstateId || ALL_METERS_ESTATE_ID,
         }),
       ).unwrap();
     },
@@ -239,88 +270,51 @@ export default function CompanyMeterManagement() {
   );
 
   useEffect(() => {
-    (async () => {
-      try {
-        const userRes = await dispatch(getSignedInUser()).unwrap();
+    if (companyId) return;
+    dispatch(getSignedInUser())
+      .unwrap()
+      .then((userRes) => {
         const data = (userRes?.data ?? userRes) as Record<string, unknown>;
-        const company = parseCompanyFromUser(data);
-        if (!company) {
+        if (!parseCompanyFromUser(data)) {
           toast.warning("No company linked to your account.");
-          return;
         }
-        setCompanyId(company.id);
-      } catch {
-        toast.error("Failed to load company information.");
-      }
-    })();
+      })
+      .catch(() => toast.error("Failed to load company information."));
+  }, [dispatch, companyId]);
+
+  useEffect(() => {
+    dispatch(getCompanyEstates({ page: 1, limit: ESTATE_FILTER_FETCH_LIMIT }))
+      .unwrap()
+      .catch(() => toast.error("Failed to load estates."));
   }, [dispatch]);
 
   useEffect(() => {
-    if (activeMeterScope !== "company") return;
-    fetchMeters("company", 1, searchQuery).catch(() => {
-      toast.error("Failed to fetch company meters");
+    fetchMeters(1, searchQuery).catch(() => {
+      toast.error(
+        isAllEstates
+          ? "Failed to fetch company meters"
+          : "Failed to fetch estate meters",
+      );
     });
-  }, [activeMeterScope, searchQuery, fetchMeters]);
+  }, [selectedEstateId, searchQuery, fetchMeters, isAllEstates]);
 
   useEffect(() => {
-    if (activeMeterScope !== "estate") return;
-    if (!selectedEstateId) return;
-    fetchMeters("estate", 1, searchQuery).catch(() => {
-      toast.error("Failed to fetch estate meters");
-    });
-  }, [activeMeterScope, selectedEstateId, searchQuery, fetchMeters]);
-
-  useEffect(() => {
-    const loadEstates = async () => {
-      setEstatesLoading(true);
-      try {
-        const res = await dispatch(
-          getCompanyEstates({ page: 1, limit: 500 }),
-        ).unwrap();
-        const estates: Array<{
-          id?: string;
-          _id?: string;
-          name?: string;
-        }> = res?.data ?? [];
-        const map: Record<string, string> = {};
-        for (const estate of estates) {
-          const id = estate?.id ?? estate?._id;
-          const name = estate?.name;
-          if (id && name) map[String(id)] = String(name);
-        }
-        setEstateNameById(map);
-      } catch {
-        toast.error("Failed to load estates.");
-      } finally {
-        setEstatesLoading(false);
-      }
-    };
-    loadEstates();
-  }, [dispatch]);
-
-  useEffect(() => {
-    if (selectedEstate?.value) return;
-    if (!estateOptions.length) return;
-    setSelectedEstate(estateOptions[0]);
-  }, [estateOptions, selectedEstate?.value]);
-
-  useEffect(() => {
-    if (!selectedEstateId) return;
+    if (!chartEstateId) return;
     dispatch(
       getCompanyEstateEnergyUsage({
-        estateId: selectedEstateId,
+        estateId: chartEstateId,
         range: usageRange,
       }),
     ).catch((error: { message?: string }) => {
       toast.error(error?.message ?? "Failed to load estate energy usage.");
     });
-  }, [dispatch, selectedEstateId, usageRange]);
+  }, [dispatch, chartEstateId, usageRange]);
 
   useEffect(() => {
-    if (!selectedEstateId) return;
+    if (!chartEstateId) return;
     dispatch(
       getCompanyEnergyConsumptionChart({
-        estateId: selectedEstateId,
+        estateId: chartEstateId,
         period: energyPeriod,
       }),
     ).catch((error: { message?: string }) => {
@@ -328,15 +322,15 @@ export default function CompanyMeterManagement() {
         error?.message ?? "Failed to load energy consumption chart.",
       );
     });
-  }, [dispatch, selectedEstateId, energyPeriod]);
+  }, [dispatch, chartEstateId, energyPeriod]);
 
   const handleRefreshUsage = async () => {
-    if (!selectedEstateId) return;
+    if (!chartEstateId) return;
     setUsageRefreshing(true);
     try {
       await dispatch(
         getCompanyEstateEnergyUsage({
-          estateId: selectedEstateId,
+          estateId: chartEstateId,
           range: usageRange,
           refresh: true,
         }),
@@ -353,10 +347,11 @@ export default function CompanyMeterManagement() {
 
   const chartEmptyMessage = useMemo(() => {
     if (estatesLoading) return "Loading estates…";
-    if (!estateOptions.length) return "No estates found.";
-    if (!selectedEstateId) return "Select an estate to view energy data.";
+    if (isAllEstates || !chartEstateId) {
+      return "Select an estate to view energy data.";
+    }
     return undefined;
-  }, [estatesLoading, estateOptions.length, selectedEstateId]);
+  }, [estatesLoading, isAllEstates, chartEstateId]);
 
   const vendChartEmptyMessage = useMemo(() => {
     if (chartEmptyMessage) return chartEmptyMessage;
@@ -364,10 +359,8 @@ export default function CompanyMeterManagement() {
   }, [chartEmptyMessage]);
 
   const handleRefresh = async () => {
-    const scope: MeterListScope =
-      activeMeterScope ?? (selectedEstateId ? "estate" : "company");
     try {
-      await fetchMeters(scope, Number(pagination?.currentPage) || 1, searchQuery);
+      await fetchMeters(Number(pagination?.currentPage) || 1, searchQuery);
     } catch {
       toast.error("Failed to refresh meter list");
     }
@@ -375,6 +368,14 @@ export default function CompanyMeterManagement() {
 
   const handleAssignMeter = () => {
     setAssignMeter((prev) => !prev);
+  };
+
+  const handleOpenAssignToEstate = (meter: CompanyMeterRow) => {
+    setAssignToEstateMeter(meter);
+  };
+
+  const handleCloseAssignToEstate = () => {
+    setAssignToEstateMeter(null);
   };
 
   const handleViewDetails = (meter: CompanyMeterRow) => {
@@ -425,11 +426,11 @@ export default function CompanyMeterManagement() {
     });
   };
 
-  const getColumns = (scope: MeterListScope) => [
+  const columns = [
     { key: "createdAt", header: "Created Date" },
     { key: "meterNumber", header: "Meter Number" },
     ...getAddressColumns(meters),
-    ...(scope === "estate"
+    ...(!isAllEstates
       ? [
           {
             key: "estateId",
@@ -481,6 +482,25 @@ export default function CompanyMeterManagement() {
       header: "Action",
       render: (item: CompanyMeterRow) => (
         <div className="flex items-center gap-2">
+          {isAllEstates && (
+            <div className="relative group/assign">
+              <Button
+                variant="outline"
+                size="sm"
+                className="cursor-pointer gap-1"
+                onClick={() => handleOpenAssignToEstate(item)}
+                aria-label="Assign to estate"
+              >
+                <Building2 className="w-4 h-4" />
+              </Button>
+              <span
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 -translate-x-1/2 whitespace-nowrap rounded bg-foreground px-2 py-1 text-xs text-background opacity-0 shadow transition-opacity group-hover/assign:opacity-100"
+              >
+                Assign to estate
+              </span>
+            </div>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -519,10 +539,16 @@ export default function CompanyMeterManagement() {
               options={estateOptions}
               placeholder="Filter by estate"
               value={selectedEstate}
-              onChange={(option) => setSelectedEstate(option)}
+              onChange={(option) =>
+                dispatch(
+                  setCompanyMeterEstateId(
+                    option?.value ?? ALL_METERS_ESTATE_ID,
+                  ),
+                )
+              }
               isSearchable
               isLoading={estatesLoading}
-              isDisabled={!estateOptions.length || estatesLoading}
+              isDisabled={estatesLoading}
               styles={{
                 control: (base) => ({ ...base, cursor: "pointer" }),
                 option: (base) => ({ ...base, cursor: "pointer" }),
@@ -589,108 +615,7 @@ export default function CompanyMeterManagement() {
 
       <Tab
         titles={[...METER_TAB_TITLES]}
-        onTabChange={(_index, title) => {
-          setActiveTabTitle(title);
-          setSearchInput("");
-          setSearchQuery("");
-        }}
         renderContent={(activeTab) => {
-          const renderMeterTable = (scope: MeterListScope) => (
-            <div className="relative space-y-6">
-              {loading && <Loader fullScreen label="Loading meters..." />}
-
-              <div
-                className={[
-                  "space-y-6",
-                  loading ? "pointer-events-none select-none" : "",
-                ].join(" ")}
-              >
-                <Card className="p-4">
-                  <div className="relative w-full max-w-sm flex items-center gap-2">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground cursor-pointer" />
-                      <input
-                        placeholder="Search by meter number."
-                        value={searchInput}
-                        onChange={(e) => setSearchInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            setSearchQuery(searchInput);
-                          }
-                          if (e.key === "Escape") {
-                            setSearchInput("");
-                            setSearchQuery("");
-                          }
-                        }}
-                        className="w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-
-                    {searchInput.trim().length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSearchQuery(searchInput);
-                        }}
-                        className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:opacity-90 transition"
-                      >
-                        Search
-                      </button>
-                    )}
-                  </div>
-                </Card>
-
-                <Card className="p-4">
-                  <Table
-                    columns={getColumns(scope)}
-                    data={meters}
-                    emptyMessage={
-                      scope === "company"
-                        ? "No company meters found."
-                        : "No estate meters found."
-                    }
-                    showPagination
-                    onSearch={(value) => setSearchInput(value)}
-                    paginationInfo={{
-                      total: pagination?.total || 0,
-                      current: Number(pagination?.currentPage) || 1,
-                      pageSize: Number(pagination?.pageSize) || 10,
-                    }}
-                    onPageChange={(page) => {
-                      fetchMeters(scope, page, searchQuery).catch(() =>
-                        toast.error(
-                          scope === "company"
-                            ? "Failed to fetch company meters"
-                            : "Failed to fetch estate meters",
-                        ),
-                      );
-                    }}
-                    enableExport
-                    exportFileName={
-                      scope === "company"
-                        ? "company-meters"
-                        : "estate-meters"
-                    }
-                    onExportRequest={async () => {
-                      if (scope === "estate" && !selectedEstateId) return [];
-                      const res = await dispatch(
-                        getCompanyMeters({
-                          page: 1,
-                          limit: 50000,
-                          estateId:
-                            scope === "company"
-                              ? COMPANY_METERS_ESTATE_ID
-                              : selectedEstateId,
-                        }),
-                      ).unwrap();
-                      return res?.data ?? [];
-                    }}
-                  />
-                </Card>
-              </div>
-            </div>
-          );
-
           switch (activeTab) {
             case "Chart Overview":
               return (
@@ -699,17 +624,17 @@ export default function CompanyMeterManagement() {
                     data={estateEnergyUsage}
                     loading={
                       estatesLoading ||
-                      (!!selectedEstateId && estateEnergyUsageLoading)
+                      (!!chartEstateId && estateEnergyUsageLoading)
                     }
                     progress={estateEnergyUsageProgress}
                     range={usageRange}
-                    onRangeChange={setUsageRange}
-                    onRefresh={
-                      selectedEstateId ? handleRefreshUsage : undefined
+                    onRangeChange={(range) =>
+                      dispatch(setCompanyMeterUsageRange(range))
                     }
+                    onRefresh={chartEstateId ? handleRefreshUsage : undefined}
                     refreshing={usageRefreshing}
                     exportFileName={
-                      selectedEstate
+                      chartEstateId && selectedEstate
                         ? `estate_${selectedEstate.label.replace(/[^a-z0-9-_]/gi, "_")}_energy_usage`
                         : "estate_energy_usage"
                     }
@@ -724,18 +649,109 @@ export default function CompanyMeterManagement() {
                     data={energyConsumptionChart}
                     loading={
                       estatesLoading ||
-                      (!!selectedEstateId && energyChartLoading)
+                      (!!chartEstateId && energyChartLoading)
                     }
                     period={energyPeriod}
-                    onPeriodChange={setEnergyPeriod}
+                    onPeriodChange={(period) =>
+                      dispatch(setCompanyMeterEnergyPeriod(period))
+                    }
                     emptyMessage={vendChartEmptyMessage}
                   />
                 </div>
               );
-            case "Company Meter Management":
-              return renderMeterTable("company");
-            case "Estate Meter Management":
-              return renderMeterTable("estate");
+            case "Meter Management":
+              return (
+                <div className="relative space-y-6">
+                  {loading && <Loader fullScreen label="Loading meters..." />}
+
+                  <div
+                    className={[
+                      "space-y-6",
+                      loading ? "pointer-events-none select-none" : "",
+                    ].join(" ")}
+                  >
+                    <Card className="p-4">
+                      <div className="relative w-full max-w-sm flex items-center gap-2">
+                        <div className="relative flex-1">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground cursor-pointer" />
+                          <input
+                            placeholder="Search by meter number."
+                            value={searchInput}
+                            onChange={(e) =>
+                              dispatch(
+                                setCompanyMeterSearchInput(e.target.value),
+                              )
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                dispatch(applyCompanyMeterSearch());
+                              }
+                              if (e.key === "Escape") {
+                                dispatch(clearCompanyMeterSearch());
+                              }
+                            }}
+                            className="w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        </div>
+
+                        {searchInput.trim().length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => dispatch(applyCompanyMeterSearch())}
+                            className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:opacity-90 transition"
+                          >
+                            Search
+                          </button>
+                        )}
+                      </div>
+                    </Card>
+
+                    <Card className="p-4">
+                      <Table
+                        columns={columns}
+                        data={meters}
+                        emptyMessage={
+                          isAllEstates
+                            ? "No company meters found."
+                            : "No estate meters found."
+                        }
+                        showPagination
+                        onSearch={(value) =>
+                          dispatch(setCompanyMeterSearchInput(value))
+                        }
+                        paginationInfo={{
+                          total: pagination?.total || 0,
+                          current: Number(pagination?.currentPage) || 1,
+                          pageSize: Number(pagination?.pageSize) || 10,
+                        }}
+                        onPageChange={(page) => {
+                          fetchMeters(page, searchQuery).catch(() =>
+                            toast.error(
+                              isAllEstates
+                                ? "Failed to fetch company meters"
+                                : "Failed to fetch estate meters",
+                            ),
+                          );
+                        }}
+                        enableExport
+                        exportFileName={
+                          isAllEstates ? "company-meters" : "estate-meters"
+                        }
+                        onExportRequest={async () => {
+                          const res = await dispatch(
+                            getCompanyMeters({
+                              page: 1,
+                              limit: 50000,
+                              estateId: selectedEstateId,
+                            }),
+                          ).unwrap();
+                          return res?.data ?? [];
+                        }}
+                      />
+                    </Card>
+                  </div>
+                </div>
+              );
             default:
               return null;
           }
@@ -747,6 +763,19 @@ export default function CompanyMeterManagement() {
           <CompanyAssignMeterForm
             companyId={companyId}
             close={handleAssignMeter}
+            refresh={handleRefresh}
+          />
+        </Modal>
+      )}
+
+      {assignToEstateMeter && (
+        <Modal
+          visible={Boolean(assignToEstateMeter)}
+          onClose={handleCloseAssignToEstate}
+        >
+          <CompanyAssignMeterToEstateForm
+            meterNumber={assignToEstateMeter.meterNumber}
+            close={handleCloseAssignToEstate}
             refresh={handleRefresh}
           />
         </Modal>

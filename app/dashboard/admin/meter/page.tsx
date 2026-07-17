@@ -63,7 +63,7 @@ interface AdminMeterData {
 
 const PAGE_LIMIT = 10;
 
-const METER_TAB_TITLES = ["Chart Overview", "Meter Management"] as const;
+const METER_TAB_TITLES = ["Meter Management", "Chart Overview"] as const;
 
 export default function AdminMeterManagement() {
   const dispatch = useDispatch<AppDispatch>();

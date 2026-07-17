@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -20,27 +20,31 @@ const countries = [
 
 const paymentOptionsMap: Record<string, { code: string; label: string }[]> = {
   NGN: [
-    { code: "card", label: "Card Payment" },
-    { code: "bank transfer", label: "Bank Transfer" },
-    { code: "ussd", label: "USSD Payment" },
-    { code: "barter", label: "Barter Wallet" },
-    { code: "mpesa", label: "M-Pesa" },
+    { code: "all", label: "All" },
+    // { code: "card", label: "Card Payment" },
+    // { code: "bank transfer", label: "Bank Transfer" },
+    // { code: "ussd", label: "USSD Payment" },
+    // { code: "barter", label: "Barter Wallet" },
+    // { code: "mpesa", label: "M-Pesa" },
   ],
   GBP: [
-    { code: "card", label: "Card Payment" },
-    { code: "account", label: "UK Bank Transfer" },
+    { code: "all", label: "All" },
+    // { code: "card", label: "Card Payment" },
+    // { code: "account", label: "UK Bank Transfer" },
   ],
   EUR: [
-    { code: "card", label: "Card Payment" },
-    { code: "account", label: "SEPA Bank Transfer" },
-    { code: "ach", label: "ACH Transfer" },
+    { code: "all", label: "All" },
+    // { code: "card", label: "Card Payment" },
+    // { code: "account", label: "SEPA Bank Transfer" },
+    // { code: "ach", label: "ACH Transfer" },
   ],
   GHS: [
-    { code: "card", label: "Card Payment" },
-    { code: "bank transfer", label: "Bank Transfer" },
-    { code: "mobilemoneyghana", label: "Mobile Money (Ghana)" },
-    { code: "ussd", label: "USSD Payment" },
-    { code: "barter", label: "Barter Wallet" },
+    { code: "all", label: "All" },
+    // { code: "card", label: "Card Payment" },
+    // { code: "bank transfer", label: "Bank Transfer" },
+    // { code: "mobilemoneyghana", label: "Mobile Money (Ghana)" },
+    // { code: "ussd", label: "USSD Payment" },
+    // { code: "barter", label: "Barter Wallet" },
   ],
 };
 
@@ -79,17 +83,13 @@ export default function FundWalletForm({
   const [description, setDescription] = useState<string>("");
   const [currency, setCurrency] = useState<string>("NGN");
   const [country, setCountry] = useState<string>("NG");
-  const [paymentOption, setPaymentOption] = useState<string>("card");
+  const [paymentOption, setPaymentOption] = useState<string>("all");
   const [gatewayType, setGatewayType] = useState<string>("");
   const [availablePaymentOptions, setAvailablePaymentOptions] = useState<
     { code: string; label: string }[]
   >(paymentOptionsMap["NGN"]);
   const [submitting, setSubmitting] = useState(false);
 
-  const enabledGateways = useMemo(
-    () => gateways.filter((g) => g.enabled),
-    [gateways],
-  );
   const loadingGateways = getPaymentGatewaysState === "isLoading";
 
   useEffect(() => {
@@ -97,18 +97,15 @@ export default function FundWalletForm({
   }, [dispatch]);
 
   useEffect(() => {
-    if (enabledGateways.length === 0) return;
+    if (gateways.length === 0) return;
     const preferred =
-      (defaultGateway &&
-        enabledGateways.find((g) => g.id === defaultGateway)?.id) ||
-      enabledGateways[0]?.id ||
+      (defaultGateway && gateways.find((g) => g.id === defaultGateway)?.id) ||
+      gateways[0]?.id ||
       "";
     setGatewayType((current) =>
-      current && enabledGateways.some((g) => g.id === current)
-        ? current
-        : preferred,
+      current && gateways.some((g) => g.id === current) ? current : preferred,
     );
-  }, [enabledGateways, defaultGateway]);
+  }, [gateways, defaultGateway]);
 
   useEffect(() => {
     if (getPaymentGatewaysState === "failed" && gatewaysError) {
@@ -277,17 +274,17 @@ export default function FundWalletForm({
               className="w-full border border-gray-300 rounded px-3 py-2"
               value={gatewayType}
               onChange={(e) => setGatewayType(e.target.value)}
-              disabled={loadingGateways || enabledGateways.length === 0}
+              disabled={loadingGateways || gateways.length === 0}
               required
             >
               <option value="">
                 {loadingGateways
                   ? "Loading gateways..."
-                  : enabledGateways.length === 0
+                  : gateways.length === 0
                     ? "No gateways available"
                     : "Select gateway"}
               </option>
-              {enabledGateways.map((gateway) => (
+              {gateways.map((gateway) => (
                 <option key={gateway.id} value={gateway.id}>
                   {gateway.name}
                 </option>

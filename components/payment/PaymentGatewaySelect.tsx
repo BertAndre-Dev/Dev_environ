@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Label } from "@/components/ui/label";
 import type { AppDispatch, RootState } from "@/redux/store";
@@ -29,10 +29,6 @@ export default function PaymentGatewaySelect({
     (state: RootState) => state.residentPaymentMgt,
   );
 
-  const enabledGateways = useMemo(
-    () => gateways.filter((g) => g.enabled),
-    [gateways],
-  );
   const loading = getPaymentGatewaysState === "isLoading";
 
   useEffect(() => {
@@ -40,17 +36,16 @@ export default function PaymentGatewaySelect({
   }, [dispatch]);
 
   useEffect(() => {
-    if (enabledGateways.length === 0) return;
+    if (gateways.length === 0) return;
     const preferred =
-      (defaultGateway &&
-        enabledGateways.find((g) => g.id === defaultGateway)?.id) ||
-      enabledGateways[0]?.id ||
+      (defaultGateway && gateways.find((g) => g.id === defaultGateway)?.id) ||
+      gateways[0]?.id ||
       "";
     if (!preferred) return;
-    if (!value || !enabledGateways.some((g) => g.id === value)) {
+    if (!value || !gateways.some((g) => g.id === value)) {
       onChangeRef.current(preferred);
     }
-  }, [enabledGateways, defaultGateway, value]);
+  }, [gateways, defaultGateway, value]);
 
   return (
     <div>
@@ -63,17 +58,17 @@ export default function PaymentGatewaySelect({
         className="mt-1 w-full border border-gray-300 rounded px-3 py-2"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        disabled={disabled || loading || enabledGateways.length === 0}
+        disabled={disabled || loading || gateways.length === 0}
         required={required}
       >
         <option value="">
           {loading
             ? "Loading gateways..."
-            : enabledGateways.length === 0
+            : gateways.length === 0
               ? "No gateways available"
               : "Select gateway"}
         </option>
-        {enabledGateways.map((gateway) => (
+        {gateways.map((gateway) => (
           <option key={gateway.id} value={gateway.id}>
             {gateway.name}
           </option>

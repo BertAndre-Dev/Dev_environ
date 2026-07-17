@@ -236,8 +236,7 @@ export default function TransactionPage() {
     try {
       const gatewaysRes = await dispatch(getPaymentGateways()).unwrap();
       const gatewayType =
-        gatewaysRes.defaultGateway ||
-        gatewaysRes.gateways.find((g) => g.enabled)?.id;
+        gatewaysRes.defaultGateway || gatewaysRes.gateways[0]?.id;
       if (!gatewayType) {
         toast.error("No payment gateway available.");
         setContinuingPaymentTxRef(null);

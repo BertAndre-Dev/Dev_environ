@@ -401,20 +401,25 @@ export default function TransactionPage() {
         ),
     },
     {
+      key: "description",
+      header: "Description",
+      render: (item: any) => item.description ?? "—",
+    },
+    {
       key: "amount",
       header: "Amount (₦)",
       render: (item: any) => item.amount?.toLocaleString() ?? 0,
     },
-    {
-      key: "gatewayType",
-      header: "Gateway",
-      render: (item: any) =>
-        item.gatewayType ? (
-          <span className="capitalize">{item.gatewayType}</span>
-        ) : (
-          "—"
-        ),
-    },
+    // {
+    //   key: "gatewayType",
+    //   header: "Gateway",
+    //   render: (item: any) =>
+    //     item.gatewayType ? (
+    //       <span className="capitalize">{item.gatewayType}</span>
+    //     ) : (
+    //       "—"
+    //     ),
+    // },
     {
       key: "paymentStatus",
       header: "Status",

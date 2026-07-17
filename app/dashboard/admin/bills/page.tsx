@@ -19,10 +19,8 @@ import {
   createBillForAddress,
   deleteBill,
   getBillsByEstate,
-  getBillsForAddress,
   suspendBill,
   updateBill,
-  type BillsForAddressItem,
 } from "@/redux/slice/admin/bills-mgt/bills";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { toast } from "react-toastify";
@@ -50,44 +48,27 @@ export default function BillPage() {
   const [selectedBill, setSelectedBill] = useState<BillData | null>(null);
   const [estateId, setEstateId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  const [assignBill, setAssignBill] = useState<BillData | null>(null);
-  const [activeTab, setActiveTab] = useState<"create" | "assign">("create");
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [billSearch, setBillSearch] = useState("");
-  const [assignSearch, setAssignSearch] = useState("");
   const [billsStartDate, setBillsStartDate] = useState("");
   const [billsEndDate, setBillsEndDate] = useState("");
-  const [assignedStartDate, setAssignedStartDate] = useState("");
-  const [assignedEndDate, setAssignedEndDate] = useState("");
-  const [assignAddressOptions, setAssignAddressOptions] = useState<
-    { label: string; value: string }[]
-  >([]);
-  const [assignAddressId, setAssignAddressId] = useState<string>("");
-  const [assignAddressLoading, setAssignAddressLoading] = useState(false);
   const [suspendBillItem, setSuspendBillItem] = useState<BillData | null>(null);
   const [suspendSubmitting, setSuspendSubmitting] = useState(false);
 
-  const {
-    allBills,
-    pagination,
-    loading,
-    assignedBills,
-    assignedPagination,
-    loadingAssigned,
-  } = useSelector((state: RootState) => {
-    const billState = state.adminBill as any;
-    return {
-      allBills: billState?.allBills?.data || [],
-      pagination: billState?.allBills?.pagination || {},
-      loading:
-        billState.getBillsByEstateState === "isLoading" ||
-        billState.createBillState === "isLoading" ||
-        billState.updateBillState === "isLoading" ||
-        billState.deleteBillState === "isLoading",
-      assignedBills: (billState?.assignedBills || []) as BillsForAddressItem[],
-      assignedPagination: billState?.assignedBillsPagination || null,
-      loadingAssigned: billState?.getBillsForAddressState === "isLoading",
-    };
-  });
+  const { allBills, pagination, loading } = useSelector(
+    (state: RootState) => {
+      const billState = state.adminBill as any;
+      return {
+        allBills: billState?.allBills?.data || [],
+        pagination: billState?.allBills?.pagination || {},
+        loading:
+          billState.getBillsByEstateState === "isLoading" ||
+          billState.createBillState === "isLoading" ||
+          billState.updateBillState === "isLoading" ||
+          billState.deleteBillState === "isLoading",
+      };
+    },
+  );
 
   useEffect(() => {
     (async () => {
@@ -131,7 +112,6 @@ export default function BillPage() {
   // Refetch bills when date range changes (only apply when both are selected)
   useEffect(() => {
     if (!estateId) return;
-    if (activeTab !== "create") return;
     const shouldApplyDate = Boolean(billsStartDate && billsEndDate);
     dispatch(
       getBillsByEstate({
@@ -144,98 +124,7 @@ export default function BillPage() {
     )
       .unwrap()
       .catch(() => toast.error("Failed to fetch bills."));
-  }, [dispatch, estateId, activeTab, billsStartDate, billsEndDate]);
-
-  // Load address options for assign tab (using same estate fields/entries)
-  useEffect(() => {
-    if (
-      activeTab !== "assign" ||
-      !estateId ||
-      assignAddressOptions.length > 0
-    ) {
-      return;
-    }
-    (async () => {
-      try {
-        setAssignAddressLoading(true);
-        const { getFieldByEstate } =
-          await import("@/redux/slice/admin/address-mgt/fields/fields");
-        const { getEntriesByField } =
-          await import("@/redux/slice/admin/address-mgt/entry/entry");
-
-        const fieldRes = await dispatch(getFieldByEstate(estateId)).unwrap();
-        const fields = fieldRes?.data || [];
-        if (!fields.length) {
-          toast.error("No address fields configured for this estate.");
-          return;
-        }
-        const primaryFieldId = fields[0].id;
-        const entryRes = await dispatch(
-          getEntriesByField({ fieldId: primaryFieldId, page: 1, limit: 200 }),
-        ).unwrap();
-        const entries =
-          entryRes?.data ??
-          (
-            entryRes as {
-              data?: Array<{ id: string; data?: Record<string, string> }>;
-            }
-          )?.data ??
-          [];
-        const opts = entries.map(
-          (entry: { id: string; data?: Record<string, string> }) => {
-            const d = entry.data ?? {};
-            const label = Object.entries(d)
-              .map(([k, v]) => `${k}: ${v}`)
-              .join(", ");
-            return { label: label || entry.id, value: entry.id };
-          },
-        );
-        setAssignAddressOptions(opts);
-        if (opts.length > 0) {
-          const firstId = opts[0].value;
-          setAssignAddressId(firstId);
-          await dispatch(
-            getBillsForAddress({
-              addressId: firstId,
-              estateId,
-              page: 1,
-              limit: 10,
-            }),
-          ).unwrap();
-        }
-      } catch {
-        toast.error("Failed to load addresses for assigned bills.");
-      } finally {
-        setAssignAddressLoading(false);
-      }
-    })();
-  }, [activeTab, estateId, assignAddressOptions.length, dispatch]);
-
-  // Refetch assigned bills when address/date range changes (only apply when both are selected)
-  useEffect(() => {
-    if (activeTab !== "assign") return;
-    if (!estateId || !assignAddressId) return;
-    const shouldApplyDate = Boolean(assignedStartDate && assignedEndDate);
-    dispatch(
-      getBillsForAddress({
-        addressId: assignAddressId,
-        estateId,
-        page: 1,
-        limit: 10,
-        startDate: shouldApplyDate ? assignedStartDate : undefined,
-        endDate: shouldApplyDate ? assignedEndDate : undefined,
-      }),
-    )
-      .unwrap()
-      .catch(() => toast.error("Failed to load assigned bills."));
-  }, [
-    dispatch,
-    activeTab,
-    estateId,
-    assignAddressId,
-    assignedStartDate,
-    assignedEndDate,
-  ]);
+  }, [dispatch, estateId, billsStartDate, billsEndDate]);
 
   const handleOpenModal = (bill?: BillData) => {
     setSelectedBill(bill || null);
@@ -247,12 +136,12 @@ export default function BillPage() {
     setOpen(false);
   };
 
-  const openAssignModal = (bill: BillData) => {
-    setAssignBill(bill);
+  const openAssignModal = () => {
+    setAssignModalOpen(true);
   };
 
   const closeAssignModal = () => {
-    setAssignBill(null);
+    setAssignModalOpen(false);
   };
 
   const openSuspendModal = (bill: BillData) => {
@@ -355,26 +244,27 @@ export default function BillPage() {
   };
 
   const handleAssignBillForAddress = async (data: BillForAddressFormData) => {
-    if (!estateId || !assignBill?.id) return;
+    if (!estateId) return;
 
     try {
       await dispatch(
         createBillForAddress({
-          billId: assignBill.id,
           addressId: data.addressId,
           estateId,
+          name: data.name,
+          description: data.description,
+          amount: data.amount,
           frequency: data.frequency,
-          amountPerBillingPeriod: data.amountPerBillingPeriod,
-          startDate: data.startDate,
+          isServiceCharge: data.isServiceCharge,
         }),
       ).unwrap();
-      toast.success("Bill assigned to address successfully.");
+      toast.success("One-off bill created for address successfully.");
       closeAssignModal();
     } catch (err: any) {
       toast.error(
         err?.message ??
           err?.payload?.message ??
-          "Failed to assign bill to address.",
+          "Failed to create bill for address.",
       );
     }
   };
@@ -475,35 +365,14 @@ export default function BillPage() {
     );
   });
 
-  const filteredAssignedBills = (assignedBills || []).filter(
-    (item: BillsForAddressItem) => {
-      const q = assignSearch.trim().toLowerCase();
-      if (!q) return true;
-      const billName = (item.billName ?? "").toLowerCase();
-      const freq = (item.frequency ?? "").toString().toLowerCase();
-      return billName.includes(q) || freq.includes(q);
-    },
-  );
-
-  const pageLoading = activeTab === "create" ? loading : loadingAssigned;
-
   return (
     <div className="relative">
-      {pageLoading && (
-        <Loader
-          fullScreen
-          label={
-            activeTab === "create"
-              ? "Loading bills..."
-              : "Loading assigned bills..."
-          }
-        />
-      )}
+      {loading && <Loader fullScreen label="Loading bills..." />}
 
       <div
         className={[
           "space-y-6",
-          pageLoading ? "pointer-events-none select-none" : "",
+          loading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -530,15 +399,7 @@ export default function BillPage() {
             <Button
               variant="outline"
               className="flex items-center gap-2"
-              onClick={() => {
-                if (!allBills?.length) {
-                  toast.info("No bills available. Create a bill first.");
-                  return;
-                }
-                const firstActive =
-                  allBills.find((b: BillData) => b.isActive) ?? allBills[0];
-                openAssignModal(firstActive);
-              }}
+              onClick={openAssignModal}
             >
               <ScrollText className="w-4 h-4" />
               Assign Bill
@@ -546,267 +407,90 @@ export default function BillPage() {
           </div>
         </div>
 
-        {/* Stats Card */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {(() => {
-            const stats = [
-              {
-                label: "Total Bills",
-                value: pagination?.total ?? 0,
-                icon: ScrollText,
-                color: "bg-[#D0DFF280]",
-              },
-              {
-                label: "Total Assigned Bills",
-                value: assignedPagination?.total ?? 0,
-                icon: ScrollText,
-                color: "bg-[#D0DFF280]",
-              },
-            ];
-
-            return stats.map((stat, i) => {
-              const Icon = stat.icon;
-              return (
-                <Card key={i} className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        {stat.label}
-                      </p>
-                      <p className="font-heading text-2xl font-bold mt-2">
-                        {stat.value}
-                      </p>
-                    </div>
-                    <div className={`p-3 rounded-lg ${stat.color}`}>
-                      <Icon className="w-6 h-6" />
-                    </div>
-                  </div>
-                </Card>
-              );
-            });
-          })()}
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-4 max-w-sm">
+          <Card className="p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Bills</p>
+                <p className="font-heading text-2xl font-bold mt-2">
+                  {pagination?.total ?? 0}
+                </p>
+              </div>
+              <div className="p-3 rounded-lg bg-[#D0DFF280]">
+                <ScrollText className="w-6 h-6" />
+              </div>
+            </div>
+          </Card>
         </div>
 
         <Card className="p-4">
-          {/* Search */}
           <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <Input
               type="text"
-              placeholder={
-                activeTab === "create"
-                  ? "Search bills by name or description..."
-                  : "Search assigned bills by bill name or frequency..."
-              }
-              value={activeTab === "create" ? billSearch : assignSearch}
-              onChange={(e) =>
-                activeTab === "create"
-                  ? setBillSearch(e.target.value)
-                  : setAssignSearch(e.target.value)
-              }
+              placeholder="Search bills by name or description..."
+              value={billSearch}
+              onChange={(e) => setBillSearch(e.target.value)}
               className="w-full sm:w-80"
             />
           </div>
 
-          {/* Tabs */}
-          <div className="flex gap-2 border-b border-border overflow-x-auto mb-4">
-            {[
-              { id: "create" as const, label: "Create Bills" },
-              { id: "assign" as const, label: "Assigned Bills" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-3 text-sm font-medium cursor-pointer border-b-2 transition-colors whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Create Bills Tab */}
-          {activeTab === "create" && (
-            <Table
-              columns={columns}
-              data={filteredBills}
-              emptyMessage="No bills found."
-              enableDateRangeFilter
-              defaultDateRangeDays={0}
-              startDate={billsStartDate}
-              endDate={billsEndDate}
-              onDateRangeChange={({ startDate, endDate }) => {
-                setBillsStartDate(startDate);
-                setBillsEndDate(endDate);
-              }}
-              showPagination
-              paginationInfo={{
-                total: pagination?.total || 0,
-                current: Number(pagination?.page) || 1,
-                pageSize: Number(pagination?.limit) || 10,
-              }}
-              onPageChange={(page) => {
-                if (!estateId) return;
-                const shouldApplyDate = Boolean(billsStartDate && billsEndDate);
-                dispatch(
-                  getBillsByEstate({
-                    estateId,
-                    page,
-                    limit: 10,
-                    startDate: shouldApplyDate ? billsStartDate : undefined,
-                    endDate: shouldApplyDate ? billsEndDate : undefined,
-                  }),
-                )
-                  .unwrap()
-                  .catch(() => toast.error("Failed to change page"));
-              }}
-              enableExport
-              exportFileName="bills"
-              onExportRequest={
-                estateId
-                  ? async () => {
-                      const shouldApplyDate = Boolean(
-                        billsStartDate && billsEndDate,
-                      );
-                      const res = await dispatch(
-                        getBillsByEstate({
-                          estateId,
-                          page: 1,
-                          limit: 50000,
-                          startDate: shouldApplyDate
-                            ? billsStartDate
-                            : undefined,
-                          endDate: shouldApplyDate ? billsEndDate : undefined,
-                        }),
-                      ).unwrap();
-                      return res?.data ?? [];
-                    }
-                  : undefined
-              }
-            />
-          )}
-
-          {/* Assigned Bills Tab */}
-          {activeTab === "assign" && (
-            <div className="space-y-4">
-              <Table
-                columns={[
-                  {
-                    key: "createdAt",
-                    header: "Created At",
-                    render: (item: BillsForAddressItem) =>
-                      item.createdAt
-                        ? new Date(item.createdAt).toLocaleString()
-                        : "—",
-                  },
-                  {
-                    key: "billName",
-                    header: "Bill Name",
-                    render: (item: BillsForAddressItem) =>
-                      item.billName ?? item.billId ?? "—",
-                  },
-                  {
-                    key: "frequency",
-                    header: "Frequency",
-                    render: (item: BillsForAddressItem) =>
-                      item.frequency ?? "—",
-                  },
-                  {
-                    key: "amountPaid",
-                    header: "Amount Paid (₦)",
-                    render: (item: BillsForAddressItem) =>
-                      item.amountPaid != null
-                        ? Number(item.amountPaid).toLocaleString()
-                        : "—",
-                  },
-                  {
-                    key: "startDate",
-                    header: "Start Date",
-                    render: (item: BillsForAddressItem) =>
-                      item.startDate
-                        ? new Date(item.startDate).toLocaleDateString()
-                        : "—",
-                  },
-                  {
-                    key: "nextDueDate",
-                    header: "Next Due Date",
-                    render: (item: BillsForAddressItem) =>
-                      item.nextDueDate
-                        ? new Date(item.nextDueDate).toLocaleDateString()
-                        : "—",
-                  },
-                ]}
-                data={filteredAssignedBills}
-                emptyMessage={
-                  assignAddressId
-                    ? "No bills assigned to this address."
-                    : "Select an address to view assigned bills."
-                }
-                enableDateRangeFilter
-                defaultDateRangeDays={0}
-                startDate={assignedStartDate}
-                endDate={assignedEndDate}
-                onDateRangeChange={({ startDate, endDate }) => {
-                  setAssignedStartDate(startDate);
-                  setAssignedEndDate(endDate);
-                }}
-                showPagination
-                paginationInfo={{
-                  total: assignedPagination?.total || 0,
-                  current: assignedPagination?.page || 1,
-                  pageSize: assignedPagination?.limit || 10,
-                }}
-                onPageChange={(page) => {
-                  if (!estateId || !assignAddressId) return;
-                  const shouldApplyDate = Boolean(
-                    assignedStartDate && assignedEndDate,
-                  );
-                  dispatch(
-                    getBillsForAddress({
-                      addressId: assignAddressId,
-                      estateId,
-                      page,
-                      limit: assignedPagination?.limit || 10,
-                      startDate: shouldApplyDate
-                        ? assignedStartDate
-                        : undefined,
-                      endDate: shouldApplyDate ? assignedEndDate : undefined,
-                    }),
-                  )
-                    .unwrap()
-                    .catch(() => toast.error("Failed to change page"));
-                }}
-                enableExport
-                exportFileName="assigned-bills"
-                onExportRequest={
-                  estateId && assignAddressId
-                    ? async () => {
-                        const shouldApplyDate = Boolean(
-                          assignedStartDate && assignedEndDate,
-                        );
-                        const res = await dispatch(
-                          getBillsForAddress({
-                            addressId: assignAddressId,
-                            estateId,
-                            page: 1,
-                            limit: 50000,
-                            startDate: shouldApplyDate
-                              ? assignedStartDate
-                              : undefined,
-                            endDate: shouldApplyDate
-                              ? assignedEndDate
-                              : undefined,
-                          }),
-                        ).unwrap();
-                        return res?.data ?? [];
-                      }
-                    : undefined
-                }
-              />
-            </div>
-          )}
+          <Table
+            columns={columns}
+            data={filteredBills}
+            emptyMessage="No bills found."
+            enableDateRangeFilter
+            defaultDateRangeDays={0}
+            startDate={billsStartDate}
+            endDate={billsEndDate}
+            onDateRangeChange={({ startDate, endDate }) => {
+              setBillsStartDate(startDate);
+              setBillsEndDate(endDate);
+            }}
+            showPagination
+            paginationInfo={{
+              total: pagination?.total || 0,
+              current: Number(pagination?.page) || 1,
+              pageSize: Number(pagination?.limit) || 10,
+            }}
+            onPageChange={(page) => {
+              if (!estateId) return;
+              const shouldApplyDate = Boolean(billsStartDate && billsEndDate);
+              dispatch(
+                getBillsByEstate({
+                  estateId,
+                  page,
+                  limit: 10,
+                  startDate: shouldApplyDate ? billsStartDate : undefined,
+                  endDate: shouldApplyDate ? billsEndDate : undefined,
+                }),
+              )
+                .unwrap()
+                .catch(() => toast.error("Failed to change page"));
+            }}
+            enableExport
+            exportFileName="bills"
+            onExportRequest={
+              estateId
+                ? async () => {
+                    const shouldApplyDate = Boolean(
+                      billsStartDate && billsEndDate,
+                    );
+                    const res = await dispatch(
+                      getBillsByEstate({
+                        estateId,
+                        page: 1,
+                        limit: 50000,
+                        startDate: shouldApplyDate
+                          ? billsStartDate
+                          : undefined,
+                        endDate: shouldApplyDate ? billsEndDate : undefined,
+                      }),
+                    ).unwrap();
+                    return res?.data ?? [];
+                  }
+                : undefined
+            }
+          />
         </Card>
 
         {open && estateId && (
@@ -819,11 +503,10 @@ export default function BillPage() {
           </Modal>
         )}
 
-        {assignBill && estateId && (
-          <Modal visible={!!assignBill} onClose={closeAssignModal}>
+        {assignModalOpen && estateId && (
+          <Modal visible={assignModalOpen} onClose={closeAssignModal}>
             <BillForAddressForm
               estateId={estateId}
-              billName={assignBill.name}
               onSubmit={handleAssignBillForAddress}
               onClose={closeAssignModal}
             />

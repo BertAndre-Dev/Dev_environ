@@ -6,7 +6,6 @@ import type { AppDispatch } from "@/redux/store";
 import { getFieldByEstate } from "@/redux/slice/admin/address-mgt/fields/fields";
 import { getEntriesByField } from "@/redux/slice/admin/address-mgt/entry/entry";
 import { Input } from "@/components/ui/input";
-import { IsoDatePicker } from "@/components/ui/iso-date-picker";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,20 +17,21 @@ import {
 
 export interface BillForAddressFormData {
   addressId: string;
-  frequency: string;
-  amountPerBillingPeriod: number;
-  startDate: string;
+  name: string;
+  description: string;
+  amount: number;
+  frequency: "oneOff";
+  isServiceCharge: boolean;
 }
 
 interface BillForAddressFormProps {
   readonly estateId: string;
-  readonly billName: string;
   readonly onSubmit: (data: BillForAddressFormData) => Promise<void> | void;
   readonly onClose?: () => void;
 }
 
 export default function BillForAddressForm(props: BillForAddressFormProps) {
-  const { estateId, billName, onSubmit, onClose } = props;
+  const { estateId, onSubmit, onClose } = props;
   const dispatch = useDispatch<AppDispatch>();
   const [addressOptions, setAddressOptions] = useState<
     { label: string; value: string }[]
@@ -41,9 +41,10 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
 
   const [form, setForm] = useState({
     addressId: "",
-    frequency: "monthly",
-    amountPerBillingPeriod: "",
-    startDate: "",
+    name: "",
+    description: "",
+    amount: "",
+    isServiceCharge: false,
   });
 
   useEffect(() => {
@@ -97,7 +98,7 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
 
   const handleChange = (
     field: keyof typeof form,
-    value: string,
+    value: string | boolean,
   ) => {
     setForm((prev) => ({
       ...prev,
@@ -111,17 +112,17 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
       toast.error("Please select an address.");
       return;
     }
-    if (!form.frequency?.trim()) {
-      toast.error("Please enter billing frequency.");
+    if (!form.name.trim()) {
+      toast.error("Please enter a bill name.");
       return;
     }
-    const amount = parseFormattedNumber(form.amountPerBillingPeriod);
+    if (!form.description.trim()) {
+      toast.error("Please enter a description.");
+      return;
+    }
+    const amount = parseFormattedNumber(form.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
-      toast.error("Please enter a valid amount per billing period.");
-      return;
-    }
-    if (!form.startDate?.trim()) {
-      toast.error("Please enter a start date.");
+      toast.error("Please enter a valid amount.");
       return;
     }
 
@@ -129,9 +130,11 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
       setSubmitting(true);
       await onSubmit({
         addressId: form.addressId,
-        frequency: form.frequency,
-        amountPerBillingPeriod: amount,
-        startDate: form.startDate,
+        name: form.name.trim(),
+        description: form.description.trim(),
+        amount,
+        frequency: "oneOff",
+        isServiceCharge: form.isServiceCharge,
       });
     } finally {
       setSubmitting(false);
@@ -142,7 +145,7 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
     <form onSubmit={handleSubmit}>
       <CardHeader>
         <CardTitle className="text-lg pb-4 pt-8 font-semibold">
-          Assign "{billName}" to an address
+          Create one-off bill for an address
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -176,47 +179,62 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="frequency">Frequency</Label>
-          <select
-            id="frequency"
-            aria-label="Select billing frequency"
-            className="w-full border border-border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#0150AC]"
-            value={form.frequency}
-            onChange={(e) => handleChange("frequency", e.target.value)}
-          >
-            <option value="monthly">Monthly</option>
-            <option value="quarterly">Quarterly</option>
-            <option value="yearly">Yearly</option>
-          </select>
+          <Label htmlFor="billName">Bill Name</Label>
+          <Input
+            id="billName"
+            value={form.name}
+            onChange={(e) => handleChange("name", e.target.value)}
+            placeholder="Gate repair"
+          />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="amountPerBillingPeriod">
-            Amount per billing period (₦)
-          </Label>
+          <Label htmlFor="description">Description</Label>
           <Input
-            id="amountPerBillingPeriod"
+            id="description"
+            value={form.description}
+            onChange={(e) => handleChange("description", e.target.value)}
+            placeholder="One-off gate repair for Plot 12 only"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="amount">Amount (₦)</Label>
+          <Input
+            id="amount"
             type="text"
             inputMode="numeric"
-            value={form.amountPerBillingPeriod}
+            value={form.amount}
             onChange={(e) =>
-              handleChange(
-                "amountPerBillingPeriod",
-                formatAmountInput(e.target.value),
-              )
+              handleChange("amount", formatAmountInput(e.target.value))
             }
-            placeholder="10,000"
+            placeholder="25,000"
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="startDate">Start Date</Label>
-          <IsoDatePicker
-            id="startDate"
-            value={form.startDate}
-            onChange={(iso) => handleChange("startDate", iso)}
-          />
+          <Label htmlFor="frequency">Frequency</Label>
+          <Input id="frequency" value="One-off" disabled readOnly />
         </div>
+
+        <label
+          htmlFor="isServiceCharge"
+          className="flex cursor-pointer items-start gap-2.5"
+        >
+          <input
+            id="isServiceCharge"
+            type="checkbox"
+            checked={form.isServiceCharge}
+            onChange={(e) => handleChange("isServiceCharge", e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-gray-300 text-[#0150AC] focus:ring-[#0150AC]"
+          />
+          <span>
+            <span className="block text-sm font-medium">Service charge</span>
+            <span className="mt-0.5 block text-xs text-muted-foreground">
+              Mark this bill as a service charge for the selected address.
+            </span>
+          </span>
+        </label>
 
         <div className="pt-4 flex gap-2">
           {onClose && (
@@ -230,16 +248,11 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
               Cancel
             </Button>
           )}
-          <Button
-            type="submit"
-            className="flex-1"
-            disabled={submitting}
-          >
-            {submitting ? "Assigning..." : "Assign Bill"}
+          <Button type="submit" className="flex-1" disabled={submitting}>
+            {submitting ? "Creating..." : "Create Bill"}
           </Button>
         </div>
       </CardContent>
     </form>
   );
 }
-

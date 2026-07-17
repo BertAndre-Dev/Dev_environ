@@ -267,7 +267,7 @@ export default function PayBillsPage() {
       const paymentUrl = paymentRes?.data?.link || paymentRes?.data?.url;
       if (!paymentUrl) throw new Error("Payment URL not received");
 
-      globalThis.location.href = paymentUrl;
+      globalThis.open(paymentUrl, "_blank", "noopener,noreferrer");
     } catch (err: any) {
       toast.error(err?.message || "Failed to fund wallet.");
     }

@@ -263,6 +263,13 @@ export default function ResidentMeter() {
       if (meter?.meterNumber) {
         tasks.push(
           dispatch(
+            getMeterVendHistory({
+              meterNumber: meter.meterNumber,
+              page: 1,
+              limit: Number(pagination?.limit) || 10,
+            }),
+          ).unwrap(),
+          dispatch(
             getMeterUsage({
               meterNumber: meter.meterNumber,
               range: usageRange,

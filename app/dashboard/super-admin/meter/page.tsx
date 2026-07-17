@@ -39,7 +39,6 @@ import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import { IoSpeedometerOutline } from "react-icons/io5";
 import Loader from "@/components/ui/Loader";
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
-import { getCompanies } from "@/redux/slice/super-admin/company-mgt/company";
 
 /** addressId from list API can be a string or populated object with id */
 type AddressIdInput = string | { id: string; data?: Record<string, unknown> };
@@ -186,10 +185,6 @@ export default function AdminMeterManagement() {
     estatesLoading: state.estate.getAllEstatesState === "isLoading",
   }));
 
-  const { allCompanies } = useSelector((state: RootState) => ({
-    allCompanies: state.superAdminCompany.list ?? [],
-  }));
-
   const { meterUsage, meterUsageLoading, meterUsageMessage } = useSelector(
     (state: RootState) => ({
       meterUsage: state.residentMeter.meterUsage,
@@ -234,16 +229,6 @@ export default function AdminMeterManagement() {
     return map;
   }, [allEstates]);
 
-  const companyNameById = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const company of allCompanies) {
-      const id = company.id ?? company._id;
-      const name = company.name;
-      if (id && name) map[String(id)] = String(name);
-    }
-    return map;
-  }, [allCompanies]);
-
   const estateOptions = useMemo<EstateOption[]>(
     () =>
       Object.entries(estateNameById)
@@ -275,11 +260,6 @@ export default function AdminMeterManagement() {
       .unwrap()
       .catch(() => {
         // non-blocking: table can still render estateId if name isn't available
-      });
-    dispatch(getCompanies({ page: 1, limit: ESTATE_FILTER_FETCH_LIMIT }))
-      .unwrap()
-      .catch(() => {
-        // non-blocking: table can still render companyId if name isn't available
       });
   }, [dispatch]);
 
@@ -446,33 +426,14 @@ export default function AdminMeterManagement() {
     { key: "meterNumber", header: "Meter Number" },
     ...getAddressColumns(allSuperAdminMeters),
     {
-      key: "estateOrCompany",
-      header: "Estate/Company",
+      key: "estateId",
+      header: "Estate",
       render: (item: AdminMeterData) => {
-        if (item.estateId) {
-          return (
-            <span className="font-medium">
-              {estateNameById[item.estateId] ?? item.estateId}
-            </span>
-          );
-        }
-        if (item.companyId) {
-          return (
-            <span className="font-medium">
-              {companyNameById[item.companyId] ?? item.companyId}
-            </span>
-          );
-        }
-        return <span className="text-muted-foreground">—</span>;
-      },
-      exportValue: (item: AdminMeterData) => {
-        if (item.estateId) {
-          return estateNameById[item.estateId] ?? item.estateId;
-        }
-        if (item.companyId) {
-          return companyNameById[item.companyId] ?? item.companyId;
-        }
-        return "";
+        const id = item.estateId;
+        if (!id) return <span className="text-muted-foreground">—</span>;
+        return (
+          <span className="font-medium">{estateNameById[id] ?? id}</span>
+        );
       },
     },
     {
@@ -746,7 +707,6 @@ export default function AdminMeterManagement() {
                             getAllMeters({
                               page: 1,
                               limit: 50000,
-                              search: searchQuery || undefined,
                             }),
                           ).unwrap();
                           return res?.data ?? [];

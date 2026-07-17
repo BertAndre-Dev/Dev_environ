@@ -125,8 +125,8 @@ interface SelectOption {
 type FilterScope = "estate" | "company";
 
 const FILTER_SCOPE_OPTIONS: { label: string; value: FilterScope }[] = [
-  { label: "Filter by estate", value: "estate" },
-  { label: "Filter by company", value: "company" },
+  { label: "Estate", value: "estate" },
+  { label: "Company", value: "company" },
 ];
 
 /** Estates/companies for filter dropdown — not tied to user table page size. */
@@ -578,22 +578,80 @@ export default function SuperAdminUserPage() {
         ].join(" ")}
       >
         {/* Header */}
-        <div className="flex flex-col items-start md:items-center justify-between flex-wrap gap-4">
-          <div className="flex flex-col gap-2 w-full md:flex-1 min-w-0">
+        <div className="flex flex-col gap-4 w-full">
+          <div className="flex flex-col gap-1 w-full min-w-0">
             <div className="flex flex-row items-center justify-between gap-2 w-full">
               <h1 className="font-heading text-3xl font-bold">
                 User Management
               </h1>
-              <div className="w-48">
+              <Button
+                onClick={() => handleEstateModal()}
+                className="flex items-center gap-2 cursor-pointer shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                Invite Admins
+              </Button>
+            </div>
+            <p className="text-muted-foreground">Manage Users</p>
+          </div>
+          <div className="flex flex-col gap-2 items-end justify-start w-full">
+            <div
+              className="inline-flex rounded-full border border-input bg-muted/30 p-1"
+              role="group"
+              aria-label="Filter by estate or company"
+            >
+              {FILTER_SCOPE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => handleFilterScopeChange(opt.value)}
+                  className={[
+                    "rounded-full px-4 py-1 text-sm font-medium transition-colors cursor-pointer",
+                    filterScope === opt.value
+                      ? "bg-[#0150AC] text-white shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  ].join(" ")}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-row md:flex-row md:flex-wrap items-stretch md:items-start justify-end gap-3 w-full sm:w-auto">
+              <div className="w-36">
+                {filterScope === "estate" ? (
+                  <Select
+                    options={estateOptions}
+                    placeholder="Select estate"
+                    value={selectedEstate}
+                    onChange={(option) => setSelectedEstate(option)}
+                    isSearchable
+                    isLoading={estateLoading}
+                    className="rounded-full"
+                  />
+                ) : (
+                  <Select
+                    options={companyOptions}
+                    placeholder="Select company"
+                    value={selectedCompany}
+                    onChange={(option) => setSelectedCompany(option)}
+                    isSearchable
+                    isLoading={companyLoading}
+                    className="rounded-full"
+                  />
+                )}
+              </div>
+
+              <div className="w-36">
                 <Select
-                  options={FILTER_SCOPE_OPTIONS}
-                  placeholder="Filter by..."
-                  value={FILTER_SCOPE_OPTIONS.find(
-                    (o) => o.value === filterScope,
+                  options={ESTATE_USER_ROLE_FILTER_OPTIONS}
+                  placeholder="Filter by role"
+                  value={ESTATE_USER_ROLE_FILTER_OPTIONS.find(
+                    (o) => o.value === roleFilter,
                   )}
                   onChange={(option) =>
-                    handleFilterScopeChange(
-                      (option?.value as FilterScope) ?? "estate",
+                    setRoleFilter(
+                      (option?.value as EstateUserRoleFilter) ??
+                        DEFAULT_ESTATE_USER_ROLE,
                     )
                   }
                   isSearchable={false}
@@ -608,63 +666,6 @@ export default function SuperAdminUserPage() {
                 />
               </div>
             </div>
-            <p className="text-muted-foreground mt-1">Manage Users</p>
-            <div className="flex flex-row items-center justify-between gap-2 w-full">
-            <div className="w-48">
-              <Select
-                options={ESTATE_USER_ROLE_FILTER_OPTIONS}
-                placeholder="Filter by role"
-                value={ESTATE_USER_ROLE_FILTER_OPTIONS.find(
-                  (o) => o.value === roleFilter,
-                )}
-                onChange={(option) =>
-                  setRoleFilter(
-                    (option?.value as EstateUserRoleFilter) ??
-                      DEFAULT_ESTATE_USER_ROLE,
-                  )
-                }
-                isSearchable={false}
-                styles={{
-                  control: (base) => ({ ...base, cursor: "pointer" }),
-                  option: (base) => ({ ...base, cursor: "pointer" }),
-                  dropdownIndicator: (base) => ({ ...base, cursor: "pointer" }),
-                }}
-              />
-            </div>
-               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="w-56">
-              {filterScope === "estate" ? (
-                <Select
-                  options={estateOptions}
-                  placeholder="Select estate"
-                  value={selectedEstate}
-                  onChange={(option) => setSelectedEstate(option)}
-                  isSearchable
-                  isLoading={estateLoading}
-                  className="rounded-full"
-                />
-              ) : (
-                <Select
-                  options={companyOptions}
-                  placeholder="Select company"
-                  value={selectedCompany}
-                  onChange={(option) => setSelectedCompany(option)}
-                  isSearchable
-                  isLoading={companyLoading}
-                  className="rounded-full"
-                />
-              )}
-            </div>
-
-            <Button
-              onClick={() => handleEstateModal()}
-              className="flex items-center gap-2 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              Invite Admins
-            </Button>
-          </div>
-          </div>
           </div>
         </div>
 

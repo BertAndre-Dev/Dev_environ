@@ -2,11 +2,30 @@
 
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { Calendar } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const DISPLAY_DATE_FORMAT = "MMM d, yyyy";
+
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
+
+const YEAR_RANGE = 40;
+
 const inputClassName =
-  "h-9 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary w-full max-w-full";
+  "h-9 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary w-full max-w-full cursor-pointer placeholder:text-muted-foreground";
 
 /** Shown next to every date field for consistent affordance. */
 const datePickerIcon = (
@@ -15,6 +34,102 @@ const datePickerIcon = (
     aria-hidden
   />
 );
+
+function buildYearOptions(centerYear: number) {
+  const start = centerYear - Math.floor(YEAR_RANGE / 2);
+  return Array.from({ length: YEAR_RANGE }, (_, i) => start + i);
+}
+
+type CustomHeaderProps = {
+  date: Date;
+  changeYear: (year: number) => void;
+  changeMonth: (month: number) => void;
+  decreaseMonth: () => void;
+  increaseMonth: () => void;
+  prevMonthButtonDisabled: boolean;
+  nextMonthButtonDisabled: boolean;
+};
+
+function DatePickerHeader({
+  date,
+  changeYear,
+  changeMonth,
+  decreaseMonth,
+  increaseMonth,
+  prevMonthButtonDisabled,
+  nextMonthButtonDisabled,
+}: Readonly<CustomHeaderProps>) {
+  const years = buildYearOptions(date.getFullYear());
+
+  return (
+    <div className="iso-datepicker-custom-header flex items-center justify-between gap-2 px-1 pb-2">
+      <button
+        type="button"
+        className="iso-datepicker-nav-btn"
+        onClick={decreaseMonth}
+        disabled={prevMonthButtonDisabled}
+        aria-label="Previous month"
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </button>
+
+      <div className="flex min-w-0 flex-1 items-center justify-center gap-1.5">
+        <select
+          aria-label="Month"
+          className="iso-datepicker-select"
+          value={date.getMonth()}
+          onChange={(e) => changeMonth(Number(e.target.value))}
+        >
+          {MONTHS.map((month, index) => (
+            <option key={month} value={index}>
+              {month}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="Year"
+          className="iso-datepicker-select"
+          value={date.getFullYear()}
+          onChange={(e) => changeYear(Number(e.target.value))}
+        >
+          {years.map((year) => (
+            <option key={year} value={year}>
+              {year}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <button
+        type="button"
+        className="iso-datepicker-nav-btn"
+        onClick={increaseMonth}
+        disabled={nextMonthButtonDisabled}
+        aria-label="Next month"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
+const sharedPickerProps = {
+  dateFormat: DISPLAY_DATE_FORMAT,
+  showPopperArrow: false,
+  showIcon: true,
+  toggleCalendarOnIconClick: true,
+  icon: datePickerIcon,
+  todayButton: "Today",
+  withPortal: true,
+  shouldCloseOnSelect: true,
+  isClearable: true,
+  fixedHeight: true,
+  popperClassName: "iso-datepicker-popper",
+  calendarClassName: "iso-datepicker-calendar",
+  renderCustomHeader: (props: CustomHeaderProps) => (
+    <DatePickerHeader {...props} />
+  ),
+};
 
 export function parseIsoToDate(value: string | undefined | null): Date | null {
   if (value == null || String(value).trim() === "") return null;
@@ -52,31 +167,28 @@ export function IsoDatePicker({
   id,
   value,
   onChange,
-  placeholder,
+  placeholder = "Select date",
   minDate,
   maxDate,
   disabled,
   className,
   ariaLabel,
 }: Readonly<IsoDatePickerProps>) {
-  const aria = ariaLabel;
+  const selected = parseIsoToDate(value);
   return (
     <DatePicker
+      {...sharedPickerProps}
       id={id}
-      selected={parseIsoToDate(value)}
+      selected={selected}
       onChange={(d: Date | null) => onChange(dateToIsoString(d))}
-      dateFormat="yyyy-MM-dd"
       placeholderText={placeholder}
       minDate={parseIsoToDate(minDate) ?? undefined}
       maxDate={parseIsoToDate(maxDate) ?? undefined}
+      openToDate={selected ?? undefined}
       disabled={disabled}
       className={cn(inputClassName, className)}
       wrapperClassName="w-full"
-      showPopperArrow={false}
-      showIcon
-      toggleCalendarOnIconClick
-      icon={datePickerIcon}
-      ariaLabel={aria}
+      ariaLabel={ariaLabel}
     />
   );
 }
@@ -90,6 +202,8 @@ export type IsoDateRangePickerProps = {
   endId?: string;
   startAriaLabel?: string;
   endAriaLabel?: string;
+  startPlaceholder?: string;
+  endPlaceholder?: string;
   disabled?: boolean;
   className?: string;
 };
@@ -108,12 +222,14 @@ export function IsoLinkedRangeStart({
   startDate,
   endDate,
   onStartChange,
+  onEndChange,
   id,
   ariaLabel,
-  placeholder,
+  placeholder = "Select start date",
   disabled,
   className,
 }: Omit<LinkedRangeBase, "onEndChange"> & {
+  onEndChange?: (iso: string) => void;
   id?: string;
   ariaLabel?: string;
   placeholder?: string;
@@ -122,22 +238,25 @@ export function IsoLinkedRangeStart({
   const e = parseIsoToDate(endDate);
   return (
     <DatePicker
+      {...sharedPickerProps}
       id={id}
       selected={s}
-      onChange={(d: Date | null) => onStartChange(dateToIsoString(d))}
+      onChange={(d: Date | null) => {
+        const next = dateToIsoString(d);
+        onStartChange(next);
+        // If new start is after current end, clear end so the range stays valid.
+        if (d && e && d > e) {
+          onEndChange?.("");
+        }
+      }}
       selectsStart
       startDate={s}
       endDate={e}
-      maxDate={e ?? undefined}
-      dateFormat="yyyy-MM-dd"
+      openToDate={s ?? new Date()}
       placeholderText={placeholder}
       disabled={disabled}
       className={cn(inputClassName, className)}
       wrapperClassName="w-full"
-      showPopperArrow={false}
-      showIcon
-      toggleCalendarOnIconClick
-      icon={datePickerIcon}
       ariaLabel={ariaLabel}
     />
   );
@@ -150,7 +269,7 @@ export function IsoLinkedRangeEnd({
   onEndChange,
   id,
   ariaLabel,
-  placeholder,
+  placeholder = "Select end date",
   disabled,
   className,
 }: Omit<LinkedRangeBase, "onStartChange"> & {
@@ -162,6 +281,7 @@ export function IsoLinkedRangeEnd({
   const e = parseIsoToDate(endDate);
   return (
     <DatePicker
+      {...sharedPickerProps}
       id={id}
       selected={e}
       onChange={(d: Date | null) => onEndChange(dateToIsoString(d))}
@@ -169,15 +289,11 @@ export function IsoLinkedRangeEnd({
       startDate={s}
       endDate={e}
       minDate={s ?? undefined}
-      dateFormat="yyyy-MM-dd"
+      openToDate={e ?? s ?? new Date()}
       placeholderText={placeholder}
       disabled={disabled}
       className={cn(inputClassName, className)}
       wrapperClassName="w-full"
-      showPopperArrow={false}
-      showIcon
-      toggleCalendarOnIconClick
-      icon={datePickerIcon}
       ariaLabel={ariaLabel}
     />
   );
@@ -193,17 +309,21 @@ export function IsoDateRangePicker({
   endId,
   startAriaLabel,
   endAriaLabel,
+  startPlaceholder,
+  endPlaceholder,
   disabled,
   className,
 }: Readonly<IsoDateRangePickerProps>) {
   return (
-    <>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <IsoLinkedRangeStart
         id={startId}
         startDate={startDate}
         endDate={endDate}
         onStartChange={onStartChange}
+        onEndChange={onEndChange}
         ariaLabel={startAriaLabel}
+        placeholder={startPlaceholder}
         disabled={disabled}
         className={className}
       />
@@ -213,9 +333,10 @@ export function IsoDateRangePicker({
         endDate={endDate}
         onEndChange={onEndChange}
         ariaLabel={endAriaLabel}
+        placeholder={endPlaceholder}
         disabled={disabled}
         className={className}
       />
-    </>
+    </div>
   );
 }

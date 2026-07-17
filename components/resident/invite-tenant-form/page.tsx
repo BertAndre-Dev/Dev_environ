@@ -440,34 +440,37 @@ export default function InviteTenantForm({ close }: InviteTenantFormProps) {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="addressId">Address</Label>
-            {loading ? (
-              <p className="text-sm text-muted-foreground">Loading addresses...</p>
-            ) : (
-              <select
-                title="Select an address"
-                aria-label="Select an address"
-                id="addressId"
-                value={formData.addressId}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, addressId: e.target.value }))
-                }
-                className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-              >
-                <option value="">Select an address</option>
-                {entryOptions.length === 0 ? (
-                  <option disabled>No addresses configured</option>
-                ) : (
-                  entryOptions.map((entry) => (
+          {entryOptions.length > 1 && (
+            <div className="space-y-2">
+              <Label htmlFor="addressId">Address</Label>
+              {loading ? (
+                <p className="text-sm text-muted-foreground">Loading addresses...</p>
+              ) : (
+                <select
+                  title="Select an address"
+                  aria-label="Select an address"
+                  id="addressId"
+                  value={formData.addressId}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, addressId: e.target.value }))
+                  }
+                  className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+                >
+                  <option value="">Select an address</option>
+                  {entryOptions.map((entry) => (
                     <option key={entry.value} value={entry.value}>
                       {entry.label}
                     </option>
-                  ))
-                )}
-              </select>
-            )}
-          </div>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+          {!loading && entryOptions.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              No addresses configured
+            </p>
+          )}
 
           <Button
             type="submit"

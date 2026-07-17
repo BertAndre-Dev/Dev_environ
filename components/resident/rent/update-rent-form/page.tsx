@@ -134,6 +134,9 @@ export default function UpdateRentForm({
                 startDate={startDate}
                 endDate={endDate}
                 onStartChange={setStartDate}
+                onEndChange={setEndDate}
+                placeholder="e.g. Jan 1, 2026"
+                ariaLabel="Rent start date"
               />
             </div>
           </div>
@@ -145,6 +148,8 @@ export default function UpdateRentForm({
                 startDate={startDate}
                 endDate={endDate}
                 onEndChange={setEndDate}
+                placeholder="e.g. Dec 31, 2026"
+                ariaLabel="Rent end date"
               />
             </div>
           </div>

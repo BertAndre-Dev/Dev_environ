@@ -11,6 +11,7 @@ export function VisitorUpsertModal({
   residentId,
   estateId,
   addressId,
+  showAddressField = true,
   onSubmitSuccess,
   onClose,
 }: Readonly<{
@@ -20,6 +21,7 @@ export function VisitorUpsertModal({
   residentId: string;
   estateId: string;
   addressId: string | { id: string; data: { block: string; unit: string } };
+  showAddressField?: boolean;
   onSubmitSuccess: () => void | Promise<void>;
   onClose: () => void;
 }>) {
@@ -32,6 +34,7 @@ export function VisitorUpsertModal({
         residentId={residentId}
         estateId={estateId}
         addressId={addressId ?? ""}
+        showAddressField={showAddressField}
         onSubmitSuccess={onSubmitSuccess}
         onClose={onClose}
       />

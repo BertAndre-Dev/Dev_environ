@@ -84,6 +84,11 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
         );
 
         setAddressOptions(options);
+        if (options.length === 1) {
+          setForm((prev) =>
+            prev.addressId ? prev : { ...prev, addressId: options[0].value },
+          );
+        }
       } catch {
         toast.error("Failed to load addresses.");
       } finally {
@@ -149,34 +154,39 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="addressId">Address</Label>
-          <select
-            id="addressId"
-            aria-label="Select address"
-            className="w-full border border-border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#0150AC]"
-            value={form.addressId}
-            onChange={(e) => handleChange("addressId", e.target.value)}
-            disabled={loadingAddresses || addressOptions.length === 0}
-          >
-            <option value="">Select address...</option>
-            {addressOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          {loadingAddresses && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Loading addresses...
-            </p>
-          )}
-          {!loadingAddresses && addressOptions.length === 0 && (
-            <p className="text-xs text-muted-foreground mt-1">
-              No addresses configured for this estate.
-            </p>
-          )}
-        </div>
+        {addressOptions.length > 1 && (
+          <div className="space-y-2">
+            <Label htmlFor="addressId">Address</Label>
+            <select
+              id="addressId"
+              aria-label="Select address"
+              className="w-full border border-border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#0150AC]"
+              value={form.addressId}
+              onChange={(e) => handleChange("addressId", e.target.value)}
+              disabled={loadingAddresses || addressOptions.length === 0}
+            >
+              <option value="">Select address...</option>
+              {addressOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            {loadingAddresses && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Loading addresses...
+              </p>
+            )}
+          </div>
+        )}
+        {loadingAddresses && addressOptions.length <= 1 && (
+          <p className="text-xs text-muted-foreground">Loading addresses...</p>
+        )}
+        {!loadingAddresses && addressOptions.length === 0 && (
+          <p className="text-xs text-muted-foreground">
+            No addresses configured for this estate.
+          </p>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="billName">Bill Name</Label>

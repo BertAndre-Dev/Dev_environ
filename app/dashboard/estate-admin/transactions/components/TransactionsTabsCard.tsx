@@ -10,7 +10,7 @@ type Props = {
   onTabChange: (tab: TransactionsActiveTab) => void;
   tabs?: TabDef[];
   history: React.ReactNode;
-  vends: React.ReactNode;
+  vends?: React.ReactNode;
   paidBills: React.ReactNode;
 };
 
@@ -45,7 +45,7 @@ export function TransactionsTabsCard({
       </div>
 
       {activeTab === "history" ? history : null}
-      {activeTab === "vends" ? vends : null}
+      {activeTab === "vends" ? vends ?? null : null}
       {activeTab === "paid-bills" ? paidBills : null}
     </Card>
   );

@@ -85,61 +85,6 @@ export const getCompanyTransactionHistory = createAsyncThunk(
   },
 );
 
-export const getCompanyVends = createAsyncThunk(
-  "company-transaction/getCompanyVends",
-  async (
-    {
-      companyId,
-      estateId,
-      page = 1,
-      limit = 10,
-      startDate,
-      endDate,
-    }: {
-      companyId?: string;
-      estateId?: string;
-      page?: number;
-      limit?: number;
-      startDate?: string;
-      endDate?: string;
-    },
-    { rejectWithValue },
-  ) => {
-    try {
-      const params = new URLSearchParams();
-      if (page != null) params.set("page", String(page));
-      if (limit != null) params.set("limit", String(limit));
-      if (startDate) params.set("startDate", startDate);
-      if (endDate) params.set("endDate", endDate);
-      const query = params.toString();
-      const suffix = query ? `?${query}` : "";
-
-      if (estateId) {
-        const res = await axiosInstance.get(
-          `/api/v1/meters/estate/${estateId}/vends${suffix}`,
-        );
-        return res.data;
-      }
-
-      if (!companyId) {
-        return rejectWithValue({
-          message: "Company or estate is required to fetch vends.",
-        });
-      }
-
-      const res = await axiosInstance.get(
-        `/api/v1/meters/company/${companyId}/vends${suffix}`,
-      );
-      return res.data;
-    } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message || "Failed to fetch vends",
-      });
-    }
-  },
-);
-
 export const getCompanyPaidBills = createAsyncThunk(
   "company-transaction/getCompanyPaidBills",
   async (

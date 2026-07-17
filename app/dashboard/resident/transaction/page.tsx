@@ -263,7 +263,8 @@ export default function TransactionPage() {
 
       const paymentUrl = paymentRes?.data?.link || paymentRes?.data?.url;
       if (!paymentUrl) throw new Error("Payment URL not received");
-      window.location.href = paymentUrl;
+      window.open(paymentUrl, "_blank", "noopener,noreferrer");
+      setContinuingPaymentTxRef(null);
     } catch (err: any) {
       toast.error(err?.message || "Failed to continue payment.");
       setContinuingPaymentTxRef(null);
@@ -317,7 +318,10 @@ export default function TransactionPage() {
       const paymentUrl = paymentRes?.data?.link || paymentRes?.data?.url;
       if (!paymentUrl) throw new Error("Payment URL not received");
 
-      window.location.href = paymentUrl;
+      window.open(paymentUrl, "_blank", "noopener,noreferrer");
+      if (userId) {
+        dispatch(getTransactionHistory({ userId, page: 1, limit: 10 }));
+      }
     } catch (err: any) {
       toast.error(err?.message);
     }

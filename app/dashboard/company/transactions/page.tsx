@@ -4,7 +4,6 @@ import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
   verifyCompanyTransaction,
   getCompanyTransactionHistory,
-  getCompanyVends,
   getCompanyPaidBills,
 } from "@/redux/slice/company/transaction/company-transaction";
 import {
@@ -27,7 +26,6 @@ import {
   type TransactionsActiveTab,
 } from "@/app/dashboard/estate-admin/transactions/components/TransactionsTabsCard";
 import { HistoryTransactionsTab } from "@/app/dashboard/estate-admin/transactions/components/HistoryTransactionsTab";
-import { VendsTab } from "@/app/dashboard/estate-admin/transactions/components/VendsTab";
 import { PaidBillsTab } from "@/app/dashboard/estate-admin/transactions/components/PaidBillsTab";
 import { formatDateTime } from "@/lib/format-date";
 
@@ -44,18 +42,7 @@ export default function CompanyTransactionPage() {
   const [email, setEmail] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
   const [limit] = useState(10);
-  const [activeTab, setActiveTab] = useState<TransactionsActiveTab>("vends");
-  const [vendsData, setVendsData] = useState<any[]>([]);
-  const [vendsPagination, setVendsPagination] = useState<{
-    total: number;
-    page: number;
-    limit: number;
-    pages: number;
-  } | null>(null);
-  const [vendsPage, setVendsPage] = useState(1);
-  const [loadingVends, setLoadingVends] = useState(false);
-  const [vendsStartDate, setVendsStartDate] = useState<string>("");
-  const [vendsEndDate, setVendsEndDate] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<TransactionsActiveTab>("history");
   const [paidBillsData, setPaidBillsData] = useState<any[]>([]);
   const [paidBillsPage, setPaidBillsPage] = useState(1);
   const [loadingPaidBills, setLoadingPaidBills] = useState(false);
@@ -165,44 +152,8 @@ export default function CompanyTransactionPage() {
   }, [search, companyId, selectedEstateId, dispatch, buildHistoryParams]);
 
   useEffect(() => {
-    setVendsPage(1);
     setPaidBillsPage(1);
   }, [selectedEstateId]);
-
-  useEffect(() => {
-    if (activeTab !== "vends" || !companyId || !selectedEstateId) return;
-    (async () => {
-      setLoadingVends(true);
-      try {
-        const shouldApplyVendsDateFilter = Boolean(vendsStartDate && vendsEndDate);
-        const res = await dispatch(
-          getCompanyVends({
-            estateId: selectedEstateId,
-            page: vendsPage,
-            limit,
-            startDate: shouldApplyVendsDateFilter ? vendsStartDate : undefined,
-            endDate: shouldApplyVendsDateFilter ? vendsEndDate : undefined,
-          }),
-        ).unwrap();
-        setVendsData(res?.data ?? []);
-        setVendsPagination(res?.pagination ?? null);
-      } catch {
-        setVendsData([]);
-        setVendsPagination(null);
-      } finally {
-        setLoadingVends(false);
-      }
-    })();
-  }, [
-    activeTab,
-    companyId,
-    selectedEstateId,
-    vendsPage,
-    dispatch,
-    limit,
-    vendsStartDate,
-    vendsEndDate,
-  ]);
 
   const PAID_BILLS_FETCH_LIMIT = 2000;
   useEffect(() => {
@@ -374,6 +325,8 @@ export default function CompanyTransactionPage() {
     );
   }
 
+  const getTxnUser = (item: any) => item?.userId ?? item?.user;
+
   const columns = [
     {
       key: "createdAt",
@@ -386,15 +339,16 @@ export default function CompanyTransactionPage() {
     {
       key: "user",
       header: "Resident",
-      render: (item: any) =>
-        item.user
-          ? [item.user.firstName, item.user.lastName]
-              .filter(Boolean)
-              .join(" ") || item.user.email
-          : "-",
+      render: (item: any) => {
+        const u = getTxnUser(item);
+        if (!u || typeof u !== "object") return "-";
+        return (
+          [u.firstName, u.lastName].filter(Boolean).join(" ") || u.email || "-"
+        );
+      },
       exportValue: (item: any) => {
-        const u = item?.user;
-        if (!u) return "";
+        const u = getTxnUser(item);
+        if (!u || typeof u !== "object") return "";
         const name = [u.firstName, u.lastName].filter(Boolean).join(" ").trim();
         return name || u.email || "";
       },
@@ -402,14 +356,27 @@ export default function CompanyTransactionPage() {
     {
       key: "email",
       header: "Email",
-      render: (item: any) => item.user?.email ?? "-",
-      exportValue: (item: any) => String(item?.user?.email ?? ""),
+      render: (item: any) => getTxnUser(item)?.email ?? "-",
+      exportValue: (item: any) => String(getTxnUser(item)?.email ?? ""),
     },
     {
-      key: "tx_ref",
-      header: "Transaction Reference",
-      render: (item: any) => item.tx_ref ?? "-",
-      exportValue: (item: any) => String(item?.tx_ref ?? ""),
+      key: "estate",
+      header: "Estate",
+      render: (item: any) =>
+        item.estateId?.name ?? item.estate?.name ?? selectedEstate?.label ?? "-",
+      exportValue: (item: any) =>
+        String(
+          item.estateId?.name ??
+            item.estate?.name ??
+            selectedEstate?.label ??
+            "",
+        ),
+    },
+    {
+      key: "description",
+      header: "Description",
+      render: (item: any) => item.description ?? "-",
+      exportValue: (item: any) => String(item?.description ?? ""),
     },
     {
       key: "type",
@@ -463,137 +430,6 @@ export default function CompanyTransactionPage() {
         );
       },
       exportValue: (item: any) => String(item.paymentStatus ?? "Pending"),
-    },
-  ];
-
-  const vendsColumns = [
-    {
-      key: "createdAt",
-      header: "Date",
-      render: (item: any) =>
-        formatDateTime(item.createdAt, "-"),
-      exportValue: (item: any) =>
-        formatDateTime(item.createdAt, ""),
-    },
-    {
-      key: "user",
-      header: "Resident",
-      render: (item: any) =>
-        item.user
-          ? [item.user.firstName, item.user.lastName]
-              .filter(Boolean)
-              .join(" ") || item.user.email
-          : "-",
-      exportValue: (item: any) => {
-        const u = item?.user;
-        if (!u) return "";
-        const name = [u.firstName, u.lastName].filter(Boolean).join(" ").trim();
-        return name || u.email || "";
-      },
-    },
-    {
-      key: "email",
-      header: "Email",
-      render: (item: any) => {
-        const userEmail = (item?.user?.email ?? "").toString();
-        if (!userEmail) return "-";
-        return (
-          <span
-            className="inline-block max-w-[180px] truncate align-bottom"
-            title={userEmail}
-          >
-            {userEmail}
-          </span>
-        );
-      },
-      exportValue: (item: any) => String(item?.user?.email ?? ""),
-    },
-    {
-      key: "meterNumber",
-      header: "Meter",
-      render: (item: any) => item.meterNumber ?? "-",
-      exportValue: (item: any) => String(item?.meterNumber ?? ""),
-    },
-    {
-      key: "amount",
-      header: "Amount (₦)",
-      render: (item: any) => item.amount?.toLocaleString() ?? 0,
-      exportValue: (item: any) =>
-        item.amount != null ? String(item.amount) : "",
-    },
-    {
-      key: "netEnergyPrice",
-      header: "Price(₦/kWh)",
-      render: (item: any) => {
-        const e = item?.fullResponse?.energyList?.[0];
-        const price = Number(e?.price);
-        const taxRate = Number(e?.taxRate ?? e?.tax_rate);
-        if (!Number.isFinite(price) || !Number.isFinite(taxRate)) return "—";
-        const totalAmount = price * (1 + taxRate / 100);
-        if (!Number.isFinite(totalAmount)) return "—";
-        return Math.round(totalAmount);
-      },
-      exportValue: (item: any) => {
-        const e = item?.fullResponse?.energyList?.[0];
-        const price = Number(e?.price);
-        const taxRate = Number(e?.taxRate ?? e?.tax_rate);
-        if (!Number.isFinite(price) || !Number.isFinite(taxRate)) return "";
-        const totalAmount = price * (1 + taxRate / 100);
-        if (!Number.isFinite(totalAmount)) return "";
-        return String(Math.round(totalAmount));
-      },
-    },
-    {
-      key: "energyPrice",
-      header: "Net Price(₦/kWh)",
-      render: (item: any) => {
-        const price = item?.fullResponse?.energyList?.[0]?.price;
-        if (price == null || price === "") return "—";
-        const n = Number(price);
-        if (!Number.isFinite(n)) return "—";
-        return n.toLocaleString();
-      },
-      exportValue: (item: any) => {
-        const price = item?.fullResponse?.energyList?.[0]?.price;
-        if (price == null || price === "") return "";
-        const n = Number(price);
-        if (!Number.isFinite(n)) return "";
-        return String(Math.round(n));
-      },
-    },
-    {
-      key: "energyValue",
-      header: "Value",
-      render: (item: any) => {
-        const value = item?.fullResponse?.energyList?.[0]?.value ?? null;
-        if (value == null || value === "") return "—";
-        const vNum = Number(value);
-        return Number(vNum) ? String(vNum) : String(value);
-      },
-      exportValue: (item: any) => {
-        const value = item?.fullResponse?.energyList?.[0]?.value ?? "";
-        return value == null ? "" : String(value);
-      },
-    },
-    {
-      key: "taxRate",
-      header: "Tax Rate (%)",
-      render: (item: any) => {
-        const rate =
-          item?.fullResponse?.energyList?.[0]?.taxRate ??
-          item?.fullResponse?.energyList?.[0]?.tax_rate ??
-          null;
-        if (rate == null || rate === "") return "—";
-        const n = Number(rate);
-        return Number(n) ? String(n) : String(rate);
-      },
-      exportValue: (item: any) => {
-        const rate =
-          item?.fullResponse?.energyList?.[0]?.taxRate ??
-          item?.fullResponse?.energyList?.[0]?.tax_rate ??
-          "";
-        return rate == null ? "" : String(rate);
-      },
     },
   ];
 
@@ -720,7 +556,7 @@ export default function CompanyTransactionPage() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         tabs={[
-          { id: "vends" as const, label: "Company Vends" },
+          { id: "history" as const, label: "Estate Transactions" },
           { id: "paid-bills" as const, label: "Paid Bills" },
         ]}
         history={
@@ -750,60 +586,6 @@ export default function CompanyTransactionPage() {
                       getCompanyTransactionHistory({
                         ...buildHistoryParams(1),
                         limit: 50000,
-                      }),
-                    ).unwrap();
-                    return res?.data ?? [];
-                  }
-                : undefined
-            }
-          />
-        }
-        vends={
-          <VendsTab
-            columns={vendsColumns}
-            data={vendsData}
-            emptyMessage={
-              !estateOptions.length
-                ? "Create an estate first to view vends"
-                : loadingVends
-                  ? "Loading vends..."
-                  : "No vends found."
-            }
-            startDate={vendsStartDate}
-            endDate={vendsEndDate}
-            onDateRangeChange={({
-              startDate,
-              endDate,
-            }: {
-              startDate: string;
-              endDate: string;
-            }) => {
-              setVendsStartDate(startDate);
-              setVendsEndDate(endDate);
-              setVendsPage(1);
-            }}
-            paginationInfo={{
-              total: vendsPagination?.total ?? 0,
-              current: vendsPagination?.page ?? vendsPage,
-              pageSize: vendsPagination?.limit ?? limit,
-            }}
-            onPageChange={(p: number) => setVendsPage(p)}
-            onExportRequest={
-              selectedEstateId
-                ? async () => {
-                    const res = await dispatch(
-                      getCompanyVends({
-                        estateId: selectedEstateId,
-                        page: 1,
-                        limit: 50000,
-                        startDate:
-                          vendsStartDate && vendsEndDate
-                            ? vendsStartDate
-                            : undefined,
-                        endDate:
-                          vendsStartDate && vendsEndDate
-                            ? vendsEndDate
-                            : undefined,
                       }),
                     ).unwrap();
                     return res?.data ?? [];

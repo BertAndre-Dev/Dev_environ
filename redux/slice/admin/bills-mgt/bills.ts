@@ -9,53 +9,13 @@ interface BillData {
 }
 
 export interface CreateBillForAddressPayload {
-  billId: string;
   addressId: string;
   estateId: string;
-  frequency: string;
-  amountPerBillingPeriod: number;
-  startDate: string;
-}
-
-export interface BillsForAddressItem {
-  id?: string;
-  billId?: string;
-  addressId?: string;
-  estateId?: string;
-  userId?: string;
-  billName?: string;
-  frequency?: string;
-  amountPaid?: number;
-  startDate?: string;
-  nextDueDate?: string;
-  status?: string;
-  lastPaymentDate?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
-  [key: string]: unknown;
-}
-
-export interface BillsForAddressResponse {
-  success?: boolean;
-  message?: string;
-  data?: BillsForAddressItem[];
-  totals?: {
-    totalRecords: number;
-    totalBills: number;
-  };
-  pagination?: {
-    total: number;
-    page: number;
-    limit: number;
-    pages: number;
-  };
-}
-
-export interface GetBillsForAddressParams {
-  addressId: string;
-  estateId: string;
-  page?: number;
-  limit?: number;
+  name: string;
+  description: string;
+  amount: number;
+  frequency: "oneOff";
+  isServiceCharge: boolean;
 }
 
 // Create estate bill
@@ -194,7 +154,7 @@ export const getBillsByEstate = createAsyncThunk(
   },
 );
 
-// Create bill assignment for a specific address
+// Create one-off bill for a specific address
 export const createBillForAddress = createAsyncThunk(
   "bills/createBillForAddress",
   async (data: CreateBillForAddressPayload, { rejectWithValue }) => {
@@ -210,38 +170,6 @@ export const createBillForAddress = createAsyncThunk(
           error?.response?.data?.message ??
           error.res?.data?.message ??
           "Failed to create bill for address",
-      });
-    }
-  },
-);
-
-// Get assigned bills for a specific address
-export const getBillsForAddress = createAsyncThunk(
-  "bills/getBillsForAddress",
-  async (
-    {
-      addressId,
-      estateId,
-      page = 1,
-      limit = 10,
-      startDate,
-      endDate,
-    }: GetBillsForAddressParams & { startDate?: string; endDate?: string },
-    { rejectWithValue },
-  ) => {
-    try {
-      const res = await axiosInstance.get<BillsForAddressResponse>(
-        `/api/v1/bills-mgt/for-address`,
-        {
-          params: { addressId, estateId, page, limit, startDate, endDate },
-        },
-      );
-      return res.data;
-    } catch (error: any) {
-      return rejectWithValue({
-        message:
-          error?.response?.data?.message ??
-          "Failed to fetch bills assigned to address",
       });
     }
   },

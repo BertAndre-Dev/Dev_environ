@@ -10,7 +10,6 @@ import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getPaymentGateways } from "@/redux/slice/resident/payment-mgt/payment-mgt";
 
-// Example country/currency/payment data (you can fetch dynamically from your backend)
 const countries = [
   { code: "NG", currency: "NGN", name: "Nigeria" },
   { code: "GB", currency: "GBP", name: "United Kingdom" },
@@ -18,35 +17,8 @@ const countries = [
   { code: "GH", currency: "GHS", name: "Ghana" },
 ];
 
-const paymentOptionsMap: Record<string, { code: string; label: string }[]> = {
-  NGN: [
-    { code: "all", label: "All" },
-    // { code: "card", label: "Card Payment" },
-    // { code: "bank transfer", label: "Bank Transfer" },
-    // { code: "ussd", label: "USSD Payment" },
-    // { code: "barter", label: "Barter Wallet" },
-    // { code: "mpesa", label: "M-Pesa" },
-  ],
-  GBP: [
-    { code: "all", label: "All" },
-    // { code: "card", label: "Card Payment" },
-    // { code: "account", label: "UK Bank Transfer" },
-  ],
-  EUR: [
-    { code: "all", label: "All" },
-    // { code: "card", label: "Card Payment" },
-    // { code: "account", label: "SEPA Bank Transfer" },
-    // { code: "ach", label: "ACH Transfer" },
-  ],
-  GHS: [
-    { code: "all", label: "All" },
-    // { code: "card", label: "Card Payment" },
-    // { code: "bank transfer", label: "Bank Transfer" },
-    // { code: "mobilemoneyghana", label: "Mobile Money (Ghana)" },
-    // { code: "ussd", label: "USSD Payment" },
-    // { code: "barter", label: "Barter Wallet" },
-  ],
-};
+/** Always sent as payment_options — not shown in the UI */
+const PAYMENT_OPTION = "all";
 
 interface FundWalletFormProps {
   userId: string;
@@ -83,11 +55,7 @@ export default function FundWalletForm({
   const [description, setDescription] = useState<string>("");
   const [currency, setCurrency] = useState<string>("NGN");
   const [country, setCountry] = useState<string>("NG");
-  const [paymentOption, setPaymentOption] = useState<string>("all");
   const [gatewayType, setGatewayType] = useState<string>("");
-  const [availablePaymentOptions, setAvailablePaymentOptions] = useState<
-    { code: string; label: string }[]
-  >(paymentOptionsMap["NGN"]);
   const [submitting, setSubmitting] = useState(false);
 
   const loadingGateways = getPaymentGatewaysState === "isLoading";
@@ -112,15 +80,6 @@ export default function FundWalletForm({
       toast.error(gatewaysError);
     }
   }, [getPaymentGatewaysState, gatewaysError]);
-
-  // Update payment options when currency changes
-  useEffect(() => {
-    const options = paymentOptionsMap[currency] || [];
-    setAvailablePaymentOptions(options);
-    if (!options.find((opt) => opt.code === paymentOption)) {
-      setPaymentOption(options[0]?.code || "");
-    }
-  }, [currency]);
 
   const handleCurrencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedCode = e.target.value;
@@ -155,11 +114,6 @@ export default function FundWalletForm({
       return;
     }
 
-    if (!paymentOption) {
-      toast.error("Please select a payment option.");
-      return;
-    }
-
     if (!gatewayType) {
       toast.error("Please select a payment gateway.");
       return;
@@ -175,7 +129,7 @@ export default function FundWalletForm({
         description: description.trim(),
         type: "credit",
         currency,
-        paymentOption,
+        paymentOption: PAYMENT_OPTION,
         country,
         gatewayType,
       });
@@ -192,7 +146,7 @@ export default function FundWalletForm({
     Boolean(userId && walletId) &&
     Number(amount) > 230 &&
     description.trim().length > 0 &&
-    Boolean(country && currency && paymentOption && gatewayType);
+    Boolean(country && currency && gatewayType);
 
   return (
     <Card className="w-full max-w-md mx-auto">
@@ -287,26 +241,6 @@ export default function FundWalletForm({
               {gateways.map((gateway) => (
                 <option key={gateway.id} value={gateway.id}>
                   {gateway.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <Label htmlFor="fund-wallet-payment-option">
-              Payment Option <span className="text-destructive">*</span>
-            </Label>
-            <select
-              id="fund-wallet-payment-option"
-              title="Payment Option"
-              className="w-full border border-gray-300 rounded px-3 py-2"
-              value={paymentOption}
-              onChange={(e) => setPaymentOption(e.target.value)}
-              required
-            >
-              {availablePaymentOptions.map((opt) => (
-                <option key={opt.code} value={opt.code}>
-                  {opt.label}
                 </option>
               ))}
             </select>

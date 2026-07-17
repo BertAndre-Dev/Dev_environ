@@ -436,11 +436,27 @@ export default function CompanyTransactionPage() {
         const status = (item.paymentStatus ?? "").toString().toLowerCase();
         const isPaid =
           status === "paid" || status === "successful" || status === "success";
-        return isPaid ? (
-          <span className="text-green-600 font-medium capitalize">
-            {item.paymentStatus || "Paid"}
-          </span>
-        ) : (
+        const isFailed =
+          status === "failed" ||
+          status === "fail" ||
+          status === "unsuccessful" ||
+          status === "cancelled" ||
+          status === "canceled";
+        if (isPaid) {
+          return (
+            <span className="text-green-600 font-medium capitalize">
+              {item.paymentStatus || "Paid"}
+            </span>
+          );
+        }
+        if (isFailed) {
+          return (
+            <span className="text-red-600 font-medium capitalize">
+              {item.paymentStatus}
+            </span>
+          );
+        }
+        return (
           <span className="text-yellow-600 font-medium capitalize">
             {item.paymentStatus || "Pending"}
           </span>

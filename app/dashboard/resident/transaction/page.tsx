@@ -38,6 +38,7 @@ interface TransactionData {
   userId: string;
   id?: string;
   paymentStatus?: string;
+  gatewayType?: string;
   tx_ref?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -250,7 +251,7 @@ export default function TransactionPage() {
           country: "NG",
           currency: "NGN",
           redirect_url: `${window.location.origin}/dashboard/resident/transaction`,
-          payment_options: "card",
+          payment_options: "all",
           gatewayType,
           customer: { email },
           customizations: {
@@ -401,17 +402,35 @@ export default function TransactionPage() {
       render: (item: any) => item.amount?.toLocaleString() ?? 0,
     },
     {
+      key: "gatewayType",
+      header: "Gateway",
+      render: (item: any) =>
+        item.gatewayType ? (
+          <span className="capitalize">{item.gatewayType}</span>
+        ) : (
+          "—"
+        ),
+    },
+    {
       key: "paymentStatus",
       header: "Status",
       render: (item: any) => {
         const status = (item.paymentStatus ?? "").toString().toLowerCase();
         const isPaid = status === "paid" || status === "successful";
+        const isFailed =
+          status === "failed" ||
+          status === "fail" ||
+          status === "unsuccessful" ||
+          status === "cancelled" ||
+          status === "canceled";
         return (
           <span
             className={
               isPaid
                 ? "text-green-600 font-medium capitalize"
-                : "text-yellow-600 font-medium capitalize"
+                : isFailed
+                  ? "text-red-600 font-medium capitalize"
+                  : "text-yellow-600 font-medium capitalize"
             }
           >
             {item.paymentStatus || "Pending"}
@@ -422,8 +441,15 @@ export default function TransactionPage() {
     {
       key: "actions",
       header: "Action",
-      render: (item: any) =>
-        item.paymentStatus === "not-paid" ? (
+      render: (item: any) => {
+        const status = (item.paymentStatus ?? "").toString().toLowerCase();
+        const canContinuePayment =
+          !status ||
+          status === "pending" ||
+          status === "not-paid" ||
+          status === "not_paid";
+        if (!canContinuePayment) return null;
+        return (
           <Button
             size="sm"
             variant="outline"
@@ -434,7 +460,8 @@ export default function TransactionPage() {
               ? "Redirecting..."
               : "Continue payment"}
           </Button>
-        ) : null,
+        );
+      },
     },
   ];
 

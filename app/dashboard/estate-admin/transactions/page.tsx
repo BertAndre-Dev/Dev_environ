@@ -458,14 +458,32 @@ export default function TransactionPage() {
     {
       key: "paymentStatus",
       header: "Status",
-      render: (item: any) =>
-        item.paymentStatus === "successful" ? (
-          <span className="text-green-600 font-medium">Successful</span>
-        ) : (
+      render: (item: any) => {
+        const status = (item.paymentStatus ?? "").toString().toLowerCase();
+        if (status === "successful" || status === "paid" || status === "success") {
+          return (
+            <span className="text-green-600 font-medium">Successful</span>
+          );
+        }
+        if (
+          status === "failed" ||
+          status === "fail" ||
+          status === "unsuccessful" ||
+          status === "cancelled" ||
+          status === "canceled"
+        ) {
+          return (
+            <span className="text-red-600 font-medium capitalize">
+              {item.paymentStatus}
+            </span>
+          );
+        }
+        return (
           <span className="text-yellow-600 font-medium">
             {item.paymentStatus || "Pending"}
           </span>
-        ),
+        );
+      },
       exportValue: (item: any) =>
         item.paymentStatus === "successful"
           ? "Successful"

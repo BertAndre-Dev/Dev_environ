@@ -36,9 +36,6 @@ const roleOptions = [
   // { label: "Company", value: "company" },
 ];
 
-// Admins can only invite residents as OWNERS. Tenants must be invited by owners.
-const residentTypeOptions = [{ label: "Owner", value: "owner" }];
-
 const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
   const dispatch = useDispatch<AppDispatch>();
 
@@ -231,25 +228,6 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
               placeholder="Select role"
             />
           </div>
-
-          {/* Resident type (for Resident role) */}
-          {formData.role === "resident" && (
-            <div>
-              <Label>Resident Type</Label>
-              <Select
-                options={residentTypeOptions}
-                value={residentTypeOptions[0]}
-                onChange={() => {
-                  setFormData((prev) => ({ ...prev, residentType: "owner" }));
-                }}
-                isDisabled
-                placeholder="Owner"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Admins can only invite owners. Tenants are invited by owners.
-              </p>
-            </div>
-          )}
 
           {/* Address(es) – checkboxes for Resident (one email, multiple apartments) */}
           {formData.role === "resident" && (

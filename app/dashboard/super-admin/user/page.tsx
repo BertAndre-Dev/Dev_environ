@@ -34,6 +34,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/modal/page";
 import InviteUserForm from "@/components/super-admin/user-form/page";
+import EditUserForm from "@/app/dashboard/super-admin/user/components/EditUserForm";
 import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import Loader from "@/components/ui/Loader";
 import { UserStatusModal } from "./components/UserStatusModal";
@@ -65,7 +66,7 @@ interface SuperAdminUserData {
   gender: string;
   phoneNumber: string;
   address: string;
-  // role: string;
+  role?: string;
   image?: string;
   isActive?: boolean;
   serviceCharge?: boolean;
@@ -174,7 +175,7 @@ export default function SuperAdminUserPage() {
   const { meterByAddressId, loading: metersLoading } =
     useUserListMeterNumbers(allSuperAdminUsers);
 
-  const [open, setOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [filterScope, setFilterScope] = useState<FilterScope>("estate");
   const [selectedEstate, setSelectedEstate] = useState<SelectOption | null>(
     null,
@@ -187,7 +188,7 @@ export default function SuperAdminUserPage() {
   const [roleFilter, setRoleFilter] = useState<EstateUserRoleFilter>(
     DEFAULT_ESTATE_USER_ROLE,
   );
-  const [selectedUser, setSelectedUser] = useState<SuperAdminUserData | null>(
+  const [editingUser, setEditingUser] = useState<SuperAdminUserData | null>(
     null,
   );
   const [statusItem, setStatusItem] = useState<SuperAdminUserData | null>(null);
@@ -341,14 +342,25 @@ export default function SuperAdminUserPage() {
     }
   };
 
-  const handleEstateModal = (user?: SuperAdminUserData) => {
-    setSelectedUser(user || null);
-    setOpen(true);
+  const handleInviteModal = () => {
+    setInviteOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setOpen(false);
-    setSelectedUser(null);
+  const handleCloseInviteModal = () => {
+    setInviteOpen(false);
+  };
+
+  const handleEditUser = (user: SuperAdminUserData) => {
+    const id = user.id || (user as { _id?: string })._id;
+    if (!id) {
+      toast.error("User id is missing");
+      return;
+    }
+    setEditingUser({ ...user, id });
+  };
+
+  const handleCloseEditModal = () => {
+    setEditingUser(null);
   };
 
   const closeStatusModal = () => {
@@ -529,7 +541,8 @@ export default function SuperAdminUserPage() {
             variant="ghost"
             className="cursor-pointer"
             size="sm"
-            onClick={() => handleEstateModal(item)}
+            onClick={() => handleEditUser(item)}
+            title="Edit user details"
           >
             <Edit className="w-4 h-4 text-blue-600" />
           </Button>
@@ -585,7 +598,7 @@ export default function SuperAdminUserPage() {
                 User Management
               </h1>
               <Button
-                onClick={() => handleEstateModal()}
+                onClick={handleInviteModal}
                 className="flex items-center gap-2 cursor-pointer shrink-0"
               >
                 <Plus className="w-4 h-4" />
@@ -777,10 +790,29 @@ export default function SuperAdminUserPage() {
           />
         </Card>
 
-        {/* User Edit Modal */}
-        {open && (
-          <Modal visible={open} onClose={handleCloseModal}>
-            <InviteUserForm close={handleCloseModal} />
+        {/* Invite Admin Modal */}
+        {inviteOpen && (
+          <Modal visible={inviteOpen} onClose={handleCloseInviteModal}>
+            <InviteUserForm close={handleCloseInviteModal} />
+          </Modal>
+        )}
+
+        {/* Edit User Modal */}
+        {editingUser && (
+          <Modal visible={Boolean(editingUser)} onClose={handleCloseEditModal}>
+            <EditUserForm
+              userId={
+                editingUser.id ||
+                (editingUser as { _id?: string })._id ||
+                ""
+              }
+              close={handleCloseEditModal}
+              onUpdated={() => {
+                if (selectedFilterEntity?.value) {
+                  fetchUsers(currentPage).catch(() => {});
+                }
+              }}
+            />
           </Modal>
         )}
 

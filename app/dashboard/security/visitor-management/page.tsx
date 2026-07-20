@@ -69,16 +69,10 @@ export default function VisitorManagementPage() {
         className={`space-y-6${loading ? " pointer-events-none select-none" : ""}`}
       >
       {/* Stats Card */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         {[
           {
             label: "Total Verifications",
-            value: 0,
-            icon: IdCard,
-            color: "bg-[#D0DFF280]",
-          },
-          {
-            label: "Denied Access",
             value: 0,
             icon: IdCard,
             color: "bg-[#D0DFF280]",

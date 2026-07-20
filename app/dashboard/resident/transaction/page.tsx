@@ -383,6 +383,12 @@ export default function TransactionPage() {
   }, [dispatch, userId, email]);
 
   // Table columns for transaction history
+  const truncateWords = (text: string, maxWords = 20) => {
+    const words = text.trim().split(/\s+/).filter(Boolean);
+    if (words.length <= maxWords) return text;
+    return `${words.slice(0, maxWords).join(" ")}…`;
+  };
+
   const columns = [
     {
       key: "createdAt",
@@ -403,7 +409,16 @@ export default function TransactionPage() {
     {
       key: "description",
       header: "Description",
-      render: (item: any) => item.description ?? "—",
+      render: (item: any) => {
+        const description = (item.description ?? "").toString().trim();
+        if (!description) return "—";
+        const truncated = truncateWords(description, 10);
+        return (
+          <span title={description} className="inline-block max-w-[280px]">
+            {truncated}
+          </span>
+        );
+      },
     },
     {
       key: "amount",

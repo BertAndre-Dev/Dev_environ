@@ -268,10 +268,6 @@ function UserProfileDetails({
           </h2>
           <DetailField label="First name" value={user.firstName || "—"} />
           <DetailField label="Last name" value={user.lastName || "—"} />
-          <DetailField
-            label="Date of birth"
-            value={formatDate(user.dateOfBirth)}
-          />
           <DetailField label="Gender" value={formatLabel(user.gender)} />
           {user.role?.toLowerCase() === "resident" ? (
             <DetailField

@@ -9,6 +9,12 @@ export type ScanVisitorParams = {
   visitEndDate?: string;
 };
 
+export type VerifyVisitorParams = {
+  visitorCode: string;
+  visitingType: VisitingType;
+  visitEndDate?: string;
+};
+
 function extractErrorMessage(error: unknown, fallback: string) {
   const data = (error as { response?: { data?: { message?: string | string[] } } })
     ?.response?.data;
@@ -22,12 +28,30 @@ function extractErrorMessage(error: unknown, fallback: string) {
 export const getAllVisitors = createAsyncThunk(
   "securityVisitor/getAllVisitors",
   async (
-    { estateId, page = 1, limit = 10 }: { estateId: string; page?: number; limit?: number },
+    {
+      estateId,
+      page = 1,
+      limit = 10,
+      startDate,
+      endDate,
+    }: {
+      estateId: string;
+      page?: number;
+      limit?: number;
+      startDate?: string;
+      endDate?: string;
+    },
     { rejectWithValue }
   ) => {
     try {
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("limit", String(limit));
+      if (startDate) params.set("startDate", startDate);
+      if (endDate) params.set("endDate", endDate);
+
       const res = await axiosInstance.get(
-        `/api/v1/visitor-mgt/all-visitors/${estateId}?page=${page}&limit=${limit}`
+        `/api/v1/visitor-mgt/all-visitors/${estateId}?${params.toString()}`
       );
       return res.data;
     } catch (error: any) {
@@ -36,7 +60,7 @@ export const getAllVisitors = createAsyncThunk(
   }
 );
 
-/** POST /api/v1/visitor-mgt/scan — verify visitor from scanned QR / barcode */
+/** POST /api/v1/visitor-mgt/scan — look up visitor from scanned QR / barcode */
 export const scanVisitor = createAsyncThunk(
   "securityVisitor/scanVisitor",
   async (params: ScanVisitorParams, { rejectWithValue }) => {
@@ -51,6 +75,35 @@ export const scanVisitor = createAsyncThunk(
       if (params.visitEndDate) body.visitEndDate = params.visitEndDate;
 
       const res = await axiosInstance.post("/api/v1/visitor-mgt/scan", body);
+      return res.data;
+    } catch (error: unknown) {
+      return rejectWithValue({
+        message: extractErrorMessage(error, "Failed to verify visitor"),
+      });
+    }
+  },
+);
+
+/** PUT /api/v1/visitor-mgt/verify-code — verify visitor and allow access */
+export const verifyVisitor = createAsyncThunk(
+  "securityVisitor/verifyVisitor",
+  async (params: VerifyVisitorParams, { rejectWithValue }) => {
+    const visitorCode = params.visitorCode.trim();
+    if (!visitorCode) {
+      return rejectWithValue({ message: "Visitor code is required" });
+    }
+
+    try {
+      const body: Record<string, string> = {
+        visitorCode,
+        visitingType: params.visitingType,
+      };
+      if (params.visitEndDate) body.visitEndDate = params.visitEndDate;
+
+      const res = await axiosInstance.put(
+        "/api/v1/visitor-mgt/verify-code",
+        body,
+      );
       return res.data;
     } catch (error: unknown) {
       return rejectWithValue({

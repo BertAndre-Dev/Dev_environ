@@ -1,24 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-toastify";
 import { getVisitorDetailsByCode } from "@/redux/slice/admin/visitor/visitor";
-import { scanVisitor } from "@/redux/slice/security/visitor/visitor";
-import {
-  buildScanPayload,
-  mapScanResponseToVisitorDetails,
-} from "@/lib/security-visitor";
 import { normalizeBarcodeInput } from "@/lib/utils";
-import { QrCode, Search } from "lucide-react";
+import { Eye, ScanLine } from "lucide-react";
+import BarcodeScannerModal from "@/components/security/barcode-scanner-modal";
 import type { VisitorDetailsData } from "@/app/dashboard/security/types";
 
 interface ViewVisitorSearchProps {
   onDetailsLoaded?: (visitor: VisitorDetailsData | null) => void;
+}
+
+function ScannerGraphic() {
+  return (
+    <div className="relative mx-auto flex h-40 w-40 items-center justify-center">
+      {/* Outer blue corner brackets */}
+      <div className="absolute inset-0">
+        <span className="absolute left-0 top-0 h-8 w-8 border-l-[3px] border-t-[3px] border-[#3B82F6] rounded-tl-sm" />
+        <span className="absolute right-0 top-0 h-8 w-8 border-r-[3px] border-t-[3px] border-[#3B82F6] rounded-tr-sm" />
+        <span className="absolute bottom-0 left-0 h-8 w-8 border-b-[3px] border-l-[3px] border-[#3B82F6] rounded-bl-sm" />
+        <span className="absolute bottom-0 right-0 h-8 w-8 border-b-[3px] border-r-[3px] border-[#3B82F6] rounded-br-sm" />
+      </div>
+      {/* Inner grey corner brackets */}
+      <div className="absolute inset-6">
+        <span className="absolute left-0 top-0 h-5 w-5 border-l-2 border-t-2 border-slate-500" />
+        <span className="absolute right-0 top-0 h-5 w-5 border-r-2 border-t-2 border-slate-500" />
+        <span className="absolute bottom-0 left-0 h-5 w-5 border-b-2 border-l-2 border-slate-500" />
+        <span className="absolute bottom-0 right-0 h-5 w-5 border-b-2 border-r-2 border-slate-500" />
+      </div>
+      {/* Scan laser line */}
+      <div className="absolute left-4 right-4 top-1/2 flex -translate-y-1/2 items-center">
+        <div className="h-px flex-1 bg-[#3B82F6]/80" />
+        <div className="mx-1 h-2 w-8 rounded-full bg-[#3B82F6] shadow-[0_0_12px_rgba(59,130,246,0.8)]" />
+        <div className="h-px flex-1 bg-[#3B82F6]/80" />
+      </div>
+    </div>
+  );
 }
 
 export default function ViewVisitorSearch({
@@ -28,102 +51,110 @@ export default function ViewVisitorSearch({
 
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
-  const [scanLoading, setScanLoading] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
-  const handleView = async () => {
-    const trimmed = normalizeBarcodeInput(code);
-    if (!trimmed) {
-      toast.warning("Enter visitor code or scan value");
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const res: { data: VisitorDetailsData } = await dispatch(
-        getVisitorDetailsByCode({ code: trimmed }),
-      ).unwrap();
-
-      setCode(trimmed);
-      onDetailsLoaded?.(res.data);
-      toast.success("Visitor details retrieved");
-    } catch (error: unknown) {
-      toast.error(
-        (error as { message?: string })?.message || "Invalid visitor code",
-      );
-      onDetailsLoaded?.(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleScanVerify = async () => {
-    const barcode = code.trim();
-    if (!barcode) {
-      toast.warning("Enter or scan a barcode / QR code");
-      return;
-    }
-
-    try {
-      setScanLoading(true);
-      const res = await dispatch(
-        scanVisitor(buildScanPayload(barcode)),
-      ).unwrap();
-      const visitor = mapScanResponseToVisitorDetails(res);
-      if (visitor) {
-        setCode(visitor.visitorCode ?? barcode);
-        onDetailsLoaded?.(visitor);
+  const loadVisitorDetails = useCallback(
+    async (rawCode: string) => {
+      const trimmed = normalizeBarcodeInput(rawCode);
+      if (!trimmed) {
+        toast.warning("Enter visitor code or scan value");
+        return;
       }
-      toast.success(
-        (res as { message?: string })?.message ??
-          "Visitor verified successfully",
-      );
-    } catch (error: unknown) {
-      toast.error(
-        (error as { message?: string })?.message ?? "Scan verification failed",
-      );
-    } finally {
-      setScanLoading(false);
-    }
+
+      try {
+        setLoading(true);
+        const res: { data: VisitorDetailsData } = await dispatch(
+          getVisitorDetailsByCode({ code: trimmed }),
+        ).unwrap();
+
+        setCode(trimmed);
+        onDetailsLoaded?.(res.data);
+        toast.success("Visitor details retrieved");
+      } catch (error: unknown) {
+        toast.error(
+          (error as { message?: string })?.message || "Invalid visitor code",
+        );
+        onDetailsLoaded?.(null);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [dispatch, onDetailsLoaded],
+  );
+
+  const handleView = () => {
+    void loadVisitorDetails(code);
   };
+
+  const handleScanned = useCallback(
+    (value: string) => {
+      setScannerOpen(false);
+      void loadVisitorDetails(value);
+    },
+    [loadVisitorDetails],
+  );
 
   return (
-    <div className="mx-auto bg-white rounded-lg p-6 space-y-6">
-      <h2 className="text-xl sm:text-2xl font-semibold">Visitor Verification</h2>
-      <p className="text-sm text-muted-foreground -mt-4">
-        Search to view visitor details, or scan to verify at the gate. Accepts
-        visitor codes, verification codes, and QR barcode values.
-      </p>
+    <>
+      <Card className="mx-auto w-full p-6 sm:p-8 shadow-lg">
+        <CardHeader className="p-0">
+          <CardTitle className="text-xl sm:text-2xl font-semibold tracking-tight">
+            Scan Visitor
+          </CardTitle>
+        </CardHeader>
 
-      <div className="space-y-2">
-        <Label>Barcode / QR code / Visitor code</Label>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Input
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            onBlur={(e) => setCode(normalizeBarcodeInput(e.target.value))}
-            placeholder="EZR-4FTX or scan QR code"
-            className="flex-1"
-          />
+        <CardContent className="p-0 space-y-6">
+          <div className="flex flex-col items-center gap-5">
+            <div className="bg-[#1B2430] p-4 rounded-2xl">
+              <ScannerGraphic />
+            </div>
+            <p className="max-w-md text-center text-sm text-muted-foreground leading-relaxed">
+              Open the camera to scan a visitor QR code. You can enter a code to
+              view details, or scan details only with the camera.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Input
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              onBlur={(e) => setCode(normalizeBarcodeInput(e.target.value))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleView();
+              }}
+              placeholder="EZR-4FTX or paste visitor code"
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              onClick={handleView}
+              disabled={loading}
+              variant="outline"
+              className="h-10 sm:h-auto shrink-0 rounded-xl"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              {loading ? "Loading..." : "View details"}
+            </Button>
+          </div>
+
           <Button
-            onClick={handleView}
-            disabled={loading || scanLoading}
-            variant="outline"
-            className="sm:w-auto"
+            type="button"
+            onClick={() => setScannerOpen(true)}
+            disabled={loading}
+            className="h-12 w-full rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white"
           >
-            <Search className="w-4 h-4 mr-2" />
-            {loading ? "Loading..." : "View details"}
+            <ScanLine className="w-4 h-4 mr-2" />
+            Scan details
           </Button>
-          <Button
-            onClick={handleScanVerify}
-            disabled={loading || scanLoading}
-            className="sm:w-auto"
-          >
-            <QrCode className="w-4 h-4 mr-2" />
-            {scanLoading ? "Scanning..." : "Scan & verify"}
-          </Button>
-        </div>
-      </div>
-    </div>
+        </CardContent>
+      </Card>
+
+      <BarcodeScannerModal
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScan={handleScanned}
+        scannerElementId="visitor-view-details-scanner"
+      />
+    </>
   );
 }

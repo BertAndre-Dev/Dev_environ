@@ -1,13 +1,10 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import { toast } from "react-toastify";
 import { RootState, AppDispatch } from "@/redux/store";
@@ -16,6 +13,10 @@ import { getAllVisitors } from "@/redux/slice/security/visitor/visitor";
 import type { SecurityVisitorItem } from "@/redux/slice/security/visitor/visitor-slice";
 import Table from "@/components/tables/list/page";
 import Loader from "@/components/ui/Loader";
+import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
+
+const DATE_RANGE_PLACEHOLDERS = getDateRangePlaceholders();
+const PAGE_LIMIT = 10;
 
 function formatDate(dateString: string) {
   const d = new Date(dateString);
@@ -38,6 +39,8 @@ export default function ActivityLogPage() {
   const dispatch = useDispatch<AppDispatch>();
   const [estateId, setEstateId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const { allVisitors, loading } = useSelector((state: RootState) => {
     const v = state.securityVisitor;
@@ -52,9 +55,11 @@ export default function ActivityLogPage() {
   const pagination = useMemo(() => {
     if (!rawPagination) return undefined;
     const total = rawPagination.total ?? list.length;
-    const limit = rawPagination.limit ?? 10;
+    const limit = rawPagination.limit ?? PAGE_LIMIT;
     const page = rawPagination.page ?? 1;
-    const totalPages = (rawPagination as { totalPages?: number }).totalPages ?? Math.ceil(Math.max(total, 1) / limit);
+    const totalPages =
+      (rawPagination as { totalPages?: number }).totalPages ??
+      Math.ceil(Math.max(total, 1) / limit);
     return { ...rawPagination, total, limit, page, totalPages };
   }, [rawPagination, list.length]);
 
@@ -71,6 +76,23 @@ export default function ActivityLogPage() {
       return [resident, visitor, purpose, address].some((s) => s.includes(q));
     });
   }, [list, search]);
+
+  const fetchVisitors = useCallback(
+    async (page = 1) => {
+      if (!estateId) return;
+      const shouldApplyDate = Boolean(startDate && endDate);
+      await dispatch(
+        getAllVisitors({
+          estateId,
+          page,
+          limit: PAGE_LIMIT,
+          startDate: shouldApplyDate ? startDate : undefined,
+          endDate: shouldApplyDate ? endDate : undefined,
+        }),
+      ).unwrap();
+    },
+    [dispatch, estateId, startDate, endDate],
+  );
 
   useEffect(() => {
     (async () => {
@@ -91,28 +113,26 @@ export default function ActivityLogPage() {
         }
 
         setEstateId(foundEstateId);
-        await dispatch(
-          getAllVisitors({ estateId: foundEstateId, page: 1, limit: 10 }),
-        ).unwrap();
-      } catch (error: any) {
-        toast.error(error?.message ?? "Failed to load visitors");
+      } catch (error: unknown) {
+        toast.error(
+          (error as { message?: string })?.message ?? "Failed to load visitors",
+        );
       }
     })();
   }, [dispatch]);
 
-  const onPageChange = (page: number) => {
+  useEffect(() => {
     if (!estateId) return;
-    dispatch(
-      getAllVisitors({ estateId, page, limit: pagination?.limit ?? 10 }),
-    ).catch((err: any) => toast.error(err?.message ?? "Failed to load page"));
-  };
+    fetchVisitors(1).catch(() => toast.error("Failed to fetch visitors"));
+  }, [estateId, fetchVisitors]);
 
-  let cardDescription = "Loading...";
-  if (pagination) {
-    cardDescription = search.trim()
-      ? `${filtered.length} matching on this page`
-      : `${pagination.total} total entries`;
-  }
+  const onPageChange = (page: number) => {
+    fetchVisitors(page).catch((err: unknown) =>
+      toast.error(
+        (err as { message?: string })?.message ?? "Failed to load page",
+      ),
+    );
+  };
 
   const columns = useMemo(
     () => [
@@ -163,7 +183,8 @@ export default function ActivityLogPage() {
       {
         key: "verifiedBy",
         header: "Verified By",
-        render: (row: SecurityVisitorItem) => row.verifiedBy?.firstName ?? "N/A",
+        render: (row: SecurityVisitorItem) =>
+          row.verifiedBy?.firstName ?? "N/A",
       },
       {
         key: "isVerified",
@@ -203,25 +224,32 @@ export default function ActivityLogPage() {
             type="text"
             placeholder="Search resident, visitor, purpose..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)} // ✅ search fixed
+            onChange={(e) => setSearch(e.target.value)}
             className="w-full max-w-sm px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </Card>
 
         <Card className="overflow-hidden">
-          <CardHeader>
-            <CardTitle>Visitor records</CardTitle>
-            <CardDescription className="text-sm">
-              {cardDescription}
-            </CardDescription>
-          </CardHeader>
-
           <CardContent className="p-0">
             <Table<SecurityVisitorItem>
               columns={columns}
               data={filtered}
               emptyMessage="No visitors found."
-              showPagination={!!pagination && (pagination.total > pagination.limit || (pagination.totalPages ?? 1) > 1)}
+              enableDateRangeFilter
+              defaultDateRangeDays={0}
+              startDate={startDate}
+              endDate={endDate}
+              startDatePlaceholder={DATE_RANGE_PLACEHOLDERS.start}
+              endDatePlaceholder={DATE_RANGE_PLACEHOLDERS.end}
+              onDateRangeChange={({ startDate: nextStart, endDate: nextEnd }) => {
+                setStartDate(nextStart);
+                setEndDate(nextEnd);
+              }}
+              showPagination={
+                !!pagination &&
+                (pagination.total > pagination.limit ||
+                  (pagination.totalPages ?? 1) > 1)
+              }
               paginationInfo={
                 pagination
                   ? {

@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
-import { scanVisitor } from "@/redux/slice/security/visitor/visitor";
+import { verifyVisitor } from "@/redux/slice/security/visitor/visitor";
 import {
-  buildScanPayload,
+  buildVerifyPayload,
   mapScanResponseToVisitorDetails,
 } from "@/lib/security-visitor";
 import { formatVisitorCode, normalizeBarcodeInput } from "@/lib/utils";
@@ -43,21 +43,22 @@ export default function VerifyVisitorForm({
   }, [visitorDetails?.visitorCode]);
 
   const handleVerify = async () => {
-    const barcode = code.trim();
-    if (!barcode) {
-      toast.warning("Enter or scan a visitor barcode");
+    const visitorCode = code.trim();
+    if (!visitorCode) {
+      toast.warning("Enter a visitor code");
       return;
     }
 
     try {
       setLoading(true);
       const res = await dispatch(
-        scanVisitor(buildScanPayload(barcode, visitorDetails)),
+        verifyVisitor(buildVerifyPayload(visitorCode, visitorDetails)),
       ).unwrap();
       const verified = mapScanResponseToVisitorDetails(res);
       onVerified?.(verified);
       toast.success(
-        (res as { message?: string })?.message ?? "Visitor verified successfully",
+        (res as { message?: string })?.message ??
+          "Visitor verified successfully",
       );
     } catch (error: unknown) {
       toast.error(

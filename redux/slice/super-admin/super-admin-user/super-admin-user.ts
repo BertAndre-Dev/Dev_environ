@@ -124,7 +124,7 @@ export const getUser = createAsyncThunk(
       return res.data;
     } catch (error: any) {
       return rejectWithValue({
-        message: error.res?.data?.message,
+        message: error?.response?.data?.message,
       });
     }
   },
@@ -174,6 +174,39 @@ export const activateUser = createAsyncThunk(
     } catch (error: any) {
       return rejectWithValue({
         message: error.res?.data?.message,
+      });
+    }
+  },
+);
+
+export type UpdateUserPayload = {
+  id: string;
+  data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    countryCode?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    phoneNumber?: string;
+    address?: string;
+    role?: string;
+    image?: string;
+    residentType?: string | null;
+  };
+};
+
+/** PUT /api/v1/user-mgt/{id} — update user details */
+export const updateUser = createAsyncThunk(
+  "super-admin-user/updateUser",
+  async ({ id, data }: UpdateUserPayload, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.put(`/api/v1/user-mgt/${id}`, data);
+      return res.data;
+    } catch (error: any) {
+      return rejectWithValue({
+        message:
+          error?.response?.data?.message || "Failed to update user details",
       });
     }
   },

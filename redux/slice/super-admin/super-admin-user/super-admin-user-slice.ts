@@ -6,6 +6,7 @@ import {
     getAllUsersByEstate,
     getAllUsersByCompany,
     getUser,
+    updateUser,
 } from './super-admin-user';
 
 
@@ -56,6 +57,7 @@ export interface UserState {
     getAllUsersByEstateState: "idle" | "isLoading" | "succeeded" | "failed";
     getAllUsersByCompanyState: "idle" | "isLoading" | "succeeded" | "failed";
     getUserState: "idle" | "isLoading" | "succeeded" | "failed";
+    updateUserState: "idle" | "isLoading" | "succeeded" | "failed";
     status: "idle" | "isLoading" | "succeeded" | "failed";
     user: SuperAdminUserDetails | null;
     allSuperAdminUsers: AllSuperAdminUserDetailsResponse | null;
@@ -70,6 +72,7 @@ const initialState: UserState = {
     getAllUsersByEstateState: "idle",
     getAllUsersByCompanyState: "idle",
     getUserState: "idle",
+    updateUserState: "idle",
     status: "idle",
     user: null,
     allSuperAdminUsers: null,
@@ -235,6 +238,33 @@ const superAdminUserSlice = createSlice({
             .addCase(deleteUser.rejected, (state, action) => {
             state.deleteUserState = "failed";
             state.error = action.error.message || "Failed to delete estate";
+            });
+
+        builder
+            .addCase(updateUser.pending, (state) => {
+              state.updateUserState = "isLoading";
+              state.error = null;
+            })
+            .addCase(updateUser.fulfilled, (state, action) => {
+              state.updateUserState = "succeeded";
+              const updated = action.payload?.data;
+              if (updated) {
+                if (state.user && (state.user.id === updated.id || state.user._id === updated.id)) {
+                  state.user = { ...state.user, ...updated };
+                }
+                if (state.allSuperAdminUsers?.data) {
+                  state.allSuperAdminUsers.data = state.allSuperAdminUsers.data.map(
+                    (u) => (u.id === updated.id || u._id === updated.id ? { ...u, ...updated } : u),
+                  );
+                }
+              }
+            })
+            .addCase(updateUser.rejected, (state, action) => {
+              state.updateUserState = "failed";
+              state.error =
+                (action.payload as { message?: string })?.message ||
+                action.error.message ||
+                "Failed to update user";
             });
         
     },

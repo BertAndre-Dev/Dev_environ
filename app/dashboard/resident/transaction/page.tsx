@@ -263,7 +263,7 @@ export default function TransactionPage() {
 
       const paymentUrl = paymentRes?.data?.link || paymentRes?.data?.url;
       if (!paymentUrl) throw new Error("Payment URL not received");
-      window.open(paymentUrl, "_blank", "noopener,noreferrer");
+      window.location.assign(paymentUrl);
       setContinuingPaymentTxRef(null);
     } catch (err: any) {
       toast.error(err?.message || "Failed to continue payment.");
@@ -318,10 +318,7 @@ export default function TransactionPage() {
       const paymentUrl = paymentRes?.data?.link || paymentRes?.data?.url;
       if (!paymentUrl) throw new Error("Payment URL not received");
 
-      window.open(paymentUrl, "_blank", "noopener,noreferrer");
-      if (userId) {
-        dispatch(getTransactionHistory({ userId, page: 1, limit: 10 }));
-      }
+      window.location.assign(paymentUrl);
     } catch (err: any) {
       toast.error(err?.message);
     }
@@ -389,6 +386,21 @@ export default function TransactionPage() {
     return `${words.slice(0, maxWords).join(" ")}…`;
   };
 
+  const canContinuePayment = (item: {
+    paymentStatus?: string;
+    tx_ref?: string;
+  }) => {
+    const status = (item.paymentStatus ?? "").toString().toLowerCase();
+    const isPending =
+      !status ||
+      status === "pending" ||
+      status === "not-paid" ||
+      status === "not_paid";
+    return isPending && Boolean(item.tx_ref);
+  };
+
+  const showActionColumn = transactions.some(canContinuePayment);
+
   const columns = [
     {
       key: "createdAt",
@@ -425,16 +437,6 @@ export default function TransactionPage() {
       header: "Amount (₦)",
       render: (item: any) => item.amount?.toLocaleString() ?? 0,
     },
-    // {
-    //   key: "gatewayType",
-    //   header: "Gateway",
-    //   render: (item: any) =>
-    //     item.gatewayType ? (
-    //       <span className="capitalize">{item.gatewayType}</span>
-    //     ) : (
-    //       "—"
-    //     ),
-    // },
     {
       key: "paymentStatus",
       header: "Status",
@@ -462,31 +464,30 @@ export default function TransactionPage() {
         );
       },
     },
-    {
-      key: "actions",
-      header: "Action",
-      render: (item: any) => {
-        const status = (item.paymentStatus ?? "").toString().toLowerCase();
-        const canContinuePayment =
-          !status ||
-          status === "pending" ||
-          status === "not-paid" ||
-          status === "not_paid";
-        if (!canContinuePayment) return null;
-        return (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={continuingPaymentTxRef === item.tx_ref}
-            onClick={() => handleContinuePayment(item)}
-          >
-            {continuingPaymentTxRef === item.tx_ref
-              ? "Redirecting..."
-              : "Continue payment"}
-          </Button>
-        );
-      },
-    },
+    ...(showActionColumn
+      ? [
+          {
+            key: "actions",
+            header: "Action",
+            exportable: false as const,
+            render: (item: any) => {
+              if (!canContinuePayment(item)) return null;
+              return (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={continuingPaymentTxRef === item.tx_ref}
+                  onClick={() => handleContinuePayment(item)}
+                >
+                  {continuingPaymentTxRef === item.tx_ref
+                    ? "Redirecting..."
+                    : "Continue payment"}
+                </Button>
+              );
+            },
+          },
+        ]
+      : []),
   ];
 
   return (

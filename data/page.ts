@@ -82,6 +82,11 @@ export const superAdminNav = [
     path: "/dashboard/super-admin/marketplace",
   },
   {
+    label: "Bill Management",
+    icon: ClipboardList,
+    path: "/dashboard/super-admin/bills",
+  },
+  {
     label: "Contact Support Inbox",
     icon: Inbox,
     path: "/dashboard/super-admin/chat",

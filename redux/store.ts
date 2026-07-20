@@ -22,6 +22,7 @@ import residentMeterRealtimeBalanceSliceReducer from "@/redux/slice/resident/met
 import superAdminMeterSliceReducer from "@/redux/slice/super-admin/super-admin-meter-mgt/super-admin-meter-slice";
 import superAdminTransactionSliceReducer from "@/redux/slice/super-admin/super-admin-transactions-mgt/super-admin-transactions-slice";
 import superAdminEstateTransactionsSliceReducer from "@/redux/slice/super-admin/super-admin-estate-transactions/super-admin-estate-transactions-slice";
+import superAdminBillsSliceReducer from "@/redux/slice/super-admin/super-admin-bills/super-admin-bills-slice";
 import visitorSliceReducer from "@/redux/slice/admin/visitor/visitor.slice";
 import residentVisitorSliceReducer from "@/redux/slice/resident/visitor/visitor-slice";
 import securityVisitorSliceReducer from "@/redux/slice/security/visitor/visitor-slice";
@@ -290,6 +291,7 @@ export const store = configureStore({
     superAdminMeter: persistedSuperAdmintMeterliceReducer,
     superAdminTransaction: persistedSuperAdminTransactionSliceReducer,
     superAdminEstateTransactions: superAdminEstateTransactionsSliceReducer,
+    superAdminBills: superAdminBillsSliceReducer,
     visitor: persistedVisitorSliceReducer,
     residentVisitor: persistedResidentVisitorSliceReducer,
     securityVisitor: persistedSecurityVisitorSliceReducer,

@@ -310,21 +310,21 @@ export default function AdminVisitorManagement() {
         );
       },
     },
-    {
-      header: "Status",
-      key: "isVerified",
-      render: (item: any) => (
-        <span
-          className={`px-2 py-1 rounded text-xs font-medium ${
-            item.isVerified
-              ? "bg-green-100 text-green-700"
-              : "bg-yellow-100 text-yellow-700"
-          }`}
-        >
-          {item.isVerified ? "Verified" : "Pending"}
-        </span>
-      ),
-    },
+    // {
+    //   header: "Status",
+    //   key: "isVerified",
+    //   render: (item: any) => (
+    //     <span
+    //       className={`px-2 py-1 rounded text-xs font-medium ${
+    //         item.isVerified
+    //           ? "bg-green-100 text-green-700"
+    //           : "bg-yellow-100 text-yellow-700"
+    //       }`}
+    //     >
+    //       {item.isVerified ? "Verified" : "Pending"}
+    //     </span>
+    //   ),
+    // },
     {
       header: "Actions",
       key: "actions",

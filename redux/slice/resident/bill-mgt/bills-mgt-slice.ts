@@ -44,6 +44,9 @@ export interface PaidBillData {
   addressId?: string;
   frequency?: string;
   amountPaid?: number;
+  lastPaymentDate?: string | null;
+  startDate?: string;
+  nextDueDate?: string;
   status?: string;
   isServiceCharge?: boolean;
 }

@@ -14,7 +14,7 @@ export interface CreateBillForAddressPayload {
   name: string;
   description: string;
   amount: number;
-  frequency: "oneOff";
+  frequency: "quarterly" | "yearly" | "oneOff";
   isServiceCharge: boolean;
 }
 

@@ -258,7 +258,7 @@ export default function BillPage() {
           isServiceCharge: data.isServiceCharge,
         }),
       ).unwrap();
-      toast.success("One-off bill created for address successfully.");
+      toast.success("Bill created for address successfully.");
       closeAssignModal();
     } catch (err: any) {
       toast.error(

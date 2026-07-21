@@ -8,6 +8,7 @@ import {
     updateBill,
     getBill,
     getBillsByEstate,
+    getBillsForAddress,
 } from './bills';
 
 
@@ -22,18 +23,42 @@ interface BillData {
   isActive?: boolean;
 }
 
+export interface AssignedBillData {
+  id?: string;
+  billId?: string;
+  userId?: string;
+  billName?: string;
+  frequency?: string;
+  amountPaid?: number;
+  startDate?: string;
+  nextDueDate?: string;
+  status?: string;
+  lastPaymentDate?: string | null;
+  createdAt?: string;
+}
+
 
 export interface Pagination {
   total: number;
   currentPage: number;
   totalPages: number;
   pageSize: number;
+  page?: number;
+  limit?: number;
+  pages?: number;
 }
 
 export interface AllBillsResponse {
   success: boolean;
   message: string;
   data: BillData[];
+  pagination: Pagination;
+}
+
+export interface AssignedBillsResponse {
+  success: boolean;
+  message: string;
+  data: AssignedBillData[];
   pagination: Pagination;
 }
 
@@ -47,9 +72,11 @@ export interface BillState {
     updateBillState: "idle" | "isLoading" | "succeeded" | "failed";
     getBillState: "idle" | "isLoading" | "succeeded" | "failed";
     getBillsByEstateState: "idle" | "isLoading" | "succeeded" | "failed";
+    getBillsForAddressState: "idle" | "isLoading" | "succeeded" | "failed";
     status: "idle" | "isLoading" | "succeeded" | "failed";
     bill: BillData | null;
     allBills: AllBillsResponse | null;
+    assignedBills: AssignedBillsResponse | null;
     error: string | null;
 }
 
@@ -63,9 +90,11 @@ const initialState: BillState = {
     updateBillState: "idle",
     getBillState: "idle",
     getBillsByEstateState: "idle",
+    getBillsForAddressState: "idle",
     status: "idle",
     bill: null,
     allBills: null,
+    assignedBills: null,
     error: null,
 };
 
@@ -107,6 +136,37 @@ const billSlice = createSlice({
                 state.getBillsByEstateState = "failed";
                 state.status = "failed";
                 state.error = action.error.message || "Failed to fetch bills for estate";
+            });
+
+        // ✅ GET BILLS FOR ADDRESS (assigned bills)
+        builder
+            .addCase(getBillsForAddress.pending, (state) => {
+                state.getBillsForAddressState = "isLoading";
+            })
+            .addCase(getBillsForAddress.fulfilled, (state, action) => {
+                state.getBillsForAddressState = "succeeded";
+                state.assignedBills = {
+                    success: action.payload?.success ?? true,
+                    message:
+                        action.payload?.message ??
+                        "Bills retrieved successfully for this address.",
+                    data: action.payload?.data || [],
+                    pagination: action.payload?.pagination || {
+                        total: action.payload?.data?.length ?? 0,
+                        currentPage: 1,
+                        totalPages: 1,
+                        pageSize: 10,
+                        page: 1,
+                        limit: 10,
+                        pages: 1,
+                    },
+                };
+            })
+            .addCase(getBillsForAddress.rejected, (state, action) => {
+                state.getBillsForAddressState = "failed";
+                state.error =
+                    action.error.message ||
+                    "Failed to fetch bills for address";
             });
 
         // ✅ GET SINGLE BILL

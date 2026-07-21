@@ -16,12 +16,6 @@ import { toast } from "react-toastify";
 
 interface BillsFormProps {
   billId: string;
-  /** Prefill from address-bills list when getBill shape differs */
-  initialBill?: {
-    name?: string;
-    amount?: number;
-    frequency?: string;
-  };
   addressOptions?: AddressOption[];
   selectedAddressId?: string | null;
   onSelectedAddressChange?: (addressId: string) => void;
@@ -29,11 +23,10 @@ interface BillsFormProps {
   onClose?: () => void;
 }
 
-type FrequencyOption = "monthly" | "quarterly" | "yearly" | "oneOff";
+type FrequencyOption = "monthly" | "quarterly" | "yearly";
 
 export default function BillsForm({
   billId,
-  initialBill,
   addressOptions = [],
   selectedAddressId = null,
   onSelectedAddressChange,
@@ -44,34 +37,19 @@ export default function BillsForm({
 
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [billName, setBillName] = useState(initialBill?.name || "");
-  const [yearlyAmount, setYearlyAmount] = useState<number>(
-    Number(initialBill?.amount ?? 0),
-  );
-  const [fixedAmount, setFixedAmount] = useState<number | null>(
-    initialBill?.amount != null ? Number(initialBill.amount) : null,
-  );
+  const [billName, setBillName] = useState("");
+  const [yearlyAmount, setYearlyAmount] = useState<number>(0);
   const [userId, setUserId] = useState("");
   const [walletId, setWalletId] = useState("");
-  const [frequency, setFrequency] = useState<FrequencyOption>(
-    (initialBill?.frequency as FrequencyOption) || "yearly",
-  );
-
-  const isAddressScopedBill = fixedAmount != null;
+  const [frequency, setFrequency] = useState<FrequencyOption>("yearly");
 
   const frequencyOptions = [
     // { label: "Monthly", value: "monthly" },
     { label: "Quarterly", value: "quarterly" },
-    { label: "Yearly", value: "yearly" },
-    ...(isAddressScopedBill
-      ? [{ label: "One-off", value: "oneOff" as const }]
-      : []),
+    { label: "Yearly", value: "yearly" }
   ];
 
   const proratedAmount = useMemo(() => {
-    if (fixedAmount != null) {
-      return Number(fixedAmount).toFixed(2);
-    }
     switch (frequency) {
       case "monthly":
         return (yearlyAmount / 12).toFixed(2);
@@ -80,7 +58,7 @@ export default function BillsForm({
       default:
         return yearlyAmount.toFixed(2);
     }
-  }, [yearlyAmount, frequency, fixedAmount]);
+  }, [yearlyAmount, frequency]);
 
   useEffect(() => {
     const load = async () => {
@@ -89,102 +67,24 @@ export default function BillsForm({
         const billRes = await dispatch(getBill(billId)).unwrap();
         const billData = billRes?.data;
         if (billData) {
-          setBillName(
-            billData.name || billData.billName || initialBill?.name || "",
-          );
-          const amountFromBill =
-            billData.amount != null
-              ? Number(billData.amount)
-              : billData.amountPaid != null
-                ? Number(billData.amountPaid)
-                : initialBill?.amount != null
-                  ? Number(initialBill.amount)
-                  : null;
-          const yearlyFromBill =
-            billData.yearlyAmount != null
-              ? Number(billData.yearlyAmount)
-              : null;
-
-          if (amountFromBill != null && Number.isFinite(amountFromBill)) {
-            setFixedAmount(amountFromBill);
-            setYearlyAmount(amountFromBill);
-          } else {
-            setFixedAmount(null);
-            setYearlyAmount(Number(yearlyFromBill ?? 0));
-          }
-
-          const billFrequency = (billData.frequency ||
-            initialBill?.frequency) as FrequencyOption | undefined;
-          if (
-            billFrequency === "monthly" ||
-            billFrequency === "quarterly" ||
-            billFrequency === "yearly" ||
-            billFrequency === "oneOff"
-          ) {
-            setFrequency(billFrequency);
-          }
-        } else if (initialBill) {
-          setBillName(initialBill.name || "");
-          if (initialBill.amount != null) {
-            setFixedAmount(Number(initialBill.amount));
-            setYearlyAmount(Number(initialBill.amount));
-          }
-          const freq = initialBill.frequency as FrequencyOption | undefined;
-          if (
-            freq === "monthly" ||
-            freq === "quarterly" ||
-            freq === "yearly" ||
-            freq === "oneOff"
-          ) {
-            setFrequency(freq);
-          }
+          setBillName(billData.name || "");
+          setYearlyAmount(Number(billData.yearlyAmount ?? 0));
         }
 
         const userRes = await dispatch(getSignedInUser()).unwrap();
         const user = userRes?.data;
         if (user) {
-          setUserId(user.id || user._id || "");
+          setUserId(user.id || "");
           setWalletId(user.walletId ?? user.wallet?.id ?? "");
         }
       } catch (err: any) {
-        // Fall back to list prefill when getBill fails for address assignments
-        if (initialBill?.name || initialBill?.amount != null) {
-          setBillName(initialBill.name || "");
-          if (initialBill.amount != null) {
-            setFixedAmount(Number(initialBill.amount));
-            setYearlyAmount(Number(initialBill.amount));
-          }
-          const freq = initialBill.frequency as FrequencyOption | undefined;
-          if (
-            freq === "monthly" ||
-            freq === "quarterly" ||
-            freq === "yearly" ||
-            freq === "oneOff"
-          ) {
-            setFrequency(freq);
-          }
-        } else {
-          toast.error(err?.message || "Failed to load bill or user details");
-        }
-
-        try {
-          const userRes = await dispatch(getSignedInUser()).unwrap();
-          const user = userRes?.data;
-          if (user) {
-            setUserId(user.id || user._id || "");
-            setWalletId(user.walletId ?? user.wallet?.id ?? "");
-          }
-        } catch {
-          // ignore secondary failure
-        }
+        toast.error(err?.message || "Failed to load bill or user details");
       } finally {
         setLoading(false);
       }
     };
 
     if (billId) load();
-    // Prefill values are only used as fallback on first load for this billId
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [billId, dispatch]);
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -255,7 +155,6 @@ export default function BillsForm({
                 options={frequencyOptions}
                 value={frequency}
                 onChange={(e) => setFrequency(e.target.value as FrequencyOption)}
-                disabled={isAddressScopedBill}
               />
             </div>
 
@@ -264,9 +163,7 @@ export default function BillsForm({
               <Label>Amount to Pay</Label>
               <Input readOnly type="number" value={proratedAmount} />
               <p className="text-sm text-muted-foreground mt-1">
-                {isAddressScopedBill
-                  ? `Bill amount is ₦${Number(fixedAmount).toLocaleString()}.`
-                  : `Yearly total is ₦${yearlyAmount.toLocaleString()}. Prorated based on selected period.`}
+                Yearly total is ₦{yearlyAmount.toLocaleString()}. Prorated based on selected period.
               </p>
             </div>
           </div>

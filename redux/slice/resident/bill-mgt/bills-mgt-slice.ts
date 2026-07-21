@@ -14,6 +14,9 @@ interface ResidentBillData {
   description: string;
   yearlyAmount: number;
   amount?: number;
+  amountPaid?: number;
+  billName?: string;
+  billId?: string;
   frequency?: string;
   addressId?: string;
   createdAt?: string;
@@ -28,6 +31,9 @@ export interface Pagination {
   currentPage: number;
   totalPages: number;
   pageSize: number;
+  page?: number;
+  limit?: number;
+  pages?: number;
 }
 
 export interface BillsResponse {
@@ -108,28 +114,12 @@ const residentBillSlice = createSlice({
         builder
             .addCase(getBillsForAddress.pending, (state) => {
                 state.getBillsForAddressState = "isLoading";
-                state.status = "isLoading";
             })
             .addCase(getBillsForAddress.fulfilled, (state, action) => {
                 state.getBillsForAddressState = "succeeded";
-                state.status = "succeeded";
-                state.residentBills = {
-                    success: action.payload?.success ?? true,
-                    message:
-                    action.payload?.message ??
-                    "Bills retrieved successfully.",
-                    data: action.payload?.data || [],
-                    pagination: action.payload?.pagination || {
-                        total: action.payload?.data?.length ?? 0,
-                        currentPage: 1,
-                        totalPages: 1,
-                        pageSize: 10,
-                    },
-                };
             })
             .addCase(getBillsForAddress.rejected, (state, action) => {
                 state.getBillsForAddressState = "failed";
-                state.status = "failed";
                 state.error =
                     action.error.message ||
                     "Failed to fetch bills for address";

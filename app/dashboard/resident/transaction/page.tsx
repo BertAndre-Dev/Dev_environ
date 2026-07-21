@@ -27,6 +27,7 @@ import { toast } from "react-toastify";
 import Table from "@/components/tables/list/page";
 import type { WalletData } from "@/redux/slice/resident/wallet-mgt/wallet-mgt-slice";
 import Loader from "@/components/ui/Loader";
+import { CopyButton } from "@/components/ui/copy-button";
 import { ResidentWalletCard } from "@/components/resident/wallet/ResidentWalletCard";
 import { formatDateTime } from "@/lib/format-date";
 
@@ -380,10 +381,10 @@ export default function TransactionPage() {
   }, [dispatch, userId, email]);
 
   // Table columns for transaction history
-  const truncateWords = (text: string, maxWords = 20) => {
-    const words = text.trim().split(/\s+/).filter(Boolean);
-    if (words.length <= maxWords) return text;
-    return `${words.slice(0, maxWords).join(" ")}…`;
+  const truncateText = (text: string, maxChars = 48) => {
+    const value = text.trim();
+    if (value.length <= maxChars) return value;
+    return `${value.slice(0, maxChars).trimEnd()}…`;
   };
 
   const canContinuePayment = (item: {
@@ -409,6 +410,32 @@ export default function TransactionPage() {
         formatDateTime(item.createdAt, "-"),
     },
     {
+      key: "tx_ref",
+      header: "Reference",
+      render: (item: any) => {
+        const ref =
+          item.tx_ref ?? item.txRef ?? item.trx_ref ?? null;
+        if (!ref) return "—";
+        const value = String(ref);
+        return (
+          <div className="flex items-center gap-2 normal-case">
+            <span
+              title={value}
+              className="inline-block max-w-[160px] truncate font-mono text-xs"
+            >
+              {value}
+            </span>
+            <CopyButton
+              value={value}
+              title="Copy transaction reference"
+            />
+          </div>
+        );
+      },
+      exportValue: (item: any) =>
+        String(item?.tx_ref ?? item?.txRef ?? item?.trx_ref ?? ""),
+    },
+    {
       key: "type",
       header: "Type",
       render: (item: any) =>
@@ -424,10 +451,12 @@ export default function TransactionPage() {
       render: (item: any) => {
         const description = (item.description ?? "").toString().trim();
         if (!description) return "—";
-        const truncated = truncateWords(description, 10);
         return (
-          <span title={description} className="inline-block max-w-[280px]">
-            {truncated}
+          <span
+            title={description}
+            className="inline-block max-w-[220px] truncate normal-case"
+          >
+            {truncateText(description, 48)}
           </span>
         );
       },

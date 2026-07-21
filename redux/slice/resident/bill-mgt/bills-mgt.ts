@@ -42,6 +42,51 @@ export const getBillsByEstate = createAsyncThunk(
   },
 );
 
+// Get bills assigned to a specific address (with pagination)
+export const getBillsForAddress = createAsyncThunk(
+  "bills/getBillsForAddress",
+  async (
+    {
+      addressId,
+      estateId,
+      page = 1,
+      limit = 10,
+      startDate,
+      endDate,
+    }: {
+      addressId: string;
+      estateId: string;
+      page?: number;
+      limit?: number;
+      startDate?: string;
+      endDate?: string;
+    },
+    { rejectWithValue },
+  ) => {
+    try {
+      const params = new URLSearchParams({
+        addressId,
+        estateId,
+        page: String(page),
+        limit: String(limit),
+      });
+      if (startDate) params.append("startDate", startDate);
+      if (endDate) params.append("endDate", endDate);
+
+      const res = await axiosInstance.get(
+        `/api/v1/bills-mgt/for-address?${params.toString()}`,
+      );
+      return res.data;
+    } catch (error: any) {
+      return rejectWithValue({
+        message:
+          error?.response?.data?.message ||
+          "Failed to fetch bills for address",
+      });
+    }
+  },
+);
+
 
 // Get resident bills (with pagination)
 export const getResidentBills = createAsyncThunk(
@@ -94,5 +139,3 @@ export const payBill = createAsyncThunk(
         }
     }
 );
-
-

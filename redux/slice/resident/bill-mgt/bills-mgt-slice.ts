@@ -2,6 +2,7 @@ import { createSlice } from "@reduxjs/toolkit";
 import {
     getBill,
     getBillsByEstate,
+    getBillsForAddress,
     getResidentBills,
     payBill
 } from './bills-mgt';
@@ -12,6 +13,9 @@ interface ResidentBillData {
   name: string;
   description: string;
   yearlyAmount: number;
+  amount?: number;
+  frequency?: string;
+  addressId?: string;
   createdAt?: string;
   updatedAt?: string;
   id?: string;
@@ -37,6 +41,7 @@ export interface BillsResponse {
 export interface ResidentBillState {
     getBillState: "idle" | "isLoading" | "succeeded" | "failed";
     getBillsByEstateState: "idle" | "isLoading" | "succeeded" | "failed";
+    getBillsForAddressState: "idle" | "isLoading" | "succeeded" | "failed";
     getResidentBillsState: "idle" | "isLoading" | "succeeded" | "failed";
     payBillState: "idle" | "isLoading" | "succeeded" | "failed";
     status: "idle" | "isLoading" | "succeeded" | "failed";
@@ -49,6 +54,7 @@ export interface ResidentBillState {
 const initialState: ResidentBillState = {
     getBillState: "idle",
     getBillsByEstateState: "idle",
+    getBillsForAddressState: "idle",
     getResidentBillsState: "idle",
     payBillState: "idle",
     status: "idle",
@@ -95,6 +101,38 @@ const residentBillSlice = createSlice({
                 state.getBillsByEstateState = "failed";
                 state.status = "failed";
                 state.error = action.error.message || "Failed to fetch bills for estate";
+            });
+
+
+        // ✅ GET BILLS FOR ADDRESS
+        builder
+            .addCase(getBillsForAddress.pending, (state) => {
+                state.getBillsForAddressState = "isLoading";
+                state.status = "isLoading";
+            })
+            .addCase(getBillsForAddress.fulfilled, (state, action) => {
+                state.getBillsForAddressState = "succeeded";
+                state.status = "succeeded";
+                state.residentBills = {
+                    success: action.payload?.success ?? true,
+                    message:
+                    action.payload?.message ??
+                    "Bills retrieved successfully.",
+                    data: action.payload?.data || [],
+                    pagination: action.payload?.pagination || {
+                        total: action.payload?.data?.length ?? 0,
+                        currentPage: 1,
+                        totalPages: 1,
+                        pageSize: 10,
+                    },
+                };
+            })
+            .addCase(getBillsForAddress.rejected, (state, action) => {
+                state.getBillsForAddressState = "failed";
+                state.status = "failed";
+                state.error =
+                    action.error.message ||
+                    "Failed to fetch bills for address";
             });
 
 

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Eye, Info } from "lucide-react";
 import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
+import BillsForm from "@/components/resident/bill-form/page";
 import SwitchAddress from "@/components/resident/switch-address/page";
 import {
   getBillsByEstate,
@@ -105,6 +106,7 @@ export default function BillPage() {
   );
   const [bootstrapping, setBootstrapping] = useState(true);
   const [viewBill, setViewBill] = useState<PaidBillData | null>(null);
+  const [payBillId, setPayBillId] = useState<string | null>(null);
 
   const {
     estateBills,
@@ -368,7 +370,11 @@ export default function BillPage() {
           <h1 className="font-heading text-3xl font-bold">Estate Bills</h1>
           <button
             type="button"
-            onClick={() => toast.info("To pay a bill, click any bill card.")}
+            onClick={() =>
+              toast.info(
+                "Estate bills open a payment form. Assigned bills pay when you click the card.",
+              )
+            }
             aria-label="How to pay"
             title="How to pay"
             className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
@@ -412,14 +418,7 @@ export default function BillPage() {
                 <Card
                   key={b.id}
                   className="p-4 cursor-pointer hover:shadow-md"
-                  onClick={() =>
-                    b.id &&
-                    handlePayBill({
-                      billId: b.id,
-                      frequency: "yearly",
-                      amountPaid: Number(b.yearlyAmount ?? 0),
-                    })
-                  }
+                  onClick={() => b.id && setPayBillId(b.id)}
                 >
                   <div className="flex flex-col">
                     <h3 className="text-sm font-semibold capitalize text-blue-600">
@@ -551,6 +550,19 @@ export default function BillPage() {
             </p>
           ) : null}
         </Card>
+
+        <Modal visible={!!payBillId} onClose={() => setPayBillId(null)}>
+          {payBillId ? (
+            <BillsForm
+              billId={payBillId}
+              addressOptions={addressOptions}
+              selectedAddressId={selectedAddressId}
+              onSelectedAddressChange={setSelectedAddressId}
+              onSubmitSuccess={refreshAfterPay}
+              onClose={() => setPayBillId(null)}
+            />
+          ) : null}
+        </Modal>
 
         <Modal visible={!!viewBill} onClose={() => setViewBill(null)}>
           <div className="pr-6 pt-2">

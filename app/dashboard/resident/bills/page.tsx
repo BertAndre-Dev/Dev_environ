@@ -365,13 +365,13 @@ export default function BillPage() {
         ].join(" ")}
       >
         <div className="flex items-center gap-1">
-          <h1 className="font-heading text-3xl font-bold">Bills</h1>
+          <h1 className="font-heading text-3xl font-bold">Estate Bills</h1>
           <button
             type="button"
             onClick={() => toast.info("To pay a bill, click any bill card.")}
             aria-label="How to pay"
             title="How to pay"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
           >
             <Info className="h-5 w-5" />
           </button>

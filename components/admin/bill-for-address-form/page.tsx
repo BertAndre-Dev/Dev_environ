@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "@/redux/store";
 import { getFieldByEstate } from "@/redux/slice/admin/address-mgt/fields/fields";
 import { getEntriesByField } from "@/redux/slice/admin/address-mgt/entry/entry";
+import { getAllUsersByEstate } from "@/redux/slice/admin/user-mgt/user";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import {
   formatAmountInput,
   parseFormattedNumber,
 } from "@/lib/format-number";
+import { formatAddressEntryLabel, normalizeAddresses } from "@/lib/address";
 
 export type BillForAddressFrequency = "quarterly" | "yearly" | "oneOff";
 
@@ -32,6 +34,30 @@ const FREQUENCY_OPTIONS: { label: string; value: BillForAddressFrequency }[] = [
   { label: "One-off", value: "oneOff" },
 ];
 
+interface ResidentRecord {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+}
+
+function residentLabel(u: ResidentRecord): string {
+  return `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email || u.id;
+}
+
+function findResidentForAddress(
+  residents: ResidentRecord[],
+  addressId: string,
+): ResidentRecord | undefined {
+  if (!addressId) return undefined;
+  return residents.find((r) => {
+    const addresses = normalizeAddresses(
+      r as unknown as Record<string, unknown>,
+    );
+    return addresses.some((a) => a.id === addressId);
+  });
+}
+
 interface BillForAddressFormProps {
   readonly estateId: string;
   readonly onSubmit: (data: BillForAddressFormData) => Promise<void> | void;
@@ -44,6 +70,7 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
   const [addressOptions, setAddressOptions] = useState<
     { label: string; value: string }[]
   >([]);
+  const [residents, setResidents] = useState<ResidentRecord[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -55,12 +82,41 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
     frequency: "oneOff" as BillForAddressFrequency,
   });
 
+  const attachedResidentName = useMemo(() => {
+    const matched = findResidentForAddress(residents, form.addressId);
+    return matched ? residentLabel(matched) : "";
+  }, [residents, form.addressId]);
+
   useEffect(() => {
     const loadAddresses = async () => {
       try {
         setLoadingAddresses(true);
 
-        const fieldRes = await dispatch(getFieldByEstate(estateId)).unwrap();
+        const [usersRes, fieldRes] = await Promise.all([
+          dispatch(
+            getAllUsersByEstate({
+              estateId,
+              page: 1,
+              limit: 500,
+              role: "resident",
+            }),
+          ).unwrap(),
+          dispatch(getFieldByEstate(estateId)).unwrap(),
+        ]);
+
+        const users = (usersRes?.data || []) as Array<
+          ResidentRecord & { _id?: string; role?: string }
+        >;
+        setResidents(
+          users
+            .filter((u) => (u.role || "resident").toLowerCase() === "resident")
+            .map((u) => ({
+              ...u,
+              id: u.id || u._id || "",
+            }))
+            .filter((u) => u.id),
+        );
+
         const fields = fieldRes?.data || [];
         if (!fields.length) {
           toast.error("No address fields configured for this estate.");
@@ -80,10 +136,7 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
           [];
         const options = entries.map(
           (entry: { id: string; data?: Record<string, string> }) => {
-            const d = entry.data ?? {};
-            const label = Object.entries(d)
-              .map(([k, v]) => `${k}: ${v}`)
-              .join(", ");
+            const label = formatAddressEntryLabel(entry.data);
             return {
               label: label || entry.id,
               value: entry.id,
@@ -159,39 +212,49 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {addressOptions.length > 1 && (
-          <div className="space-y-2">
-            <Label htmlFor="addressId">Address</Label>
-            <select
-              id="addressId"
-              aria-label="Select address"
-              className="w-full border border-border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#0150AC]"
-              value={form.addressId}
-              onChange={(e) => handleChange("addressId", e.target.value)}
-              disabled={loadingAddresses || addressOptions.length === 0}
-            >
-              <option value="">Select address...</option>
-              {addressOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            {loadingAddresses && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Loading addresses...
-              </p>
-            )}
-          </div>
-        )}
-        {loadingAddresses && addressOptions.length <= 1 && (
-          <p className="text-xs text-muted-foreground">Loading addresses...</p>
-        )}
-        {!loadingAddresses && addressOptions.length === 0 && (
-          <p className="text-xs text-muted-foreground">
-            No addresses configured for this estate.
-          </p>
-        )}
+        <div className="space-y-2">
+          <Label htmlFor="addressId">Address</Label>
+          <select
+            id="addressId"
+            aria-label="Select address"
+            className="w-full border border-border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#0150AC]"
+            value={form.addressId}
+            onChange={(e) => handleChange("addressId", e.target.value)}
+            disabled={loadingAddresses || addressOptions.length === 0}
+          >
+            <option value="">Select address...</option>
+            {addressOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          {loadingAddresses && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Loading addresses...
+            </p>
+          )}
+          {!loadingAddresses && addressOptions.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              No addresses configured for this estate.
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="residentName">Resident</Label>
+          <Input
+            id="residentName"
+            value={attachedResidentName}
+            readOnly
+            className="bg-muted/50 cursor-not-allowed"
+            placeholder={
+              form.addressId
+                ? "No resident linked to this address"
+                : "Select an address to see the resident"
+            }
+          />
+        </div>
 
         <div className="space-y-2">
           <Label htmlFor="billName">Bill Name</Label>

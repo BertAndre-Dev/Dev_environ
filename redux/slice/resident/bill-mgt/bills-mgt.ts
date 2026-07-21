@@ -92,12 +92,31 @@ export const getBillsForAddress = createAsyncThunk(
 export const getResidentBills = createAsyncThunk(
   "bills/getResidentBills",
   async (
-    { residentId, page = 1, limit = 10 }: { residentId: string; page?: number; limit?: number },
-    { rejectWithValue }
+    {
+      residentId,
+      page = 1,
+      limit = 10,
+      startDate,
+      endDate,
+    }: {
+      residentId: string;
+      page?: number;
+      limit?: number;
+      startDate?: string;
+      endDate?: string;
+    },
+    { rejectWithValue },
   ) => {
     try {
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      });
+      if (startDate) params.append("startDate", startDate);
+      if (endDate) params.append("endDate", endDate);
+
       const res = await axiosInstance.get(
-        `/api/v1/bills-mgt/resident/${residentId}?page=${page}&limit=${limit}`
+        `/api/v1/bills-mgt/resident/${residentId}?${params.toString()}`,
       );
       return res.data;
     } catch (error: any) {
@@ -105,7 +124,7 @@ export const getResidentBills = createAsyncThunk(
         message: error?.response?.data?.message || "Failed to fetch bills",
       });
     }
-  }
+  },
 );
 
 

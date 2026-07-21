@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Info } from "lucide-react";
 import Table from "@/components/tables/list/page";
@@ -11,35 +11,18 @@ import {
   getResidentBills,
   payBill,
 } from "@/redux/slice/resident/bill-mgt/bills-mgt";
+import {
+  clearAssignedBills,
+  type AssignedBillData,
+  type EstateBillData,
+  type PaidBillData,
+} from "@/redux/slice/resident/bill-mgt/bills-mgt-slice";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { normalizeAddresses, type AddressOption } from "@/lib/address";
 import { toast } from "react-toastify";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "@/redux/store";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/redux/store";
 import Loader from "@/components/ui/Loader";
-
-interface EstateBillData {
-  id?: string;
-  estateId?: string;
-  name?: string;
-  description?: string;
-  yearlyAmount?: number;
-  isActive?: boolean;
-  createdAt?: string;
-}
-
-interface AssignedBillData {
-  id?: string;
-  billId?: string;
-  billName?: string;
-  name?: string;
-  frequency?: string;
-  amountPaid?: number;
-  amount?: number;
-  yearlyAmount?: number;
-  status?: string;
-  createdAt?: string;
-}
 
 type BillsTab = "estate" | "assigned";
 
@@ -68,90 +51,58 @@ function assignedBillAmount(bill: AssignedBillData): number {
 }
 
 function assignedBillPayId(bill: AssignedBillData): string | null {
-  return bill.billId || bill.id || null;
+  return bill.billId || bill.id || bill._id || null;
 }
 
 export default function BillPage() {
   const dispatch = useDispatch<AppDispatch>();
   const [activeTab, setActiveTab] = useState<BillsTab>("estate");
-
-  const [payableBills, setPayableBills] = useState<EstateBillData[]>([]);
-  const [assignedBills, setAssignedBills] = useState<AssignedBillData[]>([]);
-  const [paidBills, setPaidBills] = useState<any[]>([]);
-  const [paidPagination, setPaidPagination] = useState<any>({});
-  const [loading, setLoading] = useState<boolean>(true);
-  const [loadingAssigned, setLoadingAssigned] = useState(false);
-  const [payingBillId, setPayingBillId] = useState<string | null>(null);
-
-  const [userId, setUserId] = useState<string>("");
-  const [walletId, setWalletId] = useState<string>("");
-  const [estateId, setEstateId] = useState<string>("");
+  const [paidStartDate, setPaidStartDate] = useState("");
+  const [paidEndDate, setPaidEndDate] = useState("");
+  const [userId, setUserId] = useState("");
+  const [walletId, setWalletId] = useState("");
+  const [estateId, setEstateId] = useState("");
   const [addressOptions, setAddressOptions] = useState<AddressOption[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
     null,
   );
+  const [bootstrapping, setBootstrapping] = useState(true);
 
-  const fetchAssignedBills = useCallback(
-    async (addressId: string, eId: string, limit = 50) => {
-      setLoadingAssigned(true);
-      try {
-        const res = await dispatch(
-          getBillsForAddress({
-            addressId,
-            estateId: eId,
-            page: 1,
-            limit,
-          }),
-        ).unwrap();
-        setAssignedBills(Array.isArray(res?.data) ? res.data : []);
-      } finally {
-        setLoadingAssigned(false);
-      }
-    },
-    [dispatch],
-  );
+  const {
+    estateBills,
+    assignedBills,
+    paidBills,
+    paidPagination,
+    loadingEstate,
+    loadingAssigned,
+    loadingPaid,
+    paying,
+  } = useSelector((state: RootState) => {
+    const s = state.residentBill as any;
+    return {
+      estateBills: (s?.estateBills?.data || []) as EstateBillData[],
+      assignedBills: (s?.assignedBills?.data || []) as AssignedBillData[],
+      paidBills: (s?.paidBills?.data || []) as PaidBillData[],
+      paidPagination: s?.paidBills?.pagination || {},
+      loadingEstate: s?.getBillsByEstateState === "isLoading",
+      loadingAssigned: s?.getBillsForAddressState === "isLoading",
+      loadingPaid: s?.getResidentBillsState === "isLoading",
+      paying: s?.payBillState === "isLoading",
+    };
+  });
 
-  const refreshLists = useCallback(async () => {
-    if (!userId) return;
-    try {
-      if (estateId) {
-        const estateRes = await dispatch(
-          getBillsByEstate({ estateId, page: 1, limit: 50 }),
-        ).unwrap();
-        setPayableBills(estateRes?.data || []);
-      }
-
-      if (selectedAddressId && estateId) {
-        await fetchAssignedBills(selectedAddressId, estateId);
-      }
-
-      const residentRes = await dispatch(
-        getResidentBills({ residentId: userId, page: 1, limit: 50 }),
-      ).unwrap();
-      setPaidBills(residentRes?.data || []);
-      setPaidPagination(residentRes?.pagination || {});
-    } catch (err: any) {
-      console.error("Refresh lists failed:", err);
-    }
-  }, [
-    dispatch,
-    estateId,
-    fetchAssignedBills,
-    selectedAddressId,
-    userId,
-  ]);
-
+  // Bootstrap user / addresses / estate bills
   useEffect(() => {
     (async () => {
-      setLoading(true);
+      setBootstrapping(true);
       try {
         const userRes = await dispatch(getSignedInUser()).unwrap();
         const user = userRes?.data as Record<string, unknown> | undefined;
         if (!user) {
           toast.warning("No signed in user found");
-          setLoading(false);
           return;
         }
+
         const uId = (user.id ?? user._id ?? "") as string;
         const wId =
           (user.walletId as string | undefined) ??
@@ -179,47 +130,80 @@ export default function BillPage() {
         if (!eId) {
           toast.warning("The signed-in user does not have an estate assigned.");
         } else {
-          const estateRes = await dispatch(
+          await dispatch(
             getBillsByEstate({ estateId: eId, page: 1, limit: 50 }),
           ).unwrap();
-          setPayableBills(estateRes?.data || []);
         }
-
-        const residentRes = await dispatch(
-          getResidentBills({ residentId: uId, page: 1, limit: 10 }),
-        ).unwrap();
-        setPaidBills(residentRes?.data || []);
-        setPaidPagination(residentRes?.pagination || {});
       } catch (err: any) {
         toast.error(err?.message || "Failed to fetch bills or user info");
       } finally {
-        setLoading(false);
+        setBootstrapping(false);
       }
     })();
   }, [dispatch]);
 
+  // Paid bills — date filter pattern matches rent/other pages
+  useEffect(() => {
+    if (!userId) return;
+
+    const shouldApplyDate = Boolean(paidStartDate && paidEndDate);
+    dispatch(
+      getResidentBills({
+        residentId: userId,
+        page: 1,
+        limit: 10,
+        startDate: shouldApplyDate ? paidStartDate : undefined,
+        endDate: shouldApplyDate ? paidEndDate : undefined,
+      }),
+    ).catch(() => toast.error("Failed to fetch paid bills"));
+  }, [dispatch, userId, paidStartDate, paidEndDate]);
+
+  // Assigned bills for selected address
   useEffect(() => {
     if (!selectedAddressId || !estateId) {
-      setAssignedBills([]);
+      dispatch(clearAssignedBills());
       return;
     }
 
-    let cancelled = false;
-    (async () => {
-      try {
-        await fetchAssignedBills(selectedAddressId, estateId);
-      } catch (err: any) {
-        if (!cancelled) {
-          setAssignedBills([]);
-          toast.error(err?.message || "Failed to fetch assigned bills");
-        }
-      }
-    })();
+    dispatch(
+      getBillsForAddress({
+        addressId: selectedAddressId,
+        estateId,
+        page: 1,
+        limit: 50,
+      }),
+    ).catch(() => toast.error("Failed to fetch assigned bills"));
+  }, [dispatch, selectedAddressId, estateId]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedAddressId, estateId, fetchAssignedBills]);
+  const refreshAfterPay = async () => {
+    if (!userId) return;
+    const shouldApplyDate = Boolean(paidStartDate && paidEndDate);
+
+    if (estateId) {
+      dispatch(getBillsByEstate({ estateId, page: 1, limit: 50 })).catch(
+        () => {},
+      );
+    }
+    if (selectedAddressId && estateId) {
+      dispatch(
+        getBillsForAddress({
+          addressId: selectedAddressId,
+          estateId,
+          page: 1,
+          limit: 50,
+        }),
+      ).catch(() => {});
+    }
+    dispatch(
+      getResidentBills({
+        residentId: userId,
+        page: Number(paidPagination?.page) || 1,
+        limit: Number(paidPagination?.limit) || 10,
+        startDate: shouldApplyDate ? paidStartDate : undefined,
+        endDate: shouldApplyDate ? paidEndDate : undefined,
+      }),
+    ).catch(() => {});
+  };
 
   const handlePayBill = async (payload: {
     billId: string;
@@ -238,9 +222,8 @@ export default function BillPage() {
       return;
     }
 
-    if (payingBillId) return;
+    if (paying) return;
 
-    setPayingBillId(payload.billId);
     try {
       await dispatch(
         payBill({
@@ -253,52 +236,61 @@ export default function BillPage() {
         }),
       ).unwrap();
       toast.success("Bill payment successful");
-      await refreshLists();
+      await refreshAfterPay();
     } catch (err: any) {
       toast.error(
-        err?.message ||
-          err?.payload?.message ||
-          "Failed to pay bill",
+        err?.message || err?.payload?.message || "Failed to pay bill",
       );
-    } finally {
-      setPayingBillId(null);
     }
   };
 
   const columns = [
-    { key: "billName", header: "Bill Name" },
-    { key: "frequency", header: "Frequency" },
+    {
+      key: "billName",
+      header: "Bill Name",
+      render: (item: PaidBillData) => item.billName || "-",
+    },
+    {
+      key: "frequency",
+      header: "Frequency",
+      render: (item: PaidBillData) =>
+        formatFrequencyLabel(item.frequency) || item.frequency || "-",
+    },
     {
       key: "amountPaid",
       header: "Amount Paid",
-      render: (item: any) =>
+      render: (item: PaidBillData) =>
         `₦${Number(item.amountPaid ?? 0).toLocaleString()}`,
     },
     {
-      key: "startDate",
-      header: "Start Date",
-      render: (item: any) =>
-        item.startDate ? new Date(item.startDate).toLocaleString() : "-",
-    },
-    {
-      key: "nextDueDate",
-      header: "Next Due Date",
-      render: (item: any) =>
-        item.nextDueDate ? new Date(item.nextDueDate).toLocaleString() : "-",
+      key: "status",
+      header: "Status",
+      render: (item: PaidBillData) => (
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${
+            item.status === "paid"
+              ? "bg-green-100 text-green-700"
+              : "bg-gray-100 text-gray-700"
+          }`}
+        >
+          {item.status || "-"}
+        </span>
+      ),
     },
   ];
 
   const showLoader =
-    loading ||
+    bootstrapping ||
+    loadingEstate ||
     (activeTab === "assigned" && loadingAssigned) ||
-    Boolean(payingBillId);
+    paying;
 
   return (
     <div className="relative">
       {showLoader && (
         <Loader
           fullScreen
-          label={payingBillId ? "Processing payment..." : "Loading bills..."}
+          label={paying ? "Processing payment..." : "Loading bills..."}
         />
       )}
 
@@ -312,9 +304,7 @@ export default function BillPage() {
           <h1 className="font-heading text-3xl font-bold">Bills</h1>
           <button
             type="button"
-            onClick={() =>
-              toast.info("To pay a bill, click any bill card.")
-            }
+            onClick={() => toast.info("To pay a bill, click any bill card.")}
             aria-label="How to pay"
             title="How to pay"
             className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -349,12 +339,12 @@ export default function BillPage() {
 
         {activeTab === "estate" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {!loading && payableBills.length === 0 ? (
+            {!loadingEstate && estateBills.length === 0 ? (
               <p className="text-muted-foreground">
                 No payable bills for this estate.
               </p>
             ) : (
-              payableBills.map((b) => (
+              estateBills.map((b) => (
                 <Card
                   key={b.id}
                   className="p-4 cursor-pointer hover:shadow-md"
@@ -396,7 +386,7 @@ export default function BillPage() {
                 const amount = assignedBillAmount(b);
                 return (
                   <Card
-                    key={b.id || payId || assignedBillName(b)}
+                    key={b.id || b._id || payId || assignedBillName(b)}
                     className="p-4 cursor-pointer hover:shadow-md"
                     onClick={() =>
                       payId &&
@@ -428,29 +418,62 @@ export default function BillPage() {
           </div>
         )}
 
-        {/* Paid bills table — shared across tabs */}
         <Card className="p-4">
           <h2 className="font-semibold mb-4">Your Paid Bills</h2>
           <Table
             columns={columns}
-            data={paidBills || []}
+            data={paidBills}
             emptyMessage="You haven't paid any bills yet."
+            enableDateRangeFilter
+            defaultDateRangeDays={0}
+            startDate={paidStartDate}
+            endDate={paidEndDate}
+            onDateRangeChange={({ startDate, endDate }) => {
+              setPaidStartDate(startDate);
+              setPaidEndDate(endDate);
+            }}
             showPagination
             paginationInfo={{
               total: paidPagination?.total || paidBills.length || 0,
-              current: Number(paidPagination?.page) || 1,
-              pageSize: Number(paidPagination?.limit) || 10,
+              current:
+                Number(paidPagination?.page) ||
+                Number(paidPagination?.currentPage) ||
+                1,
+              pageSize:
+                Number(paidPagination?.limit) ||
+                Number(paidPagination?.pageSize) ||
+                10,
+            }}
+            onPageChange={(page) => {
+              if (!userId) return;
+              const shouldApplyDate = Boolean(paidStartDate && paidEndDate);
+              dispatch(
+                getResidentBills({
+                  residentId: userId,
+                  page,
+                  limit: Number(paidPagination?.limit) || 10,
+                  startDate: shouldApplyDate ? paidStartDate : undefined,
+                  endDate: shouldApplyDate ? paidEndDate : undefined,
+                }),
+              ).catch(() => toast.error("Failed to change page"));
             }}
             enableExport
             exportFileName="paid-bills"
             onExportRequest={
               userId
                 ? async () => {
+                    const shouldApplyDate = Boolean(
+                      paidStartDate && paidEndDate,
+                    );
                     const res = await dispatch(
                       getResidentBills({
                         residentId: userId,
                         page: 1,
                         limit: 50000,
+                        startDate: shouldApplyDate
+                          ? paidStartDate
+                          : undefined,
+                        endDate: shouldApplyDate ? paidEndDate : undefined,
                       }),
                     ).unwrap();
                     return res?.data ?? [];
@@ -458,6 +481,11 @@ export default function BillPage() {
                 : undefined
             }
           />
+          {loadingPaid ? (
+            <p className="text-xs text-muted-foreground mt-2">
+              Loading paid bills...
+            </p>
+          ) : null}
         </Card>
       </div>
     </div>

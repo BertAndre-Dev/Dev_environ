@@ -12,6 +12,14 @@ export interface SecurityVisitorItem {
   phone: string;
   purpose: string;
   isVerified: boolean;
+  isCheckedOut?: boolean;
+  visitingType?: string;
+  visitStartDate?: string | null;
+  visitEndDate?: string | null;
+  validFrom?: string | null;
+  validUntil?: string | null;
+  checkoutTime?: string | null;
+  checkedOutBy?: { id: string; firstName: string; lastName: string } | null;
   createdAt: string;
   updatedAt: string;
   viewedBy?: { id: string; firstName: string; lastName: string };

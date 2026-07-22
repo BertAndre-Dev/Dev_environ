@@ -13,7 +13,16 @@ import { getAllVisitors } from "@/redux/slice/security/visitor/visitor";
 import type { SecurityVisitorItem } from "@/redux/slice/security/visitor/visitor-slice";
 import Table from "@/components/tables/list/page";
 import Loader from "@/components/ui/Loader";
+import { Button } from "@/components/ui/button";
+import { Eye } from "lucide-react";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
+import {
+  getVerificationFlags,
+  resolveVisitorVerificationMode,
+} from "@/lib/visitor-verification-mode";
+import { VisitorVerificationMode } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
+import { readStoredAuth } from "@/utils/auth-storage";
+import { VisitorActivityDetailsModal } from "@/components/security/VisitorActivityDetailsModal";
 
 const DATE_RANGE_PLACEHOLDERS = getDateRangePlaceholders();
 const PAGE_LIMIT = 10;
@@ -35,12 +44,32 @@ function getAddressDisplay(addressId: SecurityVisitorItem["addressId"]) {
   return parts.length ? parts.join(", ") : "—";
 }
 
+function personName(
+  person?: { firstName?: string; lastName?: string } | null,
+) {
+  if (!person) return "N/A";
+  const name = `${person.firstName ?? ""} ${person.lastName ?? ""}`.trim();
+  return name || "N/A";
+}
+
 export default function ActivityLogPage() {
   const dispatch = useDispatch<AppDispatch>();
   const [estateId, setEstateId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [visitorVerificationMode, setVisitorVerificationMode] = useState(
+    VisitorVerificationMode.VIEW_AND_VERIFY,
+  );
+  const [viewingVisitor, setViewingVisitor] =
+    useState<SecurityVisitorItem | null>(null);
+
+  const authUser = useSelector((state: RootState) => state.auth.user);
+
+  const verificationFlags = useMemo(
+    () => getVerificationFlags(visitorVerificationMode),
+    [visitorVerificationMode],
+  );
 
   const { allVisitors, loading } = useSelector((state: RootState) => {
     const v = state.securityVisitor;
@@ -97,15 +126,23 @@ export default function ActivityLogPage() {
   useEffect(() => {
     (async () => {
       try {
+        const priorUser = (authUser ??
+          readStoredAuth()?.user) as Record<string, unknown> | null;
         const userRes = await dispatch(getSignedInUser()).unwrap();
-        const rawEstateId =
-          userRes?.data?.estateId ?? userRes?.data?.estate ?? null;
+        const data = (userRes?.data ?? userRes) as Record<string, unknown>;
+        const rawEstateId = data?.estateId ?? data?.estate ?? null;
         const foundEstateId =
           typeof rawEstateId === "string"
             ? rawEstateId
             : (rawEstateId as { id?: string; _id?: string })?._id ||
               (rawEstateId as { id?: string; _id?: string })?.id ||
               "";
+
+        const mode =
+          resolveVisitorVerificationMode(data) ??
+          resolveVisitorVerificationMode(priorUser) ??
+          VisitorVerificationMode.VIEW_AND_VERIFY;
+        setVisitorVerificationMode(mode);
 
         if (!foundEstateId) {
           toast.warning("No estate found for this user");
@@ -119,6 +156,7 @@ export default function ActivityLogPage() {
         );
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch]);
 
   useEffect(() => {
@@ -175,34 +213,76 @@ export default function ActivityLogPage() {
         header: "Visitor Code",
         render: (row: SecurityVisitorItem) => row.visitorCode ?? "N/A",
       },
+      ...(verificationFlags.showViewedBy
+        ? [
+            {
+              key: "viewedBy",
+              header: "Viewed By",
+              render: (row: SecurityVisitorItem) => personName(row.viewedBy),
+            },
+          ]
+        : []),
+      ...(verificationFlags.showVerifiedBy
+        ? [
+            {
+              key: "verifiedBy",
+              header: "Verified By",
+              render: (row: SecurityVisitorItem) => personName(row.verifiedBy),
+            },
+          ]
+        : []),
       {
-        key: "viewedBy",
-        header: "Viewed By",
-        render: (row: SecurityVisitorItem) => row.viewedBy?.firstName ?? "N/A",
-      },
-      {
-        key: "verifiedBy",
-        header: "Verified By",
-        render: (row: SecurityVisitorItem) =>
-          row.verifiedBy?.firstName ?? "N/A",
-      },
-      {
-        key: "isVerified",
+        key: "status",
         header: "Status",
+        render: (row: SecurityVisitorItem) => {
+          if (verificationFlags.viewOnly) {
+            const viewed = Boolean(row.viewedBy);
+            return (
+              <span
+                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                  viewed
+                    ? "bg-green-100 text-green-800"
+                    : "bg-amber-100 text-amber-800"
+                }`}
+              >
+                {viewed ? "Viewed" : "Not viewed"}
+              </span>
+            );
+          }
+
+          const verified = Boolean(row.isVerified || row.verifiedBy);
+          return (
+            <span
+              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                verified
+                  ? "bg-green-100 text-green-800"
+                  : "bg-amber-100 text-amber-800"
+              }`}
+            >
+              {verified ? "Verified" : "Not verified"}
+            </span>
+          );
+        },
+      },
+      {
+        key: "actions",
+        header: "Actions",
+        exportable: false as const,
         render: (row: SecurityVisitorItem) => (
-          <span
-            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-              row.isVerified
-                ? "bg-green-100 text-green-800"
-                : "bg-amber-100 text-amber-800"
-            }`}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="cursor-pointer"
+            title="View more"
+            onClick={() => setViewingVisitor(row)}
           >
-            {row.isVerified ? "Verified" : "Not verified"}
-          </span>
+            <Eye className="h-4 w-4 text-[#0150AC]" />
+          </Button>
         ),
       },
     ],
-    [],
+    [verificationFlags],
   );
 
   return (
@@ -264,6 +344,12 @@ export default function ActivityLogPage() {
           </CardContent>
         </Card>
       </div>
+
+      <VisitorActivityDetailsModal
+        open={Boolean(viewingVisitor)}
+        item={viewingVisitor}
+        onClose={() => setViewingVisitor(null)}
+      />
     </div>
   );
 }

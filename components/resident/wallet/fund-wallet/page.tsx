@@ -218,7 +218,7 @@ export default function FundWalletForm({
             </select>
           </div>
 
-          <div>
+          {/* <div>
             <Label htmlFor="fund-wallet-gateway">
               Payment Gateway <span className="text-destructive">*</span>
             </Label>
@@ -244,7 +244,7 @@ export default function FundWalletForm({
                 </option>
               ))}
             </select>
-          </div>
+          </div> */}
 
           <Button
             type="submit"

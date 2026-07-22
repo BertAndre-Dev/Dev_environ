@@ -57,6 +57,7 @@ export type ChatGroupRoleToAdd =
   | "RESIDENT"
   | "ADMIN"
   | "SECURITY"
+  | "STAFF"
   | "ESTATE_ADMIN";
 
 export interface AddGroupMembersPayload {

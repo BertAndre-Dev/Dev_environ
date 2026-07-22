@@ -27,6 +27,7 @@ const OBJECT_ID_RE = /^[a-f\d]{24}$/i;
 
 const ROLE_OPTIONS: { label: string; value: ChatGroupRoleToAdd }[] = [
   { label: "Residents", value: "RESIDENT" },
+  { label: "Staff", value: "STAFF" },
   { label: "Security", value: "SECURITY" },
   { label: "Estate admins", value: "ESTATE_ADMIN" },
 ];
@@ -583,8 +584,38 @@ export function GroupInfoModal({
               Add members to group
             </h3>
 
+            <div>
+              <Label htmlFor="add-all-role">Bulk add by role</Label>
+              <p className="mb-2 text-xs text-muted-foreground">
+                Adds every active user in the estate with the selected role.
+              </p>
+              <Select
+                id="add-all-role"
+                value={roleToAdd}
+                onChange={(e) =>
+                  setRoleToAdd(e.target.value as ChatGroupRoleToAdd)
+                }
+                options={ROLE_OPTIONS}
+                className="mt-1 h-10 cursor-pointer"
+                disabled={showBusy}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="mt-2 cursor-pointer disabled:cursor-not-allowed"
+                disabled={showBusy}
+                onClick={() => onAddAllSameRole?.(roleToAdd)}
+              >
+                {`Add ${(
+                  ROLE_OPTIONS.find((o) => o.value === roleToAdd)?.label ??
+                  "users"
+                ).toLowerCase()}s`}
+              </Button>
+            </div>
+
             {hasEstateForPicker ? (
-              <div className="space-y-3">
+              <div className="space-y-3 border-t border-border pt-4">
                 <Label htmlFor="estate-user-search">Add people from your estate</Label>
                 <Input
                   id="estate-user-search"
@@ -675,40 +706,13 @@ export function GroupInfoModal({
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">
+              <p className="border-t border-border pt-4 text-xs text-muted-foreground">
                 This group has no estate id in the response, so the people picker
                 cannot load. Use bulk add by role, or ensure the API returns{" "}
                 <code className="rounded bg-muted px-1">estateId</code> on the
                 group.
               </p>
             )}
-
-            <div className="border-t border-border pt-4">
-              <Label htmlFor="add-all-role">Bulk add by role</Label>
-              <p className="mb-2 text-xs text-muted-foreground">
-                Adds every active user in the estate with the selected role.
-              </p>
-              <Select
-                id="add-all-role"
-                value={roleToAdd}
-                onChange={(e) =>
-                  setRoleToAdd(e.target.value as ChatGroupRoleToAdd)
-                }
-                options={ROLE_OPTIONS}
-                className="mt-1 h-10 cursor-pointer"
-                disabled={showBusy}
-              />
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                className="mt-2 cursor-pointer disabled:cursor-not-allowed"
-                disabled={showBusy}
-                onClick={() => onAddAllSameRole?.(roleToAdd)}
-              >
-                Add all with this role
-              </Button>
-            </div>
           </div>
         ) : null}
 

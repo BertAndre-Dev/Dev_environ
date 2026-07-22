@@ -1,13 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { formatDateTime } from "@/lib/format-date";
 
 export type PaidBillDetailsItem = {
@@ -74,12 +69,19 @@ export function PaidBillDetailsModal({
   else if (status === "active")
     statusClass = "text-blue-600 font-medium capitalize";
 
+  const isOneOff =
+    (item?.frequency ?? "").toString().toLowerCase() === "oneoff";
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Bill Payment Details</DialogTitle>
-        </DialogHeader>
+    <Modal
+      visible={open}
+      onClose={() => onOpenChange(false)}
+      contentClassName="max-w-lg"
+    >
+      <div className="pr-8">
+        <h2 className="font-heading text-lg font-bold text-foreground mb-4">
+          Bill Payment Details
+        </h2>
 
         {!item ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
@@ -87,58 +89,51 @@ export function PaidBillDetailsModal({
           </div>
         ) : (
           <div className="space-y-4">
-            {(() => {
-              const isOneOff =
-                (item.frequency ?? "").toString().toLowerCase() === "oneoff";
-
-              return (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <DetailRow
+                label="Resident"
+                value={formatResidentName(item.user)}
+              />
+              <DetailRow label="Email" value={item.user?.email || "—"} />
+              <DetailRow
+                label="Bill"
+                value={item.bill?.name ?? item.billName ?? "—"}
+              />
+              <DetailRow
+                label="Frequency"
+                value={formatFrequency(item.frequency)}
+              />
+              <DetailRow
+                label="Amount Paid"
+                value={`₦${Number(item.amountPaid ?? 0).toLocaleString()}`}
+              />
+              <DetailRow
+                label="Status"
+                value={
+                  <span className={statusClass}>{item.status ?? "—"}</span>
+                }
+              />
+              <DetailRow
+                label="Created"
+                value={formatDateTime(item.createdAt, "—")}
+              />
+              <DetailRow
+                label="Last Payment"
+                value={formatDateTime(item.lastPaymentDate, "—")}
+              />
+              {!isOneOff ? (
+                <>
                   <DetailRow
-                    label="Resident"
-                    value={formatResidentName(item.user)}
-                  />
-                  <DetailRow label="Email" value={item.user?.email || "—"} />
-                  <DetailRow
-                    label="Bill"
-                    value={item.bill?.name ?? item.billName ?? "—"}
+                    label="Start Date"
+                    value={formatDateTime(item.startDate, "—")}
                   />
                   <DetailRow
-                    label="Frequency"
-                    value={formatFrequency(item.frequency)}
+                    label="Next Due Date"
+                    value={formatDateTime(item.nextDueDate, "—")}
                   />
-                  <DetailRow
-                    label="Amount Paid"
-                    value={`₦${Number(item.amountPaid ?? 0).toLocaleString()}`}
-                  />
-                  <DetailRow
-                    label="Status"
-                    value={
-                      <span className={statusClass}>{item.status ?? "—"}</span>
-                    }
-                  />
-                  <DetailRow
-                    label="Created"
-                    value={formatDateTime(item.createdAt, "—")}
-                  />
-                  <DetailRow
-                    label="Last Payment"
-                    value={formatDateTime(item.lastPaymentDate, "—")}
-                  />
-                  {!isOneOff ? (
-                    <>
-                      <DetailRow
-                        label="Start Date"
-                        value={formatDateTime(item.startDate, "—")}
-                      />
-                      <DetailRow
-                        label="Next Due Date"
-                        value={formatDateTime(item.nextDueDate, "—")}
-                      />
-                    </>
-                  ) : null}
-                </div>
-              );
-            })()}
+                </>
+              ) : null}
+            </div>
 
             <div className="flex justify-end pt-2">
               <Button
@@ -152,7 +147,7 @@ export function PaidBillDetailsModal({
             </div>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+      </div>
+    </Modal>
   );
 }

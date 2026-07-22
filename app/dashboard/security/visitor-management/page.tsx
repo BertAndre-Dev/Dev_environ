@@ -91,11 +91,8 @@ export default function VisitorManagementPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch]);
 
-  const clockedIn =
-    visitorDetails?.checkedInAt ??
-    visitorDetails?.updatedAt ??
-    null;
-  const clockedOut = visitorDetails?.checkedOutAt ?? null;
+  const clockedIn = visitorDetails?.checkinTime ?? null;
+  const clockedOut = visitorDetails?.checkoutTime ?? null;
 
   return (
     <div className="relative">

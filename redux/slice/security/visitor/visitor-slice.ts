@@ -18,16 +18,13 @@ export interface SecurityVisitorItem {
   visitEndDate?: string | null;
   validFrom?: string | null;
   validUntil?: string | null;
+  checkinTime?: string | null;
   checkoutTime?: string | null;
   checkedOutBy?: { id: string; firstName: string; lastName: string } | null;
   createdAt: string;
   updatedAt: string;
   viewedBy?: { id: string; firstName: string; lastName: string };
   verifiedBy?: { id: string; firstName: string; lastName: string };
-  /** When the visitor was checked in (if API returns it). */
-  checkedInAt?: string;
-  /** When the visitor was checked out (if API returns it). */
-  checkedOutAt?: string;
 }
 
 export interface SecurityAllVisitorsResponse {

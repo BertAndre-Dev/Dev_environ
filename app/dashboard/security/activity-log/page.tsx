@@ -14,6 +14,7 @@ import type { SecurityVisitorItem } from "@/redux/slice/security/visitor/visitor
 import Table from "@/components/tables/list/page";
 import Loader from "@/components/ui/Loader";
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/ui/copy-button";
 import { Eye } from "lucide-react";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 import {
@@ -211,7 +212,20 @@ export default function ActivityLogPage() {
       {
         key: "visitorCode",
         header: "Visitor Code",
-        render: (row: SecurityVisitorItem) => row.visitorCode ?? "N/A",
+        render: (row: SecurityVisitorItem) =>
+          row.visitorCode ? (
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm font-semibold">
+                {row.visitorCode}
+              </span>
+              <CopyButton
+                value={row.visitorCode}
+                title="Copy visitor code"
+              />
+            </div>
+          ) : (
+            "N/A"
+          ),
       },
       ...(verificationFlags.showViewedBy
         ? [

@@ -82,8 +82,12 @@ export function VisitorActivityDetailsModal({ open, item, onClose }: Props) {
                 value={formatDate(item.validUntil)}
               />
               <DetailRow
+                label="Check-in time"
+                value={formatDate(item.checkinTime)}
+              />
+              <DetailRow
                 label="Checkout time"
-                value={formatDate(item.checkoutTime ?? item.checkedOutAt)}
+                value={formatDate(item.checkoutTime)}
               />
               <DetailRow
                 label="Checked out by"

@@ -23,6 +23,7 @@ interface TransactionsFilterBarProps {
 
 const DEFAULT_FREQUENCY_OPTIONS: { value: string; label: string }[] = [
   { value: "", label: "All" },
+  { value: "oneOff", label: "One-off" },
   { value: "monthly", label: "Monthly" },
   { value: "quarterly", label: "Quarterly" },
   { value: "yearly", label: "Yearly" },
@@ -31,6 +32,7 @@ const DEFAULT_FREQUENCY_OPTIONS: { value: string; label: string }[] = [
 const DEFAULT_STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "", label: "All" },
   { value: "paid", label: "Paid" },
+  { value: "active", label: "Active" },
   { value: "pending", label: "Pending" },
 ];
 

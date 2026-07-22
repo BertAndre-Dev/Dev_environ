@@ -1,6 +1,6 @@
 "use client";
 
-import { ShieldPlus, Trash2 } from "lucide-react";
+import { /* ShieldPlus, */ Trash2 } from "lucide-react";
 import type { CommunityMember } from "@/types/community-chat-ui";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,7 @@ type Props = Readonly<{
   showActions?: boolean;
   actionsDisabled?: boolean;
   onRemoveMember?: (userId: string) => void;
+  // Promote-admin temporarily disabled.
   onPromoteMember?: (userId: string) => void;
 }>;
 
@@ -18,7 +19,7 @@ export function GroupMemberRow({
   showActions = false,
   actionsDisabled = false,
   onRemoveMember,
-  onPromoteMember,
+  onPromoteMember: _onPromoteMember,
 }: Props) {
   const initials = member.name
     .split(" ")
@@ -55,6 +56,7 @@ export function GroupMemberRow({
       </span>
       {showActions ? (
         <div className="flex shrink-0 items-center gap-1">
+          {/* Promote-admin UI temporarily disabled.
           {member.tag !== "Admin" && onPromoteMember ? (
             <Button
               type="button"
@@ -69,6 +71,7 @@ export function GroupMemberRow({
               <ShieldPlus className="size-4" />
             </Button>
           ) : null}
+          */}
           {onRemoveMember ? (
             <Button
               type="button"

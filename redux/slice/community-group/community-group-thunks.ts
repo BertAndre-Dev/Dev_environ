@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 
 import axiosInstance from "@/utils/axiosInstance";
+import { chatGroupRoleToApiRole } from "@/lib/estate-user-roles";
 import type {
   AddGroupMembersPayload,
   ChatGroup,
@@ -454,7 +455,10 @@ export const addGroupMembers = createAsyncThunk<
     if (payload.memberIds?.length) body.memberIds = payload.memberIds;
     if (payload.addAllSameRole === true) {
       body.addAllSameRole = true;
-      if (payload.roleToAdd) body.roleToAdd = payload.roleToAdd;
+      if (payload.roleToAdd) {
+        // API expects lowercase roles (e.g. "resident"), not "RESIDENT".
+        body.roleToAdd = chatGroupRoleToApiRole(payload.roleToAdd);
+      }
     }
     if (!payload.memberIds?.length && payload.addAllSameRole !== true) {
       return rejectWithValue({
@@ -562,32 +566,36 @@ export const getGroupMembers = createAsyncThunk(
   },
 );
 
+// Promote-admin temporarily disabled.
 // POST /api/v1/chat/groups/{groupId}/promote-admin
 export const promoteGroupAdmin = createAsyncThunk<
   ApiResponse<unknown>,
   PromoteGroupAdminPayload,
   { rejectValue: RejectValue }
->("communityGroup/promoteGroupAdmin", async (payload, { rejectWithValue }) => {
-  try {
-    const id = payload.groupId?.trim();
-    if (!id || !isValidObjectId(id)) {
-      return rejectWithValue(invalidIdMessage("groupId"));
-    }
-    const uid = payload.userId?.trim();
-    if (!uid || !isValidObjectId(uid)) {
-      return rejectWithValue(invalidIdMessage("userId"));
-    }
-    const res = await axiosInstance.post(
-      `/api/v1/chat/groups/${id}/promote-admin`,
-      { userId: uid },
-    );
-    return (res.data ?? { success: true }) as ApiResponse<unknown>;
-  } catch (error: unknown) {
-    const err = error as { response?: { data?: { message?: string } } };
-    return rejectWithValue({
-      message: err?.response?.data?.message || "Failed to promote member.",
-    });
-  }
+>("communityGroup/promoteGroupAdmin", async (_payload, { rejectWithValue }) => {
+  return rejectWithValue({
+    message: "Promote admin is temporarily disabled.",
+  });
+  // try {
+  //   const id = payload.groupId?.trim();
+  //   if (!id || !isValidObjectId(id)) {
+  //     return rejectWithValue(invalidIdMessage("groupId"));
+  //   }
+  //   const uid = payload.userId?.trim();
+  //   if (!uid || !isValidObjectId(uid)) {
+  //     return rejectWithValue(invalidIdMessage("userId"));
+  //   }
+  //   const res = await axiosInstance.post(
+  //     `/api/v1/chat/groups/${id}/promote-admin`,
+  //     { userId: uid },
+  //   );
+  //   return (res.data ?? { success: true }) as ApiResponse<unknown>;
+  // } catch (error: unknown) {
+  //   const err = error as { response?: { data?: { message?: string } } };
+  //   return rejectWithValue({
+  //     message: err?.response?.data?.message || "Failed to promote member.",
+  //   });
+  // }
 });
 
 // GET /api/v1/chat/groups/{groupId}/messages?page=&limit=

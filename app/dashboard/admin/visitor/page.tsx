@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getVisitorsByEstate,
-  verifyVisitor,
+  // verifyVisitor,
   deleteVisitor,
 } from "@/redux/slice/admin/visitor/visitor";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
@@ -18,7 +18,7 @@ import {
   CheckCircle,
   Eye,
   QrCode,
-  ShieldCheck,
+  // ShieldCheck,
   ShieldCheckIcon,
   Trash2,
   UserPlus,
@@ -54,11 +54,11 @@ export default function AdminVisitorManagement() {
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [verifyModalVisitor, setVerifyModalVisitor] = useState<{
-    visitorCode: string;
-    firstName?: string;
-    lastName?: string;
-  } | null>(null);
+  // const [verifyModalVisitor, setVerifyModalVisitor] = useState<{
+  //   visitorCode: string;
+  //   firstName?: string;
+  //   lastName?: string;
+  // } | null>(null);
   const [visitorToDelete, setVisitorToDelete] = useState<any | null>(null);
   const [qrCodeVisitor, setQrCodeVisitor] = useState<QrCodeVisitor | null>(
     null,
@@ -195,28 +195,29 @@ export default function AdminVisitorManagement() {
     }
   };
 
-  const openVerifyModal = (item: any) => {
-    if (!verificationFlags.canVerify || item.isVerified) return;
-    setVerifyModalVisitor({
-      visitorCode: item.visitorCode,
-      firstName: item.firstName,
-      lastName: item.lastName,
-    });
-  };
+  // Admins must not verify visitors — verification is for security only.
+  // const openVerifyModal = (item: any) => {
+  //   if (!verificationFlags.canVerify || item.isVerified) return;
+  //   setVerifyModalVisitor({
+  //     visitorCode: item.visitorCode,
+  //     firstName: item.firstName,
+  //     lastName: item.lastName,
+  //   });
+  // };
 
-  const handleVerifyConfirm = async () => {
-    if (!verifyModalVisitor?.visitorCode) return;
-    try {
-      const res = await dispatch(
-        verifyVisitor({ visitorCode: verifyModalVisitor.visitorCode }),
-      ).unwrap();
-      toast.success(res.message);
-      setVerifyModalVisitor(null);
-      await fetchVisitors(pagination.page);
-    } catch (error: any) {
-      toast.error(error?.message);
-    }
-  };
+  // const handleVerifyConfirm = async () => {
+  //   if (!verifyModalVisitor?.visitorCode) return;
+  //   try {
+  //     const res = await dispatch(
+  //       verifyVisitor({ visitorCode: verifyModalVisitor.visitorCode }),
+  //     ).unwrap();
+  //     toast.success(res.message);
+  //     setVerifyModalVisitor(null);
+  //     await fetchVisitors(pagination.page);
+  //   } catch (error: any) {
+  //     toast.error(error?.message);
+  //   }
+  // };
 
   const refreshVisitors = () => {
     fetchVisitors(pagination.page).catch(() =>
@@ -370,6 +371,7 @@ export default function AdminVisitorManagement() {
       key: "actions",
       render: (item: any) => (
         <div className="flex items-center gap-2">
+          {/* Admins cannot verify visitors — security-only action.
           {verificationFlags.canVerify ? (
             item.isVerified ? (
               <div className="flex items-center gap-1 text-green-600">
@@ -388,6 +390,13 @@ export default function AdminVisitorManagement() {
                 <span className="text-xs">Verify</span>
               </Button>
             )
+          ) : null}
+          */}
+          {verificationFlags.showVerifiedBy && item.isVerified ? (
+            <div className="flex items-center gap-1 text-green-600">
+              <CheckCircle className="w-5 h-5" />
+              <span className="text-xs">Verified</span>
+            </div>
           ) : null}
           <Button
             variant="ghost"
@@ -535,7 +544,7 @@ export default function AdminVisitorManagement() {
           )}
         </Modal>
 
-        {/* Verify visitor confirmation modal */}
+        {/* Admins cannot verify visitors — confirmation modal disabled.
         <Modal
           visible={!!verifyModalVisitor}
           onClose={() => setVerifyModalVisitor(null)}
@@ -570,6 +579,7 @@ export default function AdminVisitorManagement() {
             </div>
           </div>
         </Modal>
+        */}
 
         <DeleteModal
           visible={!!visitorToDelete}

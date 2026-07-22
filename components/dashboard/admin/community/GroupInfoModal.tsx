@@ -79,6 +79,7 @@ type Props = Readonly<{
   onAddMembersByIds?: (memberIds: string[]) => void | Promise<void>;
   onAddAllSameRole?: (roleToAdd: ChatGroupRoleToAdd) => void | Promise<void>;
   onRemoveMembersByIds?: (memberIds: string[]) => void | Promise<void>;
+  // Promote-admin temporarily disabled.
   onPromoteMember?: (userId: string) => void | Promise<void>;
   estateDisplayName?: string | null;
   /** Used to load estate users for the add-member picker. */
@@ -102,7 +103,7 @@ export function GroupInfoModal({
   onAddMembersByIds,
   onAddAllSameRole,
   onRemoveMembersByIds,
-  onPromoteMember,
+  onPromoteMember: _onPromoteMember,
   estateDisplayName,
   estateId,
 }: Props) {
@@ -129,9 +130,10 @@ export function GroupInfoModal({
     null,
   );
   const [removingMember, setRemovingMember] = useState(false);
-  const [memberToPromote, setMemberToPromote] =
-    useState<CommunityMember | null>(null);
-  const [promotingMember, setPromotingMember] = useState(false);
+  // Promote-admin temporarily disabled.
+  // const [memberToPromote, setMemberToPromote] =
+  //   useState<CommunityMember | null>(null);
+  // const [promotingMember, setPromotingMember] = useState(false);
 
   const displayMembers = listMembersFetched ? listMembers : members;
   const displayMemberTotal = listMembersFetched
@@ -166,8 +168,8 @@ export function GroupInfoModal({
     setListMembersTotalPages(1);
     setMemberToRemove(null);
     setRemovingMember(false);
-    setMemberToPromote(null);
-    setPromotingMember(false);
+    // setMemberToPromote(null);
+    // setPromotingMember(false);
   }, [open, group?.id, group?.name, group?.about]);
 
   const fetchGroupMembersList = useCallback(
@@ -343,34 +345,34 @@ export function GroupInfoModal({
     }
   };
 
-  const handlePromote = (userId: string) => {
-    if (!onPromoteMember) return;
-    const member =
-      displayMembers.find((m) => m.id === userId) ??
-      ({
-        id: userId,
-        name: "this member",
-        subtitle: "Member",
-        tag: "Member",
-        avatarColor: "gray",
-      } satisfies CommunityMember);
-    setMemberToPromote(member);
-  };
+  // Promote-admin temporarily disabled.
+  // const handlePromote = (userId: string) => {
+  //   if (!_onPromoteMember) return;
+  //   const member =
+  //     displayMembers.find((m) => m.id === userId) ??
+  //     ({
+  //       id: userId,
+  //       name: "this member",
+  //       subtitle: "Member",
+  //       tag: "Member",
+  //       avatarColor: "gray",
+  //     } satisfies CommunityMember);
+  //   setMemberToPromote(member);
+  // };
 
-  const handleConfirmPromoteMember = async () => {
-    if (!memberToPromote || !onPromoteMember) return;
-    setPromotingMember(true);
-    try {
-      await onPromoteMember(memberToPromote.id);
-      setMemberToPromote(null);
-      await fetchGroupMembersList(1, false);
-    } catch (e: unknown) {
-      // Parent already toasts API error; rethrow so modal stays open.
-      throw e;
-    } finally {
-      setPromotingMember(false);
-    }
-  };
+  // const handleConfirmPromoteMember = async () => {
+  //   if (!memberToPromote || !_onPromoteMember) return;
+  //   setPromotingMember(true);
+  //   try {
+  //     await _onPromoteMember(memberToPromote.id);
+  //     setMemberToPromote(null);
+  //     await fetchGroupMembersList(1, false);
+  //   } catch (e: unknown) {
+  //     throw e;
+  //   } finally {
+  //     setPromotingMember(false);
+  //   }
+  // };
 
   if (!open) return null;
 
@@ -740,11 +742,11 @@ export function GroupInfoModal({
                         ? (id) => void handleRemoveMember(id)
                         : undefined
                     }
-                    onPromoteMember={
-                      onPromoteMember
-                        ? (id) => handlePromote(id)
-                        : undefined
-                    }
+                    // onPromoteMember={
+                    //   _onPromoteMember
+                    //     ? (id) => handlePromote(id)
+                    //     : undefined
+                    // }
                   />
                 ))}
                 {listMembersPage < listMembersTotalPages ? (
@@ -805,6 +807,7 @@ export function GroupInfoModal({
         onConfirm={handleConfirmRemoveMember}
       />
 
+      {/* Promote-admin temporarily disabled.
       <DeleteModal
         visible={!!memberToPromote}
         onClose={() => {
@@ -826,6 +829,7 @@ export function GroupInfoModal({
         }
         onConfirm={handleConfirmPromoteMember}
       />
+      */}
     </div>
   );
 }

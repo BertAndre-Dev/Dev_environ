@@ -141,7 +141,10 @@ export default function PayBillsPage() {
         const userEmail = userRes?.data?.email;
         const rType =
           userRes?.data?.residentType ?? userRes?.data?.resident_type ?? null;
-        const billPaymentPinHash = userRes?.data?.billPaymentPinHash ?? null;
+        const hasBillPaymentPin =
+          Boolean(userRes?.data?.hasBillPaymentPin) ||
+          // Legacy field — keep as fallback while older sessions may still return it.
+          Boolean(userRes?.data?.billPaymentPinHash);
 
         if (!id) {
           toast.warning("No user found.");
@@ -151,7 +154,7 @@ export default function PayBillsPage() {
         setUserId(id);
         setEmail(userEmail || "");
         setResidentType(rType ?? null);
-        setHasBillPaymentPin(Boolean(billPaymentPinHash));
+        setHasBillPaymentPin(hasBillPaymentPin);
 
         await dispatch(getWallet(id)).unwrap();
       } catch (err: any) {

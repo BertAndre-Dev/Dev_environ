@@ -47,6 +47,11 @@ import {
 import { formatUserMeterNumbers } from "@/lib/user-address-meters";
 import { useUserListMeterNumbers } from "@/hooks/useUserListMeterNumbers";
 
+/** Estate scope: company users are filtered under Company, not Estate. */
+const ESTATE_SCOPE_ROLE_FILTER_OPTIONS = ESTATE_USER_ROLE_FILTER_OPTIONS.filter(
+  (o) => o.value !== "company",
+);
+
 interface UserAddress {
   id: string;
   data?: {
@@ -336,11 +341,20 @@ export default function SuperAdminUserPage() {
     if (scope === "estate") {
       setSelectedCompany(null);
       if (estateOptions.length) setSelectedEstate(estateOptions[0]);
+      // Company role is not valid under estate filter.
+      if (roleFilter === "company") {
+        setRoleFilter(DEFAULT_ESTATE_USER_ROLE);
+      }
     } else {
       setSelectedEstate(null);
       if (companyOptions.length) setSelectedCompany(companyOptions[0]);
     }
   };
+
+  const roleFilterOptions =
+    filterScope === "estate"
+      ? ESTATE_SCOPE_ROLE_FILTER_OPTIONS
+      : ESTATE_USER_ROLE_FILTER_OPTIONS;
 
   const handleInviteModal = () => {
     setInviteOpen(true);
@@ -656,11 +670,9 @@ export default function SuperAdminUserPage() {
 
               <div className="w-36">
                 <Select
-                  options={ESTATE_USER_ROLE_FILTER_OPTIONS}
+                  options={roleFilterOptions}
                   placeholder="Filter by role"
-                  value={ESTATE_USER_ROLE_FILTER_OPTIONS.find(
-                    (o) => o.value === roleFilter,
-                  )}
+                  value={roleFilterOptions.find((o) => o.value === roleFilter)}
                   onChange={(option) =>
                     setRoleFilter(
                       (option?.value as EstateUserRoleFilter) ??

@@ -34,7 +34,7 @@ import {
   getChatGroupById,
   getChatGroups,
   getGroupMessages,
-  promoteGroupAdmin,
+  // promoteGroupAdmin,
   removeGroupMembers,
   replyToGroupMessage,
   sendGroupMessage,
@@ -521,17 +521,18 @@ export default function AdminCommunityChatPage() {
     }
   };
 
-  const handlePromoteMember = async (userId: string) => {
-    if (!selectedId) return;
-    try {
-      await dispatch(promoteGroupAdmin({ groupId: selectedId, userId })).unwrap();
-      toast.success("Member promoted.");
-      await refreshGroupMeta();
-    } catch (e: unknown) {
-      toast.error(getCommunityActionError(e, "Failed to promote member."));
-      throw e;
-    }
-  };
+  // Promote-admin is temporarily disabled.
+  // const handlePromoteMember = async (userId: string) => {
+  //   if (!selectedId) return;
+  //   try {
+  //     await dispatch(promoteGroupAdmin({ groupId: selectedId, userId })).unwrap();
+  //     toast.success("Member promoted.");
+  //     await refreshGroupMeta();
+  //   } catch (e: unknown) {
+  //     toast.error(getCommunityActionError(e, "Failed to promote member."));
+  //     throw e;
+  //   }
+  // };
 
   const emptySidebar =
     listLoading !== "isLoading" &&
@@ -634,7 +635,7 @@ export default function AdminCommunityChatPage() {
           onAddMembersByIds={handleAddMembersByIds}
           onAddAllSameRole={handleAddAllSameRole}
           onRemoveMembersByIds={handleRemoveMembersByIds}
-          onPromoteMember={handlePromoteMember}
+          // onPromoteMember={handlePromoteMember}
         />
       ) : null}
 

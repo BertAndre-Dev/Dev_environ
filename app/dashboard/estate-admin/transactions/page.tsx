@@ -22,7 +22,13 @@ import {
 import { HistoryTransactionsTab } from "./components/HistoryTransactionsTab";
 import { VendsTab } from "./components/VendsTab";
 import { PaidBillsTab } from "./components/PaidBillsTab";
+import {
+  PaidBillDetailsModal,
+  type PaidBillDetailsItem,
+} from "./components/PaidBillDetailsModal";
 import { formatDateTime } from "@/lib/format-date";
+import { Button } from "@/components/ui/button";
+import { Eye } from "lucide-react";
 
 interface TransactionData {
   walletId: string;
@@ -62,6 +68,8 @@ export default function TransactionPage() {
   const [loadingPaidBills, setLoadingPaidBills] = useState(false);
   const [paidBillsStartDate, setPaidBillsStartDate] = useState<string>("");
   const [paidBillsEndDate, setPaidBillsEndDate] = useState<string>("");
+  const [viewingPaidBill, setViewingPaidBill] =
+    useState<PaidBillDetailsItem | null>(null);
   const [search, setSearch] = useState("");
   const [filterType] = useState<string>("");
   const [filterStatus] = useState<string>("");
@@ -297,7 +305,10 @@ export default function TransactionPage() {
       { value: "", label: "All" },
       ...Array.from(set).map((f) => ({
         value: f,
-        label: f.charAt(0).toUpperCase() + f.slice(1),
+        label:
+          f.toLowerCase() === "oneoff"
+            ? "One-off"
+            : f.charAt(0).toUpperCase() + f.slice(1),
       })),
     ];
   }, [paidBillsData]);
@@ -643,11 +654,15 @@ export default function TransactionPage() {
   const paidBillsColumns = [
     {
       key: "createdAt",
-      header: "Date",
-      render: (item: any) =>
-        formatDateTime(item.createdAt, "-"),
-      exportValue: (item: any) =>
-        formatDateTime(item.createdAt, ""),
+      header: "Created",
+      render: (item: any) => formatDateTime(item.createdAt, "-"),
+      exportValue: (item: any) => formatDateTime(item.createdAt, ""),
+    },
+    {
+      key: "lastPaymentDate",
+      header: "Last Payment",
+      render: (item: any) => formatDateTime(item.lastPaymentDate, "-"),
+      exportValue: (item: any) => formatDateTime(item.lastPaymentDate, ""),
     },
     {
       key: "user",
@@ -672,46 +687,63 @@ export default function TransactionPage() {
       exportValue: (item: any) => String(item?.user?.email ?? ""),
     },
     {
-      key: "frequency",
-      header: "Frequency",
-      render: (item: any) => item.frequency ?? "-",
-      exportValue: (item: any) => String(item.frequency ?? ""),
-    },
-    {
-      key: "startDate",
-      header: "Start Date",
-      render: (item: any) => item.startDate ?? "-",
-      exportValue: (item: any) => String(item.startDate ?? ""),
-    },
-    {
-      key: "nextDueDate",
-      header: "Next Due Date",
-      render: (item: any) => item.nextDueDate ?? "-",
-      exportValue: (item: any) => String(item.nextDueDate ?? ""),
-    },
-    {
       key: "bill",
       header: "Bill",
-      render: (item: any) => item.bill?.name ?? "-",
+      render: (item: any) => item.bill?.name ?? item.billName ?? "-",
       exportValue: (item: any) =>
         String(item.bill?.name ?? item.billName ?? ""),
     },
     {
+      key: "frequency",
+      header: "Frequency",
+      render: (item: any) => {
+        const freq = (item.frequency ?? "").toString();
+        if (!freq) return "-";
+        if (freq.toLowerCase() === "oneoff") return "One-off";
+        return freq.charAt(0).toUpperCase() + freq.slice(1);
+      },
+      exportValue: (item: any) => String(item.frequency ?? ""),
+    },
+    {
       key: "amountPaid",
-      header: "Amount (₦)",
-      render: (item: any) => item.amountPaid?.toLocaleString() ?? 0,
+      header: "Amount Paid (₦)",
+      render: (item: any) =>
+        item.amountPaid != null
+          ? Number(item.amountPaid).toLocaleString()
+          : "0",
       exportValue: (item: any) =>
         item.amountPaid != null ? String(item.amountPaid) : "",
     },
     {
       key: "status",
       header: "Status",
-      render: (item: any) => (
-        <span className="text-green-600 font-medium capitalize">
-          {item.status ?? "-"}
-        </span>
-      ),
+      render: (item: any) => {
+        const status = (item.status ?? "-").toString().toLowerCase();
+        let className = "text-yellow-600 font-medium capitalize";
+        if (status === "paid")
+          className = "text-green-600 font-medium capitalize";
+        else if (status === "active")
+          className = "text-blue-600 font-medium capitalize";
+        return <span className={className}>{item.status ?? "-"}</span>;
+      },
       exportValue: (item: any) => String(item.status ?? ""),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      exportable: false as const,
+      render: (item: any) => (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="cursor-pointer"
+          title="View details"
+          onClick={() => setViewingPaidBill(item)}
+        >
+          <Eye className="h-4 w-4 text-[#0150AC]" />
+        </Button>
+      ),
     },
   ];
 
@@ -845,6 +877,14 @@ export default function TransactionPage() {
             }
           />
         }
+      />
+
+      <PaidBillDetailsModal
+        open={Boolean(viewingPaidBill)}
+        item={viewingPaidBill}
+        onOpenChange={(open) => {
+          if (!open) setViewingPaidBill(null);
+        }}
       />
     </div>
   );

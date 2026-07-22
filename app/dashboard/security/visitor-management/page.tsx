@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import VerifyVisitorForm from "@/components/security/verify-visitor-form";
 import ViewVisitorSearch from "@/components/security/view-visitor-search";
@@ -15,12 +15,30 @@ import type { RootState, AppDispatch } from "@/redux/store";
 import { toast } from "react-toastify";
 import type { VisitorDetailsData } from "@/app/dashboard/security/types";
 import Loader from "@/components/ui/Loader";
+import {
+  getVerificationFlags,
+  resolveVisitorVerificationDescription,
+  resolveVisitorVerificationMode,
+} from "@/lib/visitor-verification-mode";
+import { VisitorVerificationMode } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
+import { readStoredAuth } from "@/utils/auth-storage";
 
 export default function VisitorManagementPage() {
   const dispatch = useDispatch<AppDispatch>();
   const [estateId, setEstateId] = useState<string | null>(null);
   const [visitorDetails, setVisitorDetails] =
     useState<VisitorDetailsData | null>(null);
+  const [lookupSource, setLookupSource] = useState<"code" | "scan" | null>(
+    null,
+  );
+  const [visitorVerificationMode, setVisitorVerificationMode] = useState(
+    VisitorVerificationMode.VIEW_AND_VERIFY,
+  );
+  const [verificationDescription, setVerificationDescription] = useState<
+    string | null
+  >(null);
+
+  const authUser = useSelector((state: RootState) => state.auth.user);
 
   const { allVisitors, loading } = useSelector((state: RootState) => {
     const v = state.securityVisitor;
@@ -30,20 +48,37 @@ export default function VisitorManagementPage() {
     };
   });
 
-  // const visitors = allVisitors?.data ?? [];
+  const verificationFlags = useMemo(
+    () => getVerificationFlags(visitorVerificationMode),
+    [visitorVerificationMode],
+  );
 
   useEffect(() => {
     (async () => {
       try {
+        const priorUser = (authUser ??
+          readStoredAuth()?.user) as Record<string, unknown> | null;
         const userRes = await dispatch(getSignedInUser()).unwrap();
+        const data = (userRes?.data ?? userRes) as Record<string, unknown>;
         const rawEstateId =
-          userRes?.data?.estateId ?? userRes?.data?.estate ?? null;
+          data?.estateId ?? data?.estate ?? null;
         const id =
           typeof rawEstateId === "string"
             ? rawEstateId
             : (rawEstateId as { id?: string; _id?: string })?._id ||
               (rawEstateId as { id?: string; _id?: string })?.id ||
               "";
+
+        const mode =
+          resolveVisitorVerificationMode(data) ??
+          resolveVisitorVerificationMode(priorUser) ??
+          VisitorVerificationMode.VIEW_AND_VERIFY;
+        setVisitorVerificationMode(mode);
+        setVerificationDescription(
+          resolveVisitorVerificationDescription(data) ??
+            resolveVisitorVerificationDescription(priorUser),
+        );
+
         if (!id) return;
         setEstateId(id);
         await dispatch(
@@ -53,6 +88,7 @@ export default function VisitorManagementPage() {
         toast.error((err as { message?: string })?.message ?? "Failed to load");
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch]);
 
   const clockedIn =
@@ -68,11 +104,12 @@ export default function VisitorManagementPage() {
       <div
         className={`space-y-6${loading ? " pointer-events-none select-none" : ""}`}
       >
-      {/* Stats Card */}
       <div className="grid grid-cols-1 gap-4">
         {[
           {
-            label: "Total Verifications",
+            label: verificationFlags.viewOnly
+              ? "Total Views"
+              : "Total Verifications",
             value: 0,
             icon: IdCard,
             color: "bg-[#D0DFF280]",
@@ -97,13 +134,24 @@ export default function VisitorManagementPage() {
         })}
       </div>
 
-      <ViewVisitorSearch onDetailsLoaded={setVisitorDetails} />
+      <ViewVisitorSearch
+        verificationFlags={verificationFlags}
+        verificationDescription={verificationDescription}
+        onLookupSource={setLookupSource}
+        onDetailsLoaded={(visitor) => {
+          setVisitorDetails(visitor);
+          if (!visitor) setLookupSource(null);
+        }}
+      />
 
       {visitorDetails && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <VerifyVisitorForm
             visitorDetails={visitorDetails}
             initialCode={visitorDetails?.visitorCode}
+            verificationFlags={verificationFlags}
+            lookupSource={lookupSource}
+            verificationDescription={verificationDescription}
             onVerified={(visitor) => {
               if (visitor) setVisitorDetails(visitor);
               if (estateId) {
@@ -122,7 +170,6 @@ export default function VisitorManagementPage() {
         clockedOut={clockedOut}
         initialClockOutCode={visitorDetails?.visitorCode}
       />
-      {/* Recent Visitor Invites */}
       <RecentVisitorInvites visitors={allVisitors?.data ?? []} loading={false} />
       </div>
     </div>

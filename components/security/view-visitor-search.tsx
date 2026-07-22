@@ -9,32 +9,35 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-toastify";
 import { getVisitorDetailsByCode } from "@/redux/slice/admin/visitor/visitor";
 import { normalizeBarcodeInput } from "@/lib/utils";
-import { Eye, ScanLine } from "lucide-react";
+import { Eye, ScanLine, ShieldCheck } from "lucide-react";
 import BarcodeScannerModal from "@/components/security/barcode-scanner-modal";
 import type { VisitorDetailsData } from "@/app/dashboard/security/types";
+import type { VisitorVerificationFlags } from "@/lib/visitor-verification-mode";
+import { getVerificationFlags } from "@/lib/visitor-verification-mode";
 
 interface ViewVisitorSearchProps {
   onDetailsLoaded?: (visitor: VisitorDetailsData | null) => void;
+  /** How the last lookup was performed (typed code vs camera scan). */
+  onLookupSource?: (source: "code" | "scan") => void;
+  verificationFlags?: VisitorVerificationFlags;
+  verificationDescription?: string | null;
 }
 
 function ScannerGraphic() {
   return (
     <div className="relative mx-auto flex h-40 w-40 items-center justify-center">
-      {/* Outer blue corner brackets */}
       <div className="absolute inset-0">
         <span className="absolute left-0 top-0 h-8 w-8 border-l-[3px] border-t-[3px] border-[#3B82F6] rounded-tl-sm" />
         <span className="absolute right-0 top-0 h-8 w-8 border-r-[3px] border-t-[3px] border-[#3B82F6] rounded-tr-sm" />
         <span className="absolute bottom-0 left-0 h-8 w-8 border-b-[3px] border-l-[3px] border-[#3B82F6] rounded-bl-sm" />
         <span className="absolute bottom-0 right-0 h-8 w-8 border-b-[3px] border-r-[3px] border-[#3B82F6] rounded-br-sm" />
       </div>
-      {/* Inner grey corner brackets */}
       <div className="absolute inset-6">
         <span className="absolute left-0 top-0 h-5 w-5 border-l-2 border-t-2 border-slate-500" />
         <span className="absolute right-0 top-0 h-5 w-5 border-r-2 border-t-2 border-slate-500" />
         <span className="absolute bottom-0 left-0 h-5 w-5 border-b-2 border-l-2 border-slate-500" />
         <span className="absolute bottom-0 right-0 h-5 w-5 border-b-2 border-r-2 border-slate-500" />
       </div>
-      {/* Scan laser line */}
       <div className="absolute left-4 right-4 top-1/2 flex -translate-y-1/2 items-center">
         <div className="h-px flex-1 bg-[#3B82F6]/80" />
         <div className="mx-1 h-2 w-8 rounded-full bg-[#3B82F6] shadow-[0_0_12px_rgba(59,130,246,0.8)]" />
@@ -46,15 +49,35 @@ function ScannerGraphic() {
 
 export default function ViewVisitorSearch({
   onDetailsLoaded,
+  onLookupSource,
+  verificationFlags,
+  verificationDescription,
 }: ViewVisitorSearchProps = {}) {
   const dispatch = useDispatch<AppDispatch>();
+  const flags = verificationFlags ?? getVerificationFlags(null);
 
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
 
+  const primaryLabel = flags.verifyOnly ? "Verify code" : "View visitor";
+  const PrimaryIcon = flags.verifyOnly ? ShieldCheck : Eye;
+  const scanLabel = flags.verifyOnly ? "Scan to verify" : "Scan visitor";
+
+  let helperText =
+    "Open the camera to scan a visitor QR code. You can enter a code to view the visitor, or scan with the camera.";
+  if (verificationDescription?.trim()) {
+    helperText = verificationDescription.trim();
+  } else if (flags.viewOnly) {
+    helperText =
+      "Open the camera to scan a visitor QR code, or enter a code to view the visitor. Viewing or scanning records that you have checked this visitor.";
+  } else if (flags.verifyOnly) {
+    helperText =
+      "Open the camera to scan a visitor QR code, or enter a code to verify the visitor.";
+  }
+
   const loadVisitorDetails = useCallback(
-    async (rawCode: string) => {
+    async (rawCode: string, source: "code" | "scan") => {
       const trimmed = normalizeBarcodeInput(rawCode);
       if (!trimmed) {
         toast.warning("Enter visitor code or scan value");
@@ -63,13 +86,30 @@ export default function ViewVisitorSearch({
 
       try {
         setLoading(true);
-        const res: { data: VisitorDetailsData } = await dispatch(
-          getVisitorDetailsByCode({ code: trimmed }),
-        ).unwrap();
+        const res: { data: VisitorDetailsData; message?: string } =
+          await dispatch(
+            getVisitorDetailsByCode({ code: trimmed }),
+          ).unwrap();
 
         setCode(trimmed);
+        onLookupSource?.(source);
         onDetailsLoaded?.(res.data);
-        toast.success("Visitor details retrieved");
+
+        if (flags.viewOnly) {
+          toast.success(
+            source === "scan"
+              ? "QR code scanned — visitor recorded as viewed."
+              : "Visitor code viewed and recorded.",
+          );
+        } else if (flags.verifyOnly) {
+          toast.success(
+            source === "scan"
+              ? "QR code scanned — ready to verify."
+              : "Visitor loaded — ready to verify.",
+          );
+        } else {
+          toast.success(res.message ?? "Visitor retrieved");
+        }
       } catch (error: unknown) {
         toast.error(
           (error as { message?: string })?.message || "Invalid visitor code",
@@ -79,17 +119,17 @@ export default function ViewVisitorSearch({
         setLoading(false);
       }
     },
-    [dispatch, onDetailsLoaded],
+    [dispatch, flags.verifyOnly, flags.viewOnly, onDetailsLoaded, onLookupSource],
   );
 
-  const handleView = () => {
-    void loadVisitorDetails(code);
+  const handlePrimaryAction = () => {
+    void loadVisitorDetails(code, "code");
   };
 
   const handleScanned = useCallback(
     (value: string) => {
       setScannerOpen(false);
-      void loadVisitorDetails(value);
+      void loadVisitorDetails(value, "scan");
     },
     [loadVisitorDetails],
   );
@@ -109,8 +149,7 @@ export default function ViewVisitorSearch({
               <ScannerGraphic />
             </div>
             <p className="max-w-md text-center text-sm text-muted-foreground leading-relaxed">
-              Open the camera to scan a visitor QR code. You can enter a code to
-              view details, or scan details only with the camera.
+              {helperText}
             </p>
           </div>
 
@@ -120,20 +159,20 @@ export default function ViewVisitorSearch({
               onChange={(e) => setCode(e.target.value)}
               onBlur={(e) => setCode(normalizeBarcodeInput(e.target.value))}
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleView();
+                if (e.key === "Enter") handlePrimaryAction();
               }}
               placeholder="EZR-4FTX or paste visitor code"
               className="flex-1"
             />
             <Button
               type="button"
-              onClick={handleView}
+              onClick={handlePrimaryAction}
               disabled={loading}
               variant="outline"
               className="h-10 sm:h-auto shrink-0 rounded-xl"
             >
-              <Eye className="w-4 h-4 mr-2" />
-              {loading ? "Loading..." : "View details"}
+              <PrimaryIcon className="w-4 h-4 mr-2" />
+              {loading ? "Loading..." : primaryLabel}
             </Button>
           </div>
 
@@ -144,7 +183,7 @@ export default function ViewVisitorSearch({
             className="h-12 w-full rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white"
           >
             <ScanLine className="w-4 h-4 mr-2" />
-            Scan details
+            {scanLabel}
           </Button>
         </CardContent>
       </Card>

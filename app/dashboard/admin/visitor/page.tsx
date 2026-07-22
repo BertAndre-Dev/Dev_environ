@@ -35,68 +35,13 @@ import { formatAddressEntryLabel } from "@/lib/address";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 import { VisitorVerificationMode } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
 import { readStoredAuth } from "@/utils/auth-storage";
+import {
+  getVerificationFlags,
+  resolveVisitorVerificationMode,
+} from "@/lib/visitor-verification-mode";
 
 const PAGE_LIMIT = 10;
 const DATE_RANGE_PLACEHOLDERS = getDateRangePlaceholders();
-
-type VisitorVerificationFlags = {
-  showViewedBy: boolean;
-  showVerifiedBy: boolean;
-  canVerify: boolean;
-};
-
-function resolveVisitorVerificationMode(
-  data: Record<string, unknown> | null | undefined,
-): string | null {
-  if (!data) return null;
-
-  const memberships = data.memberships;
-  if (Array.isArray(memberships)) {
-    const current =
-      memberships.find(
-        (m: { isCurrent?: boolean }) => m?.isCurrent,
-      ) ?? memberships[0];
-    const estate = (current as { estateId?: unknown } | undefined)?.estateId;
-    if (estate && typeof estate === "object" && !Array.isArray(estate)) {
-      const mode = (estate as { visitorVerificationMode?: string })
-        .visitorVerificationMode;
-      if (mode) return String(mode).toUpperCase();
-    }
-  }
-
-  const estateId = data.estateId;
-  if (estateId && typeof estateId === "object" && !Array.isArray(estateId)) {
-    const mode = (estateId as { visitorVerificationMode?: string })
-      .visitorVerificationMode;
-    if (mode) return String(mode).toUpperCase();
-  }
-
-  const estate = data.estate;
-  if (estate && typeof estate === "object" && !Array.isArray(estate)) {
-    const mode = (estate as { visitorVerificationMode?: string })
-      .visitorVerificationMode;
-    if (mode) return String(mode).toUpperCase();
-  }
-
-  const direct = data.visitorVerificationMode;
-  if (typeof direct === "string" && direct.trim()) {
-    return direct.toUpperCase();
-  }
-
-  return null;
-}
-
-function getVerificationFlags(mode: string): VisitorVerificationFlags {
-  switch (mode) {
-    case VisitorVerificationMode.VIEW_ONLY:
-      return { showViewedBy: true, showVerifiedBy: false, canVerify: false };
-    case VisitorVerificationMode.VERIFY_ONLY:
-      return { showViewedBy: false, showVerifiedBy: true, canVerify: true };
-    case VisitorVerificationMode.VIEW_AND_VERIFY:
-    default:
-      return { showViewedBy: true, showVerifiedBy: true, canVerify: true };
-  }
-}
 
 export default function AdminVisitorManagement() {
   const dispatch = useDispatch<AppDispatch>();

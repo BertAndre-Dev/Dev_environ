@@ -241,24 +241,24 @@ export interface VendingStatsByAddressResponse {
 }
 
 /** GET /analytics/meters/vending/by-address?addressId= */
-export const getVendingStatsByAddress = createAsyncThunk(
-  "meter-mgt/getVendingStatsByAddress",
-  async ({ addressId }: { addressId: string }, { rejectWithValue }) => {
-    try {
-      const res = await axiosInstance.get<VendingStatsByAddressResponse>(
-        "/analytics/meters/vending/by-address",
-        { params: { addressId } },
-      );
-      return res.data;
-    } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to fetch vending statistics.",
-      });
-    }
-  },
-);
+// export const getVendingStatsByAddress = createAsyncThunk(
+//   "meter-mgt/getVendingStatsByAddress",
+//   async ({ addressId }: { addressId: string }, { rejectWithValue }) => {
+//     try {
+//       const res = await axiosInstance.get<VendingStatsByAddressResponse>(
+//         "/analytics/meters/vending/by-address",
+//         { params: { addressId } },
+//       );
+//       return res.data;
+//     } catch (error: unknown) {
+//       const err = error as { response?: { data?: { message?: string } } };
+//       return rejectWithValue({
+//         message:
+//           err?.response?.data?.message || "Failed to fetch vending statistics.",
+//       });
+//     }
+//   },
+// );
 
 export type { VendAnalyticsChartResponse };
 

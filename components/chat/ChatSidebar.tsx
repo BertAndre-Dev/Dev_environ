@@ -142,7 +142,7 @@ export default function ChatSidebar() {
               type="button"
               onClick={() => void handleSelect(c)}
               className={[
-                "w-full text-left rounded-xl border p-3 transition-colors",
+                "w-full cursor-pointer text-left rounded-xl border p-3 transition-colors",
                 isActive ? "bg-primary/10 border-primary/20" : "hover:bg-muted/40",
               ].join(" ")}
               aria-label={`Open chat: ${c.subject}`}

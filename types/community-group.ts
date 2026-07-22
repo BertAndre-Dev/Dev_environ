@@ -6,6 +6,9 @@ export interface ChatGroupMemberUser {
   firstName?: string;
   lastName?: string;
   email?: string;
+  role?: string;
+  /** Present on some member-list payloads. */
+  isAdmin?: boolean;
 }
 
 export interface ChatGroup {
@@ -66,6 +69,24 @@ export interface AddGroupMembersPayload {
 export interface RemoveGroupMembersPayload {
   groupId: string;
   memberIds: string[];
+}
+
+export interface GetGroupMembersPayload {
+  groupId: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface ChatGroupMembersListResponse {
+  success: boolean;
+  message?: string;
+  data: ChatGroupMemberUser[];
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  };
 }
 
 export interface PromoteGroupAdminPayload {

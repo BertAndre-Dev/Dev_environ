@@ -6,6 +6,7 @@ import type { AppDispatch } from "@/redux/store";
 import { getFieldByEstate } from "@/redux/slice/admin/address-mgt/fields/fields";
 import { getEntriesByField } from "@/redux/slice/admin/address-mgt/entry/entry";
 import { getAllUsersByEstate } from "@/redux/slice/admin/user-mgt/user";
+import { getBill } from "@/redux/slice/admin/bills-mgt/bills";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,16 @@ export interface BillForAddressFormData {
   amount: number;
   frequency: BillForAddressFrequency;
   isServiceCharge: boolean;
+}
+
+export interface BillForAddressInitialData {
+  id?: string;
+  billId?: string;
+  addressId?: string;
+  name?: string;
+  description?: string;
+  amount?: number;
+  frequency?: string;
 }
 
 const FREQUENCY_OPTIONS: { label: string; value: BillForAddressFrequency }[] = [
@@ -58,28 +69,47 @@ function findResidentForAddress(
   });
 }
 
+function normalizeFrequency(value?: string): BillForAddressFrequency {
+  if (value === "quarterly" || value === "yearly" || value === "oneOff") {
+    return value;
+  }
+  return "oneOff";
+}
+
+function getSubmitLabel(submitting: boolean, isEditing: boolean): string {
+  if (submitting) return isEditing ? "Updating..." : "Creating...";
+  return isEditing ? "Update Bill" : "Create Bill";
+}
+
 interface BillForAddressFormProps {
   readonly estateId: string;
+  readonly initialData?: BillForAddressInitialData | null;
   readonly onSubmit: (data: BillForAddressFormData) => Promise<void> | void;
   readonly onClose?: () => void;
 }
 
 export default function BillForAddressForm(props: BillForAddressFormProps) {
-  const { estateId, onSubmit, onClose } = props;
+  const { estateId, initialData = null, onSubmit, onClose } = props;
   const dispatch = useDispatch<AppDispatch>();
+  const isEditing = Boolean(initialData?.id || initialData?.billId);
+
   const [addressOptions, setAddressOptions] = useState<
     { label: string; value: string }[]
   >([]);
   const [residents, setResidents] = useState<ResidentRecord[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [loadingBill, setLoadingBill] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const [form, setForm] = useState({
-    addressId: "",
-    name: "",
-    description: "",
-    amount: "",
-    frequency: "oneOff" as BillForAddressFrequency,
+    addressId: initialData?.addressId || "",
+    name: initialData?.name || "",
+    description: initialData?.description || "",
+    amount:
+      initialData?.amount != null
+        ? formatAmountInput(String(initialData.amount))
+        : "",
+    frequency: normalizeFrequency(initialData?.frequency),
   });
 
   const attachedResidentName = useMemo(() => {
@@ -145,7 +175,7 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
         );
 
         setAddressOptions(options);
-        if (options.length === 1) {
+        if (!isEditing && options.length === 1) {
           setForm((prev) =>
             prev.addressId ? prev : { ...prev, addressId: options[0].value },
           );
@@ -160,7 +190,46 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
     if (estateId) {
       loadAddresses();
     }
-  }, [dispatch, estateId]);
+  }, [dispatch, estateId, isEditing]);
+
+  useEffect(() => {
+    const billId = initialData?.billId || initialData?.id;
+    if (!billId) return;
+
+    const loadBill = async () => {
+      try {
+        setLoadingBill(true);
+        const res = await dispatch(getBill(billId)).unwrap();
+        const fetchData = res?.data;
+        if (!fetchData) return;
+
+        setForm((prev) => ({
+          addressId:
+            fetchData.addressId || initialData?.addressId || prev.addressId,
+          name: fetchData.name || fetchData.billName || prev.name,
+          description: fetchData.description || prev.description,
+          amount: formatAmountInput(
+            String(
+              fetchData.amount ??
+                fetchData.amountPaid ??
+                fetchData.yearlyAmount ??
+                initialData?.amount ??
+                0,
+            ),
+          ),
+          frequency: normalizeFrequency(
+            fetchData.frequency || initialData?.frequency,
+          ),
+        }));
+      } catch (error: any) {
+        toast.error(error?.message || "Failed to load bill");
+      } finally {
+        setLoadingBill(false);
+      }
+    };
+
+    loadBill();
+  }, [dispatch, initialData]);
 
   const handleChange = (field: keyof typeof form, value: string) => {
     setForm((prev) => ({
@@ -208,106 +277,119 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
     <form onSubmit={handleSubmit}>
       <CardHeader>
         <CardTitle className="text-lg pb-4 pt-8 font-semibold">
-          Create bill for an address
+          {isEditing ? "Update bill for an address" : "Create bill for an address"}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="addressId">Address</Label>
-          <select
-            id="addressId"
-            aria-label="Select address"
-            className="w-full border border-border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#0150AC]"
-            value={form.addressId}
-            onChange={(e) => handleChange("addressId", e.target.value)}
-            disabled={loadingAddresses || addressOptions.length === 0}
-          >
-            <option value="">Select address...</option>
-            {addressOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          {loadingAddresses && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Loading addresses...
-            </p>
-          )}
-          {!loadingAddresses && addressOptions.length === 0 && (
-            <p className="text-xs text-muted-foreground">
-              No addresses configured for this estate.
-            </p>
-          )}
-        </div>
+        {loadingBill ? (
+          <p className="text-gray-500 italic">Loading bill...</p>
+        ) : (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="addressId">Address</Label>
+              <select
+                id="addressId"
+                aria-label="Select address"
+                className="w-full border border-border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#0150AC]"
+                value={form.addressId}
+                onChange={(e) => handleChange("addressId", e.target.value)}
+                disabled={
+                  isEditing ||
+                  loadingAddresses ||
+                  addressOptions.length === 0
+                }
+              >
+                <option value="">Select address...</option>
+                {addressOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              {loadingAddresses && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Loading addresses...
+                </p>
+              )}
+              {!loadingAddresses && addressOptions.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No addresses configured for this estate.
+                </p>
+              )}
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="residentName">Resident</Label>
-          <Input
-            id="residentName"
-            value={attachedResidentName}
-            readOnly
-            className="bg-muted/50 cursor-not-allowed"
-            placeholder={
-              form.addressId
-                ? "No resident linked to this address"
-                : "Select an address to see the resident"
-            }
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="residentName">Resident</Label>
+              <Input
+                id="residentName"
+                value={attachedResidentName}
+                readOnly
+                className="bg-muted/50 cursor-not-allowed"
+                placeholder={
+                  form.addressId
+                    ? "No resident linked to this address"
+                    : "Select an address to see the resident"
+                }
+              />
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="billName">Bill Name</Label>
-          <Input
-            id="billName"
-            value={form.name}
-            onChange={(e) => handleChange("name", e.target.value)}
-            placeholder="Gate repair"
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="billName">Bill Name</Label>
+              <Input
+                id="billName"
+                value={form.name}
+                onChange={(e) => handleChange("name", e.target.value)}
+                placeholder="Gate repair"
+              />
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="description">Description</Label>
-          <Input
-            id="description"
-            value={form.description}
-            onChange={(e) => handleChange("description", e.target.value)}
-            placeholder="Gate repair for Plot 12 only"
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Input
+                id="description"
+                value={form.description}
+                onChange={(e) => handleChange("description", e.target.value)}
+                placeholder="Gate repair for Plot 12 only"
+              />
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="amount">Amount (₦)</Label>
-          <Input
-            id="amount"
-            type="text"
-            inputMode="numeric"
-            value={form.amount}
-            onChange={(e) =>
-              handleChange("amount", formatAmountInput(e.target.value))
-            }
-            placeholder="25,000"
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount (₦)</Label>
+              <Input
+                id="amount"
+                type="text"
+                inputMode="numeric"
+                value={form.amount}
+                onChange={(e) =>
+                  handleChange("amount", formatAmountInput(e.target.value))
+                }
+                placeholder="25,000"
+              />
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="frequency">Frequency</Label>
-          <select
-            id="frequency"
-            aria-label="Select frequency"
-            className="w-full border border-border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#0150AC]"
-            value={form.frequency}
-            onChange={(e) =>
-              handleChange("frequency", e.target.value as BillForAddressFrequency)
-            }
-          >
-            {FREQUENCY_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="frequency">Frequency</Label>
+              <select
+                id="frequency"
+                aria-label="Select frequency"
+                className="w-full border border-border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#0150AC]"
+                value={form.frequency}
+                onChange={(e) =>
+                  handleChange(
+                    "frequency",
+                    e.target.value as BillForAddressFrequency,
+                  )
+                }
+              >
+                {FREQUENCY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
 
         <div className="pt-4 flex gap-2">
           {onClose && (
@@ -316,13 +398,17 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
               variant="outline"
               className="flex-1"
               onClick={onClose}
-              disabled={submitting}
+              disabled={submitting || loadingBill}
             >
               Cancel
             </Button>
           )}
-          <Button type="submit" className="flex-1" disabled={submitting}>
-            {submitting ? "Creating..." : "Create Bill"}
+          <Button
+            type="submit"
+            className="flex-1"
+            disabled={submitting || loadingBill}
+          >
+            {getSubmitLabel(submitting, isEditing)}
           </Button>
         </div>
       </CardContent>

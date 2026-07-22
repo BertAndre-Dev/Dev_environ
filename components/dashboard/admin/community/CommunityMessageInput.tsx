@@ -111,7 +111,7 @@ export function CommunityMessageInput({
             <button
               type="button"
               onClick={onCancelReply}
-              className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="shrink-0 cursor-pointer rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
               aria-label="Cancel reply"
             >
               <X className="size-4" />

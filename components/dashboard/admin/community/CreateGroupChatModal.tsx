@@ -141,7 +141,7 @@ export function CreateGroupChatModal({
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="mt-2 h-11 w-full rounded-lg bg-[#0052CC] text-white hover:bg-[#0047B3] disabled:cursor-not-allowed"
+            className="mt-2 h-11 w-full cursor-pointer rounded-lg bg-[#0052CC] text-white hover:bg-[#0047B3] disabled:cursor-not-allowed"
           >
             {isSubmitting ? "Creating…" : "Create"}
           </Button>

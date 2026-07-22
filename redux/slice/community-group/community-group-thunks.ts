@@ -50,6 +50,8 @@ type ApiChatGroupMember = {
   firstName?: string;
   lastName?: string;
   email?: string;
+  role?: string;
+  isAdmin?: boolean;
 };
 
 type ApiChatGroup = {
@@ -98,6 +100,8 @@ function normalizeMemberUser(entry: unknown): ChatGroupMemberUser | null {
     firstName: typeof o.firstName === "string" ? o.firstName : undefined,
     lastName: typeof o.lastName === "string" ? o.lastName : undefined,
     email: typeof o.email === "string" ? o.email : undefined,
+    role: typeof o.role === "string" ? o.role : undefined,
+    isAdmin: typeof o.isAdmin === "boolean" ? o.isAdmin : undefined,
   };
 }
 
@@ -496,6 +500,67 @@ export const removeGroupMembers = createAsyncThunk<
     });
   }
 });
+
+// GET /api/v1/chat/groups/{groupId}/members
+export const getGroupMembers = createAsyncThunk(
+  "communityGroup/getGroupMembers",
+  async (
+    {
+      groupId,
+      page = 1,
+      limit = 50,
+    }: {
+      groupId: string;
+      page?: number;
+      limit?: number;
+    },
+    { rejectWithValue },
+  ) => {
+    try {
+      const id = groupId?.trim();
+      if (!id || !isValidObjectId(id)) {
+        return rejectWithValue(invalidIdMessage("groupId"));
+      }
+      const res = await axiosInstance.get(`/api/v1/chat/groups/${id}/members`, {
+        params: { page, limit },
+      });
+      const raw = res.data as {
+        success?: boolean;
+        message?: string;
+        data?: unknown;
+        pagination?: ApiPagination;
+      };
+      const listRaw = Array.isArray(raw?.data)
+        ? raw.data
+        : Array.isArray((raw?.data as { members?: unknown })?.members)
+          ? (raw.data as { members: unknown[] }).members
+          : [];
+      const data = listRaw
+        .map(normalizeMemberUser)
+        .filter((m): m is ChatGroupMemberUser => m !== null);
+      const pagination = mergeCommunityApiPagination(
+        raw?.pagination,
+        page,
+        limit,
+      );
+      if (page === 1) {
+        pagination.total = Math.max(pagination.total, data.length);
+      }
+      return {
+        success: raw?.success ?? true,
+        message: raw?.message,
+        data,
+        pagination,
+      };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message || "Failed to fetch group members.",
+      });
+    }
+  },
+);
 
 // POST /api/v1/chat/groups/{groupId}/promote-admin
 export const promoteGroupAdmin = createAsyncThunk<

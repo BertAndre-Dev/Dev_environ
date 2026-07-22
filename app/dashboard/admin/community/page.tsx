@@ -484,14 +484,7 @@ export default function AdminCommunityChatPage() {
       toast.success("Members added.");
       await refreshGroupMeta();
     } catch (e: unknown) {
-      const msg =
-        e &&
-        typeof e === "object" &&
-        "message" in e &&
-        typeof (e as { message?: string }).message === "string"
-          ? (e as { message: string }).message
-          : "Failed to add members.";
-      toast.error(msg);
+      toast.error(getCommunityActionError(e, "Failed to add members."));
       throw e;
     }
   };
@@ -509,14 +502,7 @@ export default function AdminCommunityChatPage() {
       toast.success("Members added.");
       await refreshGroupMeta();
     } catch (e: unknown) {
-      const msg =
-        e &&
-        typeof e === "object" &&
-        "message" in e &&
-        typeof (e as { message?: string }).message === "string"
-          ? (e as { message: string }).message
-          : "Failed to add members.";
-      toast.error(msg);
+      toast.error(getCommunityActionError(e, "Failed to add members."));
       throw e;
     }
   };
@@ -530,14 +516,7 @@ export default function AdminCommunityChatPage() {
       toast.success("Members removed.");
       await refreshGroupMeta();
     } catch (e: unknown) {
-      const msg =
-        e &&
-        typeof e === "object" &&
-        "message" in e &&
-        typeof (e as { message?: string }).message === "string"
-          ? (e as { message: string }).message
-          : "Failed to remove members.";
-      toast.error(msg);
+      toast.error(getCommunityActionError(e, "Failed to remove members."));
       throw e;
     }
   };
@@ -549,14 +528,7 @@ export default function AdminCommunityChatPage() {
       toast.success("Member promoted.");
       await refreshGroupMeta();
     } catch (e: unknown) {
-      const msg =
-        e &&
-        typeof e === "object" &&
-        "message" in e &&
-        typeof (e as { message?: string }).message === "string"
-          ? (e as { message: string }).message
-          : "Failed to promote member.";
-      toast.error(msg);
+      toast.error(getCommunityActionError(e, "Failed to promote member."));
       throw e;
     }
   };

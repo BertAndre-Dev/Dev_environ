@@ -22,13 +22,29 @@ export function getCommunityActionError(
   e: unknown,
   fallback: string,
 ): string {
-  if (
-    e &&
-    typeof e === "object" &&
-    "message" in e &&
-    typeof (e as { message?: string }).message === "string"
-  ) {
-    return (e as { message: string }).message;
+  if (typeof e === "string" && e.trim()) return e.trim();
+  if (e && typeof e === "object") {
+    const o = e as {
+      message?: unknown;
+      payload?: { message?: unknown };
+      data?: { message?: unknown };
+      response?: { data?: { message?: unknown } };
+    };
+    if (typeof o.message === "string" && o.message.trim()) {
+      return o.message.trim();
+    }
+    if (typeof o.payload?.message === "string" && o.payload.message.trim()) {
+      return o.payload.message.trim();
+    }
+    if (typeof o.data?.message === "string" && o.data.message.trim()) {
+      return o.data.message.trim();
+    }
+    if (
+      typeof o.response?.data?.message === "string" &&
+      o.response.data.message.trim()
+    ) {
+      return o.response.data.message.trim();
+    }
   }
   return fallback;
 }

@@ -12,6 +12,7 @@ import BillsForm, {
 } from "@/components/admin/bills-form/page";
 import BillForAddressForm, {
   type BillForAddressFormData,
+  type BillForAddressInitialData,
 } from "@/components/admin/bill-for-address-form/page";
 
 import {
@@ -73,10 +74,16 @@ export default function BillPage() {
   const [estateId, setEstateId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [selectedAssignedBill, setSelectedAssignedBill] =
+    useState<BillForAddressInitialData | null>(null);
   const [billSearch, setBillSearch] = useState("");
   const [billsStartDate, setBillsStartDate] = useState("");
   const [billsEndDate, setBillsEndDate] = useState("");
-  const [suspendBillItem, setSuspendBillItem] = useState<BillData | null>(null);
+  const [suspendBillItem, setSuspendBillItem] = useState<{
+    id?: string;
+    name: string;
+    isActive?: boolean;
+  } | null>(null);
   const [suspendSubmitting, setSuspendSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<BillsTab>("bills");
 
@@ -251,14 +258,55 @@ export default function BillPage() {
   };
 
   const openAssignModal = () => {
+    setSelectedAssignedBill(null);
+    setAssignModalOpen(true);
+  };
+
+  const openEditAssignedModal = (item: AssignedBillData) => {
+    setSelectedAssignedBill({
+      id: item.id,
+      billId: item.billId,
+      addressId: assignedAddressId || undefined,
+      name: item.billName,
+      amount: item.amountPaid,
+      frequency: item.frequency,
+    });
     setAssignModalOpen(true);
   };
 
   const closeAssignModal = () => {
     setAssignModalOpen(false);
+    setSelectedAssignedBill(null);
   };
 
-  const openSuspendModal = (bill: BillData) => {
+  const refreshCurrentBillsList = async () => {
+    if (!estateId) return;
+
+    if (activeTab === "assigned" && assignedAddressId) {
+      await fetchAssignedBills(assignedAddressId, estateId, {
+        startDate: assignedStartDate,
+        endDate: assignedEndDate,
+      });
+      return;
+    }
+
+    await dispatch(
+      getBillsByEstate({
+        estateId,
+        page: 1,
+        limit: 10,
+        startDate:
+          billsStartDate && billsEndDate ? billsStartDate : undefined,
+        endDate: billsStartDate && billsEndDate ? billsEndDate : undefined,
+      }),
+    ).unwrap();
+  };
+
+  const openSuspendModal = (bill: {
+    id?: string;
+    name: string;
+    isActive?: boolean;
+  }) => {
     if (!bill.id || !bill.isActive) return;
     setSuspendBillItem(bill);
   };
@@ -270,16 +318,7 @@ export default function BillPage() {
       await dispatch(suspendBill(suspendBillItem.id)).unwrap();
       toast.info(`${suspendBillItem.name} suspended.`);
       setSuspendBillItem(null);
-      await dispatch(
-        getBillsByEstate({
-          estateId,
-          page: 1,
-          limit: 10,
-          startDate:
-            billsStartDate && billsEndDate ? billsStartDate : undefined,
-          endDate: billsStartDate && billsEndDate ? billsEndDate : undefined,
-        }),
-      ).unwrap();
+      await refreshCurrentBillsList();
     } catch (err: any) {
       toast.error(err?.message);
     } finally {
@@ -287,21 +326,12 @@ export default function BillPage() {
     }
   };
 
-  const handleActivateBill = async (bill: BillData) => {
+  const handleActivateBill = async (bill: { id?: string; name: string }) => {
     if (!bill.id || !estateId) return;
     try {
       await dispatch(activateBill(bill.id)).unwrap();
       toast.success(`${bill.name} activated.`);
-      await dispatch(
-        getBillsByEstate({
-          estateId,
-          page: 1,
-          limit: 10,
-          startDate:
-            billsStartDate && billsEndDate ? billsStartDate : undefined,
-          endDate: billsStartDate && billsEndDate ? billsEndDate : undefined,
-        }),
-      ).unwrap();
+      await refreshCurrentBillsList();
     } catch (err: any) {
       toast.error(err?.message);
     }
@@ -315,19 +345,16 @@ export default function BillPage() {
       onConfirm: async () => {
         await dispatch(deleteBill(id)).unwrap();
         toast.success(`${name} deleted successfully.`);
-        await dispatch(
-          getBillsByEstate({
-            estateId,
-            page: 1,
-            limit: 10,
-            startDate:
-              billsStartDate && billsEndDate ? billsStartDate : undefined,
-            endDate: billsStartDate && billsEndDate ? billsEndDate : undefined,
-          }),
-        ).unwrap();
+        await refreshCurrentBillsList();
       },
     });
   };
+
+  const getAssignedBillActionId = (item: AssignedBillData) =>
+    item.billId || item.id;
+
+  const isAssignedBillActive = (item: AssignedBillData) =>
+    (item.status || "").toLowerCase() === "active";
 
   const handleSubmitBill = async (data: BillSubmitData) => {
     if (!estateId) return;
@@ -361,18 +388,40 @@ export default function BillPage() {
     if (!estateId) return;
 
     try {
-      await dispatch(
-        createBillForAddress({
-          addressId: data.addressId,
-          estateId,
-          name: data.name,
-          description: data.description,
-          amount: data.amount,
-          frequency: data.frequency,
-          isServiceCharge: data.isServiceCharge,
-        }),
-      ).unwrap();
-      toast.success("Bill created for address successfully.");
+      const billId =
+        selectedAssignedBill?.billId || selectedAssignedBill?.id;
+
+      if (billId) {
+        await dispatch(
+          updateBill({
+            billId,
+            data: {
+              estateId,
+              name: data.name,
+              description: data.description,
+              amount: data.amount,
+              frequency: data.frequency,
+              addressId: data.addressId,
+              isServiceCharge: data.isServiceCharge,
+            },
+          }),
+        ).unwrap();
+        toast.success("Assigned bill updated successfully.");
+      } else {
+        await dispatch(
+          createBillForAddress({
+            addressId: data.addressId,
+            estateId,
+            name: data.name,
+            description: data.description,
+            amount: data.amount,
+            frequency: data.frequency,
+            isServiceCharge: data.isServiceCharge,
+          }),
+        ).unwrap();
+        toast.success("Bill created for address successfully.");
+      }
+
       closeAssignModal();
 
       setAssignedAddressId(data.addressId);
@@ -385,7 +434,7 @@ export default function BillPage() {
       toast.error(
         err?.message ??
           err?.payload?.message ??
-          "Failed to create bill for address.",
+          "Failed to save bill for address.",
       );
     }
   };
@@ -412,7 +461,7 @@ export default function BillPage() {
     { key: "description", header: "Description" },
     {
       key: "yearlyAmount",
-      header: "Yearly Amount (₦)",
+      header: "Amount (₦)",
       render: (item: BillData) => formatAmountDisplay(item.yearlyAmount),
     },
     {
@@ -483,6 +532,18 @@ export default function BillPage() {
     render?: (item: AssignedBillData) => React.ReactNode;
   }[] = [
     {
+      key: "createdAt",
+      header: "Created At",
+      render: (item) =>
+        item.createdAt
+          ? new Date(item.createdAt).toLocaleDateString("en-GB", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })
+          : "-",
+    },
+    {
       key: "billName",
       header: "Bill Name",
       render: (item) => item.billName || "-",
@@ -498,43 +559,54 @@ export default function BillPage() {
       render: (item) => formatAmountDisplay(Number(item.amountPaid ?? 0)),
     },
     {
-      key: "startDate",
-      header: "Start Date",
-      render: (item) =>
-        item.startDate
-          ? new Date(item.startDate).toLocaleDateString("en-GB", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            })
-          : "-",
-    },
-    {
-      key: "nextDueDate",
-      header: "Next Due Date",
-      render: (item) =>
-        item.nextDueDate
-          ? new Date(item.nextDueDate).toLocaleDateString("en-GB", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            })
-          : "-",
-    },
-    {
       key: "status",
       header: "Status",
-      render: (item) => (
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${
-            item.status === "active"
-              ? "bg-green-100 text-green-700"
-              : "bg-gray-100 text-gray-700"
-          }`}
-        >
-          {item.status || "-"}
-        </span>
-      ),
+      render: (item) => {
+        const active = isAssignedBillActive(item);
+        return (
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${
+              active
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
+            }`}
+          >
+            {item.status || "-"}
+          </span>
+        );
+      },
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      render: (item) => {
+        const actionId = getAssignedBillActionId(item);
+        const name = item.billName || "Bill";
+
+        return (
+          <div className="flex items-center gap-2">
+            <Button
+              className="cursor-pointer"
+              variant="ghost"
+              size="sm"
+              onClick={() => openEditAssignedModal(item)}
+              title="Edit bill"
+              disabled={!actionId}
+            >
+              <Edit2 className="w-4 h-4 text-blue-600" />
+            </Button>
+            <Button
+              className="cursor-pointer"
+              variant="ghost"
+              size="sm"
+              onClick={() => handleDeleteBill(actionId, name)}
+              disabled={!actionId}
+            >
+              <Trash2 className="w-4 h-4 text-red-600" />
+            </Button>
+          </div>
+        );
+      },
     },
   ];
 
@@ -802,6 +874,7 @@ export default function BillPage() {
           <Modal visible={assignModalOpen} onClose={closeAssignModal}>
             <BillForAddressForm
               estateId={estateId}
+              initialData={selectedAssignedBill}
               onSubmit={handleAssignBillForAddress}
               onClose={closeAssignModal}
             />

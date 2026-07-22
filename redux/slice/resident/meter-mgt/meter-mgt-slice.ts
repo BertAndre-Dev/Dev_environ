@@ -6,7 +6,7 @@ import {
   reconnectMeter,
   disconnectMeter,
   getMeterVendHistory,
-  getVendingStatsByAddress,
+  // getVendingStatsByAddress,
   getResidentEnergyConsumptionChart,
   type MeterUsageData,
   type VendingStatsByAddressData,
@@ -234,24 +234,24 @@ const residentMeterSlice = createSlice({
           "Failed to fetch energy consumption chart";
       });
 
-    builder
-      .addCase(getVendingStatsByAddress.pending, (state) => {
-        state.getVendingStatsByAddressState = "isLoading";
-        state.vendingStatsByAddress = null;
-      })
-      .addCase(getVendingStatsByAddress.fulfilled, (state, action) => {
-        state.getVendingStatsByAddressState = "succeeded";
-        state.vendingStatsByAddress = action.payload?.data ?? null;
-      })
-      .addCase(getVendingStatsByAddress.rejected, (state, action) => {
-        state.getVendingStatsByAddressState = "failed";
-        state.vendingStatsByAddress = null;
-        const apiMessage = (action.payload as { message?: string } | null)?.message;
-        state.error =
-          apiMessage ||
-          action.error.message ||
-          "Failed to fetch vending statistics";
-      });
+    // builder
+    //   .addCase(getVendingStatsByAddress.pending, (state) => {
+    //     state.getVendingStatsByAddressState = "isLoading";
+    //     state.vendingStatsByAddress = null;
+    //   })
+    //   .addCase(getVendingStatsByAddress.fulfilled, (state, action) => {
+    //     state.getVendingStatsByAddressState = "succeeded";
+    //     state.vendingStatsByAddress = action.payload?.data ?? null;
+    //   })
+    //   .addCase(getVendingStatsByAddress.rejected, (state, action) => {
+    //     state.getVendingStatsByAddressState = "failed";
+    //     state.vendingStatsByAddress = null;
+    //     const apiMessage = (action.payload as { message?: string } | null)?.message;
+    //     state.error =
+    //       apiMessage ||
+    //       action.error.message ||
+    //       "Failed to fetch vending statistics";
+    //   });
 
     // ✅ VEND POWER
     builder

@@ -40,9 +40,12 @@ import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 import { formatUserMeterNumbers } from "@/lib/user-address-meters";
 import { useUserListMeterNumbers } from "@/hooks/useUserListMeterNumbers";
 
-/** Admin user management: exclude company & estate admin from role filter. */
+/** Admin user management: exclude company, estate admin, and admin from role filter. */
 const ADMIN_USER_ROLE_FILTER_OPTIONS = ESTATE_USER_ROLE_FILTER_OPTIONS.filter(
-  (o) => o.value !== "company" && o.value !== "estate admin",
+  (o) =>
+    o.value !== "company" &&
+    o.value !== "estate admin" &&
+    o.value !== "admin",
 );
 
 interface AdminUserData {

@@ -6,11 +6,11 @@ import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import { toast } from "react-toastify";
 import { RootState, AppDispatch } from "@/redux/store";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getVisitorsByEstate,
-  verifyVisitor,
+  // verifyVisitor,
   deleteVisitor,
 } from "@/redux/slice/admin/visitor/visitor";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
@@ -18,7 +18,7 @@ import {
   CheckCircle,
   Eye,
   QrCode,
-  ShieldCheck,
+  // ShieldCheck,
   ShieldCheckIcon,
   Trash2,
   UserPlus,
@@ -33,6 +33,12 @@ import {
 } from "@/components/resident/visitor-management/VisitorQrCodeModal";
 import { formatAddressEntryLabel } from "@/lib/address";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
+import { VisitorVerificationMode } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
+import { readStoredAuth } from "@/utils/auth-storage";
+import {
+  getVerificationFlags,
+  resolveVisitorVerificationMode,
+} from "@/lib/visitor-verification-mode";
 
 const PAGE_LIMIT = 10;
 const DATE_RANGE_PLACEHOLDERS = getDateRangePlaceholders();
@@ -41,18 +47,26 @@ export default function AdminVisitorManagement() {
   const dispatch = useDispatch<AppDispatch>();
   const [estateId, setEstateId] = useState<string | null>(null);
   const [estateName, setEstateName] = useState("Estate");
+  const [visitorVerificationMode, setVisitorVerificationMode] = useState(
+    VisitorVerificationMode.VIEW_AND_VERIFY,
+  );
   const [addVisitorOpen, setAddVisitorOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [verifyModalVisitor, setVerifyModalVisitor] = useState<{
-    visitorCode: string;
-    firstName?: string;
-    lastName?: string;
-  } | null>(null);
+  // const [verifyModalVisitor, setVerifyModalVisitor] = useState<{
+  //   visitorCode: string;
+  //   firstName?: string;
+  //   lastName?: string;
+  // } | null>(null);
   const [visitorToDelete, setVisitorToDelete] = useState<any | null>(null);
   const [qrCodeVisitor, setQrCodeVisitor] = useState<QrCodeVisitor | null>(
     null,
+  );
+
+  const verificationFlags = useMemo(
+    () => getVerificationFlags(visitorVerificationMode),
+    [visitorVerificationMode],
   );
 
   const { visitors, pagination, loading } = useSelector((state: RootState) => {
@@ -71,6 +85,7 @@ export default function AdminVisitorManagement() {
       loading: visitorState.getVisitorsByEstateState === "isLoading",
     };
   });
+  const authUser = useSelector((state: RootState) => state.auth.user);
 
   // ✅ Client-side filtered visitors
   const filteredVisitors = visitors.filter((v: any) => {
@@ -104,11 +119,14 @@ export default function AdminVisitorManagement() {
   useEffect(() => {
     (async () => {
       try {
+        // Capture pre-/me user (often has memberships from sign-in).
+        const priorUser = (authUser ??
+          readStoredAuth()?.user) as Record<string, unknown> | null;
         const userRes = await dispatch(getSignedInUser()).unwrap();
-        const data = userRes?.data ?? (userRes as Record<string, unknown>);
+        const data = (userRes?.data ?? userRes) as Record<string, unknown>;
         const rawEstateId = data?.estateId as
           | string
-          | { id?: string; _id?: string }
+          | { id?: string; _id?: string; name?: string }
           | undefined;
         const foundEstateId =
           typeof rawEstateId === "string"
@@ -116,13 +134,38 @@ export default function AdminVisitorManagement() {
             : rawEstateId?._id || rawEstateId?.id || "";
 
         const estateFromId =
-          (data?.estateId as { name?: string } | undefined)?.name ?? "";
+          (typeof rawEstateId === "object" && rawEstateId?.name) || "";
         const estateFromObj =
           (data?.estate as { name?: string } | undefined)?.name ?? "";
         const fallbackEstateName = (data?.estateName as string) ?? "";
+
+        // Prefer estate name from current membership when available.
+        let membershipEstateName = "";
+        const memberships = data?.memberships ?? priorUser?.memberships;
+        if (Array.isArray(memberships)) {
+          const current =
+            memberships.find(
+              (m: { isCurrent?: boolean }) => m?.isCurrent,
+            ) ?? memberships[0];
+          const estate = (current as { estateId?: { name?: string } })
+            ?.estateId;
+          if (estate && typeof estate === "object") {
+            membershipEstateName = estate.name ?? "";
+          }
+        }
+
         const name =
-          estateFromId || estateFromObj || fallbackEstateName || "Estate";
+          membershipEstateName ||
+          estateFromId ||
+          estateFromObj ||
+          fallbackEstateName ||
+          "Estate";
         setEstateName(name);
+        const resolvedMode =
+          resolveVisitorVerificationMode(data) ??
+          resolveVisitorVerificationMode(priorUser) ??
+          VisitorVerificationMode.VIEW_AND_VERIFY;
+        setVisitorVerificationMode(resolvedMode as VisitorVerificationMode);
 
         if (!foundEstateId) {
           toast.warning("No estate found for this user");
@@ -134,6 +177,8 @@ export default function AdminVisitorManagement() {
         toast.error(error?.message);
       }
     })();
+    // Intentionally run once on mount; prior auth user is read for membership fallback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch]);
 
   // Single fetch when estate or date range changes.
@@ -150,28 +195,29 @@ export default function AdminVisitorManagement() {
     }
   };
 
-  const openVerifyModal = (item: any) => {
-    if (item.isVerified) return;
-    setVerifyModalVisitor({
-      visitorCode: item.visitorCode,
-      firstName: item.firstName,
-      lastName: item.lastName,
-    });
-  };
+  // Admins must not verify visitors — verification is for security only.
+  // const openVerifyModal = (item: any) => {
+  //   if (!verificationFlags.canVerify || item.isVerified) return;
+  //   setVerifyModalVisitor({
+  //     visitorCode: item.visitorCode,
+  //     firstName: item.firstName,
+  //     lastName: item.lastName,
+  //   });
+  // };
 
-  const handleVerifyConfirm = async () => {
-    if (!verifyModalVisitor?.visitorCode) return;
-    try {
-      const res = await dispatch(
-        verifyVisitor({ visitorCode: verifyModalVisitor.visitorCode }),
-      ).unwrap();
-      toast.success(res.message);
-      setVerifyModalVisitor(null);
-      await fetchVisitors(pagination.page);
-    } catch (error: any) {
-      toast.error(error?.message);
-    }
-  };
+  // const handleVerifyConfirm = async () => {
+  //   if (!verifyModalVisitor?.visitorCode) return;
+  //   try {
+  //     const res = await dispatch(
+  //       verifyVisitor({ visitorCode: verifyModalVisitor.visitorCode }),
+  //     ).unwrap();
+  //     toast.success(res.message);
+  //     setVerifyModalVisitor(null);
+  //     await fetchVisitors(pagination.page);
+  //   } catch (error: any) {
+  //     toast.error(error?.message);
+  //   }
+  // };
 
   const refreshVisitors = () => {
     fetchVisitors(pagination.page).catch(() =>
@@ -282,71 +328,76 @@ export default function AdminVisitorManagement() {
         );
       },
     },
-    {
-      header: "Viewed By",
-      key: "viewedBy",
-      render: (item: any) => {
-        if (!item.viewedBy) {
-          return <span className="text-gray-500 text-xs">Not viewed</span>;
-        }
-        return (
-          <div className="text-sm">
-            {item.viewedBy.firstName} {item.viewedBy.lastName}
-          </div>
-        );
-      },
-    },
-    {
-      header: "Verified By",
-      key: "verifiedBy",
-      render: (item: any) => {
-        if (!item.verifiedBy) {
-          return <span className="text-gray-500 text-xs">Not verified</span>;
-        }
-        return (
-          <div className="text-sm">
-            {item.verifiedBy.firstName} {item.verifiedBy.lastName}
-          </div>
-        );
-      },
-    },
-    {
-      header: "Status",
-      key: "isVerified",
-      render: (item: any) => (
-        <span
-          className={`px-2 py-1 rounded text-xs font-medium ${
-            item.isVerified
-              ? "bg-green-100 text-green-700"
-              : "bg-yellow-100 text-yellow-700"
-          }`}
-        >
-          {item.isVerified ? "Verified" : "Pending"}
-        </span>
-      ),
-    },
+    ...(verificationFlags.showViewedBy
+      ? [
+          {
+            header: "Viewed By",
+            key: "viewedBy",
+            render: (item: any) => {
+              if (!item.viewedBy) {
+                return <span className="text-gray-500 text-xs">Not viewed</span>;
+              }
+              return (
+                <div className="text-sm">
+                  {item.viewedBy.firstName} {item.viewedBy.lastName}
+                </div>
+              );
+            },
+          },
+        ]
+      : []),
+    ...(verificationFlags.showVerifiedBy
+      ? [
+          {
+            header: "Verified By",
+            key: "verifiedBy",
+            render: (item: any) => {
+              if (!item.verifiedBy) {
+                return (
+                  <span className="text-gray-500 text-xs">Not verified</span>
+                );
+              }
+              return (
+                <div className="text-sm">
+                  {item.verifiedBy.firstName} {item.verifiedBy.lastName}
+                </div>
+              );
+            },
+          },
+        ]
+      : []),
     {
       header: "Actions",
       key: "actions",
       render: (item: any) => (
         <div className="flex items-center gap-2">
-          {item.isVerified ? (
+          {/* Admins cannot verify visitors — security-only action.
+          {verificationFlags.canVerify ? (
+            item.isVerified ? (
+              <div className="flex items-center gap-1 text-green-600">
+                <CheckCircle className="w-5 h-5" />
+                <span className="text-xs">Verified</span>
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => openVerifyModal(item)}
+                className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
+                title="Verify visitor"
+              >
+                <ShieldCheck className="w-5 h-5" />
+                <span className="text-xs">Verify</span>
+              </Button>
+            )
+          ) : null}
+          */}
+          {verificationFlags.showVerifiedBy && item.isVerified ? (
             <div className="flex items-center gap-1 text-green-600">
               <CheckCircle className="w-5 h-5" />
               <span className="text-xs">Verified</span>
             </div>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => openVerifyModal(item)}
-              className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
-              title="Verify visitor"
-            >
-              <ShieldCheck className="w-5 h-5" />
-              <span className="text-xs">Verify</span>
-            </Button>
-          )}
+          ) : null}
           <Button
             variant="ghost"
             size="sm"
@@ -420,21 +471,30 @@ export default function AdminVisitorManagement() {
                 icon: UserPlus2,
                 color: "bg-[#FEE6D480]",
               },
-              {
-                label: "Viewed Visitors",
-                value:
-                  filteredVisitors?.filter((v: any) => v.viewedBy)?.length || 0,
-                icon: Eye,
-                color: "bg-[#CCE4DB80]",
-              },
-              {
-                label: "Verified Visitors",
-                value:
-                  filteredVisitors?.filter((v: any) => v.isVerified)?.length ||
-                  0,
-                icon: ShieldCheckIcon,
-                color: "bg-[#D0DFF280]",
-              },
+              ...(verificationFlags.showViewedBy
+                ? [
+                    {
+                      label: "Viewed Visitors",
+                      value:
+                        filteredVisitors?.filter((v: any) => v.viewedBy)
+                          ?.length || 0,
+                      icon: Eye,
+                      color: "bg-[#CCE4DB80]",
+                    },
+                  ]
+                : []),
+              ...(verificationFlags.showVerifiedBy
+                ? [
+                    {
+                      label: "Verified Visitors",
+                      value:
+                        filteredVisitors?.filter((v: any) => v.isVerified)
+                          ?.length || 0,
+                      icon: ShieldCheckIcon,
+                      color: "bg-[#D0DFF280]",
+                    },
+                  ]
+                : []),
             ];
 
             return stats.map((stat, i) => {
@@ -484,7 +544,7 @@ export default function AdminVisitorManagement() {
           )}
         </Modal>
 
-        {/* Verify visitor confirmation modal */}
+        {/* Admins cannot verify visitors — confirmation modal disabled.
         <Modal
           visible={!!verifyModalVisitor}
           onClose={() => setVerifyModalVisitor(null)}
@@ -519,6 +579,7 @@ export default function AdminVisitorManagement() {
             </div>
           </div>
         </Modal>
+        */}
 
         <DeleteModal
           visible={!!visitorToDelete}

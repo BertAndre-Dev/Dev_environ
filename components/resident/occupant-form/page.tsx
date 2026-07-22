@@ -13,12 +13,15 @@ import { formatAddressEntryLabel } from "@/lib/address";
 
 interface OccupantFormProps {
   addressId: string | { id: string; data: { block: string; unit: string } };
+  /** When false, hides the address field (e.g. resident has only one address). */
+  showAddressField?: boolean;
   onSubmitSuccess?: () => void | Promise<void>;
   onClose?: () => void;
 }
 
 export default function OccupantForm({
   addressId,
+  showAddressField = true,
   onSubmitSuccess,
   onClose,
 }: OccupantFormProps) {
@@ -133,19 +136,21 @@ export default function OccupantForm({
             />
           </div>
 
-          <div>
-            <Label htmlFor="address">Address</Label>
-            <Input
-              id="address"
-              name="address"
-              type="text"
-              value={formData.address}
-              onChange={handleInputChange}
-              placeholder="Address"
-              disabled
-              className="mt-1 bg-gray-50"
-            />
-          </div>
+          {showAddressField && (
+            <div>
+              <Label htmlFor="address">Address</Label>
+              <Input
+                id="address"
+                name="address"
+                type="text"
+                value={formData.address}
+                onChange={handleInputChange}
+                placeholder="Address"
+                disabled
+                className="mt-1 bg-gray-50"
+              />
+            </div>
+          )}
 
           <div>
             <Label htmlFor="relationship">Relationship *</Label>

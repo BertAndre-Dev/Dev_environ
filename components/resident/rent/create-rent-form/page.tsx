@@ -49,7 +49,11 @@ export default function CreateRentForm({
   }));
 
   const handleTenantChange = (tenantId: string) => {
-    setForm((p) => ({ ...p, tenantId, addressId: "" }));
+    const tenant = tenantList.find((t) => t.id === tenantId);
+    const addresses = tenant?.addressIds ?? [];
+    const onlyAddressId =
+      addresses.length === 1 ? addresses[0]?.id ?? "" : "";
+    setForm((p) => ({ ...p, tenantId, addressId: onlyAddressId }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -144,21 +148,30 @@ export default function CreateRentForm({
             )}
           </div>
           <div>
-            <Label htmlFor="addressId">Address (for this tenant)</Label>
-            <Select
-              id="addressId"
-              options={[
-                { label: "Select address...", value: "" },
-                ...addressOptions,
-              ]}
-              value={form.addressId}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, addressId: e.target.value }))
-              }
-              className="mt-1 w-full"
-              required
-              disabled={!form.tenantId || addressOptions.length === 0}
-            />
+            {addressOptions.length > 1 && (
+              <>
+                <Label htmlFor="addressId">Address (for this tenant)</Label>
+                <Select
+                  id="addressId"
+                  options={[
+                    { label: "Select address...", value: "" },
+                    ...addressOptions,
+                  ]}
+                  value={form.addressId}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, addressId: e.target.value }))
+                  }
+                  className="mt-1 w-full"
+                  required
+                  disabled={!form.tenantId || addressOptions.length === 0}
+                />
+              </>
+            )}
+            {form.tenantId && addressOptions.length === 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                No addresses on file for this tenant.
+              </p>
+            )}
           </div>
           <div>
             <Label htmlFor="amount">Amount (₦)</Label>
@@ -185,6 +198,11 @@ export default function CreateRentForm({
                 onStartChange={(iso) =>
                   setForm((p) => ({ ...p, startDate: iso }))
                 }
+                onEndChange={(iso) =>
+                  setForm((p) => ({ ...p, endDate: iso }))
+                }
+                placeholder="e.g. Jan 1, 2026"
+                ariaLabel="Rent start date"
               />
             </div>
           </div>
@@ -198,6 +216,8 @@ export default function CreateRentForm({
                 onEndChange={(iso) =>
                   setForm((p) => ({ ...p, endDate: iso }))
                 }
+                placeholder="e.g. Dec 31, 2026"
+                ariaLabel="Rent end date"
               />
             </div>
           </div>

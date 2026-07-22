@@ -93,21 +93,21 @@ export function VisitorsTableCard({
           );
         },
       },
-      {
-        key: "isVerified",
-        header: "Status",
-        render: (item: ResidentVisitorData) => (
-          <span
-            className={`px-2 py-1 rounded text-xs font-semibold ${
-              item.isVerified
-                ? "bg-green-100 text-green-800"
-                : "bg-yellow-100 text-yellow-800"
-            }`}
-          >
-            {item.isVerified ? "Verified" : "Pending"}
-          </span>
-        ),
-      },
+      // {
+      //   key: "isVerified",
+      //   header: "Status",
+      //   render: (item: ResidentVisitorData) => (
+      //     <span
+      //       className={`px-2 py-1 rounded text-xs font-semibold ${
+      //         item.isVerified
+      //           ? "bg-green-100 text-green-800"
+      //           : "bg-yellow-100 text-yellow-800"
+      //       }`}
+      //     >
+      //       {item.isVerified ? "Verified" : "Pending"}
+      //     </span>
+      //   ),
+      // },
       {
         key: "checkoutTime",
         header: "Checkout Time",

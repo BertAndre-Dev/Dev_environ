@@ -9,53 +9,27 @@ interface BillData {
 }
 
 export interface CreateBillForAddressPayload {
-  billId: string;
   addressId: string;
   estateId: string;
-  frequency: string;
-  amountPerBillingPeriod: number;
-  startDate: string;
+  name: string;
+  description: string;
+  amount: number;
+  frequency: "quarterly" | "yearly" | "oneOff";
+  isServiceCharge: boolean;
 }
 
-export interface BillsForAddressItem {
-  id?: string;
-  billId?: string;
-  addressId?: string;
-  estateId?: string;
-  userId?: string;
-  billName?: string;
-  frequency?: string;
-  amountPaid?: number;
-  startDate?: string;
-  nextDueDate?: string;
-  status?: string;
-  lastPaymentDate?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
-  [key: string]: unknown;
-}
-
-export interface BillsForAddressResponse {
-  success?: boolean;
-  message?: string;
-  data?: BillsForAddressItem[];
-  totals?: {
-    totalRecords: number;
-    totalBills: number;
-  };
-  pagination?: {
-    total: number;
-    page: number;
-    limit: number;
-    pages: number;
-  };
-}
-
-export interface GetBillsForAddressParams {
-  addressId: string;
+export interface UpdateBillPayload {
   estateId: string;
-  page?: number;
-  limit?: number;
+  name: string;
+  description: string;
+  yearlyAmount: number;
+}
+
+export interface UpdateBillForAddressPayload {
+  name: string;
+  description: string;
+  amount: number;
+  isServiceCharge: boolean;
 }
 
 // Create estate bill
@@ -73,25 +47,54 @@ export const createBill = createAsyncThunk(
   },
 );
 
-// Update existing bill
+// Update estate bill
 export const updateBill = createAsyncThunk(
   "bills/updateBill",
   async (
-    { billId, data }: { billId: string; data: BillData },
+    { billId, data }: { billId: string; data: UpdateBillPayload },
     { rejectWithValue },
   ) => {
     try {
-      const { estateId, name, description, yearlyAmount } = data;
-      const res = await axiosInstance.put(`/api/v1/bills-mgt/${billId}`, {
-        estateId,
-        name,
-        description,
-        yearlyAmount,
-      });
+      const res = await axiosInstance.put(`/api/v1/bills-mgt/${billId}`, data);
       return res.data;
     } catch (error: any) {
       return rejectWithValue({
-        message: error.res?.data?.message,
+        message:
+          error?.response?.data?.message ||
+          error.res?.data?.message ||
+          "Failed to update bill",
+      });
+    }
+  },
+);
+
+// Update address-specific (assigned) bill
+export const updateBillForAddress = createAsyncThunk(
+  "bills/updateBillForAddress",
+  async (
+    {
+      billId,
+      data,
+    }: { billId: string; data: UpdateBillForAddressPayload },
+    { rejectWithValue },
+  ) => {
+    try {
+      const res = await axiosInstance.put(
+        `/api/v1/bills-mgt/for-address/${billId}`,
+        {
+          name: data.name,
+          description: data.description,
+          amount: data.amount,
+          isServiceCharge: data.isServiceCharge,
+        },
+      );
+      return res.data;
+    } catch (error: any) {
+      return rejectWithValue({
+        message:
+          error?.response?.data?.message ||
+          error.res?.data?.message ||
+          "Failed to update assigned bill",
       });
     }
   },
@@ -194,7 +197,52 @@ export const getBillsByEstate = createAsyncThunk(
   },
 );
 
-// Create bill assignment for a specific address
+// Get bills assigned to a specific address (with pagination)
+export const getBillsForAddress = createAsyncThunk(
+  "bills/getBillsForAddress",
+  async (
+    {
+      addressId,
+      estateId,
+      page = 1,
+      limit = 10,
+      startDate,
+      endDate,
+    }: {
+      addressId: string;
+      estateId: string;
+      page?: number;
+      limit?: number;
+      startDate?: string;
+      endDate?: string;
+    },
+    { rejectWithValue },
+  ) => {
+    try {
+      const params = new URLSearchParams({
+        addressId,
+        estateId,
+        page: String(page),
+        limit: String(limit),
+      });
+      if (startDate) params.append("startDate", startDate);
+      if (endDate) params.append("endDate", endDate);
+
+      const res = await axiosInstance.get(
+        `/api/v1/bills-mgt/for-address?${params.toString()}`,
+      );
+      return res.data;
+    } catch (error: any) {
+      return rejectWithValue({
+        message:
+          error?.response?.data?.message ||
+          "Failed to fetch bills for address",
+      });
+    }
+  },
+);
+
+// Create one-off bill for a specific address
 export const createBillForAddress = createAsyncThunk(
   "bills/createBillForAddress",
   async (data: CreateBillForAddressPayload, { rejectWithValue }) => {
@@ -210,38 +258,6 @@ export const createBillForAddress = createAsyncThunk(
           error?.response?.data?.message ??
           error.res?.data?.message ??
           "Failed to create bill for address",
-      });
-    }
-  },
-);
-
-// Get assigned bills for a specific address
-export const getBillsForAddress = createAsyncThunk(
-  "bills/getBillsForAddress",
-  async (
-    {
-      addressId,
-      estateId,
-      page = 1,
-      limit = 10,
-      startDate,
-      endDate,
-    }: GetBillsForAddressParams & { startDate?: string; endDate?: string },
-    { rejectWithValue },
-  ) => {
-    try {
-      const res = await axiosInstance.get<BillsForAddressResponse>(
-        `/api/v1/bills-mgt/for-address`,
-        {
-          params: { addressId, estateId, page, limit, startDate, endDate },
-        },
-      );
-      return res.data;
-    } catch (error: any) {
-      return rejectWithValue({
-        message:
-          error?.response?.data?.message ??
-          "Failed to fetch bills assigned to address",
       });
     }
   },

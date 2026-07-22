@@ -1,5 +1,8 @@
 import type { VisitorDetailsData } from "@/app/dashboard/security/types";
-import type { ScanVisitorParams } from "@/redux/slice/security/visitor/visitor";
+import type {
+  ScanVisitorParams,
+  VerifyVisitorParams,
+} from "@/redux/slice/security/visitor/visitor";
 
 export function buildScanPayload(
   barcode: string,
@@ -12,10 +15,25 @@ export function buildScanPayload(
     visitingType,
   };
 
-  if (visitingType === "LONG_VISIT") {
-    const end = visitorDetails?.visitEndDate ?? visitorDetails?.validUntil;
-    if (end) payload.visitEndDate = end;
-  }
+  const end = visitorDetails?.visitEndDate ?? visitorDetails?.validUntil;
+  if (end) payload.visitEndDate = end;
+
+  return payload;
+}
+
+export function buildVerifyPayload(
+  visitorCode: string,
+  visitorDetails?: VisitorDetailsData | null,
+): VerifyVisitorParams {
+  const trimmed = visitorCode.trim();
+  const visitingType = visitorDetails?.visitingType ?? "SHORT_VISIT";
+  const payload: VerifyVisitorParams = {
+    visitorCode: trimmed,
+    visitingType,
+  };
+
+  const end = visitorDetails?.visitEndDate ?? visitorDetails?.validUntil;
+  if (end) payload.visitEndDate = end;
 
   return payload;
 }

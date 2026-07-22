@@ -21,12 +21,13 @@ import {
 } from "@/redux/slice/resident/transaction/transaction";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
-import { getBanks as getResidentBanks } from "@/redux/slice/resident/payment-mgt/payment-mgt";
+import { getBanks as getResidentBanks, getPaymentGateways } from "@/redux/slice/resident/payment-mgt/payment-mgt";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import Table from "@/components/tables/list/page";
 import type { WalletData } from "@/redux/slice/resident/wallet-mgt/wallet-mgt-slice";
 import Loader from "@/components/ui/Loader";
+import { CopyButton } from "@/components/ui/copy-button";
 import { ResidentWalletCard } from "@/components/resident/wallet/ResidentWalletCard";
 import { formatDateTime } from "@/lib/format-date";
 
@@ -38,6 +39,7 @@ interface TransactionData {
   userId: string;
   id?: string;
   paymentStatus?: string;
+  gatewayType?: string;
   tx_ref?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -117,7 +119,7 @@ export default function TransactionPage() {
         const [walletRes] = await Promise.all([
           dispatch(getWallet(id)).unwrap(),
           dispatch(getTransactionHistory({ userId: id, page: 1, limit })),
-          dispatch(getResidentBanks("NG")),
+          dispatch(getResidentBanks({ country: "NG", gatewayType: "flutterwave" })),
         ]);
 
         if (!walletRes?.data?.id)
@@ -234,6 +236,15 @@ export default function TransactionPage() {
     }
     setContinuingPaymentTxRef(tx_ref);
     try {
+      const gatewaysRes = await dispatch(getPaymentGateways()).unwrap();
+      const gatewayType =
+        gatewaysRes.defaultGateway || gatewaysRes.gateways[0]?.id;
+      if (!gatewayType) {
+        toast.error("No payment gateway available.");
+        setContinuingPaymentTxRef(null);
+        return;
+      }
+
       const paymentRes = await dispatch(
         initializePayment({
           tx_ref,
@@ -241,7 +252,8 @@ export default function TransactionPage() {
           country: "NG",
           currency: "NGN",
           redirect_url: `${window.location.origin}/dashboard/resident/transaction`,
-          payment_options: "card",
+          payment_options: "all",
+          gatewayType,
           customer: { email },
           customizations: {
             title: "Wallet Funding",
@@ -252,7 +264,8 @@ export default function TransactionPage() {
 
       const paymentUrl = paymentRes?.data?.link || paymentRes?.data?.url;
       if (!paymentUrl) throw new Error("Payment URL not received");
-      window.location.href = paymentUrl;
+      window.location.assign(paymentUrl);
+      setContinuingPaymentTxRef(null);
     } catch (err: any) {
       toast.error(err?.message || "Failed to continue payment.");
       setContinuingPaymentTxRef(null);
@@ -269,6 +282,7 @@ export default function TransactionPage() {
     currency,
     paymentOption,
     country,
+    gatewayType,
   }: {
     userId: string;
     walletId: string;
@@ -278,16 +292,9 @@ export default function TransactionPage() {
     currency: string;
     paymentOption: string;
     country: string;
+    gatewayType: string;
   }) => {
     try {
-      // // ⚠️ Check if amount exceeds the maximum limit BEFORE any transaction
-      // const MAX_AMOUNT = 200_000;
-      // if (amount > MAX_AMOUNT) {
-      //   toast.error(`You cannot fund more than ${MAX_AMOUNT.toLocaleString()}`);
-      //   return; // Stop further execution
-      // }
-
-      // ✅ Only now we create a transaction
       const txRes = await dispatch(
         createTransaction({ userId, walletId, amount, description, type }),
       ).unwrap();
@@ -295,7 +302,6 @@ export default function TransactionPage() {
       const tx_ref = txRes?.data?.tx_ref;
       if (!tx_ref) throw new Error("Transaction reference not found");
 
-      // Initialize payment on Flutterwave
       const paymentRes = await dispatch(
         initializePayment({
           tx_ref,
@@ -304,6 +310,7 @@ export default function TransactionPage() {
           currency,
           redirect_url: `${window.location.origin}/dashboard/resident/transaction`,
           payment_options: paymentOption,
+          gatewayType,
           customer: { email },
           customizations: { title: "Wallet Funding", description },
         }),
@@ -312,10 +319,8 @@ export default function TransactionPage() {
       const paymentUrl = paymentRes?.data?.link || paymentRes?.data?.url;
       if (!paymentUrl) throw new Error("Payment URL not received");
 
-      // Redirect to Flutterwave
-      window.location.href = paymentUrl;
+      window.location.assign(paymentUrl);
     } catch (err: any) {
-      // console.error("❌ Fund wallet error:", err);
       toast.error(err?.message);
     }
   };
@@ -376,12 +381,59 @@ export default function TransactionPage() {
   }, [dispatch, userId, email]);
 
   // Table columns for transaction history
+  const truncateText = (text: string, maxChars = 48) => {
+    const value = text.trim();
+    if (value.length <= maxChars) return value;
+    return `${value.slice(0, maxChars).trimEnd()}…`;
+  };
+
+  const canContinuePayment = (item: {
+    paymentStatus?: string;
+    tx_ref?: string;
+  }) => {
+    const status = (item.paymentStatus ?? "").toString().toLowerCase();
+    const isPending =
+      !status ||
+      status === "pending" ||
+      status === "not-paid" ||
+      status === "not_paid";
+    return isPending && Boolean(item.tx_ref);
+  };
+
+  const showActionColumn = transactions.some(canContinuePayment);
+
   const columns = [
     {
       key: "createdAt",
       header: "Date",
       render: (item: any) =>
         formatDateTime(item.createdAt, "-"),
+    },
+    {
+      key: "tx_ref",
+      header: "Reference",
+      render: (item: any) => {
+        const ref =
+          item.tx_ref ?? item.txRef ?? item.trx_ref ?? null;
+        if (!ref) return "—";
+        const value = String(ref);
+        return (
+          <div className="flex items-center gap-2 normal-case">
+            <span
+              title={value}
+              className="inline-block max-w-[160px] truncate font-mono text-xs"
+            >
+              {value}
+            </span>
+            <CopyButton
+              value={value}
+              title="Copy transaction reference"
+            />
+          </div>
+        );
+      },
+      exportValue: (item: any) =>
+        String(item?.tx_ref ?? item?.txRef ?? item?.trx_ref ?? ""),
     },
     {
       key: "type",
@@ -394,6 +446,22 @@ export default function TransactionPage() {
         ),
     },
     {
+      key: "description",
+      header: "Description",
+      render: (item: any) => {
+        const description = (item.description ?? "").toString().trim();
+        if (!description) return "—";
+        return (
+          <span
+            title={description}
+            className="inline-block max-w-[220px] truncate normal-case"
+          >
+            {truncateText(description, 48)}
+          </span>
+        );
+      },
+    },
+    {
       key: "amount",
       header: "Amount (₦)",
       render: (item: any) => item.amount?.toLocaleString() ?? 0,
@@ -404,12 +472,20 @@ export default function TransactionPage() {
       render: (item: any) => {
         const status = (item.paymentStatus ?? "").toString().toLowerCase();
         const isPaid = status === "paid" || status === "successful";
+        const isFailed =
+          status === "failed" ||
+          status === "fail" ||
+          status === "unsuccessful" ||
+          status === "cancelled" ||
+          status === "canceled";
         return (
           <span
             className={
               isPaid
                 ? "text-green-600 font-medium capitalize"
-                : "text-yellow-600 font-medium capitalize"
+                : isFailed
+                  ? "text-red-600 font-medium capitalize"
+                  : "text-yellow-600 font-medium capitalize"
             }
           >
             {item.paymentStatus || "Pending"}
@@ -417,23 +493,30 @@ export default function TransactionPage() {
         );
       },
     },
-    {
-      key: "actions",
-      header: "Action",
-      render: (item: any) =>
-        item.paymentStatus === "not-paid" ? (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={continuingPaymentTxRef === item.tx_ref}
-            onClick={() => handleContinuePayment(item)}
-          >
-            {continuingPaymentTxRef === item.tx_ref
-              ? "Redirecting..."
-              : "Continue payment"}
-          </Button>
-        ) : null,
-    },
+    ...(showActionColumn
+      ? [
+          {
+            key: "actions",
+            header: "Action",
+            exportable: false as const,
+            render: (item: any) => {
+              if (!canContinuePayment(item)) return null;
+              return (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={continuingPaymentTxRef === item.tx_ref}
+                  onClick={() => handleContinuePayment(item)}
+                >
+                  {continuingPaymentTxRef === item.tx_ref
+                    ? "Redirecting..."
+                    : "Continue payment"}
+                </Button>
+              );
+            },
+          },
+        ]
+      : []),
   ];
 
   return (

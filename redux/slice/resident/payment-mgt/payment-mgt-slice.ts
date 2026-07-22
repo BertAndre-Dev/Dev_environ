@@ -1,19 +1,29 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { getBanks, verifyBankAccount } from "./payment-mgt";
-import type { BankItem } from "./payment-mgt";
+import {
+  getBanks,
+  getPaymentGateways,
+  verifyBankAccount,
+} from "./payment-mgt";
+import type { BankItem, PaymentGatewayItem } from "./payment-mgt";
 
 export interface ResidentPaymentMgtState {
   getBanksState: "idle" | "isLoading" | "succeeded" | "failed";
+  getPaymentGatewaysState: "idle" | "isLoading" | "succeeded" | "failed";
   verifyBankAccountState: "idle" | "isLoading" | "succeeded" | "failed";
   banks: BankItem[];
+  gateways: PaymentGatewayItem[];
+  defaultGateway: string | null;
   verifiedAccountName: string | null;
   error: string | null;
 }
 
 const initialState: ResidentPaymentMgtState = {
   getBanksState: "idle",
+  getPaymentGatewaysState: "idle",
   verifyBankAccountState: "idle",
   banks: [],
+  gateways: [],
+  defaultGateway: null,
   verifiedAccountName: null,
   error: null,
 };
@@ -32,14 +42,35 @@ const residentPaymentMgtSlice = createSlice({
     },
     resetResidentPaymentMgt: (state) => {
       state.getBanksState = "idle";
+      state.getPaymentGatewaysState = "idle";
       state.verifyBankAccountState = "idle";
       state.banks = [];
+      state.gateways = [];
+      state.defaultGateway = null;
       state.verifiedAccountName = null;
       state.error = null;
     },
   },
   extraReducers(builder) {
     builder
+      .addCase(getPaymentGateways.pending, (state) => {
+        state.getPaymentGatewaysState = "isLoading";
+        state.error = null;
+      })
+      .addCase(getPaymentGateways.fulfilled, (state, action) => {
+        state.getPaymentGatewaysState = "succeeded";
+        state.gateways = action.payload.gateways ?? [];
+        state.defaultGateway = action.payload.defaultGateway ?? null;
+      })
+      .addCase(getPaymentGateways.rejected, (state, action) => {
+        state.getPaymentGatewaysState = "failed";
+        state.gateways = [];
+        state.defaultGateway = null;
+        state.error =
+          (action.payload as { message?: string })?.message ||
+          action.error.message ||
+          null;
+      })
       .addCase(getBanks.pending, (state) => {
         state.getBanksState = "isLoading";
         state.error = null;
@@ -54,7 +85,7 @@ const residentPaymentMgtSlice = createSlice({
         state.error =
           (action.payload as { message?: string })?.message ||
           action.error.message ||
-          "Failed to load banks";
+          null;
       })
       .addCase(verifyBankAccount.pending, (state) => {
         state.verifyBankAccountState = "isLoading";
@@ -71,7 +102,7 @@ const residentPaymentMgtSlice = createSlice({
         state.error =
           (action.payload as { message?: string })?.message ||
           action.error.message ||
-          "Account not found";
+          null;
       });
   },
 });

@@ -13,8 +13,9 @@ import {
   getWallet,
   getEstateCredits,
 } from "@/redux/slice/estate-admin/wallet-mgt/wallet-mgt";
-import { getBanks } from "@/redux/slice/estate-admin/fund-wallet/fund-wallet";
+import { getBanks, verifyBankAccount } from "@/redux/slice/estate-admin/fund-wallet/fund-wallet";
 import type { BankItem } from "@/redux/slice/estate-admin/fund-wallet/fund-wallet";
+import { clearVerifiedAccount } from "@/redux/slice/estate-admin/fund-wallet/fund-wallet-slice";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { verifyTransaction } from "@/redux/slice/estate-admin/transaction/transaction";
 import { useDispatch, useSelector } from "react-redux";
@@ -85,11 +86,18 @@ export default function EstateAdminWalletPage() {
   const { txRef, loading, error } = useSelector(
     (state: RootState) => state.payment,
   );
-  const { banks, getBanksState } = useSelector(
-    (state: RootState) => state.estateAdminFundWallet,
-  );
+  const {
+    banks,
+    getBanksState,
+    verifyBankAccountState,
+    verifiedAccountName,
+    error: verifyError,
+  } = useSelector((state: RootState) => state.estateAdminFundWallet);
   const loadingBanks = getBanksState === "isLoading";
   const bankOptions = useMemo(() => dedupeBanksByCode(banks), [banks]);
+  const verifyingAccount = verifyBankAccountState === "isLoading";
+  const accountVerified =
+    verifyBankAccountState === "succeeded" && !!verifiedAccountName;
 
   useEffect(() => {
     (async () => {
@@ -143,12 +151,54 @@ export default function EstateAdminWalletPage() {
   }, [estateId, creditsPage, dispatch]);
 
   useEffect(() => {
-    dispatch(getBanks("NG"));
+    dispatch(getBanks({ country: "NG", gatewayType: "flutterwave" }));
   }, [dispatch]);
+
+  useEffect(() => {
+    if (
+      !createWalletModalOpen ||
+      createWalletAccountNumber.trim().length < 10 ||
+      !createWalletBankCode
+    ) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      dispatch(
+        verifyBankAccount({
+          accountNumber: createWalletAccountNumber.trim(),
+          bankCode: createWalletBankCode,
+          gatewayType: "flutterwave",
+        }),
+      );
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [
+    createWalletModalOpen,
+    createWalletAccountNumber,
+    createWalletBankCode,
+    dispatch,
+  ]);
+
+  const resetCreateWalletForm = () => {
+    setCreateWalletAccountNumber("");
+    setCreateWalletBankCode("");
+    dispatch(clearVerifiedAccount());
+  };
+
+  const handleCloseCreateWalletModal = () => {
+    setCreateWalletModalOpen(false);
+    resetCreateWalletForm();
+  };
 
   const handleCreateWallet = async () => {
     if (!estateId) {
       toast.warning("No estate found.");
+      return;
+    }
+    if (!accountVerified) {
+      if (verifyError) toast.error(verifyError);
       return;
     }
     if (!createWalletAccountNumber.trim()) {
@@ -170,9 +220,7 @@ export default function EstateAdminWalletPage() {
         }),
       ).unwrap();
       toast.success("Wallet created successfully.");
-      setCreateWalletModalOpen(false);
-      setCreateWalletAccountNumber("");
-      setCreateWalletBankCode("");
+      handleCloseCreateWalletModal();
       await dispatch(getWallet(estateId));
     } catch (error: any) {
       toast.error(error?.message || "Failed to create wallet.");
@@ -423,11 +471,7 @@ export default function EstateAdminWalletPage() {
       {/* Create Wallet Modal */}
       <Modal
         visible={createWalletModalOpen}
-        onClose={() => {
-          setCreateWalletModalOpen(false);
-          setCreateWalletAccountNumber("");
-          setCreateWalletBankCode("");
-        }}
+        onClose={handleCloseCreateWalletModal}
       >
         <div className="rounded-md shadow-md w-full max-w-md mx-auto mt-12 pb-8 px-4">
           <h2 className="text-lg font-semibold mb-4">Create Wallet</h2>
@@ -441,7 +485,10 @@ export default function EstateAdminWalletPage() {
               <select
                 id="create-wallet-bank"
                 value={createWalletBankCode}
-                onChange={(e) => setCreateWalletBankCode(e.target.value)}
+                onChange={(e) => {
+                  setCreateWalletBankCode(e.target.value);
+                  dispatch(clearVerifiedAccount());
+                }}
                 className="mt-2 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 disabled={loadingBanks}
                 aria-label="Select bank"
@@ -461,20 +508,41 @@ export default function EstateAdminWalletPage() {
               <Input
                 id="create-wallet-account"
                 type="text"
+                inputMode="numeric"
                 value={createWalletAccountNumber}
-                onChange={(e) => setCreateWalletAccountNumber(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value.replaceAll(/\D/g, "").slice(0, 10);
+                  setCreateWalletAccountNumber(value);
+                  dispatch(clearVerifiedAccount());
+                }}
                 placeholder="e.g. 0002299900"
                 className="mt-2"
+                maxLength={10}
               />
+              {verifyingAccount &&
+                createWalletAccountNumber.trim() &&
+                createWalletBankCode && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Verifying account...
+                  </p>
+                )}
+              {accountVerified && !verifyingAccount && (
+                <p className="text-sm text-green-600 font-medium mt-1">
+                  Account name: {verifiedAccountName}
+                </p>
+              )}
+              {verifyBankAccountState === "failed" &&
+                verifyError &&
+                !verifyingAccount &&
+                createWalletAccountNumber.trim().length >= 10 &&
+                createWalletBankCode && (
+                  <p className="text-sm text-red-600 mt-1">{verifyError}</p>
+                )}
             </div>
             <div className="flex gap-2 justify-end">
               <Button
                 variant="outline"
-                onClick={() => {
-                  setCreateWalletModalOpen(false);
-                  setCreateWalletAccountNumber("");
-                  setCreateWalletBankCode("");
-                }}
+                onClick={handleCloseCreateWalletModal}
               >
                 Cancel
               </Button>
@@ -484,6 +552,7 @@ export default function EstateAdminWalletPage() {
                   createWalletState === "isLoading" ||
                   !createWalletAccountNumber.trim() ||
                   !createWalletBankCode.trim() ||
+                  !accountVerified ||
                   loadingBanks
                 }
               >

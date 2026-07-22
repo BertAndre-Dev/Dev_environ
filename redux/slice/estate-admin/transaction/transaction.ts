@@ -48,6 +48,7 @@ interface TransferPayload {
   accountNumber: string;
   narration: string;
   tx_ref: string;
+  gatewayType: string;
   otp?: string;
 }
 
@@ -59,6 +60,7 @@ interface EstateAdminOtpPayload {
   accountNumber: string;
   narration: string;
   tx_ref: string;
+  gatewayType: string;
 }
 
 // ✅ Generate transaction reference for withdrawals/payments

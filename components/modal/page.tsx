@@ -62,6 +62,7 @@ const Modal: React.FC<ModalProps> = ({
                 hover:cursor-pointer
                 top-2
                 right-4
+                z-20
                 bg-[#d0dff2]
                 border
                 border-black

@@ -1,109 +1,171 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useDispatch } from "react-redux";
+import Select from "react-select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-toastify";
-import { AppDispatch } from "@/redux/store";
-import { Select } from "@/components/ui/select";
+import type { AppDispatch } from "@/redux/store";
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
+import { getCompanies } from "@/redux/slice/super-admin/company-mgt/company";
 import { assignMeterToEstate } from "@/redux/slice/super-admin/super-admin-meter-mgt/super-admin-meter";
 
-// ---------- Types ----------
+type AssignScope = "estate" | "company";
+
 type AssignMeterFormProps = {
   close: () => void;
   refresh: () => void;
 };
 
-interface AssignMeterFormData {
-  meterNumber: string;
-  estateId: string;
+type SelectOption = { label: string; value: string };
+
+type EstateRecord = {
+  id: string;
+  name: string;
+  companyId: string;
+};
+
+function resolveCompanyId(
+  value?: string | { id?: string; _id?: string } | null,
+): string {
+  if (!value) return "";
+  if (typeof value === "string") return value.trim();
+  return String(value.id ?? value._id ?? "").trim();
 }
 
-interface SelectOption {
-  label: string;
-  value: string;
+function toEstateRecord(estate: {
+  id?: string;
+  _id?: string;
+  name?: string;
+  companyId?: string | { id?: string; _id?: string };
+  company?: { id?: string; _id?: string };
+}): EstateRecord | null {
+  const id = String(estate.id ?? estate._id ?? "").trim();
+  if (!id) return null;
+
+  return {
+    id,
+    name: estate.name ?? "Unnamed estate",
+    companyId:
+      resolveCompanyId(estate.companyId) || resolveCompanyId(estate.company),
+  };
 }
 
-// ---------- Component ----------
-const ESTATE_FETCH_LIMIT = 500;
+const FETCH_LIMIT = 500;
 
 const AssignMeterForm: React.FC<AssignMeterFormProps> = ({ close, refresh }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const [formData, setFormData] = useState<AssignMeterFormData>({
-    meterNumber: "",
-    estateId: "",
-  });
+  const [assignScope, setAssignScope] = useState<AssignScope>("estate");
+  const [meterNumber, setMeterNumber] = useState("");
+  const [companyId, setCompanyId] = useState("");
+  const [estateId, setEstateId] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [estates, setEstates] = useState<SelectOption[]>([]);
+  const [loadingOptions, setLoadingOptions] = useState(true);
+  const [allEstates, setAllEstates] = useState<EstateRecord[]>([]);
+  const [companyOptions, setCompanyOptions] = useState<SelectOption[]>([]);
 
-  // ---------------- Load all estates ----------------
   useEffect(() => {
-    const loadEstates = async () => {
+    (async () => {
+      setLoadingOptions(true);
       try {
-        setLoading(true);
-        const res = await dispatch(
-          getAllEstates({ page: 1, limit: ESTATE_FETCH_LIMIT }),
-        ).unwrap();
+        const [estatesRes, companiesRes] = await Promise.all([
+          dispatch(getAllEstates({ page: 1, limit: FETCH_LIMIT })).unwrap(),
+          dispatch(getCompanies({ page: 1, limit: FETCH_LIMIT })).unwrap(),
+        ]);
 
-        if (res?.success && res.data) {
-          const options = res.data.map((estate: any) => ({
-            label: estate.name,
-            value: estate.id,
-          }));
-          setEstates(options);
-        } else {
-          toast.error("No estates found.");
-        }
-      } catch (error: any) {
-        console.error("Failed to fetch estates:", error);
-        toast.error("Failed to load estates.");
+        const estateRows = (estatesRes?.data ?? []) as Array<{
+          id?: string;
+          _id?: string;
+          name?: string;
+          companyId?: string | { id?: string; _id?: string };
+          company?: { id?: string; _id?: string };
+        }>;
+        setAllEstates(
+          estateRows
+            .map((e) => toEstateRecord(e))
+            .filter((e): e is EstateRecord => Boolean(e)),
+        );
+
+        const companyRows = (companiesRes?.data ?? []) as Array<{
+          id?: string;
+          _id?: string;
+          name?: string;
+        }>;
+        setCompanyOptions(
+          companyRows
+            .map((c) => {
+              const value = String(c.id ?? c._id ?? "").trim();
+              if (!value) return null;
+              return { value, label: c.name ?? "Unnamed company" };
+            })
+            .filter((o): o is SelectOption => Boolean(o)),
+        );
+      } catch {
+        toast.error("Failed to load companies or estates.");
       } finally {
-        setLoading(false);
+        setLoadingOptions(false);
       }
-    };
-
-    loadEstates();
+    })();
   }, [dispatch]);
 
-  // ---------------- Submit handler ----------------
+  const estateOptions = useMemo(
+    () => allEstates.map((e) => ({ value: e.id, label: e.name })),
+    [allEstates],
+  );
+
+  const handleScopeChange = (scope: AssignScope) => {
+    setAssignScope(scope);
+    setCompanyId("");
+    setEstateId("");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.estateId) {
-      toast.error("Please select an estate");
+    const trimmedMeter = meterNumber.trim();
+    if (!trimmedMeter) {
+      toast.error("Please enter a meter number");
       return;
     }
 
-    if (!formData.meterNumber) {
-      toast.error("Please enter a meter number");
+    if (assignScope === "company" && !companyId) {
+      toast.error("Please select a company");
+      return;
+    }
+    if (assignScope === "estate" && !estateId) {
+      toast.error("Please select an estate");
       return;
     }
 
     setLoading(true);
     try {
-      // Convert meterNumber to string before saving (in case input returns number)
       const payload = {
-        ...formData,
-        meterNumber: String(formData.meterNumber),
+        meterNumber: trimmedMeter,
+        ...(assignScope === "company" ? { companyId } : { estateId }),
       };
       const res = await dispatch(assignMeterToEstate(payload)).unwrap();
       toast.success(res?.message || "Meter assigned successfully.");
       refresh();
       close();
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error?.message);
+    } catch (error: unknown) {
+      const message =
+        (error as { message?: string })?.message ?? "Failed to assign meter";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   };
 
-  // ---------------- Render ----------------
+  const canSubmit =
+    Boolean(meterNumber.trim()) &&
+    !loading &&
+    !loadingOptions &&
+    (assignScope === "company" ? Boolean(companyId) : Boolean(estateId));
+
   return (
     <Card className="max-w-lg mx-auto mt-6">
       <CardHeader>
@@ -111,44 +173,75 @@ const AssignMeterForm: React.FC<AssignMeterFormProps> = ({ close, refresh }) => 
       </CardHeader>
 
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Meter Number Field */}
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <Label>Meter Number</Label>
+            <Label htmlFor="meter-number">Meter Number</Label>
             <Input
-              type="number"
+              id="meter-number"
+              type="text"
+              inputMode="numeric"
               placeholder="Enter meter number"
-              value={formData.meterNumber}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, meterNumber: e.target.value }))
-              }
+              value={meterNumber}
+              onChange={(e) => setMeterNumber(e.target.value)}
               required
             />
           </div>
-          {/* Estate Dropdown */}
-          <div className="space-y-2">
-            <Label>Assign to Estate</Label>
-            {loading ? (
-              <div className="border rounded-md px-3 py-2 text-sm text-gray-500 bg-gray-50">
-                Loading estates...
-              </div>
-            ) : (
-              <Select
-                value={formData.estateId}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                  setFormData((prev) => ({ ...prev, estateId: e.target.value }))
-                }
-                options={[
-                  { value: "", label: "Select an estate" }, // Placeholder option
-                  ...estates,
-                ]}
-              />
-            )}
+
+          <div className="space-y-3">
+            <Label>Assign to</Label>
+            <div className="flex items-center gap-6">
+              <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                <input
+                  type="radio"
+                  name="assignScope"
+                  value="estate"
+                  checked={assignScope === "estate"}
+                  onChange={() => handleScopeChange("estate")}
+                />
+                Estate
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                <input
+                  type="radio"
+                  name="assignScope"
+                  value="company"
+                  checked={assignScope === "company"}
+                  onChange={() => handleScopeChange("company")}
+                />
+                Company
+              </label>
+            </div>
           </div>
 
+          {assignScope === "estate" ? (
+            <div className="space-y-2">
+              <Label>Assign to Estate</Label>
+              <Select
+                options={estateOptions}
+                value={estateOptions.find((o) => o.value === estateId) ?? null}
+                onChange={(opt) => setEstateId(opt?.value ?? "")}
+                isLoading={loadingOptions}
+                placeholder="Select an estate"
+                isDisabled={loadingOptions}
+              />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label>Assign to Company</Label>
+              <Select
+                options={companyOptions}
+                value={
+                  companyOptions.find((o) => o.value === companyId) ?? null
+                }
+                onChange={(opt) => setCompanyId(opt?.value ?? "")}
+                isLoading={loadingOptions}
+                placeholder="Select a company"
+                isDisabled={loadingOptions}
+              />
+            </div>
+          )}
 
-          {/* Submit Button */}
-          <Button type="submit" disabled={loading || !formData.estateId || !formData.meterNumber} className="w-full">
+          <Button type="submit" disabled={!canSubmit} className="w-full">
             {loading ? "Assigning..." : "Assign Meter"}
           </Button>
         </form>

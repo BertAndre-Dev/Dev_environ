@@ -12,19 +12,22 @@ import type {
   CommunityChatGroup,
   CommunityMember,
 } from "@/types/community-chat-ui";
-import { formatGroupStatus } from "@/lib/community-chat-ui";
+import { chatGroupMemberUsersToRows, formatGroupStatus } from "@/lib/community-chat-ui";
 import type { ChatGroupRoleToAdd } from "@/types/community-group";
 import { GroupMemberRow } from "./GroupMemberRow";
 import { CommunityGroupAvatar } from "./CommunityGroupAvatar";
 import { getAllUsersByEstate } from "@/redux/slice/admin/user-mgt/user";
+import { getGroupMembers } from "@/redux/slice/community-group/community-group-thunks";
 import type { AppDispatch } from "@/redux/store";
 import { chatGroupRoleToApiRole } from "@/lib/estate-user-roles";
+import DeleteModal from "@/components/resident/delete-modal/page";
+import { getCommunityActionError } from "@/components/dashboard/admin/community/CommunityEditMessageModal";
 
 const OBJECT_ID_RE = /^[a-f\d]{24}$/i;
 
 const ROLE_OPTIONS: { label: string; value: ChatGroupRoleToAdd }[] = [
   { label: "Residents", value: "RESIDENT" },
-  { label: "Admins", value: "ADMIN" },
+  { label: "Staff", value: "STAFF" },
   { label: "Security", value: "SECURITY" },
   { label: "Estate admins", value: "ESTATE_ADMIN" },
 ];
@@ -77,6 +80,7 @@ type Props = Readonly<{
   onAddMembersByIds?: (memberIds: string[]) => void | Promise<void>;
   onAddAllSameRole?: (roleToAdd: ChatGroupRoleToAdd) => void | Promise<void>;
   onRemoveMembersByIds?: (memberIds: string[]) => void | Promise<void>;
+  // Promote-admin temporarily disabled.
   onPromoteMember?: (userId: string) => void | Promise<void>;
   estateDisplayName?: string | null;
   /** Used to load estate users for the add-member picker. */
@@ -100,14 +104,12 @@ export function GroupInfoModal({
   onAddMembersByIds,
   onAddAllSameRole,
   onRemoveMembersByIds,
-  onPromoteMember,
+  onPromoteMember: _onPromoteMember,
   estateDisplayName,
   estateId,
 }: Props) {
   const dispatch = useDispatch<AppDispatch>();
   const [editing, setEditing] = useState(false);
-  const resolvedMemberTotal =
-    memberTotal ?? group?.memberCount ?? members.length;
   const [editName, setEditName] = useState(group?.name ?? "");
   const [editAbout, setEditAbout] = useState(group?.about ?? "");
   const [roleToAdd, setRoleToAdd] = useState<ChatGroupRoleToAdd>("RESIDENT");
@@ -119,6 +121,25 @@ export function GroupInfoModal({
   const [estateUsersTotalPages, setEstateUsersTotalPages] = useState(1);
   const [estateUsersLoading, setEstateUsersLoading] = useState(false);
   const [selectedIdsToAdd, setSelectedIdsToAdd] = useState<string[]>([]);
+  const [listMembers, setListMembers] = useState<CommunityMember[]>([]);
+  const [listMembersLoading, setListMembersLoading] = useState(false);
+  const [listMembersFetched, setListMembersFetched] = useState(false);
+  const [listMembersTotal, setListMembersTotal] = useState(0);
+  const [listMembersPage, setListMembersPage] = useState(1);
+  const [listMembersTotalPages, setListMembersTotalPages] = useState(1);
+  const [memberToRemove, setMemberToRemove] = useState<CommunityMember | null>(
+    null,
+  );
+  const [removingMember, setRemovingMember] = useState(false);
+  // Promote-admin temporarily disabled.
+  // const [memberToPromote, setMemberToPromote] =
+  //   useState<CommunityMember | null>(null);
+  // const [promotingMember, setPromotingMember] = useState(false);
+
+  const displayMembers = listMembersFetched ? listMembers : members;
+  const displayMemberTotal = listMembersFetched
+    ? listMembersTotal
+    : (memberTotal ?? group?.memberCount ?? displayMembers.length);
 
   useEffect(() => {
     const t = globalThis.setTimeout(
@@ -141,7 +162,63 @@ export function GroupInfoModal({
     setEstateUsersPage(1);
     setEstateUsersTotalPages(1);
     setSelectedIdsToAdd([]);
-  }, [open, group?.name, group?.about]);
+    setListMembers([]);
+    setListMembersFetched(false);
+    setListMembersTotal(0);
+    setListMembersPage(1);
+    setListMembersTotalPages(1);
+    setMemberToRemove(null);
+    setRemovingMember(false);
+    // setMemberToPromote(null);
+    // setPromotingMember(false);
+  }, [open, group?.id, group?.name, group?.about]);
+
+  const fetchGroupMembersList = useCallback(
+    async (page: number, append: boolean) => {
+      const groupId = (group?.id ?? "").trim();
+      if (!groupId) {
+        if (!append) setListMembers([]);
+        return;
+      }
+      setListMembersLoading(true);
+      try {
+        const res = await dispatch(
+          getGroupMembers({ groupId, page, limit: 50 }),
+        ).unwrap();
+        const rows = chatGroupMemberUsersToRows(
+          res?.data ?? [],
+          group?.adminIds,
+        );
+        setListMembers((prev) => (append ? [...prev, ...rows] : rows));
+        const total =
+          typeof res?.pagination?.total === "number"
+            ? res.pagination.total
+            : rows.length;
+        const pages =
+          typeof res?.pagination?.pages === "number" && res.pagination.pages >= 1
+            ? res.pagination.pages
+            : 1;
+        setListMembersTotal(total);
+        setListMembersPage(page);
+        setListMembersTotalPages(pages);
+        setListMembersFetched(true);
+      } catch (e: unknown) {
+        toast.error(getCommunityActionError(e, "Could not load group members."));
+        if (!append) {
+          setListMembers([]);
+          setListMembersFetched(false);
+        }
+      } finally {
+        setListMembersLoading(false);
+      }
+    },
+    [dispatch, group?.id, group?.adminIds],
+  );
+
+  useEffect(() => {
+    if (!open || !(group?.id ?? "").trim()) return;
+    void fetchGroupMembersList(1, false);
+  }, [open, group?.id, fetchGroupMembersList]);
 
   const idsInGroup = useMemo(() => {
     const s = new Set<string>();
@@ -150,9 +227,9 @@ export function GroupInfoModal({
       const v = typeof id === "string" ? id : String(id);
       if (OBJECT_ID_RE.test(v)) s.add(v);
     });
-    members.forEach((m) => s.add(m.id));
+    displayMembers.forEach((m) => s.add(m.id));
     return s;
-  }, [group?.memberUsers, group?.memberIds, members]);
+  }, [group?.memberUsers, group?.memberIds, displayMembers]);
 
   const fetchEstateUsers = useCallback(
     async (page: number, append: boolean) => {
@@ -195,14 +272,7 @@ export function GroupInfoModal({
         setEstateUsersTotalPages(totalPages);
         setEstateUsersPage(page);
       } catch (e: unknown) {
-        const msg =
-          e &&
-          typeof e === "object" &&
-          "message" in e &&
-          typeof (e as { message?: string }).message === "string"
-            ? (e as { message: string }).message
-            : "Could not load estate users.";
-        toast.error(msg);
+        toast.error(getCommunityActionError(e, "Could not load estate users."));
         if (!append) setEstateUsers([]);
       } finally {
         setEstateUsersLoading(false);
@@ -242,36 +312,68 @@ export function GroupInfoModal({
       await onAddMembersByIds(selectedIdsToAdd);
       setSelectedIdsToAdd([]);
       await fetchEstateUsers(estateUsersPage, false);
+      await fetchGroupMembersList(1, false);
     } catch {
       /* parent toasted */
     }
   };
 
-  const handleRemoveMember = async (userId: string) => {
-    const name = members.find((m) => m.id === userId)?.name ?? "this member";
-    if (
-      !globalThis.confirm(
-        `Remove ${name} from this group? They can be added again later.`,
-      )
-    ) {
-      return;
-    }
-    if (!onRemoveMembersByIds) return;
+  const handleRemoveMember = (userId: string) => {
+    const member =
+      displayMembers.find((m) => m.id === userId) ??
+      ({
+        id: userId,
+        name: "this member",
+        subtitle: "Member",
+        tag: "Member",
+        avatarColor: "gray",
+      } satisfies CommunityMember);
+    setMemberToRemove(member);
+  };
+
+  const handleConfirmRemoveMember = async () => {
+    if (!memberToRemove || !onRemoveMembersByIds) return;
+    setRemovingMember(true);
     try {
-      await onRemoveMembersByIds([userId]);
-    } catch {
-      /* parent toasted */
+      await onRemoveMembersByIds([memberToRemove.id]);
+      setMemberToRemove(null);
+      await fetchGroupMembersList(1, false);
+    } catch (e: unknown) {
+      // Parent already toasts API error; rethrow so DeleteModal stays open.
+      throw e;
+    } finally {
+      setRemovingMember(false);
     }
   };
 
-  const handlePromote = async (userId: string) => {
-    if (!onPromoteMember) return;
-    try {
-      await onPromoteMember(userId);
-    } catch {
-      /* parent toasted */
-    }
-  };
+  // Promote-admin temporarily disabled.
+  // const handlePromote = (userId: string) => {
+  //   if (!_onPromoteMember) return;
+  //   const member =
+  //     displayMembers.find((m) => m.id === userId) ??
+  //     ({
+  //       id: userId,
+  //       name: "this member",
+  //       subtitle: "Member",
+  //       tag: "Member",
+  //       avatarColor: "gray",
+  //     } satisfies CommunityMember);
+  //   setMemberToPromote(member);
+  // };
+
+  // const handleConfirmPromoteMember = async () => {
+  //   if (!memberToPromote || !_onPromoteMember) return;
+  //   setPromotingMember(true);
+  //   try {
+  //     await _onPromoteMember(memberToPromote.id);
+  //     setMemberToPromote(null);
+  //     await fetchGroupMembersList(1, false);
+  //   } catch (e: unknown) {
+  //     throw e;
+  //   } finally {
+  //     setPromotingMember(false);
+  //   }
+  // };
 
   if (!open) return null;
 
@@ -282,7 +384,7 @@ export function GroupInfoModal({
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
         <div
-          className="relative w-full max-w-lg cursor-default rounded-xl bg-card p-6 shadow-xl"
+          className="relative flex h-[90vh] w-full max-w-lg cursor-default flex-col overflow-hidden rounded-xl bg-card p-6 shadow-xl"
           role="dialog"
           aria-labelledby="group-info-title"
           onClick={(e) => e.stopPropagation()}
@@ -336,7 +438,7 @@ export function GroupInfoModal({
       onClick={(e) => e.target === e.currentTarget && !showBusy && onClose()}
     >
       <div
-        className="relative max-h-[90vh] w-full max-w-lg cursor-default overflow-y-auto rounded-xl bg-card p-6 shadow-xl"
+        className="relative flex h-[70vh] w-full max-w-lg cursor-default flex-col overflow-hidden rounded-xl bg-card shadow-xl"
         role="dialog"
         aria-labelledby="group-info-title"
         onClick={(e) => e.stopPropagation()}
@@ -345,12 +447,13 @@ export function GroupInfoModal({
           type="button"
           onClick={onClose}
           disabled={showBusy}
-          className="absolute right-4 top-4 flex size-9 cursor-pointer items-center justify-center rounded-full bg-muted text-foreground transition-colors hover:bg-muted/80 disabled:cursor-not-allowed disabled:opacity-50"
+          className="absolute right-4 top-4 z-10 flex size-9 cursor-pointer items-center justify-center rounded-full bg-muted text-foreground transition-colors hover:bg-muted/80 disabled:cursor-not-allowed disabled:opacity-50"
           aria-label="Close"
         >
           <X className="size-5" />
         </button>
 
+        <div className="min-h-0 flex-1 overflow-y-auto p-6">
         <h2 id="group-info-title" className="text-lg font-bold">
           Group Info
         </h2>
@@ -442,6 +545,7 @@ export function GroupInfoModal({
               type="button"
               variant="outline"
               size="sm"
+              className="cursor-pointer disabled:cursor-not-allowed"
               disabled={showBusy}
               onClick={() => {
                 setEditName(group.name);
@@ -454,6 +558,7 @@ export function GroupInfoModal({
             <Button
               type="button"
               size="sm"
+              className="cursor-pointer disabled:cursor-not-allowed"
               disabled={showBusy || !editName.trim()}
               onClick={async () => {
                 if (!onUpdateGroup || !editName.trim()) return;
@@ -476,11 +581,41 @@ export function GroupInfoModal({
         {showMemberAdminTools ? (
           <div className="mt-6 space-y-5 rounded-lg border border-border bg-muted/20 p-4">
             <h3 className="text-sm font-semibold text-foreground">
-              Manage members
+              Add members to group
             </h3>
 
+            <div>
+              <Label htmlFor="add-all-role">Bulk add by role</Label>
+              <p className="mb-2 text-xs text-muted-foreground">
+                Adds every active user in the estate with the selected role.
+              </p>
+              <Select
+                id="add-all-role"
+                value={roleToAdd}
+                onChange={(e) =>
+                  setRoleToAdd(e.target.value as ChatGroupRoleToAdd)
+                }
+                options={ROLE_OPTIONS}
+                className="mt-1 h-10 cursor-pointer"
+                disabled={showBusy}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="mt-2 cursor-pointer disabled:cursor-not-allowed"
+                disabled={showBusy}
+                onClick={() => onAddAllSameRole?.(roleToAdd)}
+              >
+                {`Add ${(
+                  ROLE_OPTIONS.find((o) => o.value === roleToAdd)?.label ??
+                  "users"
+                ).toLowerCase()}s`}
+              </Button>
+            </div>
+
             {hasEstateForPicker ? (
-              <div className="space-y-3">
+              <div className="space-y-3 border-t border-border pt-4">
                 <Label htmlFor="estate-user-search">Add people from your estate</Label>
                 <Input
                   id="estate-user-search"
@@ -490,16 +625,19 @@ export function GroupInfoModal({
                   disabled={showBusy}
                   className="h-10 cursor-text"
                 />
-                <div className="max-h-[220px] overflow-y-auto rounded-lg border border-border bg-background">
+                <div className="h-[180px] overflow-y-auto rounded-lg border border-border bg-background">
                   {estateUsersLoading && availableToAdd.length === 0 ? (
                     <p className="p-4 text-center text-sm text-muted-foreground">
                       Loading users…
                     </p>
                   ) : availableToAdd.length === 0 ? (
                     <p className="p-4 text-center text-sm text-muted-foreground">
-                      {estateUsers.length === 0
+                      {debouncedEstateSearch
                         ? "No users match this search, or everyone listed is already in the group."
-                        : "Everyone on this page is already in the group. Try search or load more."}
+                        : `All ${(
+                            ROLE_OPTIONS.find((o) => o.value === roleToAdd)
+                              ?.label ?? "users with this role"
+                          ).toLowerCase()} have already been added to the group.`}
                     </p>
                   ) : (
                     <ul className="divide-y divide-border">
@@ -541,6 +679,7 @@ export function GroupInfoModal({
                   <Button
                     type="button"
                     size="sm"
+                    className="cursor-pointer disabled:cursor-not-allowed"
                     disabled={
                       showBusy ||
                       selectedIdsToAdd.length === 0 ||
@@ -555,6 +694,7 @@ export function GroupInfoModal({
                       type="button"
                       variant="outline"
                       size="sm"
+                      className="cursor-pointer disabled:cursor-not-allowed"
                       disabled={showBusy || estateUsersLoading}
                       onClick={() =>
                         void fetchEstateUsers(estateUsersPage + 1, true)
@@ -566,83 +706,80 @@ export function GroupInfoModal({
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">
+              <p className="border-t border-border pt-4 text-xs text-muted-foreground">
                 This group has no estate id in the response, so the people picker
                 cannot load. Use bulk add by role, or ensure the API returns{" "}
                 <code className="rounded bg-muted px-1">estateId</code> on the
                 group.
               </p>
             )}
-
-            <div className="border-t border-border pt-4">
-              <Label htmlFor="add-all-role">Bulk add by role</Label>
-              <p className="mb-2 text-xs text-muted-foreground">
-                Adds every active user in the estate with the selected role.
-              </p>
-              <Select
-                id="add-all-role"
-                value={roleToAdd}
-                onChange={(e) =>
-                  setRoleToAdd(e.target.value as ChatGroupRoleToAdd)
-                }
-                options={ROLE_OPTIONS}
-                className="mt-1 h-10 cursor-pointer"
-                disabled={showBusy}
-              />
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                className="mt-2"
-                disabled={showBusy}
-                onClick={() => onAddAllSameRole?.(roleToAdd)}
-              >
-                Add all with this role
-              </Button>
-            </div>
           </div>
         ) : null}
 
         <div className="mt-4">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold">
-              Members ({resolvedMemberTotal})
+              Members ({displayMemberTotal})
             </h3>
           </div>
-          <div className="rounded-lg border border-border px-3">
-            {!detailLoading && members.length === 0 ? (
+          <div className="h-[180px] overflow-y-auto rounded-lg border border-border px-3">
+            {listMembersLoading && displayMembers.length === 0 ? (
               <p className="py-4 text-center text-sm text-muted-foreground">
-                No members in this group response.
+                Loading members…
+              </p>
+            ) : !detailLoading &&
+              !listMembersLoading &&
+              displayMembers.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                No members in this group.
               </p>
             ) : (
-              members.map((m) => (
-                <GroupMemberRow
-                  key={m.id}
-                  member={m}
-                  showActions={showMemberAdminTools}
-                  actionsDisabled={showBusy}
-                  onRemoveMember={
-                    onRemoveMembersByIds
-                      ? (id) => void handleRemoveMember(id)
-                      : undefined
-                  }
-                  onPromoteMember={
-                    onPromoteMember
-                      ? (id) => void handlePromote(id)
-                      : undefined
-                  }
-                />
-              ))
+              <>
+                {displayMembers.map((m) => (
+                  <GroupMemberRow
+                    key={m.id}
+                    member={m}
+                    showActions={showMemberAdminTools}
+                    actionsDisabled={showBusy || listMembersLoading}
+                    onRemoveMember={
+                      onRemoveMembersByIds
+                        ? (id) => void handleRemoveMember(id)
+                        : undefined
+                    }
+                    // onPromoteMember={
+                    //   _onPromoteMember
+                    //     ? (id) => handlePromote(id)
+                    //     : undefined
+                    // }
+                  />
+                ))}
+                {listMembersPage < listMembersTotalPages ? (
+                  <div className="py-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full cursor-pointer disabled:cursor-not-allowed"
+                      disabled={showBusy || listMembersLoading}
+                      onClick={() =>
+                        void fetchGroupMembersList(listMembersPage + 1, true)
+                      }
+                    >
+                      {listMembersLoading ? "Loading…" : "Load more members"}
+                    </Button>
+                  </div>
+                ) : null}
+              </>
             )}
           </div>
         </div>
 
         {canDeleteGroup ? (
-          <div className="mt-8">
+          <div className="mt-8 w-full">
             <Button
               type="button"
               variant="outline"
-              className="h-11 w-full cursor-pointer rounded-lg border-red-600 text-red-600 hover:bg-red-300 disabled:cursor-not-allowed dark:hover:bg-red-950/30 sm:w-auto"
+              className="h-11 w-full cursor-pointer rounded-lg border-red-600 text-red-600 hover:bg-red-300 disabled:cursor-not-allowed dark:hover:bg-red-950/30"
               disabled={showBusy}
               onClick={() => onDeleteGroup?.()}
             >
@@ -650,7 +787,53 @@ export function GroupInfoModal({
             </Button>
           </div>
         ) : null}
+        </div>
       </div>
+
+      <DeleteModal
+        visible={!!memberToRemove}
+        onClose={() => {
+          if (removingMember) return;
+          setMemberToRemove(null);
+        }}
+        itemName={memberToRemove?.name || "this member"}
+        title="Remove member"
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        loading={removingMember}
+        message={
+          <p className="text-sm text-muted-foreground mb-4">
+            Are you sure you want to remove{" "}
+            <strong>{memberToRemove?.name || "this member"}</strong> from this
+            group? They can be added again later.
+          </p>
+        }
+        onConfirm={handleConfirmRemoveMember}
+      />
+
+      {/* Promote-admin temporarily disabled.
+      <DeleteModal
+        visible={!!memberToPromote}
+        onClose={() => {
+          if (promotingMember) return;
+          setMemberToPromote(null);
+        }}
+        itemName={memberToPromote?.name || "this member"}
+        title="Make group admin"
+        confirmLabel="Promote"
+        cancelLabel="Cancel"
+        loading={promotingMember}
+        loadingLabel="Promoting…"
+        confirmClassName="bg-primary text-primary-foreground hover:bg-primary/90"
+        message={
+          <p className="text-sm text-muted-foreground mb-4">
+            Make <strong>{memberToPromote?.name || "this member"}</strong> a
+            group admin? They will be able to manage members for this group.
+          </p>
+        }
+        onConfirm={handleConfirmPromoteMember}
+      />
+      */}
     </div>
   );
 }

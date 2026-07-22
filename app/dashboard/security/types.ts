@@ -21,8 +21,6 @@ export interface VisitorDetailsData {
   verifiedBy?: { id: string; firstName: string; lastName: string; role?: string };
   validFrom?: string;
   validUntil?: string;
-  /** When the visitor was checked in (if API returns it). */
-  checkedInAt?: string;
-  /** When the visitor was checked out (if API returns it). */
-  checkedOutAt?: string;
+  checkinTime?: string | null;
+  checkoutTime?: string | null;
 }

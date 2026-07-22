@@ -21,6 +21,8 @@ interface VisitorFormProps {
   residentId: string;
   estateId: string;
   addressId: string | { id: string; data: { block: string; unit: string } };
+  /** When false, hides the address field (e.g. resident has only one address). */
+  showAddressField?: boolean;
   onSubmitSuccess?: () => void;
   onClose?: () => void;
 }
@@ -30,6 +32,7 @@ export default function VisitorForm({
   residentId,
   estateId,
   addressId,
+  showAddressField = true,
   onSubmitSuccess,
   onClose,
 }: VisitorFormProps) {
@@ -274,28 +277,30 @@ export default function VisitorForm({
               />
             </div>
 
-            <div>
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                name="address"
-                type="text"
-                value={formData.address}
-                onChange={handleInputChange}
-                placeholder="Address"
-                disabled
-                className="mt-1 bg-gray-50"
-              />
-              {!(typeof addressId === "object"
-                ? addressId?.id
-                : addressId) && (
-                <p className="text-xs text-amber-600 mt-1">
-                  No address is linked to your account. Please contact your
-                  estate admin to assign you an address before inviting
-                  visitors.
-                </p>
-              )}
-            </div>
+            {showAddressField && (
+              <div>
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  name="address"
+                  type="text"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  placeholder="Address"
+                  disabled
+                  className="mt-1 bg-gray-50"
+                />
+                {!(typeof addressId === "object"
+                  ? addressId?.id
+                  : addressId) && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    No address is linked to your account. Please contact your
+                    estate admin to assign you an address before inviting
+                    visitors.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div>
               <Label htmlFor="phone">Phone Number *</Label>

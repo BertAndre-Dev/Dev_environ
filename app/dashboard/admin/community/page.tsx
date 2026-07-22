@@ -34,7 +34,7 @@ import {
   getChatGroupById,
   getChatGroups,
   getGroupMessages,
-  promoteGroupAdmin,
+  // promoteGroupAdmin,
   removeGroupMembers,
   replyToGroupMessage,
   sendGroupMessage,
@@ -484,14 +484,7 @@ export default function AdminCommunityChatPage() {
       toast.success("Members added.");
       await refreshGroupMeta();
     } catch (e: unknown) {
-      const msg =
-        e &&
-        typeof e === "object" &&
-        "message" in e &&
-        typeof (e as { message?: string }).message === "string"
-          ? (e as { message: string }).message
-          : "Failed to add members.";
-      toast.error(msg);
+      toast.error(getCommunityActionError(e, "Failed to add members."));
       throw e;
     }
   };
@@ -509,14 +502,7 @@ export default function AdminCommunityChatPage() {
       toast.success("Members added.");
       await refreshGroupMeta();
     } catch (e: unknown) {
-      const msg =
-        e &&
-        typeof e === "object" &&
-        "message" in e &&
-        typeof (e as { message?: string }).message === "string"
-          ? (e as { message: string }).message
-          : "Failed to add members.";
-      toast.error(msg);
+      toast.error(getCommunityActionError(e, "Failed to add members."));
       throw e;
     }
   };
@@ -530,36 +516,23 @@ export default function AdminCommunityChatPage() {
       toast.success("Members removed.");
       await refreshGroupMeta();
     } catch (e: unknown) {
-      const msg =
-        e &&
-        typeof e === "object" &&
-        "message" in e &&
-        typeof (e as { message?: string }).message === "string"
-          ? (e as { message: string }).message
-          : "Failed to remove members.";
-      toast.error(msg);
+      toast.error(getCommunityActionError(e, "Failed to remove members."));
       throw e;
     }
   };
 
-  const handlePromoteMember = async (userId: string) => {
-    if (!selectedId) return;
-    try {
-      await dispatch(promoteGroupAdmin({ groupId: selectedId, userId })).unwrap();
-      toast.success("Member promoted.");
-      await refreshGroupMeta();
-    } catch (e: unknown) {
-      const msg =
-        e &&
-        typeof e === "object" &&
-        "message" in e &&
-        typeof (e as { message?: string }).message === "string"
-          ? (e as { message: string }).message
-          : "Failed to promote member.";
-      toast.error(msg);
-      throw e;
-    }
-  };
+  // Promote-admin is temporarily disabled.
+  // const handlePromoteMember = async (userId: string) => {
+  //   if (!selectedId) return;
+  //   try {
+  //     await dispatch(promoteGroupAdmin({ groupId: selectedId, userId })).unwrap();
+  //     toast.success("Member promoted.");
+  //     await refreshGroupMeta();
+  //   } catch (e: unknown) {
+  //     toast.error(getCommunityActionError(e, "Failed to promote member."));
+  //     throw e;
+  //   }
+  // };
 
   const emptySidebar =
     listLoading !== "isLoading" &&
@@ -662,7 +635,7 @@ export default function AdminCommunityChatPage() {
           onAddMembersByIds={handleAddMembersByIds}
           onAddAllSameRole={handleAddAllSameRole}
           onRemoveMembersByIds={handleRemoveMembersByIds}
-          onPromoteMember={handlePromoteMember}
+          // onPromoteMember={handlePromoteMember}
         />
       ) : null}
 

@@ -472,6 +472,7 @@ export default function VisitorPage() {
           residentId={userId}
           estateId={estateId}
           addressId={selectedAddressForForm ?? ""}
+          showAddressField={addressOptions.length > 1}
           onSubmitSuccess={refreshVisitors}
           onClose={handleCloseModal}
         />
@@ -479,6 +480,7 @@ export default function VisitorPage() {
         <OccupantUpsertModal
           open={occupantModalOpen}
           addressId={selectedAddressForForm ?? ""}
+          showAddressField={addressOptions.length > 1}
           onSubmitSuccess={refreshOccupants}
           onClose={handleCloseModal}
         />

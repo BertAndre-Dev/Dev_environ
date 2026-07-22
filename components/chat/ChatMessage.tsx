@@ -190,7 +190,7 @@ export default function ChatMessage({ message, currentUserId }: Readonly<Props>)
                 type="button"
                 onClick={handleDelete}
                 className={[
-                  "opacity-0 group-hover:opacity-100 transition-opacity",
+                  "cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity",
                   "p-1 rounded-md",
                   isMine
                     ? "hover:bg-white/10 text-primary-foreground/90"

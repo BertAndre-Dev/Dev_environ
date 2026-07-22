@@ -20,7 +20,7 @@ import {
   getMeterVendHistory,
   getMeterUsage,
   getResidentEnergyConsumptionChart,
-  getVendingStatsByAddress,
+  // getVendingStatsByAddress,
   type MeterUsageRange,
 } from "@/redux/slice/resident/meter-mgt/meter-mgt";
 import { getMeterRealtimeBalance } from "@/redux/slice/resident/meter-realtime-balance/resident-meter-realtime-balance";
@@ -46,9 +46,9 @@ function formatMeterBalance(balance: number | null | undefined): string {
   });
 }
 
-function formatPurchasedAmount(amount: number): string {
-  return `₦${amount.toLocaleString()}`;
-}
+// function formatPurchasedAmount(amount: number): string {
+//   return `₦${amount.toLocaleString()}`;
+// }
 
 export default function ResidentMeter() {
   const dispatch = useDispatch<AppDispatch>();
@@ -96,13 +96,13 @@ export default function ResidentMeter() {
     useSelector(
       (state: RootState) => state.residentMeter.getMeterByAddressState,
     ) === "isLoading";
-  const vendingStats = useSelector(
-    (state: RootState) => state.residentMeter.vendingStatsByAddress,
-  );
-  const vendingStatsLoading =
-    useSelector(
-      (state: RootState) => state.residentMeter.getVendingStatsByAddressState,
-    ) === "isLoading";
+  // const vendingStats = useSelector(
+  //   (state: RootState) => state.residentMeter.vendingStatsByAddress,
+  // );
+  // const vendingStatsLoading =
+  //   useSelector(
+  //     (state: RootState) => state.residentMeter.getVendingStatsByAddressState,
+  //   ) === "isLoading";
 
   const energyConsumptionChart = useSelector(
     (state: RootState) => state.residentMeter.energyConsumptionChart,
@@ -170,14 +170,14 @@ export default function ResidentMeter() {
     })();
   }, [dispatch, selectedAddressId]);
 
-  useEffect(() => {
-    if (!selectedAddressId) return;
-    dispatch(getVendingStatsByAddress({ addressId: selectedAddressId })).catch(
-      (error: { message?: string }) => {
-        toast.error(error?.message ?? "Failed to load purchase total.");
-      },
-    );
-  }, [dispatch, selectedAddressId]);
+  // useEffect(() => {
+  //   if (!selectedAddressId) return;
+  //   dispatch(getVendingStatsByAddress({ addressId: selectedAddressId })).catch(
+  //     (error: { message?: string }) => {
+  //       toast.error(error?.message ?? "Failed to load purchase total.");
+  //     },
+  //   );
+  // }, [dispatch, selectedAddressId]);
 
   useEffect(() => {
     if (meter?.meterNumber) {
@@ -256,12 +256,19 @@ export default function ResidentMeter() {
     try {
       const tasks: Promise<unknown>[] = [
         dispatch(getMeterByAddress({ addressId: selectedAddressId })).unwrap(),
-        dispatch(
-          getVendingStatsByAddress({ addressId: selectedAddressId }),
-        ).unwrap(),
+        // dispatch(
+        //   getVendingStatsByAddress({ addressId: selectedAddressId }),
+        // ).unwrap(),
       ];
       if (meter?.meterNumber) {
         tasks.push(
+          dispatch(
+            getMeterVendHistory({
+              meterNumber: meter.meterNumber,
+              page: 1,
+              limit: Number(pagination?.limit) || 10,
+            }),
+          ).unwrap(),
           dispatch(
             getMeterUsage({
               meterNumber: meter.meterNumber,

@@ -17,6 +17,9 @@ export interface DeleteModalProps {
   readonly title?: string;
   /** Optional custom message. Default: "Are you sure you want to delete {itemName}? This action cannot be undone." */
   readonly message?: React.ReactNode;
+  /** Confirm button classes. Default is destructive red. */
+  readonly confirmClassName?: string;
+  readonly loadingLabel?: string;
 }
 
 export default function DeleteModal({
@@ -29,6 +32,8 @@ export default function DeleteModal({
   loading = false,
   title = "Delete",
   message,
+  confirmClassName = "bg-red-600 hover:bg-red-700 text-white",
+  loadingLabel,
 }: DeleteModalProps) {
   const handleConfirm = async () => {
     try {
@@ -53,6 +58,7 @@ export default function DeleteModal({
           <Button
             type="button"
             variant="outline"
+            className="cursor-pointer"
             onClick={onClose}
             disabled={loading}
           >
@@ -60,11 +66,11 @@ export default function DeleteModal({
           </Button>
           <Button
             type="button"
-            className="bg-red-600 hover:bg-red-700 text-white"
+            className={`cursor-pointer ${confirmClassName}`}
             onClick={handleConfirm}
             disabled={loading}
           >
-            {loading ? "Deleting…" : confirmLabel}
+            {loading ? loadingLabel || "Deleting…" : confirmLabel}
           </Button>
         </div>
       </div>

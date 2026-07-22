@@ -1,0 +1,130 @@
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import axiosInstance from "@/utils/axiosInstance";
+
+interface CompanyMeterEstatePayload {
+  meterNumber: string;
+  estateId: string;
+}
+
+/** Payload for POST /api/v1/meters/add-meter — company pool, estate, or both */
+export interface CompanyAddMeterPayload {
+  meterNumber: string;
+  companyId: string;
+  estateId?: string;
+  userId?: string;
+  addressId?: string;
+  newEstateId?: string;
+}
+
+export const addCompanyMeter = createAsyncThunk(
+  "company-meter/addMeter",
+  async (data: CompanyAddMeterPayload, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.post("/api/v1/meters/add-meter", data);
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: unknown } };
+      return rejectWithValue(err.response?.data);
+    }
+  },
+);
+
+export const removeCompanyEstateMeter = createAsyncThunk(
+  "company-meter/removeEstateMeter",
+  async (data: CompanyMeterEstatePayload, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.put(
+        "/api/v1/meters/remove-estate-meter",
+        data,
+      );
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: unknown } };
+      return rejectWithValue(err.response?.data);
+    }
+  },
+);
+
+/** POST /api/v1/meters/assign-meter-to-address — assign company meter to an estate */
+export const assignCompanyMeterToEstate = createAsyncThunk(
+  "company-meter/assignMeterToEstate",
+  async (data: CompanyMeterEstatePayload, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.post(
+        "/api/v1/meters/assign-meter-to-address",
+        data,
+      );
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: unknown } };
+      return rejectWithValue(err.response?.data);
+    }
+  },
+);
+
+export const getCompanyMeters = createAsyncThunk(
+  "company-meter/getMeters",
+  async (
+    {
+      page = 1,
+      limit = 10,
+      search = "",
+      estateId,
+    }: {
+      page: number;
+      limit: number;
+      search?: string;
+      estateId?: string;
+    },
+    { rejectWithValue },
+  ) => {
+    try {
+      const params = new URLSearchParams();
+      params.append("page", String(page));
+      params.append("limit", String(limit));
+      if (search) params.append("search", search);
+
+      const baseUrl = estateId
+        ? `/api/v1/meters/estate/${estateId}`
+        : "/api/v1/meters";
+
+      const res = await axiosInstance.get(`${baseUrl}?${params.toString()}`);
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: unknown } };
+      return rejectWithValue(err.response?.data);
+    }
+  },
+);
+
+export const getCompanyMeterByAddressId = createAsyncThunk(
+  "company-meter/getMeterByAddressId",
+  async (addressId: string, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.get(
+        `/api/v1/meters/address/${addressId}`,
+      );
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as {
+        response?: { data?: { message?: string } };
+      };
+      return rejectWithValue(
+        err?.response?.data ?? { message: "Failed to fetch meter details" },
+      );
+    }
+  },
+);
+
+export const deleteCompanyMeter = createAsyncThunk(
+  "company-meter/deleteMeter",
+  async (meterId: string, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.delete(`/api/v1/meters/${meterId}`);
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: unknown } };
+      return rejectWithValue(err.response?.data);
+    }
+  },
+);

@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { getAllVisitors, scanVisitor } from "./visitor";
+import { getAllVisitors, scanVisitor, verifyVisitor } from "./visitor";
 
 export interface SecurityVisitorItem {
   id: string;
@@ -12,14 +12,19 @@ export interface SecurityVisitorItem {
   phone: string;
   purpose: string;
   isVerified: boolean;
+  isCheckedOut?: boolean;
+  visitingType?: string;
+  visitStartDate?: string | null;
+  visitEndDate?: string | null;
+  validFrom?: string | null;
+  validUntil?: string | null;
+  checkinTime?: string | null;
+  checkoutTime?: string | null;
+  checkedOutBy?: { id: string; firstName: string; lastName: string } | null;
   createdAt: string;
   updatedAt: string;
   viewedBy?: { id: string; firstName: string; lastName: string };
   verifiedBy?: { id: string; firstName: string; lastName: string };
-  /** When the visitor was checked in (if API returns it). */
-  checkedInAt?: string;
-  /** When the visitor was checked out (if API returns it). */
-  checkedOutAt?: string;
 }
 
 export interface SecurityAllVisitorsResponse {
@@ -37,6 +42,7 @@ export interface SecurityAllVisitorsResponse {
 export interface SecurityVisitorState {
   getAllVisitorsStatus: "idle" | "isLoading" | "succeeded" | "failed";
   scanVisitorStatus: "idle" | "isLoading" | "succeeded" | "failed";
+  verifyVisitorStatus: "idle" | "isLoading" | "succeeded" | "failed";
   allVisitors: SecurityAllVisitorsResponse | null;
   lastScannedVisitor: SecurityVisitorItem | null;
   error: string | null;
@@ -45,6 +51,7 @@ export interface SecurityVisitorState {
 const initialState: SecurityVisitorState = {
   getAllVisitorsStatus: "idle",
   scanVisitorStatus: "idle",
+  verifyVisitorStatus: "idle",
   allVisitors: null,
   lastScannedVisitor: null,
   error: null,
@@ -57,6 +64,7 @@ const securityVisitorSlice = createSlice({
     resetSecurityVisitorState: (state) => {
       state.getAllVisitorsStatus = "idle";
       state.scanVisitorStatus = "idle";
+      state.verifyVisitorStatus = "idle";
       state.allVisitors = null;
       state.lastScannedVisitor = null;
       state.error = null;
@@ -91,6 +99,23 @@ const securityVisitorSlice = createSlice({
       })
       .addCase(scanVisitor.rejected, (state, action) => {
         state.scanVisitorStatus = "failed";
+        state.error =
+          (action.payload as { message?: string })?.message ??
+          action.error.message ??
+          "Failed to verify visitor";
+      })
+
+      .addCase(verifyVisitor.pending, (state) => {
+        state.verifyVisitorStatus = "isLoading";
+        state.error = null;
+      })
+      .addCase(verifyVisitor.fulfilled, (state, action) => {
+        state.verifyVisitorStatus = "succeeded";
+        const data = (action.payload as { data?: SecurityVisitorItem })?.data;
+        if (data) state.lastScannedVisitor = data;
+      })
+      .addCase(verifyVisitor.rejected, (state, action) => {
+        state.verifyVisitorStatus = "failed";
         state.error =
           (action.payload as { message?: string })?.message ??
           action.error.message ??

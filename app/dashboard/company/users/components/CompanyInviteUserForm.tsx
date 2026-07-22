@@ -14,7 +14,6 @@ import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-esta
 import {
   buildInviteUserPayload,
   COMPANY_INVITE_ROLE_OPTIONS,
-  isEnergyProviderRole,
   validateEnergyProviderInviteScope,
 } from "@/lib/invite-user-roles";
 
@@ -78,7 +77,6 @@ export default function CompanyInviteUserForm({
   }, [dispatch]);
 
   const roleOptions = [...COMPANY_INVITE_ROLE_OPTIONS];
-  const invitingEnergyProvider = isEnergyProviderRole(formData.role);
 
   const estateOptions = estates.map((e) => ({
     value: e.id,
@@ -95,6 +93,7 @@ export default function CompanyInviteUserForm({
     if (!formData.email.trim()) return toast.error("Please provide an email.");
     if (!formData.firstName.trim()) return toast.error("Please provide first name.");
     if (!formData.lastName.trim()) return toast.error("Please provide last name.");
+    if (!formData.estateId.trim()) return toast.error("Please select an estate.");
 
     const energyProviderError = validateEnergyProviderInviteScope({
       role: formData.role,
@@ -183,9 +182,7 @@ export default function CompanyInviteUserForm({
             />
           </div>
           <div>
-            <Label>
-              Estate{invitingEnergyProvider ? "" : " (optional)"}
-            </Label>
+            <Label>Estate</Label>
             <Select
               options={estateOptions}
               value={estateOptions.find((o) => o.value === formData.estateId) ?? null}

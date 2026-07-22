@@ -1,7 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import {
   getCompanyTransactionHistory,
-  getCompanyVends,
   getCompanyPaidBills,
   verifyCompanyTransaction,
 } from "./company-transaction";
@@ -39,22 +38,18 @@ export interface CompanyTransactionState {
     | "isLoading"
     | "succeeded"
     | "failed";
-  getCompanyVendsState: "idle" | "isLoading" | "succeeded" | "failed";
   getCompanyPaidBillsState: "idle" | "isLoading" | "succeeded" | "failed";
   verifyTransactionState: "idle" | "isLoading" | "succeeded" | "failed";
   allTransactions: TransactionResponse | null;
-  vends: { data: unknown[]; pagination: Record<string, number> | null } | null;
   paidBills: { data: unknown[]; pagination: Record<string, number> | null } | null;
   error: string | null;
 }
 
 const initialState: CompanyTransactionState = {
   getCompanyTransactionHistoryState: "idle",
-  getCompanyVendsState: "idle",
   getCompanyPaidBillsState: "idle",
   verifyTransactionState: "idle",
   allTransactions: null,
-  vends: null,
   paidBills: null,
   error: null,
 };
@@ -91,24 +86,6 @@ const companyTransactionSlice = createSlice({
       })
       .addCase(getCompanyTransactionHistory.rejected, (state, action) => {
         state.getCompanyTransactionHistoryState = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          null;
-      })
-
-      .addCase(getCompanyVends.pending, (state) => {
-        state.getCompanyVendsState = "isLoading";
-      })
-      .addCase(getCompanyVends.fulfilled, (state, action) => {
-        state.getCompanyVendsState = "succeeded";
-        state.vends = {
-          data: action.payload?.data ?? [],
-          pagination: action.payload?.pagination ?? null,
-        };
-      })
-      .addCase(getCompanyVends.rejected, (state, action) => {
-        state.getCompanyVendsState = "failed";
         state.error =
           (action.payload as { message?: string })?.message ??
           action.error.message ??

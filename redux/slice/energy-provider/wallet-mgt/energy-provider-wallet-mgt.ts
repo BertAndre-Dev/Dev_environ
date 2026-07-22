@@ -24,6 +24,7 @@ export interface EnergyProviderWithdrawOtpPayload {
   accountNumber: string;
   narration: string;
   tx_ref: string;
+  gatewayType: string;
 }
 
 export interface EnergyProviderTransferPayload

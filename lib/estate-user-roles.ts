@@ -41,6 +41,8 @@ export function chatGroupRoleToApiRole(
       return "admin";
     case "SECURITY":
       return "security";
+    case "STAFF":
+      return "staff";
     case "ESTATE_ADMIN":
       return "estate admin";
     default:

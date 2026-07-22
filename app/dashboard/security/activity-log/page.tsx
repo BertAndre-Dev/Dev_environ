@@ -1,13 +1,10 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import { toast } from "react-toastify";
 import { RootState, AppDispatch } from "@/redux/store";
@@ -16,6 +13,20 @@ import { getAllVisitors } from "@/redux/slice/security/visitor/visitor";
 import type { SecurityVisitorItem } from "@/redux/slice/security/visitor/visitor-slice";
 import Table from "@/components/tables/list/page";
 import Loader from "@/components/ui/Loader";
+import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/ui/copy-button";
+import { Eye } from "lucide-react";
+import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
+import {
+  getVerificationFlags,
+  resolveVisitorVerificationMode,
+} from "@/lib/visitor-verification-mode";
+import { VisitorVerificationMode } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
+import { readStoredAuth } from "@/utils/auth-storage";
+import { VisitorActivityDetailsModal } from "@/components/security/VisitorActivityDetailsModal";
+
+const DATE_RANGE_PLACEHOLDERS = getDateRangePlaceholders();
+const PAGE_LIMIT = 10;
 
 function formatDate(dateString: string) {
   const d = new Date(dateString);
@@ -34,10 +45,32 @@ function getAddressDisplay(addressId: SecurityVisitorItem["addressId"]) {
   return parts.length ? parts.join(", ") : "—";
 }
 
+function personName(
+  person?: { firstName?: string; lastName?: string } | null,
+) {
+  if (!person) return "N/A";
+  const name = `${person.firstName ?? ""} ${person.lastName ?? ""}`.trim();
+  return name || "N/A";
+}
+
 export default function ActivityLogPage() {
   const dispatch = useDispatch<AppDispatch>();
   const [estateId, setEstateId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [visitorVerificationMode, setVisitorVerificationMode] = useState(
+    VisitorVerificationMode.VIEW_AND_VERIFY,
+  );
+  const [viewingVisitor, setViewingVisitor] =
+    useState<SecurityVisitorItem | null>(null);
+
+  const authUser = useSelector((state: RootState) => state.auth.user);
+
+  const verificationFlags = useMemo(
+    () => getVerificationFlags(visitorVerificationMode),
+    [visitorVerificationMode],
+  );
 
   const { allVisitors, loading } = useSelector((state: RootState) => {
     const v = state.securityVisitor;
@@ -52,9 +85,11 @@ export default function ActivityLogPage() {
   const pagination = useMemo(() => {
     if (!rawPagination) return undefined;
     const total = rawPagination.total ?? list.length;
-    const limit = rawPagination.limit ?? 10;
+    const limit = rawPagination.limit ?? PAGE_LIMIT;
     const page = rawPagination.page ?? 1;
-    const totalPages = (rawPagination as { totalPages?: number }).totalPages ?? Math.ceil(Math.max(total, 1) / limit);
+    const totalPages =
+      (rawPagination as { totalPages?: number }).totalPages ??
+      Math.ceil(Math.max(total, 1) / limit);
     return { ...rawPagination, total, limit, page, totalPages };
   }, [rawPagination, list.length]);
 
@@ -72,12 +107,31 @@ export default function ActivityLogPage() {
     });
   }, [list, search]);
 
+  const fetchVisitors = useCallback(
+    async (page = 1) => {
+      if (!estateId) return;
+      const shouldApplyDate = Boolean(startDate && endDate);
+      await dispatch(
+        getAllVisitors({
+          estateId,
+          page,
+          limit: PAGE_LIMIT,
+          startDate: shouldApplyDate ? startDate : undefined,
+          endDate: shouldApplyDate ? endDate : undefined,
+        }),
+      ).unwrap();
+    },
+    [dispatch, estateId, startDate, endDate],
+  );
+
   useEffect(() => {
     (async () => {
       try {
+        const priorUser = (authUser ??
+          readStoredAuth()?.user) as Record<string, unknown> | null;
         const userRes = await dispatch(getSignedInUser()).unwrap();
-        const rawEstateId =
-          userRes?.data?.estateId ?? userRes?.data?.estate ?? null;
+        const data = (userRes?.data ?? userRes) as Record<string, unknown>;
+        const rawEstateId = data?.estateId ?? data?.estate ?? null;
         const foundEstateId =
           typeof rawEstateId === "string"
             ? rawEstateId
@@ -85,34 +139,39 @@ export default function ActivityLogPage() {
               (rawEstateId as { id?: string; _id?: string })?.id ||
               "";
 
+        const mode =
+          resolveVisitorVerificationMode(data) ??
+          resolveVisitorVerificationMode(priorUser) ??
+          VisitorVerificationMode.VIEW_AND_VERIFY;
+        setVisitorVerificationMode(mode);
+
         if (!foundEstateId) {
           toast.warning("No estate found for this user");
           return;
         }
 
         setEstateId(foundEstateId);
-        await dispatch(
-          getAllVisitors({ estateId: foundEstateId, page: 1, limit: 10 }),
-        ).unwrap();
-      } catch (error: any) {
-        toast.error(error?.message ?? "Failed to load visitors");
+      } catch (error: unknown) {
+        toast.error(
+          (error as { message?: string })?.message ?? "Failed to load visitors",
+        );
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch]);
 
-  const onPageChange = (page: number) => {
+  useEffect(() => {
     if (!estateId) return;
-    dispatch(
-      getAllVisitors({ estateId, page, limit: pagination?.limit ?? 10 }),
-    ).catch((err: any) => toast.error(err?.message ?? "Failed to load page"));
-  };
+    fetchVisitors(1).catch(() => toast.error("Failed to fetch visitors"));
+  }, [estateId, fetchVisitors]);
 
-  let cardDescription = "Loading...";
-  if (pagination) {
-    cardDescription = search.trim()
-      ? `${filtered.length} matching on this page`
-      : `${pagination.total} total entries`;
-  }
+  const onPageChange = (page: number) => {
+    fetchVisitors(page).catch((err: unknown) =>
+      toast.error(
+        (err as { message?: string })?.message ?? "Failed to load page",
+      ),
+    );
+  };
 
   const columns = useMemo(
     () => [
@@ -153,35 +212,91 @@ export default function ActivityLogPage() {
       {
         key: "visitorCode",
         header: "Visitor Code",
-        render: (row: SecurityVisitorItem) => row.visitorCode ?? "N/A",
+        render: (row: SecurityVisitorItem) =>
+          row.visitorCode ? (
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm font-semibold">
+                {row.visitorCode}
+              </span>
+              <CopyButton
+                value={row.visitorCode}
+                title="Copy visitor code"
+              />
+            </div>
+          ) : (
+            "N/A"
+          ),
       },
+      ...(verificationFlags.showViewedBy
+        ? [
+            {
+              key: "viewedBy",
+              header: "Viewed By",
+              render: (row: SecurityVisitorItem) => personName(row.viewedBy),
+            },
+          ]
+        : []),
+      ...(verificationFlags.showVerifiedBy
+        ? [
+            {
+              key: "verifiedBy",
+              header: "Verified By",
+              render: (row: SecurityVisitorItem) => personName(row.verifiedBy),
+            },
+          ]
+        : []),
       {
-        key: "viewedBy",
-        header: "Viewed By",
-        render: (row: SecurityVisitorItem) => row.viewedBy?.firstName ?? "N/A",
-      },
-      {
-        key: "verifiedBy",
-        header: "Verified By",
-        render: (row: SecurityVisitorItem) => row.verifiedBy?.firstName ?? "N/A",
-      },
-      {
-        key: "isVerified",
+        key: "status",
         header: "Status",
+        render: (row: SecurityVisitorItem) => {
+          if (verificationFlags.viewOnly) {
+            const viewed = Boolean(row.viewedBy);
+            return (
+              <span
+                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                  viewed
+                    ? "bg-green-100 text-green-800"
+                    : "bg-amber-100 text-amber-800"
+                }`}
+              >
+                {viewed ? "Viewed" : "Not viewed"}
+              </span>
+            );
+          }
+
+          const verified = Boolean(row.isVerified || row.verifiedBy);
+          return (
+            <span
+              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                verified
+                  ? "bg-green-100 text-green-800"
+                  : "bg-amber-100 text-amber-800"
+              }`}
+            >
+              {verified ? "Verified" : "Not verified"}
+            </span>
+          );
+        },
+      },
+      {
+        key: "actions",
+        header: "Actions",
+        exportable: false as const,
         render: (row: SecurityVisitorItem) => (
-          <span
-            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-              row.isVerified
-                ? "bg-green-100 text-green-800"
-                : "bg-amber-100 text-amber-800"
-            }`}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="cursor-pointer"
+            title="View more"
+            onClick={() => setViewingVisitor(row)}
           >
-            {row.isVerified ? "Verified" : "Not verified"}
-          </span>
+            <Eye className="h-4 w-4 text-[#0150AC]" />
+          </Button>
         ),
       },
     ],
-    [],
+    [verificationFlags],
   );
 
   return (
@@ -203,25 +318,32 @@ export default function ActivityLogPage() {
             type="text"
             placeholder="Search resident, visitor, purpose..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)} // ✅ search fixed
+            onChange={(e) => setSearch(e.target.value)}
             className="w-full max-w-sm px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </Card>
 
         <Card className="overflow-hidden">
-          <CardHeader>
-            <CardTitle>Visitor records</CardTitle>
-            <CardDescription className="text-sm">
-              {cardDescription}
-            </CardDescription>
-          </CardHeader>
-
           <CardContent className="p-0">
             <Table<SecurityVisitorItem>
               columns={columns}
               data={filtered}
               emptyMessage="No visitors found."
-              showPagination={!!pagination && (pagination.total > pagination.limit || (pagination.totalPages ?? 1) > 1)}
+              enableDateRangeFilter
+              defaultDateRangeDays={0}
+              startDate={startDate}
+              endDate={endDate}
+              startDatePlaceholder={DATE_RANGE_PLACEHOLDERS.start}
+              endDatePlaceholder={DATE_RANGE_PLACEHOLDERS.end}
+              onDateRangeChange={({ startDate: nextStart, endDate: nextEnd }) => {
+                setStartDate(nextStart);
+                setEndDate(nextEnd);
+              }}
+              showPagination={
+                !!pagination &&
+                (pagination.total > pagination.limit ||
+                  (pagination.totalPages ?? 1) > 1)
+              }
               paginationInfo={
                 pagination
                   ? {
@@ -236,6 +358,12 @@ export default function ActivityLogPage() {
           </CardContent>
         </Card>
       </div>
+
+      <VisitorActivityDetailsModal
+        open={Boolean(viewingVisitor)}
+        item={viewingVisitor}
+        onClose={() => setViewingVisitor(null)}
+      />
     </div>
   );
 }

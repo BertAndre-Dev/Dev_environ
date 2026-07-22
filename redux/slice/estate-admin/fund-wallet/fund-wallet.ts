@@ -9,36 +9,66 @@ export interface BankItem {
 
 export interface GetBanksResponse {
   success?: boolean;
+  message?: string;
   data?: BankItem[];
+}
+
+export type PaymentGatewayType = "flutterwave" | "monnify";
+
+export interface GetBanksParams {
+  country?: string;
+  gatewayType?: PaymentGatewayType;
 }
 
 export interface VerifyBankAccountPayload {
   accountNumber: string;
   bankCode: string;
+  gatewayType?: PaymentGatewayType;
 }
 
 export interface VerifyBankAccountResponse {
   account_name?: string;
+  message?: string;
+  data?: { account_name?: string; message?: string };
+}
+
+function getApiErrorMessage(error: unknown): string | undefined {
+  const err = error as {
+    response?: { data?: { message?: string | string[] } };
+    message?: string;
+  };
+  const msg = err?.response?.data?.message;
+  if (Array.isArray(msg) && msg[0]) return msg[0];
+  if (typeof msg === "string" && msg.trim()) return msg;
+  if (typeof err?.message === "string" && err.message.trim()) return err.message;
+  return undefined;
 }
 
 export const getBanks = createAsyncThunk(
   "estate-admin-fund-wallet/getBanks",
-  async (country: string, { rejectWithValue }) => {
+  async (
+    { country = "NG", gatewayType }: GetBanksParams = {},
+    { rejectWithValue }
+  ) => {
     try {
       const res = await axiosInstance.get<GetBanksResponse>(
         "/api/v1/payment-mgt/banks",
-        { params: { country } }
+        {
+          params: {
+            country,
+            ...(gatewayType ? { gatewayType } : {}),
+          },
+        }
       );
       if (res.data?.success && res.data?.data) {
         return res.data.data;
       }
       return rejectWithValue({
-        message: "Failed to load banks",
+        message: res.data?.message,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       return rejectWithValue({
-        message:
-          error?.response?.data?.message || "Failed to load banks",
+        message: getApiErrorMessage(error),
       });
     }
   }
@@ -47,25 +77,32 @@ export const getBanks = createAsyncThunk(
 export const verifyBankAccount = createAsyncThunk(
   "estate-admin-fund-wallet/verifyBankAccount",
   async (
-    { accountNumber, bankCode }: VerifyBankAccountPayload,
+    { accountNumber, bankCode, gatewayType }: VerifyBankAccountPayload,
     { rejectWithValue }
   ) => {
     try {
-      const res = await axiosInstance.get<VerifyBankAccountResponse>(
+      const res = await axiosInstance.get(
         "/api/v1/payment-mgt/verify-bank-account",
         {
           params: {
             accountNumber: accountNumber.trim(),
             bankCode,
+            ...(gatewayType ? { gatewayType } : {}),
           },
         }
       );
-      if (res.data?.account_name) {
-        return { accountName: res.data.account_name };
+      const data = res.data as VerifyBankAccountResponse;
+      const accountName = data?.account_name ?? data?.data?.account_name;
+      if (accountName) {
+        return { accountName };
       }
-      return rejectWithValue({ message: "Account not found" });
-    } catch {
-      return rejectWithValue({ message: "Account not found" });
+      return rejectWithValue({
+        message: data?.message ?? data?.data?.message,
+      });
+    } catch (error: unknown) {
+      return rejectWithValue({
+        message: getApiErrorMessage(error),
+      });
     }
   }
 );

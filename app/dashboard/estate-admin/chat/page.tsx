@@ -38,6 +38,7 @@ import type { ChatGroup, GroupMessage } from "@/types/community-group";
 import type { CommunityReplyTarget } from "@/types/community-chat-ui";
 import type { RootState, AppDispatch } from "@/redux/store";
 import { useCommunityChatGroupRoom } from "@/hooks/useCommunityChatGroupRoom";
+import Loader from "@/components/ui/Loader";
 
 export default function EstateAdminCommunityChatPage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -55,6 +56,7 @@ export default function EstateAdminCommunityChatPage() {
   } | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [bootstrapping, setBootstrapping] = useState(true);
   const authUserId = useSelector((state: RootState) =>
     extractUserId((state.auth.user ?? null) as Record<string, unknown> | null),
   );
@@ -116,6 +118,8 @@ export default function EstateAdminCommunityChatPage() {
         setCurrentUserId(null);
         setEstateName("Estate");
         setMessageSelfLabel("You");
+      } finally {
+        setBootstrapping(false);
       }
     })();
   }, [dispatch]);
@@ -390,9 +394,19 @@ export default function EstateAdminCommunityChatPage() {
 
   const anyLoading = listLoading === "isLoading" || detailLoading === "isLoading";
   const sendDisabled = !selectedId || anyLoading;
+  const pageLoading =
+    bootstrapping || (listLoading === "isLoading" && groups.length === 0);
 
   return (
-    <div className="space-y-4">
+    <div className="relative">
+      {pageLoading && <Loader fullScreen label="Loading community..." />}
+
+      <div
+        className={[
+          "space-y-4",
+          pageLoading ? "pointer-events-none select-none" : "",
+        ].join(" ")}
+      >
       <CommunityPageHeader
         estateName={estateName}
         showCreateGroup={false}
@@ -462,6 +476,7 @@ export default function EstateAdminCommunityChatPage() {
         onClose={closeEditModal}
         onSubmit={handleEditSubmit}
       />
+      </div>
     </div>
   );
 }

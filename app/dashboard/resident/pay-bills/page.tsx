@@ -141,7 +141,10 @@ export default function PayBillsPage() {
         const userEmail = userRes?.data?.email;
         const rType =
           userRes?.data?.residentType ?? userRes?.data?.resident_type ?? null;
-        const billPaymentPinHash = userRes?.data?.billPaymentPinHash ?? null;
+        const hasBillPaymentPin =
+          Boolean(userRes?.data?.hasBillPaymentPin) ||
+          // Legacy field — keep as fallback while older sessions may still return it.
+          Boolean(userRes?.data?.billPaymentPinHash);
 
         if (!id) {
           toast.warning("No user found.");
@@ -151,7 +154,7 @@ export default function PayBillsPage() {
         setUserId(id);
         setEmail(userEmail || "");
         setResidentType(rType ?? null);
-        setHasBillPaymentPin(Boolean(billPaymentPinHash));
+        setHasBillPaymentPin(hasBillPaymentPin);
 
         await dispatch(getWallet(id)).unwrap();
       } catch (err: any) {
@@ -230,6 +233,7 @@ export default function PayBillsPage() {
     currency,
     paymentOption,
     country,
+    gatewayType,
   }: {
     userId: string;
     walletId: string;
@@ -239,6 +243,7 @@ export default function PayBillsPage() {
     currency: string;
     paymentOption: string;
     country: string;
+    gatewayType: string;
   }) => {
     try {
       const txRes = await dispatch(
@@ -256,6 +261,7 @@ export default function PayBillsPage() {
           currency,
           redirect_url: `${globalThis.location.origin}/dashboard/resident/pay-bills`,
           payment_options: paymentOption,
+          gatewayType,
           customer: { email },
           customizations: { title: "Wallet Funding", description },
         }),
@@ -264,7 +270,7 @@ export default function PayBillsPage() {
       const paymentUrl = paymentRes?.data?.link || paymentRes?.data?.url;
       if (!paymentUrl) throw new Error("Payment URL not received");
 
-      globalThis.location.href = paymentUrl;
+      globalThis.open(paymentUrl, "_blank", "noopener,noreferrer");
     } catch (err: any) {
       toast.error(err?.message || "Failed to fund wallet.");
     }

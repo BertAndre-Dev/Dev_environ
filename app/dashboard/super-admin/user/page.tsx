@@ -20,18 +20,21 @@ import Table from "@/components/tables/list/page";
 import Select from "react-select";
 import {
   getAllUsersByEstate,
+  getAllUsersByCompany,
   activateUser,
   suspendUser,
   deleteUser,
 } from "@/redux/slice/super-admin/super-admin-user/super-admin-user";
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
+import { getCompanies } from "@/redux/slice/super-admin/company-mgt/company";
 import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/modal/page";
 import InviteUserForm from "@/components/super-admin/user-form/page";
+import EditUserForm from "@/app/dashboard/super-admin/user/components/EditUserForm";
 import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import Loader from "@/components/ui/Loader";
 import { UserStatusModal } from "./components/UserStatusModal";
@@ -43,6 +46,11 @@ import {
 } from "@/lib/estate-user-roles";
 import { formatUserMeterNumbers } from "@/lib/user-address-meters";
 import { useUserListMeterNumbers } from "@/hooks/useUserListMeterNumbers";
+
+/** Estate scope: company users are filtered under Company, not Estate. */
+const ESTATE_SCOPE_ROLE_FILTER_OPTIONS = ESTATE_USER_ROLE_FILTER_OPTIONS.filter(
+  (o) => o.value !== "company",
+);
 
 interface UserAddress {
   id: string;
@@ -63,7 +71,7 @@ interface SuperAdminUserData {
   gender: string;
   phoneNumber: string;
   address: string;
-  // role: string;
+  role?: string;
   image?: string;
   isActive?: boolean;
   serviceCharge?: boolean;
@@ -115,13 +123,20 @@ function formatInvitationStatus(value?: string) {
     .join(" ");
 }
 
-interface EstateOption {
+interface SelectOption {
   label: string;
   value: string;
 }
 
-/** Estates for filter dropdown — not tied to user table page size. */
-const ESTATE_FILTER_FETCH_LIMIT = 500;
+type FilterScope = "estate" | "company";
+
+const FILTER_SCOPE_OPTIONS: { label: string; value: FilterScope }[] = [
+  { label: "Estate", value: "estate" },
+  { label: "Company", value: "company" },
+];
+
+/** Estates/companies for filter dropdown — not tied to user table page size. */
+const FILTER_FETCH_LIMIT = 500;
 
 export default function SuperAdminUserPage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -135,7 +150,9 @@ export default function SuperAdminUserPage() {
       return {
         allSuperAdminUsers: Array.isArray(data) ? data : [],
         userPagination,
-        loading: userState.getAllUsersByEstateState === "isLoading",
+        loading:
+          userState.getAllUsersByEstateState === "isLoading" ||
+          userState.getAllUsersByCompanyState === "isLoading",
       };
     },
   );
@@ -149,13 +166,26 @@ export default function SuperAdminUserPage() {
     };
   });
 
-  const pageLoading = estateLoading || loading;
+  const { allCompanies, companyLoading } = useSelector((state: RootState) => {
+    const companyState = state.superAdminCompany;
+    const data = companyState.list || [];
+    return {
+      allCompanies: Array.isArray(data) ? data : [],
+      companyLoading: companyState.getListStatus === "isLoading",
+    };
+  });
+
+  const pageLoading = estateLoading || companyLoading || loading;
 
   const { meterByAddressId, loading: metersLoading } =
     useUserListMeterNumbers(allSuperAdminUsers);
 
-  const [open, setOpen] = useState(false);
-  const [selectedEstate, setSelectedEstate] = useState<EstateOption | null>(
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [filterScope, setFilterScope] = useState<FilterScope>("estate");
+  const [selectedEstate, setSelectedEstate] = useState<SelectOption | null>(
+    null,
+  );
+  const [selectedCompany, setSelectedCompany] = useState<SelectOption | null>(
     null,
   );
   const [startDate, setStartDate] = useState("");
@@ -163,7 +193,7 @@ export default function SuperAdminUserPage() {
   const [roleFilter, setRoleFilter] = useState<EstateUserRoleFilter>(
     DEFAULT_ESTATE_USER_ROLE,
   );
-  const [selectedUser, setSelectedUser] = useState<SuperAdminUserData | null>(
+  const [editingUser, setEditingUser] = useState<SuperAdminUserData | null>(
     null,
   );
   const [statusItem, setStatusItem] = useState<SuperAdminUserData | null>(null);
@@ -173,61 +203,116 @@ export default function SuperAdminUserPage() {
   const [statusSubmitting, setStatusSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // ✅ Map estates for dropdown
-  const estateOptions: EstateOption[] =
-    allEstates
-      ?.map((e: any) => {
-        const value = String(e?._id || e?.id || "").trim();
-        if (!value) return null;
-        return {
-          label: e?.name ?? "Unnamed estate",
-          value,
-        };
-      })
-      .filter((x): x is EstateOption => Boolean(x)) || [];
+  const estateOptions: SelectOption[] = useMemo(
+    () =>
+      allEstates
+        ?.map((e: any) => {
+          const value = String(e?._id || e?.id || "").trim();
+          if (!value) return null;
+          return {
+            label: e?.name ?? "Unnamed estate",
+            value,
+          };
+        })
+        .filter((x): x is SelectOption => Boolean(x)) || [],
+    [allEstates],
+  );
+
+  const companyOptions: SelectOption[] = useMemo(
+    () =>
+      allCompanies
+        .map((c) => {
+          const value = String(c?._id || c?.id || "").trim();
+          if (!value) return null;
+          return {
+            label: c?.name ?? "Unnamed company",
+            value,
+          };
+        })
+        .filter((x): x is SelectOption => Boolean(x)),
+    [allCompanies],
+  );
+
+  const selectedFilterEntity =
+    filterScope === "estate" ? selectedEstate : selectedCompany;
 
   const pageSize = Number(userPagination?.pageSize) || 10;
 
   const fetchUsers = useCallback(
     (page = 1) => {
-      if (!selectedEstate?.value) return Promise.resolve();
+      if (!selectedFilterEntity?.value) return Promise.resolve();
       const shouldApplyDate = Boolean(startDate && endDate);
-      return dispatch(
-        getAllUsersByEstate({
-          estateId: selectedEstate.value,
-          page,
-          limit: pageSize,
-          role: roleFilter,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
-        }),
-      )
-        .unwrap()
-        .then((result) => {
-          setCurrentPage(page);
-          return result;
-        });
+      const common = {
+        page,
+        limit: pageSize,
+        role: roleFilter,
+        startDate: shouldApplyDate ? startDate : undefined,
+        endDate: shouldApplyDate ? endDate : undefined,
+      };
+
+      const request =
+        filterScope === "company"
+          ? dispatch(
+              getAllUsersByCompany({
+                companyId: selectedFilterEntity.value,
+                ...common,
+              }),
+            )
+          : dispatch(
+              getAllUsersByEstate({
+                estateId: selectedFilterEntity.value,
+                ...common,
+              }),
+            );
+
+      return request.unwrap().then((result) => {
+        setCurrentPage(page);
+        return result;
+      });
     },
-    [dispatch, selectedEstate?.value, pageSize, roleFilter, startDate, endDate],
+    [
+      dispatch,
+      filterScope,
+      selectedFilterEntity?.value,
+      pageSize,
+      roleFilter,
+      startDate,
+      endDate,
+    ],
   );
 
-  // ✅ Fetch estates for filter dropdown (high limit — not user table page size)
+  // Fetch estates & companies for filter dropdowns
   useEffect(() => {
-    dispatch(getAllEstates({ page: 1, limit: ESTATE_FILTER_FETCH_LIMIT }))
+    dispatch(getAllEstates({ page: 1, limit: FILTER_FETCH_LIMIT }))
       .unwrap()
       .catch(() => toast.error("Failed to fetch estates"));
+    dispatch(getCompanies({ page: 1, limit: FILTER_FETCH_LIMIT }))
+      .unwrap()
+      .catch(() => toast.error("Failed to fetch companies"));
   }, [dispatch]);
 
-  // ✅ Default to the first estate as soon as estates load
+  // Default to the first estate/company for the active scope
   useEffect(() => {
-    if (selectedEstate?.value) return;
-    if (!estateOptions.length) return;
-    setSelectedEstate(estateOptions[0]);
-  }, [estateOptions, selectedEstate?.value]);
+    if (filterScope === "estate") {
+      if (selectedEstate?.value) return;
+      if (!estateOptions.length) return;
+      setSelectedEstate(estateOptions[0]);
+      return;
+    }
+    if (selectedCompany?.value) return;
+    if (!companyOptions.length) return;
+    setSelectedCompany(companyOptions[0]);
+  }, [
+    filterScope,
+    estateOptions,
+    companyOptions,
+    selectedEstate?.value,
+    selectedCompany?.value,
+  ]);
 
-  // ✅ Fetch users when estate/role changes, or when a complete date range is set/cleared
+  // Fetch users when scope/entity/role changes, or when a complete date range is set/cleared
   useEffect(() => {
-    if (!selectedEstate?.value) return;
+    if (!selectedFilterEntity?.value) return;
 
     const partialDate =
       (Boolean(startDate) && !endDate) || (!startDate && Boolean(endDate));
@@ -235,18 +320,61 @@ export default function SuperAdminUserPage() {
 
     setCurrentPage(1);
     fetchUsers(1).catch(() =>
-      toast.error("Failed to fetch users for selected estate"),
+      toast.error(
+        filterScope === "company"
+          ? "Failed to fetch users for selected company"
+          : "Failed to fetch users for selected estate",
+      ),
     );
-  }, [selectedEstate?.value, roleFilter, startDate, endDate, fetchUsers]);
+  }, [
+    filterScope,
+    selectedFilterEntity?.value,
+    roleFilter,
+    startDate,
+    endDate,
+    fetchUsers,
+  ]);
 
-  const handleEstateModal = (user?: SuperAdminUserData) => {
-    setSelectedUser(user || null);
-    setOpen(true);
+  const handleFilterScopeChange = (scope: FilterScope) => {
+    setFilterScope(scope);
+    setCurrentPage(1);
+    if (scope === "estate") {
+      setSelectedCompany(null);
+      if (estateOptions.length) setSelectedEstate(estateOptions[0]);
+      // Company role is not valid under estate filter.
+      if (roleFilter === "company") {
+        setRoleFilter(DEFAULT_ESTATE_USER_ROLE);
+      }
+    } else {
+      setSelectedEstate(null);
+      if (companyOptions.length) setSelectedCompany(companyOptions[0]);
+    }
   };
 
-  const handleCloseModal = () => {
-    setOpen(false);
-    setSelectedUser(null);
+  const roleFilterOptions =
+    filterScope === "estate"
+      ? ESTATE_SCOPE_ROLE_FILTER_OPTIONS
+      : ESTATE_USER_ROLE_FILTER_OPTIONS;
+
+  const handleInviteModal = () => {
+    setInviteOpen(true);
+  };
+
+  const handleCloseInviteModal = () => {
+    setInviteOpen(false);
+  };
+
+  const handleEditUser = (user: SuperAdminUserData) => {
+    const id = user.id || (user as { _id?: string })._id;
+    if (!id) {
+      toast.error("User id is missing");
+      return;
+    }
+    setEditingUser({ ...user, id });
+  };
+
+  const handleCloseEditModal = () => {
+    setEditingUser(null);
   };
 
   const closeStatusModal = () => {
@@ -282,7 +410,7 @@ export default function SuperAdminUserPage() {
         toast.success(`${user.firstName ?? "User"} has been activated.`);
       }
       closeStatusModal();
-      if (selectedEstate?.value) {
+      if (selectedFilterEntity?.value) {
         await fetchUsers(1);
       }
     } catch (err: any) {
@@ -300,7 +428,7 @@ export default function SuperAdminUserPage() {
       onConfirm: async () => {
         await dispatch(deleteUser(id)).unwrap();
         toast.success(`${name} deleted successfully!`);
-        if (selectedEstate?.value) await fetchUsers(1);
+        if (selectedFilterEntity?.value) await fetchUsers(1);
       },
     });
   };
@@ -427,7 +555,8 @@ export default function SuperAdminUserPage() {
             variant="ghost"
             className="cursor-pointer"
             size="sm"
-            onClick={() => handleEstateModal(item)}
+            onClick={() => handleEditUser(item)}
+            title="Edit user details"
           >
             <Edit className="w-4 h-4 text-blue-600" />
           </Button>
@@ -476,53 +605,92 @@ export default function SuperAdminUserPage() {
         ].join(" ")}
       >
         {/* Header */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between flex-wrap gap-4">
-          <div className="flex flex-col gap-2">
-            <h1 className="font-heading text-3xl font-bold">User Management</h1>
-            <p className="text-muted-foreground mt-1">Manage Users</p>
-            <div className="w-48">
-              <Select
-                options={ESTATE_USER_ROLE_FILTER_OPTIONS}
-                placeholder="Filter by role"
-                value={ESTATE_USER_ROLE_FILTER_OPTIONS.find(
-                  (o) => o.value === roleFilter,
-                )}
-                onChange={(option) =>
-                  setRoleFilter(
-                    (option?.value as EstateUserRoleFilter) ??
-                      DEFAULT_ESTATE_USER_ROLE,
-                  )
-                }
-                isSearchable={false}
-                styles={{
-                  control: (base) => ({ ...base, cursor: "pointer" }),
-                  option: (base) => ({ ...base, cursor: "pointer" }),
-                  dropdownIndicator: (base) => ({ ...base, cursor: "pointer" }),
-                }}
-              />
+        <div className="flex flex-col gap-4 w-full">
+          <div className="flex flex-col gap-1 w-full min-w-0">
+            <div className="flex flex-row items-center justify-between gap-2 w-full">
+              <h1 className="font-heading text-3xl font-bold">
+                User Management
+              </h1>
+              <Button
+                onClick={handleInviteModal}
+                className="flex items-center gap-2 cursor-pointer shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                Invite Admins
+              </Button>
             </div>
+            <p className="text-muted-foreground">Manage Users</p>
           </div>
-
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            {/* ✅ Estate Dropdown */}
-            <div className="w-48">
-              <Select
-                options={estateOptions}
-                placeholder="Filter by estate"
-                value={selectedEstate}
-                onChange={(option) => setSelectedEstate(option)}
-                isSearchable
-                className="rounded-full"
-              />
-            </div>
-
-            <Button
-              onClick={() => handleEstateModal()}
-              className="flex items-center gap-2 cursor-pointer"
+          <div className="flex flex-col gap-2 items-end justify-start w-full">
+            <div
+              className="inline-flex rounded-full border border-input bg-muted/30 p-1"
+              role="group"
+              aria-label="Filter by estate or company"
             >
-              <Plus className="w-4 h-4" />
-              Invite Admins
-            </Button>
+              {FILTER_SCOPE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => handleFilterScopeChange(opt.value)}
+                  className={[
+                    "rounded-full px-4 py-1 text-sm font-medium transition-colors cursor-pointer",
+                    filterScope === opt.value
+                      ? "bg-[#0150AC] text-white shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  ].join(" ")}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-row md:flex-row md:flex-wrap items-stretch md:items-start justify-end gap-3 w-full sm:w-auto">
+              <div className="w-36">
+                {filterScope === "estate" ? (
+                  <Select
+                    options={estateOptions}
+                    placeholder="Select estate"
+                    value={selectedEstate}
+                    onChange={(option) => setSelectedEstate(option)}
+                    isSearchable
+                    isLoading={estateLoading}
+                    className="rounded-full"
+                  />
+                ) : (
+                  <Select
+                    options={companyOptions}
+                    placeholder="Select company"
+                    value={selectedCompany}
+                    onChange={(option) => setSelectedCompany(option)}
+                    isSearchable
+                    isLoading={companyLoading}
+                    className="rounded-full"
+                  />
+                )}
+              </div>
+
+              <div className="w-36">
+                <Select
+                  options={roleFilterOptions}
+                  placeholder="Filter by role"
+                  value={roleFilterOptions.find((o) => o.value === roleFilter)}
+                  onChange={(option) =>
+                    setRoleFilter(
+                      (option?.value as EstateUserRoleFilter) ??
+                        DEFAULT_ESTATE_USER_ROLE,
+                    )
+                  }
+                  isSearchable={false}
+                  styles={{
+                    control: (base) => ({ ...base, cursor: "pointer" }),
+                    option: (base) => ({ ...base, cursor: "pointer" }),
+                    dropdownIndicator: (base) => ({
+                      ...base,
+                      cursor: "pointer",
+                    }),
+                  }}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -576,7 +744,11 @@ export default function SuperAdminUserPage() {
           <Table
             columns={columns}
             data={allSuperAdminUsers}
-            emptyMessage="No users found for this estate"
+            emptyMessage={
+              filterScope === "company"
+                ? "No users found for this company"
+                : "No users found for this estate"
+            }
             enableDateRangeFilter
             defaultDateRangeDays={0}
             startDate={startDate}
@@ -599,19 +771,30 @@ export default function SuperAdminUserPage() {
             enableExport
             exportFileName="users"
             onExportRequest={
-              selectedEstate?.value
+              selectedFilterEntity?.value
                 ? async () => {
                     const shouldApplyDate = Boolean(startDate && endDate);
-                    const res = await dispatch(
-                      getAllUsersByEstate({
-                        estateId: selectedEstate.value,
-                        page: 1,
-                        limit: 50000,
-                        role: roleFilter,
-                        startDate: shouldApplyDate ? startDate : undefined,
-                        endDate: shouldApplyDate ? endDate : undefined,
-                      }),
-                    ).unwrap();
+                    const common = {
+                      page: 1,
+                      limit: 50000,
+                      role: roleFilter,
+                      startDate: shouldApplyDate ? startDate : undefined,
+                      endDate: shouldApplyDate ? endDate : undefined,
+                    };
+                    const res =
+                      filterScope === "company"
+                        ? await dispatch(
+                            getAllUsersByCompany({
+                              companyId: selectedFilterEntity.value,
+                              ...common,
+                            }),
+                          ).unwrap()
+                        : await dispatch(
+                            getAllUsersByEstate({
+                              estateId: selectedFilterEntity.value,
+                              ...common,
+                            }),
+                          ).unwrap();
                     return res?.data ?? [];
                   }
                 : undefined
@@ -619,10 +802,29 @@ export default function SuperAdminUserPage() {
           />
         </Card>
 
-        {/* User Edit Modal */}
-        {open && (
-          <Modal visible={open} onClose={handleCloseModal}>
-            <InviteUserForm close={handleCloseModal} />
+        {/* Invite Admin Modal */}
+        {inviteOpen && (
+          <Modal visible={inviteOpen} onClose={handleCloseInviteModal}>
+            <InviteUserForm close={handleCloseInviteModal} />
+          </Modal>
+        )}
+
+        {/* Edit User Modal */}
+        {editingUser && (
+          <Modal visible={Boolean(editingUser)} onClose={handleCloseEditModal}>
+            <EditUserForm
+              userId={
+                editingUser.id ||
+                (editingUser as { _id?: string })._id ||
+                ""
+              }
+              close={handleCloseEditModal}
+              onUpdated={() => {
+                if (selectedFilterEntity?.value) {
+                  fetchUsers(currentPage).catch(() => {});
+                }
+              }}
+            />
           </Modal>
         )}
 

@@ -15,6 +15,7 @@ interface TransactionData {
   userId: string;
   id?: string;
   paymentStatus?: string;
+  gatewayType?: string;
   tx_ref?: string;
   createdAt?: string;
   updatedAt?: string;

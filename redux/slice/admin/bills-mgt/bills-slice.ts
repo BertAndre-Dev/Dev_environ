@@ -3,13 +3,13 @@ import {
     activateBill,
     createBill,
     createBillForAddress,
-    getBillsForAddress,
     deleteBill,
     suspendBill,
     updateBill,
+    updateBillForAddress,
     getBill,
     getBillsByEstate,
-    type BillsForAddressItem,
+    getBillsForAddress,
 } from './bills';
 
 
@@ -24,18 +24,43 @@ interface BillData {
   isActive?: boolean;
 }
 
+export interface AssignedBillData {
+  id?: string;
+  billId?: string;
+  userId?: string;
+  billName?: string;
+  frequency?: string;
+  amountPaid?: number;
+  startDate?: string;
+  nextDueDate?: string;
+  status?: string;
+  lastPaymentDate?: string | null;
+  createdAt?: string;
+  isServiceCharge?: boolean;
+}
+
 
 export interface Pagination {
   total: number;
   currentPage: number;
   totalPages: number;
   pageSize: number;
+  page?: number;
+  limit?: number;
+  pages?: number;
 }
 
 export interface AllBillsResponse {
   success: boolean;
   message: string;
   data: BillData[];
+  pagination: Pagination;
+}
+
+export interface AssignedBillsResponse {
+  success: boolean;
+  message: string;
+  data: AssignedBillData[];
   pagination: Pagination;
 }
 
@@ -53,13 +78,7 @@ export interface BillState {
     status: "idle" | "isLoading" | "succeeded" | "failed";
     bill: BillData | null;
     allBills: AllBillsResponse | null;
-    assignedBills: BillsForAddressItem[];
-    assignedBillsPagination: {
-      total: number;
-      page: number;
-      limit: number;
-      pages: number;
-    } | null;
+    assignedBills: AssignedBillsResponse | null;
     error: string | null;
 }
 
@@ -77,8 +96,7 @@ const initialState: BillState = {
     status: "idle",
     bill: null,
     allBills: null,
-    assignedBills: [],
-    assignedBillsPagination: null,
+    assignedBills: null,
     error: null,
 };
 
@@ -122,28 +140,36 @@ const billSlice = createSlice({
                 state.error = action.error.message || "Failed to fetch bills for estate";
             });
 
-        // ✅ GET BILLS FOR ADDRESS
+        // ✅ GET BILLS FOR ADDRESS (assigned bills)
         builder
             .addCase(getBillsForAddress.pending, (state) => {
                 state.getBillsForAddressState = "isLoading";
             })
             .addCase(getBillsForAddress.fulfilled, (state, action) => {
                 state.getBillsForAddressState = "succeeded";
-                state.assignedBills = Array.isArray(action.payload?.data)
-                    ? (action.payload.data as BillsForAddressItem[])
-                    : [];
-                state.assignedBillsPagination = action.payload?.pagination ?? null;
+                state.assignedBills = {
+                    success: action.payload?.success ?? true,
+                    message:
+                        action.payload?.message ??
+                        "Bills retrieved successfully for this address.",
+                    data: action.payload?.data || [],
+                    pagination: action.payload?.pagination || {
+                        total: action.payload?.data?.length ?? 0,
+                        currentPage: 1,
+                        totalPages: 1,
+                        pageSize: 10,
+                        page: 1,
+                        limit: 10,
+                        pages: 1,
+                    },
+                };
             })
             .addCase(getBillsForAddress.rejected, (state, action) => {
                 state.getBillsForAddressState = "failed";
-                state.assignedBills = [];
-                state.assignedBillsPagination = null;
                 state.error =
-                    (action.payload as { message?: string })?.message ||
                     action.error.message ||
                     "Failed to fetch bills for address";
             });
-
 
         // ✅ GET SINGLE BILL
         builder
@@ -211,7 +237,7 @@ const billSlice = createSlice({
 
 
         
-        // ✅ UPDATE BILL
+        // ✅ UPDATE BILL (estate)
         builder
             .addCase(updateBill.pending, (state) => {
                 state.updateBillState = "isLoading";
@@ -231,6 +257,52 @@ const billSlice = createSlice({
                     action.error.message || "Failed to update estate bill";
             });
 
+        // ✅ UPDATE ASSIGNED BILL (for-address)
+        builder
+            .addCase(updateBillForAddress.pending, (state) => {
+                state.updateBillState = "isLoading";
+            })
+            .addCase(updateBillForAddress.fulfilled, (state, action) => {
+                state.updateBillState = "succeeded";
+                const updated = action.payload?.data;
+                const billId = action.meta.arg.billId;
+                if (state.assignedBills?.data) {
+                    state.assignedBills.data = state.assignedBills.data.map(
+                        (bill) => {
+                            if (
+                                bill.id !== billId &&
+                                bill.billId !== billId &&
+                                bill.id !== updated?.id &&
+                                bill.billId !== updated?.id
+                            ) {
+                                return bill;
+                            }
+                            return {
+                                ...bill,
+                                billName:
+                                    updated?.name ??
+                                    updated?.billName ??
+                                    bill.billName,
+                                amountPaid:
+                                    updated?.amount ??
+                                    updated?.amountPaid ??
+                                    bill.amountPaid,
+                                isServiceCharge:
+                                    updated?.isServiceCharge ??
+                                    bill.isServiceCharge,
+                            };
+                        },
+                    );
+                }
+            })
+            .addCase(updateBillForAddress.rejected, (state, action) => {
+                state.updateBillState = "failed";
+                state.error =
+                    (action.payload as { message?: string })?.message ||
+                    action.error.message ||
+                    "Failed to update assigned bill";
+            });
+
 
         // ✅ DELETE BILL
         builder
@@ -245,6 +317,15 @@ const billSlice = createSlice({
                     (bill) => bill.id !== deletedId
                     );
                     state.allBills.pagination.total -= 1;
+                }
+                if (state.assignedBills?.data) {
+                    state.assignedBills.data = state.assignedBills.data.filter(
+                        (bill) =>
+                            bill.id !== deletedId && bill.billId !== deletedId,
+                    );
+                    if (state.assignedBills.pagination?.total != null) {
+                        state.assignedBills.pagination.total -= 1;
+                    }
                 }
             })
             .addCase(deleteBill.rejected, (state, action) => {
@@ -266,6 +347,15 @@ const billSlice = createSlice({
                 est.id === updated.id ? updated : est
                 );
             }
+            if (state.assignedBills?.data) {
+                const activatedId = action.meta.arg;
+                state.assignedBills.data = state.assignedBills.data.map(
+                    (bill) =>
+                        bill.id === activatedId || bill.billId === activatedId
+                            ? { ...bill, status: "active" }
+                            : bill,
+                );
+            }
             })
             .addCase(activateBill.rejected, (state, action) => {
             state.activateBillState = "failed";
@@ -284,6 +374,16 @@ const billSlice = createSlice({
                 if (updated && state.allBills?.data) {
                     state.allBills.data = state.allBills.data.map((est) =>
                     est.id === updated.id ? updated : est
+                    );
+                }
+                if (state.assignedBills?.data) {
+                    const suspendedId = action.meta.arg;
+                    state.assignedBills.data = state.assignedBills.data.map(
+                        (bill) =>
+                            bill.id === suspendedId ||
+                            bill.billId === suspendedId
+                                ? { ...bill, status: "suspended" }
+                                : bill,
                     );
                 }
             })

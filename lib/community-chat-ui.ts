@@ -78,13 +78,7 @@ export function chatGroupMemberRowsFromApi(
   const adminSet = new Set(group.adminIds ?? []);
 
   if (group.memberUsers && group.memberUsers.length > 0) {
-    return group.memberUsers.map((m) => ({
-      id: m.id,
-      name: memberDisplayName(m),
-      subtitle: adminSet.has(m.id) ? "Group admin" : "Member",
-      tag: adminSet.has(m.id) ? "Admin" : "Member",
-      avatarColor: adminSet.has(m.id) ? "green" : "gray",
-    }));
+    return chatGroupMemberUsersToRows(group.memberUsers, group.adminIds);
   }
 
   const ids = group.memberIds ?? [];
@@ -97,8 +91,30 @@ export function chatGroupMemberRowsFromApi(
       id,
       name: shortenUserId(id),
       subtitle: adminSet.has(id) ? "Group admin" : "Member",
-      tag: adminSet.has(id) ? "Admin" : "Member",
-      avatarColor: adminSet.has(id) ? "green" : "gray",
+      tag: adminSet.has(id) ? ("Admin" as const) : ("Member" as const),
+      avatarColor: adminSet.has(id) ? ("green" as const) : ("gray" as const),
+    };
+  });
+}
+
+/** Map populated member users (e.g. GET .../groups/{id}/members) to modal rows. */
+export function chatGroupMemberUsersToRows(
+  members: ChatGroupMemberUser[],
+  adminIds?: string[],
+): CommunityMember[] {
+  const adminSet = new Set(adminIds ?? []);
+  return members.map((m) => {
+    const isAdmin = Boolean(m.isAdmin) || adminSet.has(m.id);
+    return {
+      id: m.id,
+      name: memberDisplayName(m),
+      subtitle: isAdmin
+        ? "Group admin"
+        : m.role?.trim()
+          ? m.role.trim()
+          : "Member",
+      tag: isAdmin ? ("Admin" as const) : ("Member" as const),
+      avatarColor: isAdmin ? ("green" as const) : ("gray" as const),
     };
   });
 }

@@ -62,13 +62,9 @@ export default function CreateWalletModal({
   const verifyingAccount = verifyBankAccountState === "isLoading";
   const accountVerified =
     verifyBankAccountState === "succeeded" && !!verifiedAccountName;
-  const accountError =
-    verifyBankAccountState === "failed"
-      ? (paymentError ?? "Account not found")
-      : "";
 
   useEffect(() => {
-    dispatch(getBanks(COUNTRY));
+    dispatch(getBanks({ country: COUNTRY, gatewayType: "flutterwave" }));
     return () => {
       dispatch(clearResidentBanks());
       dispatch(clearResidentVerifiedAccount());
@@ -109,6 +105,7 @@ export default function CreateWalletModal({
           verifyBankAccount({
             accountNumber: accountNumber.trim(),
             bankCode: selectedBankCode,
+            gatewayType: "flutterwave",
           }),
         );
       }, 500);
@@ -134,9 +131,7 @@ export default function CreateWalletModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!accountVerified) {
-      toast.error(
-        "Please wait for account verification or check account details.",
-      );
+      if (paymentError) toast.error(paymentError);
       return;
     }
     if (!selectedBankCode) {
@@ -171,6 +166,17 @@ export default function CreateWalletModal({
     }
   };
 
+  const bankTriggerClassName =
+    "w-full flex items-center justify-between gap-2 border border-input rounded-md bg-transparent px-3 py-2 text-left text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 min-h-9";
+  const bankTriggerContent = (
+    <>
+      <span className={selectedBankCode ? "" : "text-muted-foreground"}>
+        {selectedBankName || "Select bank"}
+      </span>
+      <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+    </>
+  );
+
   return (
     <Card className="w-full max-w-md mx-auto">
       <form onSubmit={handleSubmit}>
@@ -186,21 +192,29 @@ export default function CreateWalletModal({
           <div>
             <Label>Bank name</Label>
             <div ref={bankDropdownRef} className="relative mt-1">
-              <button
-                type="button"
-                className="w-full flex items-center justify-between gap-2 border border-input rounded-md bg-transparent px-3 py-2 text-left text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 min-h-9"
-                onClick={() => !loadingBanks && setBankDropdownOpen((o) => !o)}
-                disabled={loadingBanks}
-                aria-expanded={bankDropdownOpen ? "true" : "false"}
-                aria-haspopup="listbox"
-              >
-                <span
-                  className={selectedBankCode ? "" : "text-muted-foreground"}
+              {bankDropdownOpen ? (
+                <button
+                  type="button"
+                  className={bankTriggerClassName}
+                  onClick={() => setBankDropdownOpen(false)}
+                  disabled={loadingBanks}
+                  aria-expanded="true"
+                  aria-haspopup="listbox"
                 >
-                  {selectedBankName || "Select bank"}
-                </span>
-                <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
-              </button>
+                  {bankTriggerContent}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={bankTriggerClassName}
+                  onClick={() => !loadingBanks && setBankDropdownOpen(true)}
+                  disabled={loadingBanks}
+                  aria-expanded="false"
+                  aria-haspopup="listbox"
+                >
+                  {bankTriggerContent}
+                </button>
+              )}
               {bankDropdownOpen && (
                 <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-md">
                   <div className="p-2 border-b border-border">
@@ -283,11 +297,12 @@ export default function CreateWalletModal({
                 Account name: {verifiedAccountName}
               </p>
             )}
-            {accountError &&
+            {verifyBankAccountState === "failed" &&
+              paymentError &&
               !verifyingAccount &&
               accountNumber.trim().length >= 10 &&
               selectedBankCode && (
-                <p className="text-sm text-red-600 mt-1">{accountError}</p>
+                <p className="text-sm text-red-600 mt-1">{paymentError}</p>
               )}
           </div>
 

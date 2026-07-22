@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
 import {
@@ -11,11 +11,16 @@ import {
 import { toast } from "react-toastify";
 import { TransactionDetailsDialog } from "@/components/super-admin/transaction-modal/page";
 import { TransactionsFilterBar } from "@/components/super-admin/transactions-filter-bar";
-import { TotalTransactionsCard } from "./components/TotalTransactionsCard";
 import { TransactionsSearchCard } from "./components/TransactionsSearchCard";
 import { TransactionsTableCard } from "./components/TransactionsTableCard";
 import Loader from "@/components/ui/Loader";
 import { formatDateTime } from "@/lib/format-date";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Modal from "@/components/modal/page";
+import { CheckCircle } from "lucide-react";
 
 const PAGE_SIZE = 10;
 
@@ -64,6 +69,9 @@ export default function SuperAdminTransactionsPage() {
     });
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [verifyModalOpen, setVerifyModalOpen] = useState(false);
+  const [txRefInput, setTxRefInput] = useState("");
+  const [verifyingFromModal, setVerifyingFromModal] = useState(false);
 
   // ✅ Fetch grand total ONCE, separately, without touching the list state
   // useEffect(() => {
@@ -296,6 +304,27 @@ export default function SuperAdminTransactionsPage() {
           err?.message ??
           "Failed to verify transaction",
       );
+      throw err;
+    }
+  };
+
+  const handleVerifyFromModal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const tx_ref = txRefInput.trim();
+    if (!tx_ref) {
+      toast.warning("Enter a Flutterwave transaction reference");
+      return;
+    }
+
+    setVerifyingFromModal(true);
+    try {
+      await handleVerifyTransaction(tx_ref);
+      setTxRefInput("");
+      setVerifyModalOpen(false);
+    } catch {
+      // error already toasted
+    } finally {
+      setVerifyingFromModal(false);
     }
   };
 
@@ -309,13 +338,20 @@ export default function SuperAdminTransactionsPage() {
           loading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
-      <div className="flex flex-col">
-        <h1 className="font-heading text-3xl font-bold">Transactions</h1>
-        <p className="text-muted-foreground">Overview of all transactions</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="font-heading text-3xl font-bold">Transactions</h1>
+          <p className="text-muted-foreground">Overview of all transactions</p>
+        </div>
+        <Button
+          type="button"
+          onClick={() => setVerifyModalOpen(true)}
+          className="flex items-center gap-2 shrink-0"
+        >
+          <CheckCircle className="w-4 h-4" />
+          Verify Transaction
+        </Button>
       </div>
-
-      {/* ✅ Uses local grandTotalAmount state, not Redux — no overwrite risk */}
-      {/* <TotalTransactionsCard grandTotal={grandTotalAmount} /> */}
 
       <TransactionsSearchCard
         placeholder="Search by name, email, estate, description, reference or amount..."
@@ -361,6 +397,52 @@ export default function SuperAdminTransactionsPage() {
         onVerify={handleVerifyTransaction}
         verifyLoading={verifyTransactionState}
       />
+
+      <Modal
+        visible={verifyModalOpen}
+        onClose={() => {
+          if (verifyingFromModal) return;
+          setVerifyModalOpen(false);
+          setTxRefInput("");
+        }}
+        contentClassName="md:w-[420px] max-w-[420px] p-4"
+      >
+        <Card className="border-0 shadow-none">
+          <CardHeader className="px-0 pt-2">
+            <CardTitle className="text-lg font-semibold">
+              Verify Transaction
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Enter the Flutterwave transaction reference (tx_ref) to verify and
+              optionally trigger payouts.
+            </p>
+          </CardHeader>
+          <CardContent className="px-0 pb-0">
+            <form onSubmit={handleVerifyFromModal} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="verify-tx-ref">Transaction reference</Label>
+                <Input
+                  id="verify-tx-ref"
+                  value={txRefInput}
+                  onChange={(e) => setTxRefInput(e.target.value)}
+                  placeholder="e.g. FLW-..."
+                  disabled={verifyingFromModal}
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  type="submit"
+                  className="flex-1"
+                  disabled={verifyingFromModal}
+                >
+                  {verifyingFromModal ? "Verifying..." : "Verify"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </Modal>
       </div>
     </div>
   );

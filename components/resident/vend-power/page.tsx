@@ -96,9 +96,8 @@ export default function VendPowerForm({
     setShowSuccessModal(false);
     setSuccessToken(null);
     setCopied(false);
-    onSubmitSuccess?.();
     onClose?.();
-  }, [onSubmitSuccess, onClose]);
+  }, [onClose]);
 
   useEffect(() => {
     if (!showSuccessModal) return;
@@ -149,6 +148,9 @@ export default function VendPowerForm({
 
       setSuccessToken(token || null);
       setShowSuccessModal(true);
+      // Soft-reload vend history / related meter data without a full page refresh
+      onSubmitSuccess?.();
+      setAmount(0);
     } catch (err: any) {
       toast.error(err?.message || "Failed to process payment");
     } finally {

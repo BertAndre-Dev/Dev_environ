@@ -4,8 +4,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import VerifyVisitorForm from "@/components/security/verify-visitor-form";
 import ViewVisitorSearch from "@/components/security/view-visitor-search";
-import { Card } from "@/components/ui/card";
-import { IdCard } from "lucide-react";
 import ResidentDetails from "@/components/security/resident-detail";
 import ClockedCard from "@/components/security/clockinouttime";
 import RecentVisitorInvites from "@/components/security/recent-visitor-invites";
@@ -101,35 +99,6 @@ export default function VisitorManagementPage() {
       <div
         className={`space-y-6${loading ? " pointer-events-none select-none" : ""}`}
       >
-      <div className="grid grid-cols-1 gap-4">
-        {[
-          {
-            label: verificationFlags.viewOnly
-              ? "Total Views"
-              : "Total Verifications",
-            value: 0,
-            icon: IdCard,
-            color: "bg-[#D0DFF280]",
-          },
-        ].map((stat, i) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={i} className="p-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="font-heading text-2xl font-bold mt-2">
-                    {stat.value}
-                  </p>
-                </div>
-                <div className={`p-3 rounded-lg ${stat.color}`}>
-                  <Icon className="w-6 h-6" />
-                </div>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
 
       <ViewVisitorSearch
         verificationFlags={verificationFlags}

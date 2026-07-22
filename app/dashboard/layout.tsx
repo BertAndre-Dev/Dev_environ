@@ -341,9 +341,9 @@ export default function DashboardLayout({
           </nav>
 
           {/* User Info */}
-          <div className="bg-[#f2f2f2] border-t border-sidebar-border m-4 rounded-lg px-2 py-4  ">
+          <div className="bg-[#f2f2f2] border-t border-sidebar-border px-2 py-4  ">
             <button
-              className="flex items-center gap-0 md:gap-3 w-full rounded-lg hover:bg-sidebar-accent transition-colors overflow-x-scroll"
+              className="flex items-center gap-0 md:gap-3 w-full hover:bg-sidebar-accent transition-colors overflow-x-scroll"
               // onClick={handleSignOut}
             >
               <div className="bg-[#4E61E5] rounded-full overflow-hidden w-8 h-8 flex-shrink-0">

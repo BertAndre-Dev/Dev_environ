@@ -18,6 +18,20 @@ export interface CreateBillForAddressPayload {
   isServiceCharge: boolean;
 }
 
+export interface UpdateBillPayload {
+  estateId: string;
+  name: string;
+  description: string;
+  yearlyAmount: number;
+}
+
+export interface UpdateBillForAddressPayload {
+  name: string;
+  description: string;
+  amount: number;
+  isServiceCharge: boolean;
+}
+
 // Create estate bill
 export const createBill = createAsyncThunk(
   "bills/createBill",
@@ -33,25 +47,54 @@ export const createBill = createAsyncThunk(
   },
 );
 
-// Update existing bill
+// Update estate bill
 export const updateBill = createAsyncThunk(
   "bills/updateBill",
   async (
-    { billId, data }: { billId: string; data: BillData },
+    { billId, data }: { billId: string; data: UpdateBillPayload },
     { rejectWithValue },
   ) => {
     try {
-      const { estateId, name, description, yearlyAmount } = data;
-      const res = await axiosInstance.put(`/api/v1/bills-mgt/${billId}`, {
-        estateId,
-        name,
-        description,
-        yearlyAmount,
-      });
+      const res = await axiosInstance.put(`/api/v1/bills-mgt/${billId}`, data);
       return res.data;
     } catch (error: any) {
       return rejectWithValue({
-        message: error.res?.data?.message,
+        message:
+          error?.response?.data?.message ||
+          error.res?.data?.message ||
+          "Failed to update bill",
+      });
+    }
+  },
+);
+
+// Update address-specific (assigned) bill
+export const updateBillForAddress = createAsyncThunk(
+  "bills/updateBillForAddress",
+  async (
+    {
+      billId,
+      data,
+    }: { billId: string; data: UpdateBillForAddressPayload },
+    { rejectWithValue },
+  ) => {
+    try {
+      const res = await axiosInstance.put(
+        `/api/v1/bills-mgt/for-address/${billId}`,
+        {
+          name: data.name,
+          description: data.description,
+          amount: data.amount,
+          isServiceCharge: data.isServiceCharge,
+        },
+      );
+      return res.data;
+    } catch (error: any) {
+      return rejectWithValue({
+        message:
+          error?.response?.data?.message ||
+          error.res?.data?.message ||
+          "Failed to update assigned bill",
       });
     }
   },

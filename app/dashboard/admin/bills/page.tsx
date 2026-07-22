@@ -24,6 +24,7 @@ import {
   getBillsForAddress,
   suspendBill,
   updateBill,
+  updateBillForAddress,
 } from "@/redux/slice/admin/bills-mgt/bills";
 import type { AssignedBillData } from "@/redux/slice/admin/bills-mgt/bills-slice";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
@@ -393,15 +394,12 @@ export default function BillPage() {
 
       if (billId) {
         await dispatch(
-          updateBill({
+          updateBillForAddress({
             billId,
             data: {
-              estateId,
               name: data.name,
               description: data.description,
               amount: data.amount,
-              frequency: data.frequency,
-              addressId: data.addressId,
               isServiceCharge: data.isServiceCharge,
             },
           }),

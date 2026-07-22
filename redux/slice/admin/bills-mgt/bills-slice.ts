@@ -6,6 +6,7 @@ import {
     deleteBill,
     suspendBill,
     updateBill,
+    updateBillForAddress,
     getBill,
     getBillsByEstate,
     getBillsForAddress,
@@ -35,6 +36,7 @@ export interface AssignedBillData {
   status?: string;
   lastPaymentDate?: string | null;
   createdAt?: string;
+  isServiceCharge?: boolean;
 }
 
 
@@ -235,7 +237,7 @@ const billSlice = createSlice({
 
 
         
-        // ✅ UPDATE BILL
+        // ✅ UPDATE BILL (estate)
         builder
             .addCase(updateBill.pending, (state) => {
                 state.updateBillState = "isLoading";
@@ -255,6 +257,52 @@ const billSlice = createSlice({
                     action.error.message || "Failed to update estate bill";
             });
 
+        // ✅ UPDATE ASSIGNED BILL (for-address)
+        builder
+            .addCase(updateBillForAddress.pending, (state) => {
+                state.updateBillState = "isLoading";
+            })
+            .addCase(updateBillForAddress.fulfilled, (state, action) => {
+                state.updateBillState = "succeeded";
+                const updated = action.payload?.data;
+                const billId = action.meta.arg.billId;
+                if (state.assignedBills?.data) {
+                    state.assignedBills.data = state.assignedBills.data.map(
+                        (bill) => {
+                            if (
+                                bill.id !== billId &&
+                                bill.billId !== billId &&
+                                bill.id !== updated?.id &&
+                                bill.billId !== updated?.id
+                            ) {
+                                return bill;
+                            }
+                            return {
+                                ...bill,
+                                billName:
+                                    updated?.name ??
+                                    updated?.billName ??
+                                    bill.billName,
+                                amountPaid:
+                                    updated?.amount ??
+                                    updated?.amountPaid ??
+                                    bill.amountPaid,
+                                isServiceCharge:
+                                    updated?.isServiceCharge ??
+                                    bill.isServiceCharge,
+                            };
+                        },
+                    );
+                }
+            })
+            .addCase(updateBillForAddress.rejected, (state, action) => {
+                state.updateBillState = "failed";
+                state.error =
+                    (action.payload as { message?: string })?.message ||
+                    action.error.message ||
+                    "Failed to update assigned bill";
+            });
+
 
         // ✅ DELETE BILL
         builder
@@ -269,6 +317,15 @@ const billSlice = createSlice({
                     (bill) => bill.id !== deletedId
                     );
                     state.allBills.pagination.total -= 1;
+                }
+                if (state.assignedBills?.data) {
+                    state.assignedBills.data = state.assignedBills.data.filter(
+                        (bill) =>
+                            bill.id !== deletedId && bill.billId !== deletedId,
+                    );
+                    if (state.assignedBills.pagination?.total != null) {
+                        state.assignedBills.pagination.total -= 1;
+                    }
                 }
             })
             .addCase(deleteBill.rejected, (state, action) => {
@@ -290,6 +347,15 @@ const billSlice = createSlice({
                 est.id === updated.id ? updated : est
                 );
             }
+            if (state.assignedBills?.data) {
+                const activatedId = action.meta.arg;
+                state.assignedBills.data = state.assignedBills.data.map(
+                    (bill) =>
+                        bill.id === activatedId || bill.billId === activatedId
+                            ? { ...bill, status: "active" }
+                            : bill,
+                );
+            }
             })
             .addCase(activateBill.rejected, (state, action) => {
             state.activateBillState = "failed";
@@ -308,6 +374,16 @@ const billSlice = createSlice({
                 if (updated && state.allBills?.data) {
                     state.allBills.data = state.allBills.data.map((est) =>
                     est.id === updated.id ? updated : est
+                    );
+                }
+                if (state.assignedBills?.data) {
+                    const suspendedId = action.meta.arg;
+                    state.assignedBills.data = state.assignedBills.data.map(
+                        (bill) =>
+                            bill.id === suspendedId ||
+                            bill.billId === suspendedId
+                                ? { ...bill, status: "suspended" }
+                                : bill,
                     );
                 }
             })

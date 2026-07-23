@@ -26,6 +26,7 @@ import Table from "@/components/tables/list/page";
 import type { EstateCreditItem } from "@/redux/slice/estate-admin/wallet-mgt/wallet-mgt-slice";
 import { formatDateTime } from "@/lib/format-date";
 import { TransactionsFilterBar } from "@/components/super-admin/transactions-filter-bar";
+import Loader from "@/components/ui/Loader";
 
 const LIMIT = 10;
 
@@ -54,6 +55,7 @@ export default function EstateAdminWalletPage() {
   const [estateId, setEstateId] = useState<string | null>(null);
   const [estateName, setEstateName] = useState("Estate");
   const [creditsPage, setCreditsPage] = useState(1);
+  const [bootstrapping, setBootstrapping] = useState(true);
 
   const [fromDate, setFromDate] = useState<string | null>(null);
   const [toDate, setToDate] = useState<string | null>(null);
@@ -71,6 +73,7 @@ export default function EstateAdminWalletPage() {
   );
   const walletLoading =
     getWalletState === "idle" || getWalletState === "isLoading";
+  const pageLoading = bootstrapping || (!!estateId && walletLoading);
   const estateCredits = useSelector(
     (state: RootState) => state.estateAdminWallet?.estateCredits ?? null,
   );
@@ -142,6 +145,8 @@ export default function EstateAdminWalletPage() {
         ]);
       } catch (err: any) {
         // When user does not have a wallet, do not show error toast
+      } finally {
+        setBootstrapping(false);
       }
     })();
   }, [dispatch]);
@@ -378,7 +383,15 @@ export default function EstateAdminWalletPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="relative">
+      {pageLoading && <Loader fullScreen label="Loading wallet..." />}
+
+      <div
+        className={[
+          "space-y-6",
+          pageLoading ? "pointer-events-none select-none" : "",
+        ].join(" ")}
+      >
       <div>
         <h1 className="font-heading text-3xl font-bold">Wallet Management</h1>
         <p className="text-muted-foreground mt-1">
@@ -564,6 +577,7 @@ export default function EstateAdminWalletPage() {
           </div>
         </div>
       </Modal>
+      </div>
     </div>
   );
 }

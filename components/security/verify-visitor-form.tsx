@@ -14,7 +14,7 @@ import {
   mapScanResponseToVisitorDetails,
 } from "@/lib/security-visitor";
 import { formatVisitorCode, normalizeBarcodeInput } from "@/lib/utils";
-import { CheckCircle, Eye } from "lucide-react";
+import { CheckCircle, Eye, Phone } from "lucide-react";
 import type { VisitorDetailsData } from "@/app/dashboard/security/types";
 import type { VisitorVerificationFlags } from "@/lib/visitor-verification-mode";
 import { getVerificationFlags } from "@/lib/visitor-verification-mode";
@@ -92,9 +92,14 @@ export default function VerifyVisitorForm({
   const visitorName = visitorDetails
     ? `${visitorDetails.firstName} ${visitorDetails.lastName}`.trim() || "—"
     : "—";
-  const location = visitorDetails?.addressId?.data
-    ? Object.values(visitorDetails.addressId.data).filter(Boolean).join(", ")
+  const visitorPhone = visitorDetails?.phone?.trim() || "—";
+  const residentName = visitorDetails?.residentId
+    ? `${visitorDetails.residentId.firstName} ${visitorDetails.residentId.lastName}`.trim() ||
+      "—"
     : "—";
+  const addressData = visitorDetails?.addressId?.data ?? {};
+  const residentAddress =
+    Object.values(addressData).filter(Boolean).join(", ") || "—";
   const reasonForVisit = visitorDetails?.purpose ?? "—";
   const numberOfPeople = 1;
 
@@ -151,9 +156,9 @@ export default function VerifyVisitorForm({
     : "Verify & Allow Access";
 
   return (
-    <div className="w-full h-[370px] overflow-y-scroll pb-4 bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mx-auto space-y-6">
+    <div className="w-full max-h-[70vh] overflow-y-auto pb-4 bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mx-auto space-y-6">
       <div className="border-b border-[#D9D9D9] pb-4">
-        <h2 className="text-2xl font-bold text-gray-900">Visitor Details</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Details</h2>
       </div>
 
       {statusNotice ? (
@@ -171,50 +176,68 @@ export default function VerifyVisitorForm({
         </div>
       ) : null}
 
-      <div className="flex items-center gap-4">
-        <div className="w-16 h-16 rounded-full bg-blue-100 border-[3px] border-blue-600 flex items-center justify-center shrink-0">
-          <span className="text-blue-700 font-semibold text-lg">
-            {visitorName
-              .split(" ")
-              .filter(Boolean)
-              .map((n) => n[0])
-              .join("")
-              .slice(0, 2) || "—"}
-          </span>
-        </div>
-        <div>
-          <p className="text-xl font-bold text-gray-900">{visitorName}</p>
-          <p className="text-gray-500 text-sm mt-0.5">{location}</p>
-        </div>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-sm text-gray-600">
-          Barcode / QR code / Visitor code
-        </Label>
-        <Input
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          onBlur={(e) => setCode(normalizeBarcodeInput(e.target.value))}
-          title="Barcode / QR code / Visitor code"
-          placeholder="EZR-4FTX or scan QR code"
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label className="text-sm text-gray-500">Reason for visit</Label>
-          <div className="border border-gray-200 rounded-xl px-4 py-3 text-gray-700 bg-gray-50 text-sm">
-            {reasonForVisit}
+      <section className="space-y-4">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+          Visitor
+        </h3>
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-blue-100 border-[3px] border-blue-600 flex items-center justify-center shrink-0">
+            <span className="text-blue-700 font-semibold text-lg">
+              {visitorName
+                .split(" ")
+                .filter(Boolean)
+                .map((n) => n[0])
+                .join("")
+                .slice(0, 2) || "—"}
+            </span>
+          </div>
+          <div>
+            <p className="text-xl font-bold text-gray-900">{visitorName}</p>
+            <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
+              <Phone className="h-4 w-4 shrink-0" />
+              <span>{visitorPhone}</span>
+            </div>
           </div>
         </div>
+
         <div className="space-y-1.5">
-          <Label className="text-sm text-gray-500">Number of people</Label>
-          <div className="border border-gray-200 rounded-xl px-4 py-3 text-gray-700 bg-gray-50 text-sm">
-            {numberOfPeople}
+          <Label className="text-sm text-gray-600">
+            Barcode / QR code / Visitor code
+          </Label>
+          <Input
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            onBlur={(e) => setCode(normalizeBarcodeInput(e.target.value))}
+            title="Barcode / QR code / Visitor code"
+            placeholder="EZR-4FTX or scan QR code"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-sm text-gray-500">Reason for visit</Label>
+            <div className="border border-gray-200 rounded-xl px-4 py-3 text-gray-700 bg-gray-50 text-sm">
+              {reasonForVisit}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm text-gray-500">Number of people</Label>
+            <div className="border border-gray-200 rounded-xl px-4 py-3 text-gray-700 bg-gray-50 text-sm">
+              {numberOfPeople}
+            </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      <section className="space-y-3 border-t border-gray-100 pt-5">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+          Resident
+        </h3>
+        <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 space-y-1">
+          <p className="text-base font-semibold text-gray-900">{residentName}</p>
+          <p className="text-sm text-gray-600">{residentAddress}</p>
+        </div>
+      </section>
 
       {flags.canVerify && !alreadyVerified ? (
         <div className="grid grid-cols-1 gap-4 pt-2">

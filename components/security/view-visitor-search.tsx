@@ -21,6 +21,8 @@ interface ViewVisitorSearchProps {
   onLookupSource?: (source: "code" | "scan") => void;
   verificationFlags?: VisitorVerificationFlags;
   verificationDescription?: string | null;
+  /** When embedded in a modal, drop the outer page card chrome. */
+  embedded?: boolean;
 }
 
 function ScannerGraphic() {
@@ -52,6 +54,7 @@ export default function ViewVisitorSearch({
   onLookupSource,
   verificationFlags,
   verificationDescription,
+  embedded = false,
 }: ViewVisitorSearchProps = {}) {
   const dispatch = useDispatch<AppDispatch>();
   const flags = verificationFlags ?? getVerificationFlags(null);
@@ -136,8 +139,14 @@ export default function ViewVisitorSearch({
 
   return (
     <>
-      <Card className="mx-auto w-full p-6 sm:p-8 shadow-lg">
-        <CardHeader className="p-0">
+      <Card
+        className={
+          embedded
+            ? "w-full border-0 shadow-none p-0"
+            : "mx-auto w-full p-6 sm:p-8 shadow-lg"
+        }
+      >
+        <CardHeader className={embedded ? "p-0 pb-4" : "p-0"}>
           <CardTitle className="text-xl sm:text-2xl font-semibold tracking-tight">
             Scan Visitor
           </CardTitle>

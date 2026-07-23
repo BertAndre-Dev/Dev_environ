@@ -2,17 +2,18 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import VerifyVisitorForm from "@/components/security/verify-visitor-form";
-import ViewVisitorSearch from "@/components/security/view-visitor-search";
-import ResidentDetails from "@/components/security/resident-detail";
-import ClockedCard from "@/components/security/clockinouttime";
+import { Eye, ShieldCheck } from "lucide-react";
 import RecentVisitorInvites from "@/components/security/recent-visitor-invites";
+import ViewVisitorModal from "@/components/security/ViewVisitorModal";
+import VerifyModal from "@/components/security/VerifyModal";
+import ClockOutCard from "@/components/security/ClockOutCard";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Loader from "@/components/ui/Loader";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getAllVisitors } from "@/redux/slice/security/visitor/visitor";
 import type { RootState, AppDispatch } from "@/redux/store";
 import { toast } from "react-toastify";
 import type { VisitorDetailsData } from "@/app/dashboard/security/types";
-import Loader from "@/components/ui/Loader";
 import {
   getVerificationFlags,
   resolveVisitorVerificationDescription,
@@ -20,6 +21,13 @@ import {
 } from "@/lib/visitor-verification-mode";
 import { VisitorVerificationMode } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
 import { readStoredAuth } from "@/utils/auth-storage";
+
+function readInitialVerificationMode(): VisitorVerificationMode | null {
+  if (typeof window === "undefined") return null;
+  return resolveVisitorVerificationMode(
+    readStoredAuth()?.user as Record<string, unknown> | null,
+  );
+}
 
 export default function VisitorManagementPage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -29,12 +37,16 @@ export default function VisitorManagementPage() {
   const [lookupSource, setLookupSource] = useState<"code" | "scan" | null>(
     null,
   );
-  const [visitorVerificationMode, setVisitorVerificationMode] = useState(
-    VisitorVerificationMode.VIEW_AND_VERIFY,
+  const [visitorVerificationMode, setVisitorVerificationMode] =
+    useState<VisitorVerificationMode | null>(readInitialVerificationMode);
+  const [modeReady, setModeReady] = useState(
+    () => readInitialVerificationMode() != null,
   );
   const [verificationDescription, setVerificationDescription] = useState<
     string | null
   >(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [verifyModalOpen, setVerifyModalOpen] = useState(false);
 
   const authUser = useSelector((state: RootState) => state.auth.user);
 
@@ -47,19 +59,36 @@ export default function VisitorManagementPage() {
   });
 
   const verificationFlags = useMemo(
-    () => getVerificationFlags(visitorVerificationMode),
+    () =>
+      visitorVerificationMode
+        ? getVerificationFlags(visitorVerificationMode)
+        : null,
     [visitorVerificationMode],
   );
+
+  const refreshVisitors = () => {
+    if (!estateId) return;
+    dispatch(getAllVisitors({ estateId, page: 1, limit: 20 })).catch(() => {});
+  };
 
   useEffect(() => {
     (async () => {
       try {
         const priorUser = (authUser ??
           readStoredAuth()?.user) as Record<string, unknown> | null;
+        // Prefer stored/redux mode immediately so cards don't flash the wrong set.
+        const priorMode = resolveVisitorVerificationMode(priorUser);
+        if (priorMode) {
+          setVisitorVerificationMode(priorMode);
+          setModeReady(true);
+          setVerificationDescription(
+            resolveVisitorVerificationDescription(priorUser),
+          );
+        }
+
         const userRes = await dispatch(getSignedInUser()).unwrap();
         const data = (userRes?.data ?? userRes) as Record<string, unknown>;
-        const rawEstateId =
-          data?.estateId ?? data?.estate ?? null;
+        const rawEstateId = data?.estateId ?? data?.estate ?? null;
         const id =
           typeof rawEstateId === "string"
             ? rawEstateId
@@ -69,13 +98,14 @@ export default function VisitorManagementPage() {
 
         const mode =
           resolveVisitorVerificationMode(data) ??
-          resolveVisitorVerificationMode(priorUser) ??
+          priorMode ??
           VisitorVerificationMode.VIEW_AND_VERIFY;
         setVisitorVerificationMode(mode);
         setVerificationDescription(
           resolveVisitorVerificationDescription(data) ??
             resolveVisitorVerificationDescription(priorUser),
         );
+        setModeReady(true);
 
         if (!id) return;
         setEstateId(id);
@@ -83,61 +113,142 @@ export default function VisitorManagementPage() {
           getAllVisitors({ estateId: id, page: 1, limit: 20 }),
         ).unwrap();
       } catch (err: unknown) {
+        setVisitorVerificationMode(
+          (prev) => prev ?? VisitorVerificationMode.VIEW_AND_VERIFY,
+        );
+        setModeReady(true);
         toast.error((err as { message?: string })?.message ?? "Failed to load");
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch]);
 
-  const clockedIn = visitorDetails?.checkinTime ?? null;
-  const clockedOut = visitorDetails?.checkoutTime ?? null;
+  const handleCloseViewModal = () => {
+    setViewModalOpen(false);
+    setVisitorDetails(null);
+    setLookupSource(null);
+  };
+
+  const showViewCard =
+    modeReady &&
+    Boolean(
+      verificationFlags?.viewOnly || verificationFlags?.viewAndVerify,
+    );
+  const showVerifyCard =
+    modeReady &&
+    Boolean(
+      verificationFlags?.verifyOnly || verificationFlags?.viewAndVerify,
+    );
+  const actionCardCount = Number(showViewCard) + Number(showVerifyCard);
+  const pageLoading = loading || !modeReady;
 
   return (
     <div className="relative">
-      {loading && <Loader fullScreen label="Loading visitors..." />}
+      {pageLoading && <Loader fullScreen label="Loading visitors..." />}
 
       <div
-        className={`space-y-6${loading ? " pointer-events-none select-none" : ""}`}
+        className={`space-y-6${pageLoading ? " pointer-events-none select-none" : ""}`}
       >
+        <div>
+          <h1 className="font-heading text-3xl font-bold">
+            Visitor Management
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            View visitors at the gate, or verify and clock them out.
+          </p>
+        </div>
 
-      <ViewVisitorSearch
-        verificationFlags={verificationFlags}
+        <div className="space-y-8 pb-6">
+          <div
+            className={`grid gap-4 ${
+              actionCardCount <= 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"
+            }`}
+          >
+            {showViewCard ? (
+              <button
+                type="button"
+                onClick={() => setViewModalOpen(true)}
+                className="text-left rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Card className="h-full transition-shadow hover:shadow-md cursor-pointer border-border">
+                  <div className="px-4 pt-2 flex items-center gap-2">
+                    <Eye className="h-6 w-6" />
+                    <CardTitle className="text-xl">
+                      Click here to view visitor
+                    </CardTitle>
+                  </div>
+
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Scan or enter a visitor code to view visitor and resident
+                      details.
+                    </p>
+                  </CardContent>
+                </Card>
+              </button>
+            ) : null}
+
+            {showVerifyCard ? (
+              <button
+                type="button"
+                onClick={() => setVerifyModalOpen(true)}
+                className="text-left rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Card className="h-full transition-shadow hover:shadow-md cursor-pointer border-border">
+                    <div className="px-4 pt-2 flex items-center gap-2">
+                      <ShieldCheck className="h-6 w-6" />
+                        <CardTitle className="text-xl">Verify</CardTitle>
+                    </div>
+                  
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Enter a visitor code to verify and allow access.
+                    </p>
+                  </CardContent>
+                </Card>
+              </button>
+            ) : null}
+          </div>
+
+          {modeReady ? <ClockOutCard onClockedOut={refreshVisitors} /> : null}
+        </div>
+
+        <RecentVisitorInvites
+          visitors={allVisitors?.data ?? []}
+          loading={false}
+        />
+      </div>
+
+      <ViewVisitorModal
+        open={viewModalOpen}
+        onClose={handleCloseViewModal}
+        visitorDetails={visitorDetails}
+        lookupSource={lookupSource}
+        verificationFlags={
+          verificationFlags ??
+          getVerificationFlags(VisitorVerificationMode.VIEW_AND_VERIFY)
+        }
         verificationDescription={verificationDescription}
         onLookupSource={setLookupSource}
         onDetailsLoaded={(visitor) => {
           setVisitorDetails(visitor);
           if (!visitor) setLookupSource(null);
         }}
+        onVerified={(visitor) => {
+          if (visitor) setVisitorDetails(visitor);
+          refreshVisitors();
+        }}
       />
 
-      {visitorDetails && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <VerifyVisitorForm
-            visitorDetails={visitorDetails}
-            initialCode={visitorDetails?.visitorCode}
-            verificationFlags={verificationFlags}
-            lookupSource={lookupSource}
-            verificationDescription={verificationDescription}
-            onVerified={(visitor) => {
-              if (visitor) setVisitorDetails(visitor);
-              if (estateId) {
-                dispatch(
-                  getAllVisitors({ estateId, page: 1, limit: 20 }),
-                ).catch(() => {});
-              }
-            }}
-          />
-          <ResidentDetails visitorDetails={visitorDetails} />
-        </div>
-      )}
-
-      <ClockedCard
-        clockedIn={clockedIn}
-        clockedOut={clockedOut}
-        initialClockOutCode={visitorDetails?.visitorCode}
+      <VerifyModal
+        open={verifyModalOpen}
+        onClose={() => setVerifyModalOpen(false)}
+        initialCode={visitorDetails?.visitorCode}
+        onVerified={(visitor) => {
+          if (visitor) setVisitorDetails(visitor);
+          refreshVisitors();
+        }}
       />
-      <RecentVisitorInvites visitors={allVisitors?.data ?? []} loading={false} />
-      </div>
     </div>
   );
 }

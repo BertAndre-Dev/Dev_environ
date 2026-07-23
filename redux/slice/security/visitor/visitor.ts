@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export type VisitingType = "SHORT_VISIT" | "LONG_VISIT";
 
@@ -15,14 +16,12 @@ export type VerifyVisitorParams = {
   visitEndDate?: string;
 };
 
-function extractErrorMessage(error: unknown, fallback: string) {
-  const data = (error as { response?: { data?: { message?: string | string[] } } })
-    ?.response?.data;
-  if (!data) return fallback;
-  const { message } = data;
-  if (Array.isArray(message)) return message.join(", ");
-  if (typeof message === "string") return message;
-  return fallback;
+function rejectApiError(error: unknown, rejectWithValue: (v: unknown) => unknown) {
+  const data = (error as { response?: { data?: unknown } })?.response?.data;
+  if (data) return rejectWithValue(data);
+  const message = getApiErrorMessage(error);
+  if (message) return rejectWithValue({ message });
+  return rejectWithValue(error);
 }
 
 export const getAllVisitors = createAsyncThunk(
@@ -41,7 +40,7 @@ export const getAllVisitors = createAsyncThunk(
       startDate?: string;
       endDate?: string;
     },
-    { rejectWithValue }
+    { rejectWithValue },
   ) => {
     try {
       const params = new URLSearchParams();
@@ -51,13 +50,28 @@ export const getAllVisitors = createAsyncThunk(
       if (endDate) params.set("endDate", endDate);
 
       const res = await axiosInstance.get(
-        `/api/v1/visitor-mgt/all-visitors/${estateId}?${params.toString()}`
+        `/api/v1/visitor-mgt/all-visitors/${estateId}?${params.toString()}`,
       );
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data);
+    } catch (error: unknown) {
+      return rejectApiError(error, rejectWithValue);
     }
-  }
+  },
+);
+
+/** GET /api/v1/visitor-mgt/view-details — look up visitor by code */
+export const getVisitorDetailsByCode = createAsyncThunk(
+  "securityVisitor/getVisitorDetailsByCode",
+  async ({ code }: { code: string }, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.get(`/api/v1/visitor-mgt/view-details`, {
+        params: { code },
+      });
+      return res.data;
+    } catch (error: unknown) {
+      return rejectApiError(error, rejectWithValue);
+    }
+  },
 );
 
 /** POST /api/v1/visitor-mgt/scan — look up visitor from scanned QR / barcode */
@@ -77,9 +91,7 @@ export const scanVisitor = createAsyncThunk(
       const res = await axiosInstance.post("/api/v1/visitor-mgt/scan", body);
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({
-        message: extractErrorMessage(error, "Failed to verify visitor"),
-      });
+      return rejectApiError(error, rejectWithValue);
     }
   },
 );
@@ -106,26 +118,21 @@ export const verifyVisitor = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({
-        message: extractErrorMessage(error, "Failed to verify visitor"),
-      });
+      return rejectApiError(error, rejectWithValue);
     }
   },
 );
 
 export const checkoutVisitor = createAsyncThunk(
   "securityVisitor/checkoutVisitor",
-  async (
-    { visitorCode }: { visitorCode: string },
-    { rejectWithValue }
-  ) => {
+  async ({ visitorCode }: { visitorCode: string }, { rejectWithValue }) => {
     try {
       const res = await axiosInstance.post("/api/v1/visitor-mgt/checkout", {
         visitorCode,
       });
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data);
+    } catch (error: unknown) {
+      return rejectApiError(error, rejectWithValue);
     }
-  }
+  },
 );

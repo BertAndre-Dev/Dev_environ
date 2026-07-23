@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "@/redux/store";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "@/redux/store";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,10 @@ import {
   mapScanResponseToVisitorDetails,
 } from "@/lib/security-visitor";
 import { formatVisitorCode, normalizeBarcodeInput } from "@/lib/utils";
+import {
+  getApiErrorMessage,
+  getApiSuccessMessage,
+} from "@/lib/api-error";
 import { CheckCircle, Eye, Phone } from "lucide-react";
 import type { VisitorDetailsData } from "@/app/dashboard/security/types";
 import type { VisitorVerificationFlags } from "@/lib/visitor-verification-mode";
@@ -48,11 +52,14 @@ export default function VerifyVisitorForm({
   const dispatch = useDispatch<AppDispatch>();
   const searchParams = useSearchParams();
   const flags = verificationFlags ?? getVerificationFlags(null);
+  const loading = useSelector(
+    (state: RootState) =>
+      state.securityVisitor?.verifyVisitorStatus === "isLoading",
+  );
 
   const codeFromUrl = searchParams.get("code") ?? "";
   const initialCode = initialCodeProp ?? codeFromUrl;
   const [code, setCode] = useState(() => normalizeBarcodeInput(initialCode));
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (visitorDetails?.visitorCode) {
@@ -68,24 +75,16 @@ export default function VerifyVisitorForm({
     }
 
     try {
-      setLoading(true);
       const res = await dispatch(
         verifyVisitor(buildVerifyPayload(visitorCode, visitorDetails)),
       ).unwrap();
       const verified = mapScanResponseToVisitorDetails(res);
       onVerified?.(verified);
-      toast.success(
-        lookupSource === "scan"
-          ? "QR code verified — access recorded."
-          : ((res as { message?: string })?.message ??
-              "Visitor code verified successfully"),
-      );
+      const message = getApiSuccessMessage(res);
+      if (message) toast.success(message);
     } catch (error: unknown) {
-      toast.error(
-        (error as { message?: string })?.message ?? "Verification failed",
-      );
-    } finally {
-      setLoading(false);
+      const message = getApiErrorMessage(error);
+      if (message) toast.error(message);
     }
   };
 

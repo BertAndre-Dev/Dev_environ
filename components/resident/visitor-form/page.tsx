@@ -169,19 +169,39 @@ export default function VisitorForm({
         toast.error("End date must be after start date");
         return;
       }
+    } else if (!formData.visitStartDate) {
+      toast.error("Visit start date is required for a short visit");
+      return;
+    }
+
+    if (
+      formData.visitStartDate &&
+      new Date(formData.visitStartDate).getTime() < Date.now()
+    ) {
+      toast.error("Visit start date must be the current date and time or later.");
+      return;
     }
 
     const toIsoOrNull = (val: string) =>
       val ? new Date(val).toISOString() : null;
 
-    const visitStartDate =
-      formData.visitingType === "LONG_VISIT"
-        ? toIsoOrNull(formData.visitStartDate)
-        : null;
-    const visitEndDate =
-      formData.visitingType === "LONG_VISIT"
-        ? toIsoOrNull(formData.visitEndDate)
-        : null;
+    const visitStartDate = toIsoOrNull(formData.visitStartDate);
+    const isLongVisit = formData.visitingType === "LONG_VISIT";
+
+    const payload = {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      phone: formData.phone,
+      purpose: formData.purpose,
+      residentId,
+      estateId,
+      addressId: addressIdString,
+      visitingType: formData.visitingType,
+      visitStartDate,
+      ...(isLongVisit
+        ? { visitEndDate: toIsoOrNull(formData.visitEndDate) }
+        : {}),
+    };
 
     setSubmitting(true);
     try {
@@ -189,36 +209,12 @@ export default function VisitorForm({
         await dispatch(
           updateVisitor({
             id: visitorId,
-            data: {
-              firstName: formData.firstName,
-              lastName: formData.lastName,
-              phone: formData.phone,
-              purpose: formData.purpose,
-              residentId,
-              estateId,
-              addressId: addressIdString,
-              visitingType: formData.visitingType,
-              visitStartDate,
-              visitEndDate,
-            },
+            data: payload,
           }),
         ).unwrap();
         toast.success("Visitor updated successfully");
       } else {
-        await dispatch(
-          createVisitor({
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            phone: formData.phone,
-            purpose: formData.purpose,
-            residentId,
-            estateId,
-            addressId: addressIdString,
-            visitingType: formData.visitingType,
-            visitStartDate,
-            visitEndDate,
-          }),
-        ).unwrap();
+        await dispatch(createVisitor(payload)).unwrap();
         toast.success("Visitor created successfully");
       }
 
@@ -342,10 +338,6 @@ export default function VisitorForm({
                   setFormData((prev) => ({
                     ...prev,
                     visitingType: e.target.value as VisitingType,
-                    visitStartDate:
-                      e.target.value === "SHORT_VISIT"
-                        ? ""
-                        : prev.visitStartDate,
                     visitEndDate:
                       e.target.value === "SHORT_VISIT"
                         ? ""
@@ -359,12 +351,25 @@ export default function VisitorForm({
               </select>
               <p className="text-xs text-gray-500 mt-1">
                 {formData.visitingType === "SHORT_VISIT"
-                  ? "Short visits are valid for the day of creation."
+                  ? "Choose when the short visit should start."
                   : "Long visits require a start and end date."}
               </p>
             </div>
 
-            {formData.visitingType === "LONG_VISIT" && (
+            {formData.visitingType === "SHORT_VISIT" ? (
+              <div>
+                <Label htmlFor="visitStartDate">Visit Start Date *</Label>
+                <Input
+                  id="visitStartDate"
+                  name="visitStartDate"
+                  type="datetime-local"
+                  value={formData.visitStartDate}
+                  onChange={handleInputChange}
+                  required
+                  className="mt-1"
+                />
+              </div>
+            ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="visitStartDate">Visit Start Date *</Label>

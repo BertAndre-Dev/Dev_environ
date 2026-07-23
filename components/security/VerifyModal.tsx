@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { CheckCircle } from "lucide-react";
 import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,12 @@ import {
   mapScanResponseToVisitorDetails,
 } from "@/lib/security-visitor";
 import { formatVisitorCode } from "@/lib/utils";
+import {
+  getApiErrorMessage,
+  getApiSuccessMessage,
+} from "@/lib/api-error";
 import type { VisitorDetailsData } from "@/app/dashboard/security/types";
-import type { AppDispatch } from "@/redux/store";
+import type { AppDispatch, RootState } from "@/redux/store";
 import { toast } from "react-toastify";
 
 interface VerifyModalProps {
@@ -32,7 +36,10 @@ export default function VerifyModal({
 }: VerifyModalProps) {
   const dispatch = useDispatch<AppDispatch>();
   const [visitorCode, setVisitorCode] = useState("");
-  const [loading, setLoading] = useState(false);
+  const loading = useSelector(
+    (state: RootState) =>
+      state.securityVisitor?.verifyVisitorStatus === "isLoading",
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -46,23 +53,16 @@ export default function VerifyModal({
       return;
     }
     try {
-      setLoading(true);
       const res = await dispatch(
         verifyVisitor(buildVerifyPayload(code)),
       ).unwrap();
-      const verified = mapScanResponseToVisitorDetails(res);
-      onVerified?.(verified);
-      toast.success(
-        (res as { message?: string })?.message ??
-          "Visitor code verified successfully",
-      );
+      onVerified?.(mapScanResponseToVisitorDetails(res));
+      const message = getApiSuccessMessage(res);
+      if (message) toast.success(message);
       onClose();
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Verification failed",
-      );
-    } finally {
-      setLoading(false);
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 

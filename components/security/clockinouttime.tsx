@@ -1,14 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { checkoutVisitor } from "@/redux/slice/security/visitor/visitor";
 import { formatVisitorCode } from "@/lib/utils";
-import type { AppDispatch } from "@/redux/store";
+import {
+  getApiErrorMessage,
+  getApiSuccessMessage,
+} from "@/lib/api-error";
+import type { AppDispatch, RootState } from "@/redux/store";
 import { toast } from "react-toastify";
 
 interface ClockInOutTimeProps {
@@ -47,7 +51,10 @@ export default function ClockInOutTime({
   const [lastClockedOutTime, setLastClockedOutTime] = useState<string | null>(
     null,
   );
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const checkoutLoading = useSelector(
+    (state: RootState) =>
+      state.securityVisitor?.checkoutVisitorStatus === "isLoading",
+  );
 
   useEffect(() => {
     if (initialClockOutCode) {
@@ -62,15 +69,13 @@ export default function ClockInOutTime({
       return;
     }
     try {
-      setCheckoutLoading(true);
-      await dispatch(checkoutVisitor({ visitorCode: code })).unwrap();
-      const now = new Date().toISOString();
-      setLastClockedOutTime(now);
-      toast.success("Visitor clocked out successfully");
+      const res = await dispatch(checkoutVisitor({ visitorCode: code })).unwrap();
+      setLastClockedOutTime(new Date().toISOString());
+      const message = getApiSuccessMessage(res);
+      if (message) toast.success(message);
     } catch (err: unknown) {
-      toast.error((err as { message?: string })?.message ?? "Clock out failed");
-    } finally {
-      setCheckoutLoading(false);
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 

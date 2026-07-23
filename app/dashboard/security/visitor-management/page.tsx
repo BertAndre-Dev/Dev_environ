@@ -7,13 +7,20 @@ import RecentVisitorInvites from "@/components/security/recent-visitor-invites";
 import ViewVisitorModal from "@/components/security/ViewVisitorModal";
 import VerifyModal from "@/components/security/VerifyModal";
 import ClockOutCard from "@/components/security/ClockOutCard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import Loader from "@/components/ui/Loader";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getAllVisitors } from "@/redux/slice/security/visitor/visitor";
+import {
+  clearActiveVisitor,
+  setActiveVisitor,
+  setLookupSource,
+  setSecurityEstateId,
+  setSecurityVerificationContext,
+} from "@/redux/slice/security/visitor/visitor-slice";
 import type { RootState, AppDispatch } from "@/redux/store";
 import { toast } from "react-toastify";
-import type { VisitorDetailsData } from "@/app/dashboard/security/types";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   getVerificationFlags,
   resolveVisitorVerificationDescription,
@@ -31,30 +38,30 @@ function readInitialVerificationMode(): VisitorVerificationMode | null {
 
 export default function VisitorManagementPage() {
   const dispatch = useDispatch<AppDispatch>();
-  const [estateId, setEstateId] = useState<string | null>(null);
-  const [visitorDetails, setVisitorDetails] =
-    useState<VisitorDetailsData | null>(null);
-  const [lookupSource, setLookupSource] = useState<"code" | "scan" | null>(
-    null,
-  );
-  const [visitorVerificationMode, setVisitorVerificationMode] =
-    useState<VisitorVerificationMode | null>(readInitialVerificationMode);
-  const [modeReady, setModeReady] = useState(
-    () => readInitialVerificationMode() != null,
-  );
-  const [verificationDescription, setVerificationDescription] = useState<
-    string | null
-  >(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [verifyModalOpen, setVerifyModalOpen] = useState(false);
 
   const authUser = useSelector((state: RootState) => state.auth.user);
-
-  const { allVisitors, loading } = useSelector((state: RootState) => {
+  const {
+    allVisitors,
+    loading,
+    estateId,
+    visitorVerificationMode,
+    verificationDescription,
+    contextReady,
+    activeVisitor,
+    lookupSource,
+  } = useSelector((state: RootState) => {
     const v = state.securityVisitor;
     return {
       allVisitors: v?.allVisitors ?? null,
       loading: v?.getAllVisitorsStatus === "isLoading",
+      estateId: v?.estateId ?? null,
+      visitorVerificationMode: v?.visitorVerificationMode ?? null,
+      verificationDescription: v?.verificationDescription ?? null,
+      contextReady: Boolean(v?.contextReady),
+      activeVisitor: v?.activeVisitor ?? null,
+      lookupSource: v?.lookupSource ?? null,
     };
   });
 
@@ -68,23 +75,27 @@ export default function VisitorManagementPage() {
 
   const refreshVisitors = () => {
     if (!estateId) return;
-    dispatch(getAllVisitors({ estateId, page: 1, limit: 20 })).catch(() => {});
+    void dispatch(getAllVisitors({ estateId, page: 1, limit: 20 }));
   };
 
   useEffect(() => {
+    const priorMode = readInitialVerificationMode();
+    if (priorMode) {
+      const priorUser = readStoredAuth()?.user as Record<string, unknown> | null;
+      dispatch(
+        setSecurityVerificationContext({
+          mode: priorMode,
+          description: resolveVisitorVerificationDescription(priorUser),
+          ready: true,
+        }),
+      );
+    }
+
     (async () => {
       try {
         const priorUser = (authUser ??
           readStoredAuth()?.user) as Record<string, unknown> | null;
-        // Prefer stored/redux mode immediately so cards don't flash the wrong set.
-        const priorMode = resolveVisitorVerificationMode(priorUser);
-        if (priorMode) {
-          setVisitorVerificationMode(priorMode);
-          setModeReady(true);
-          setVerificationDescription(
-            resolveVisitorVerificationDescription(priorUser),
-          );
-        }
+        const priorModeResolved = resolveVisitorVerificationMode(priorUser);
 
         const userRes = await dispatch(getSignedInUser()).unwrap();
         const data = (userRes?.data ?? userRes) as Record<string, unknown>;
@@ -98,26 +109,39 @@ export default function VisitorManagementPage() {
 
         const mode =
           resolveVisitorVerificationMode(data) ??
-          priorMode ??
+          priorModeResolved ??
           VisitorVerificationMode.VIEW_AND_VERIFY;
-        setVisitorVerificationMode(mode);
-        setVerificationDescription(
-          resolveVisitorVerificationDescription(data) ??
-            resolveVisitorVerificationDescription(priorUser),
+
+        dispatch(
+          setSecurityVerificationContext({
+            mode,
+            description:
+              resolveVisitorVerificationDescription(data) ??
+              resolveVisitorVerificationDescription(priorUser),
+            ready: true,
+          }),
         );
-        setModeReady(true);
 
         if (!id) return;
-        setEstateId(id);
+        dispatch(setSecurityEstateId(id));
         await dispatch(
           getAllVisitors({ estateId: id, page: 1, limit: 20 }),
         ).unwrap();
       } catch (err: unknown) {
-        setVisitorVerificationMode(
-          (prev) => prev ?? VisitorVerificationMode.VIEW_AND_VERIFY,
+        dispatch(
+          setSecurityVerificationContext({
+            mode:
+              resolveVisitorVerificationMode(
+                (authUser ?? readStoredAuth()?.user) as Record<
+                  string,
+                  unknown
+                > | null,
+              ) ?? VisitorVerificationMode.VIEW_AND_VERIFY,
+            ready: true,
+          }),
         );
-        setModeReady(true);
-        toast.error((err as { message?: string })?.message ?? "Failed to load");
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -125,22 +149,21 @@ export default function VisitorManagementPage() {
 
   const handleCloseViewModal = () => {
     setViewModalOpen(false);
-    setVisitorDetails(null);
-    setLookupSource(null);
+    dispatch(clearActiveVisitor());
   };
 
   const showViewCard =
-    modeReady &&
+    contextReady &&
     Boolean(
       verificationFlags?.viewOnly || verificationFlags?.viewAndVerify,
     );
   const showVerifyCard =
-    modeReady &&
+    contextReady &&
     Boolean(
       verificationFlags?.verifyOnly || verificationFlags?.viewAndVerify,
     );
   const actionCardCount = Number(showViewCard) + Number(showVerifyCard);
-  const pageLoading = loading || !modeReady;
+  const pageLoading = loading || !contextReady;
 
   return (
     <div className="relative">
@@ -161,7 +184,9 @@ export default function VisitorManagementPage() {
         <div className="space-y-8 pb-6">
           <div
             className={`grid gap-4 ${
-              actionCardCount <= 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"
+              actionCardCount <= 1
+                ? "grid-cols-1"
+                : "grid-cols-1 sm:grid-cols-2"
             }`}
           >
             {showViewCard ? (
@@ -195,11 +220,11 @@ export default function VisitorManagementPage() {
                 className="text-left rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <Card className="h-full transition-shadow hover:shadow-md cursor-pointer border-border">
-                    <div className="px-4 pt-2 flex items-center gap-2">
-                      <ShieldCheck className="h-6 w-6" />
-                        <CardTitle className="text-xl">Verify</CardTitle>
-                    </div>
-                  
+                  <div className="px-4 pt-2 flex items-center gap-2">
+                    <ShieldCheck className="h-6 w-6" />
+                    <CardTitle className="text-xl">Verify</CardTitle>
+                  </div>
+
                   <CardContent>
                     <p className="text-sm text-muted-foreground">
                       Enter a visitor code to verify and allow access.
@@ -210,7 +235,7 @@ export default function VisitorManagementPage() {
             ) : null}
           </div>
 
-          {modeReady ? <ClockOutCard onClockedOut={refreshVisitors} /> : null}
+          {contextReady ? <ClockOutCard onClockedOut={refreshVisitors} /> : null}
         </div>
 
         <RecentVisitorInvites
@@ -222,20 +247,19 @@ export default function VisitorManagementPage() {
       <ViewVisitorModal
         open={viewModalOpen}
         onClose={handleCloseViewModal}
-        visitorDetails={visitorDetails}
+        visitorDetails={activeVisitor}
         lookupSource={lookupSource}
         verificationFlags={
           verificationFlags ??
           getVerificationFlags(VisitorVerificationMode.VIEW_AND_VERIFY)
         }
         verificationDescription={verificationDescription}
-        onLookupSource={setLookupSource}
+        onLookupSource={(source) => dispatch(setLookupSource(source))}
         onDetailsLoaded={(visitor) => {
-          setVisitorDetails(visitor);
-          if (!visitor) setLookupSource(null);
+          dispatch(setActiveVisitor(visitor));
         }}
         onVerified={(visitor) => {
-          if (visitor) setVisitorDetails(visitor);
+          if (visitor) dispatch(setActiveVisitor(visitor));
           refreshVisitors();
         }}
       />
@@ -243,9 +267,9 @@ export default function VisitorManagementPage() {
       <VerifyModal
         open={verifyModalOpen}
         onClose={() => setVerifyModalOpen(false)}
-        initialCode={visitorDetails?.visitorCode}
+        initialCode={activeVisitor?.visitorCode}
         onVerified={(visitor) => {
-          if (visitor) setVisitorDetails(visitor);
+          if (visitor) dispatch(setActiveVisitor(visitor));
           refreshVisitors();
         }}
       />

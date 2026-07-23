@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { AlertCircle, CheckCircle, LogOut } from "lucide-react";
 import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { checkoutVisitor } from "@/redux/slice/security/visitor/visitor";
 import { formatVisitorCode } from "@/lib/utils";
-import type { AppDispatch } from "@/redux/store";
+import {
+  getApiErrorMessage,
+  getApiSuccessMessage,
+} from "@/lib/api-error";
+import type { AppDispatch, RootState } from "@/redux/store";
 
 interface ClockOutCardProps {
   onClockedOut?: () => void;
@@ -25,8 +29,11 @@ type FeedbackState = {
 export default function ClockOutCard({ onClockedOut }: ClockOutCardProps) {
   const dispatch = useDispatch<AppDispatch>();
   const [clockOutCode, setClockOutCode] = useState("");
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const checkoutLoading = useSelector(
+    (state: RootState) =>
+      state.securityVisitor?.checkoutVisitorStatus === "isLoading",
+  );
 
   useEffect(() => {
     if (!feedback) return;
@@ -53,32 +60,24 @@ export default function ClockOutCard({ onClockedOut }: ClockOutCardProps) {
       return;
     }
     try {
-      setCheckoutLoading(true);
-      await dispatch(checkoutVisitor({ visitorCode: code })).unwrap();
+      const res = await dispatch(checkoutVisitor({ visitorCode: code })).unwrap();
       setClockOutCode("");
       onClockedOut?.();
       showFeedback(
         "Clocked out",
-        "Visitor clocked out successfully.",
+        getApiSuccessMessage(res) || "Visitor clocked out successfully.",
         "success",
       );
     } catch (err: unknown) {
-      showFeedback(
-        "Clock out failed",
-        (err as { message?: string })?.message ?? "Clock out failed",
-        "error",
-      );
-    } finally {
-      setCheckoutLoading(false);
+      const message = getApiErrorMessage(err);
+      if (message) {
+        showFeedback("Clock out failed", message, "error");
+      }
     }
   };
 
   const FeedbackIcon =
-    feedback?.variant === "success"
-      ? CheckCircle
-      : feedback?.variant === "error"
-        ? AlertCircle
-        : AlertCircle;
+    feedback?.variant === "success" ? CheckCircle : AlertCircle;
 
   const iconClass =
     feedback?.variant === "success"

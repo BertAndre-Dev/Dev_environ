@@ -257,6 +257,11 @@ export default function BillPage() {
       return;
     }
 
+    if (!estateId) {
+      toast.error("Missing estate information. Please refresh and try again.");
+      return;
+    }
+
     if (addressOptions.length > 1 && !selectedAddressId) {
       toast.error("Please select an address before paying.");
       return;
@@ -270,6 +275,7 @@ export default function BillPage() {
           billId: payload.billId,
           userId,
           walletId,
+          estateId,
           addressId: selectedAddressId ?? undefined,
           frequency: payload.frequency,
           amountPaid: payload.amountPaid,
@@ -555,6 +561,7 @@ export default function BillPage() {
           {payBillId ? (
             <BillsForm
               billId={payBillId}
+              estateId={estateId}
               addressOptions={addressOptions}
               selectedAddressId={selectedAddressId}
               onSelectedAddressChange={setSelectedAddressId}

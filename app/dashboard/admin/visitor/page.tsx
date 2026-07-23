@@ -367,6 +367,48 @@ export default function AdminVisitorManagement() {
         ]
       : []),
     {
+      header: "Check-in Time",
+      key: "checkinTime",
+      render: (item: any) =>
+        item.checkinTime ? (
+          <div className="text-sm">
+            {new Date(item.checkinTime).toLocaleString()}
+          </div>
+        ) : (
+          <span className="text-gray-500 text-xs">—</span>
+        ),
+    },
+    {
+      header: "Check-out Time",
+      key: "checkoutTime",
+      render: (item: any) =>
+        item.checkoutTime ? (
+          <div className="text-sm">
+            {new Date(item.checkoutTime).toLocaleString()}
+          </div>
+        ) : (
+          <span className="text-gray-500 text-xs">—</span>
+        ),
+    },
+    {
+      header: "Checked Out By",
+      key: "checkedOutBy",
+      render: (item: any) => {
+        const checkedOutBy = item.checkedOutBy;
+        if (!checkedOutBy) {
+          return <span className="text-gray-500 text-xs">—</span>;
+        }
+        if (typeof checkedOutBy === "string") {
+          return <div className="text-xs font-mono">{checkedOutBy}</div>;
+        }
+        const name =
+          `${checkedOutBy.firstName ?? ""} ${checkedOutBy.lastName ?? ""}`.trim();
+        return (
+          <div className="text-sm">{name || "—"}</div>
+        );
+      },
+    },
+    {
       header: "Actions",
       key: "actions",
       render: (item: any) => (

@@ -16,6 +16,7 @@ import { toast } from "react-toastify";
 
 interface BillsFormProps {
   billId: string;
+  estateId?: string;
   addressOptions?: AddressOption[];
   selectedAddressId?: string | null;
   onSelectedAddressChange?: (addressId: string) => void;
@@ -27,6 +28,7 @@ type FrequencyOption = "monthly" | "quarterly" | "yearly";
 
 export default function BillsForm({
   billId,
+  estateId: estateIdProp,
   addressOptions = [],
   selectedAddressId = null,
   onSelectedAddressChange,
@@ -41,6 +43,7 @@ export default function BillsForm({
   const [yearlyAmount, setYearlyAmount] = useState<number>(0);
   const [userId, setUserId] = useState("");
   const [walletId, setWalletId] = useState("");
+  const [estateId, setEstateId] = useState(estateIdProp ?? "");
   const [frequency, setFrequency] = useState<FrequencyOption>("yearly");
 
   const frequencyOptions = [
@@ -76,6 +79,17 @@ export default function BillsForm({
         if (user) {
           setUserId(user.id || "");
           setWalletId(user.walletId ?? user.wallet?.id ?? "");
+          const rawEstateId = user.estateId as
+            | string
+            | { id?: string; _id?: string }
+            | null
+            | undefined;
+          const resolvedEstateId =
+            estateIdProp ||
+            (typeof rawEstateId === "string"
+              ? rawEstateId
+              : rawEstateId?._id || rawEstateId?.id || "");
+          if (resolvedEstateId) setEstateId(resolvedEstateId);
         }
       } catch (err: any) {
         toast.error(err?.message || "Failed to load bill or user details");
@@ -85,12 +99,17 @@ export default function BillsForm({
     };
 
     if (billId) load();
-  }, [billId, dispatch]);
+  }, [billId, dispatch, estateIdProp]);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!billId || !userId || !walletId) {
       toast.error("Missing bill or wallet information.");
+      return;
+    }
+
+    if (!estateId) {
+      toast.error("Missing estate information.");
       return;
     }
 
@@ -106,6 +125,7 @@ export default function BillsForm({
           billId,
           userId,
           walletId,
+          estateId,
           addressId: selectedAddressId ?? undefined,
           frequency,
           amountPaid: Number(proratedAmount),

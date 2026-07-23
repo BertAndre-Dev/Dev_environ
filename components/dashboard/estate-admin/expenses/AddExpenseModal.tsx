@@ -68,18 +68,8 @@ export function AddExpenseModal({
             <Input id="add-expense-head" value={headName} disabled />
           </div>
 
-          {/* <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="add-expense-date">
-              Date
-            </label>
-            <input
-              id="add-expense-date"
-              type="date"
-              value={date}
-              onChange={(e) => onDateChange(e.target.value)}
-              className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div> */}
+          {/* Date field intentionally omitted for estate-admin expense entry.
+              Prefer IsoDatePicker from @/components/ui/iso-date-picker if re-enabled. */}
 
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">

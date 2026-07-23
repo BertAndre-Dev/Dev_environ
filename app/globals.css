@@ -322,15 +322,28 @@ input[type="number"] {
 }
 
 .iso-datepicker-select {
-  max-width: 7.5rem;
+  max-width: 8rem;
   border: 1px solid var(--border);
   border-radius: 0.375rem;
   background: var(--background);
   color: var(--foreground);
-  padding: 0.35rem 0.5rem;
+  padding: 0.4rem 0.5rem;
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
+}
+
+.iso-datepicker-select:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.iso-datepicker-select-year {
+  max-width: 5.25rem;
+}
+
+.iso-datepicker-select option:disabled {
+  color: var(--muted-foreground);
 }
 
 .iso-datepicker-calendar .react-datepicker__day-name {
@@ -385,12 +398,21 @@ input[type="number"] {
   border-top: 1px solid var(--border);
   color: var(--primary);
   font-weight: 600;
-  padding: 0.6rem;
+  padding: 0.65rem;
   cursor: pointer;
+  border-radius: 0 0 calc(var(--radius) - 2px) calc(var(--radius) - 2px);
 }
 
 .iso-datepicker-calendar .react-datepicker__today-button:hover {
   background: var(--secondary);
+}
+
+.iso-datepicker-calendar .react-datepicker__month-container {
+  float: none;
+}
+
+.react-datepicker__portal .iso-datepicker-calendar {
+  margin-top: 0;
 }
 
 .react-datepicker__input-container {
@@ -402,15 +424,16 @@ input[type="number"] {
 
 .react-datepicker__input-container .react-datepicker__calendar-icon {
   padding: 0;
-  right: 0.65rem;
+  right: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
   pointer-events: auto;
+  cursor: pointer;
   z-index: 1;
 }
 
 .react-datepicker__input-container input {
-  padding-right: 4.25rem;
+  padding-right: 2.75rem;
 }
 
 .react-datepicker__input-container input::placeholder {
@@ -418,9 +441,9 @@ input[type="number"] {
   opacity: 1;
 }
 
-/* Keep clear button left of the calendar icon */
+/* Clear icon sits in the same trailing slot as the calendar icon */
 .react-datepicker__input-container .react-datepicker__close-icon {
-  right: 2.4rem !important;
+  right: 0.55rem !important;
   left: auto !important;
   padding: 0 !important;
   height: 100%;
@@ -439,6 +462,10 @@ input[type="number"] {
   line-height: 16px !important;
   padding: 0 !important;
   margin: 0 !important;
+}
+
+.iso-datepicker-has-value .react-datepicker__calendar-icon {
+  display: none;
 }
 
 /* Hide scrollbars while keeping scroll / overflow behavior */

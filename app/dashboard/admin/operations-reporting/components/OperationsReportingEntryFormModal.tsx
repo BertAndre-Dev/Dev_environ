@@ -5,6 +5,7 @@ import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { IsoDatePicker } from "@/components/ui/iso-date-picker";
 import { ClipboardList } from "lucide-react";
 import type {
   OperationsReportingEntry,
@@ -176,15 +177,31 @@ export default function OperationsReportingEntryFormModal({
                   <Label htmlFor={inputId} className="text-sm font-medium">
                     {field.label}
                   </Label>
-                  <Input
-                    id={inputId}
-                    type={useDateInput ? "date" : "text"}
-                    value={values[key] ?? ""}
-                    onChange={(e) =>
-                      setValues((prev) => ({ ...prev, [key]: e.target.value }))
-                    }
-                    placeholder={`Enter ${field.label}`}
-                  />
+                  {useDateInput ? (
+                    <IsoDatePicker
+                      id={inputId}
+                      value={
+                        /^\d{4}-\d{2}-\d{2}/.test(values[key] ?? "")
+                          ? (values[key] ?? "").slice(0, 10)
+                          : (values[key] ?? "")
+                      }
+                      onChange={(iso) =>
+                        setValues((prev) => ({ ...prev, [key]: iso }))
+                      }
+                      placeholder={`Select ${field.label}`}
+                      ariaLabel={field.label}
+                    />
+                  ) : (
+                    <Input
+                      id={inputId}
+                      type="text"
+                      value={values[key] ?? ""}
+                      onChange={(e) =>
+                        setValues((prev) => ({ ...prev, [key]: e.target.value }))
+                      }
+                      placeholder={`Enter ${field.label}`}
+                    />
+                  )}
                   <p className="text-xs text-muted-foreground font-mono">{key}</p>
                 </div>
               );

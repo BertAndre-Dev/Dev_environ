@@ -4,7 +4,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  IsoDatePicker,
+  todayIsoString,
+} from "@/components/ui/iso-date-picker";
 import type { AppDispatch } from "@/redux/store";
 import {
   getAssetCategories,
@@ -30,8 +33,6 @@ import type { EstateOption } from "../../asset/lib/estate";
 
 const SELECT_CLASS =
   "h-10 w-full cursor-pointer rounded-md border border-border bg-background px-3 text-sm disabled:cursor-not-allowed";
-
-const DATE_INPUT_CLASS = "cursor-pointer";
 
 type CreateFormState = {
   estateId: string;
@@ -88,31 +89,6 @@ function fromDateInputValue(value: string) {
   if (!value) return "";
   const d = new Date(`${value}T00:00:00`);
   return Number.isNaN(d.getTime()) ? value : d.toISOString();
-}
-
-function maxDateInputToday() {
-  return toDateInputValue(new Date().toISOString());
-}
-
-function clampDateInput(value: string, max: string) {
-  if (!value || !max) return value;
-  return value > max ? max : value;
-}
-
-function closeDatePickerIfComplete(input: HTMLInputElement, value: string) {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    requestAnimationFrame(() => input.blur());
-  }
-}
-
-function handleDatePickerChange(
-  input: HTMLInputElement,
-  rawValue: string,
-  onUpdate: (value: string) => void,
-) {
-  const next = clampDateInput(rawValue, maxDateInputToday());
-  onUpdate(next);
-  closeDatePickerIfComplete(input, next);
 }
 
 function formatCurrency(amount?: number) {
@@ -276,6 +252,14 @@ export default function MaintenanceFormModal({
   const canSubmitEdit =
     Boolean(editForm.lastMaintenanceDate) && Boolean(editForm.frequency);
 
+  // Create: today onward. Edit: keep an existing past date selectable, otherwise today onward.
+  const scheduleMinDate = useMemo(() => {
+    const today = todayIsoString();
+    if (!isEdit) return today;
+    const existing = toDateInputValue(initial?.lastMaintenanceDate);
+    return existing && existing < today ? existing : today;
+  }, [isEdit, initial?.lastMaintenanceDate]);
+
   return (
     <Modal visible={visible} onClose={onClose}>
       <div className="space-y-4 max-h-[85vh] overflow-y-auto">
@@ -294,28 +278,21 @@ export default function MaintenanceFormModal({
           <div className="grid grid-cols-1 gap-3">
             <div className="space-y-2 sm:col-span-2">
               <label htmlFor="maint-date-edit" className="text-sm font-medium">
-                Last maintenance date
+                Maintenance date
               </label>
-              <Input
+              <IsoDatePicker
                 id="maint-date-edit"
-                type="date"
-                className={DATE_INPUT_CLASS}
-                max={maxDateInputToday()}
                 value={editForm.lastMaintenanceDate}
-                onChange={(e) =>
-                  handleDatePickerChange(e.target, e.target.value, (value) =>
-                    setEditForm((s) => ({ ...s, lastMaintenanceDate: value })),
-                  )
+                minDate={scheduleMinDate}
+                onChange={(value) =>
+                  setEditForm((s) => ({ ...s, lastMaintenanceDate: value }))
                 }
-                onInput={(e) =>
-                  handleDatePickerChange(
-                    e.currentTarget,
-                    e.currentTarget.value,
-                    (value) =>
-                      setEditForm((s) => ({ ...s, lastMaintenanceDate: value })),
-                  )
-                }
+                placeholder="Select maintenance date"
+                ariaLabel="Maintenance date"
               />
+              <p className="text-xs text-muted-foreground">
+                Today or a future date.
+              </p>
             </div>
             <div className="space-y-2">
               <label htmlFor="maint-freq-edit" className="text-sm font-medium">
@@ -469,28 +446,21 @@ export default function MaintenanceFormModal({
             <div className="grid grid-cols-1 gap-3 border-t border-border pt-4">
               <div className="space-y-2 sm:col-span-2">
                 <label htmlFor="maint-date" className="text-sm font-medium">
-                  Last maintenance date
+                  Maintenance date
                 </label>
-                <Input
+                <IsoDatePicker
                   id="maint-date"
-                  type="date"
-                  className={DATE_INPUT_CLASS}
-                  max={maxDateInputToday()}
                   value={createForm.lastMaintenanceDate}
-                  onChange={(e) =>
-                    handleDatePickerChange(e.target, e.target.value, (value) =>
-                      setCreateForm((s) => ({ ...s, lastMaintenanceDate: value })),
-                    )
+                  minDate={scheduleMinDate}
+                  onChange={(value) =>
+                    setCreateForm((s) => ({ ...s, lastMaintenanceDate: value }))
                   }
-                  onInput={(e) =>
-                    handleDatePickerChange(
-                      e.currentTarget,
-                      e.currentTarget.value,
-                      (value) =>
-                        setCreateForm((s) => ({ ...s, lastMaintenanceDate: value })),
-                    )
-                  }
+                  placeholder="Select maintenance date"
+                  ariaLabel="Maintenance date"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Today or a future date.
+                </p>
               </div>
               <div className="space-y-2">
                 <label htmlFor="maint-freq" className="text-sm font-medium">

@@ -4,6 +4,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  IsoDatePicker,
+  todayIsoString,
+} from "@/components/ui/iso-date-picker";
 import type {
   Asset,
   AssetCategory,
@@ -200,13 +204,15 @@ export default function AssetFormModal({
             <label htmlFor="asset-date" className="text-sm font-medium">
               Date purchased
             </label>
-            <Input
+            <IsoDatePicker
               id="asset-date"
-              type="date"
               value={form.datePurchased}
-              onChange={(e) =>
-                setForm((s) => ({ ...s, datePurchased: e.target.value }))
+              onChange={(value) =>
+                setForm((s) => ({ ...s, datePurchased: value }))
               }
+              maxDate={todayIsoString()}
+              placeholder="Select purchase date"
+              ariaLabel="Date purchased"
             />
           </div>
         </div>

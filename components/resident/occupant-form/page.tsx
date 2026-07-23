@@ -167,7 +167,7 @@ export default function OccupantForm({
           </div>
         </div>
 
-        <div className="pt-6 flex gap-2">
+        <div className="pt-2 flex gap-2">
           <Button
             type="button"
             variant="outline"

@@ -5,6 +5,10 @@ import { Info, Minus, Plus } from "lucide-react";
 import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  IsoDatePicker,
+  todayIsoString,
+} from "@/components/ui/iso-date-picker";
 import type {
   AssetCategory,
   CreateAssetItemPayload,
@@ -37,8 +41,6 @@ function createDraftRow(baseName: string, index: number): DraftRow {
   };
 }
 
-const todayIso = () => new Date().toISOString().slice(0, 10);
-
 export default function AssetFormModal({
   visible,
   onClose,
@@ -52,7 +54,7 @@ export default function AssetFormModal({
   const [rows, setRows] = useState<DraftRow[]>([createDraftRow("", 0)]);
   const [amount, setAmount] = useState("");
   const [useFullLife, setUseFullLife] = useState("");
-  const [datePurchased, setDatePurchased] = useState<string>(todayIso());
+  const [datePurchased, setDatePurchased] = useState<string>(todayIsoString());
 
   const categoryId = useMemo(
     () => category?.id || category?._id || "",
@@ -66,7 +68,7 @@ export default function AssetFormModal({
     setRows([createDraftRow("", 0)]);
     setAmount("");
     setUseFullLife("");
-    setDatePurchased(todayIso());
+    setDatePurchased(todayIsoString());
   }, [visible]);
 
   useEffect(() => {
@@ -199,11 +201,13 @@ export default function AssetFormModal({
             >
               Date Purchased
             </label>
-            <Input
+            <IsoDatePicker
               id="add-asset-date"
-              type="date"
               value={datePurchased}
-              onChange={(e) => setDatePurchased(e.target.value)}
+              onChange={setDatePurchased}
+              maxDate={todayIsoString()}
+              placeholder="Select purchase date"
+              ariaLabel="Date purchased"
               className="h-11"
             />
           </div>

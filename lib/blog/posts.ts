@@ -16,6 +16,29 @@ export type BlogPostMeta = {
 
 export const blogPosts: BlogPostMeta[] = [
   {
+    slug: "how-sustainability-is-redefining-estate-management-in-nigeria",
+    title: "How Sustainability Is Redefining Estate Management in Nigeria",
+    excerpt:
+      "Sustainability is no longer optional for Nigerian estates. From resident expectations and cost savings to digital systems and stronger communities, here’s how sustainable thinking is reshaping modern estate management.",
+    hook: "Is this estate being managed sustainably?",
+    publishedAt: "2026-07-23",
+    readTimeMinutes: 7,
+    wordCount: 980,
+    category: "Estate Management",
+    author: "Bertahub Team",
+    featuredImage: "/assets/blog/blog-6.jpeg",
+    featuredImageAlt:
+      "Sustainable residential estate entrance with solar-powered street lighting, recycling bins, and a modern security gatehouse",
+    keywords: [
+      "sustainable estate management Nigeria",
+      "green estate communities",
+      "digital estate management",
+      "estate sustainability practices",
+      "sustainable property management Nigeria",
+      "estate operations efficiency",
+    ],
+  },
+  {
     slug: "how-estate-managers-can-prepare-for-the-next-decade",
     title: "How Estate Managers Can Prepare for the Next Decade",
     excerpt:

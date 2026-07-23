@@ -15,7 +15,7 @@ export interface CreateVisitorData {
   addressId: string;
   visitingType: VisitingType;
   visitStartDate: string | null;
-  visitEndDate: string | null;
+  visitEndDate?: string | null;
 }
 
 export interface UpdateVisitorData {

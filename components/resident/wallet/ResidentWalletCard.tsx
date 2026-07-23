@@ -60,12 +60,13 @@ export function ResidentWalletCard({
   onCreateWalletClick,
 }: Readonly<Props>) {
   const [showBalance, setShowBalance] = useState(true);
+  const hasWallet = Boolean(wallet?.id);
 
   return (
     <Card className="p-4 md:p-6 shadow-md">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-lg font-semibold">My Wallet</CardTitle>
-        {wallet ? (
+        {hasWallet ? (
           <Button
             type="button"
             variant="ghost"
@@ -87,7 +88,7 @@ export function ResidentWalletCard({
       </CardHeader>
 
       <CardContent>
-        {wallet ? (
+        {hasWallet ? (
           <div className="space-y-4">
             {variant === "fundOnly" ? (
               <div className="flex flex-col md:flex-row gap-5 md:gap-0 items-start md:items-center justify-between">

@@ -39,12 +39,6 @@ export interface BillForAddressInitialData {
   frequency?: string;
 }
 
-const FREQUENCY_OPTIONS: { label: string; value: BillForAddressFrequency }[] = [
-  { label: "Quarterly", value: "quarterly" },
-  { label: "Yearly", value: "yearly" },
-  { label: "One-off", value: "oneOff" },
-];
-
 interface ResidentRecord {
   id: string;
   firstName?: string;
@@ -67,13 +61,6 @@ function findResidentForAddress(
     );
     return addresses.some((a) => a.id === addressId);
   });
-}
-
-function normalizeFrequency(value?: string): BillForAddressFrequency {
-  if (value === "quarterly" || value === "yearly" || value === "oneOff") {
-    return value;
-  }
-  return "oneOff";
 }
 
 function getSubmitLabel(submitting: boolean, isEditing: boolean): string {
@@ -109,7 +96,6 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
       initialData?.amount != null
         ? formatAmountInput(String(initialData.amount))
         : "",
-    frequency: normalizeFrequency(initialData?.frequency),
   });
 
   const attachedResidentName = useMemo(() => {
@@ -217,9 +203,6 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
                 0,
             ),
           ),
-          frequency: normalizeFrequency(
-            fetchData.frequency || initialData?.frequency,
-          ),
         }));
       } catch (error: any) {
         toast.error(error?.message || "Failed to load bill");
@@ -265,7 +248,7 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
         name: form.name.trim(),
         description: form.description.trim(),
         amount,
-        frequency: form.frequency,
+        frequency: "oneOff",
         isServiceCharge: false,
       });
     } finally {
@@ -365,29 +348,6 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
                 }
                 placeholder="25,000"
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="frequency">Frequency</Label>
-              <select
-                id="frequency"
-                aria-label="Select frequency"
-                className="w-full border border-border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#0150AC] disabled:opacity-60"
-                value={form.frequency}
-                disabled={isEditing}
-                onChange={(e) =>
-                  handleChange(
-                    "frequency",
-                    e.target.value as BillForAddressFrequency,
-                  )
-                }
-              >
-                {FREQUENCY_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
             </div>
           </>
         )}

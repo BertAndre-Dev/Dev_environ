@@ -1,5 +1,14 @@
-import { createSlice } from "@reduxjs/toolkit";
-import { getAllVisitors, scanVisitor, verifyVisitor } from "./visitor";
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import type { VisitorDetailsData } from "@/app/dashboard/security/types";
+import { getApiErrorMessage } from "@/lib/api-error";
+import { VisitorVerificationMode } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
+import {
+  checkoutVisitor,
+  getAllVisitors,
+  getVisitorDetailsByCode,
+  scanVisitor,
+  verifyVisitor,
+} from "./visitor";
 
 export interface SecurityVisitorItem {
   id: string;
@@ -39,34 +48,102 @@ export interface SecurityAllVisitorsResponse {
   };
 }
 
+type RequestStatus = "idle" | "isLoading" | "succeeded" | "failed";
+
 export interface SecurityVisitorState {
-  getAllVisitorsStatus: "idle" | "isLoading" | "succeeded" | "failed";
-  scanVisitorStatus: "idle" | "isLoading" | "succeeded" | "failed";
-  verifyVisitorStatus: "idle" | "isLoading" | "succeeded" | "failed";
+  getAllVisitorsStatus: RequestStatus;
+  viewDetailsStatus: RequestStatus;
+  scanVisitorStatus: RequestStatus;
+  verifyVisitorStatus: RequestStatus;
+  checkoutVisitorStatus: RequestStatus;
   allVisitors: SecurityAllVisitorsResponse | null;
-  lastScannedVisitor: SecurityVisitorItem | null;
+  activeVisitor: VisitorDetailsData | null;
+  lookupSource: "code" | "scan" | null;
+  estateId: string | null;
+  visitorVerificationMode: VisitorVerificationMode | null;
+  verificationDescription: string | null;
+  contextReady: boolean;
   error: string | null;
 }
 
 const initialState: SecurityVisitorState = {
   getAllVisitorsStatus: "idle",
+  viewDetailsStatus: "idle",
   scanVisitorStatus: "idle",
   verifyVisitorStatus: "idle",
+  checkoutVisitorStatus: "idle",
   allVisitors: null,
-  lastScannedVisitor: null,
+  activeVisitor: null,
+  lookupSource: null,
+  estateId: null,
+  visitorVerificationMode: null,
+  verificationDescription: null,
+  contextReady: false,
   error: null,
 };
+
+function setRejectedError(
+  state: SecurityVisitorState,
+  action: { payload?: unknown; error?: { message?: string } },
+) {
+  state.error =
+    getApiErrorMessage(action.payload) ??
+    getApiErrorMessage(action.error) ??
+    null;
+}
+
+function visitorFromPayload(payload: unknown): VisitorDetailsData | null {
+  const data =
+    (payload as { data?: VisitorDetailsData })?.data ??
+    (payload as VisitorDetailsData | null);
+  if (!data || typeof data !== "object" || !("visitorCode" in data)) {
+    return null;
+  }
+  return data;
+}
 
 const securityVisitorSlice = createSlice({
   name: "securityVisitor",
   initialState,
   reducers: {
-    resetSecurityVisitorState: (state) => {
-      state.getAllVisitorsStatus = "idle";
-      state.scanVisitorStatus = "idle";
-      state.verifyVisitorStatus = "idle";
-      state.allVisitors = null;
-      state.lastScannedVisitor = null;
+    resetSecurityVisitorState: () => ({ ...initialState }),
+    setSecurityEstateId: (state, action: PayloadAction<string | null>) => {
+      state.estateId = action.payload;
+    },
+    setSecurityVerificationContext: (
+      state,
+      action: PayloadAction<{
+        mode: VisitorVerificationMode | null;
+        description?: string | null;
+        ready?: boolean;
+      }>,
+    ) => {
+      state.visitorVerificationMode = action.payload.mode;
+      if (action.payload.description !== undefined) {
+        state.verificationDescription = action.payload.description;
+      }
+      if (action.payload.ready !== undefined) {
+        state.contextReady = action.payload.ready;
+      }
+    },
+    setActiveVisitor: (
+      state,
+      action: PayloadAction<VisitorDetailsData | null>,
+    ) => {
+      state.activeVisitor = action.payload;
+      if (!action.payload) state.lookupSource = null;
+    },
+    setLookupSource: (
+      state,
+      action: PayloadAction<"code" | "scan" | null>,
+    ) => {
+      state.lookupSource = action.payload;
+    },
+    clearActiveVisitor: (state) => {
+      state.activeVisitor = null;
+      state.lookupSource = null;
+    },
+    clearSecurityVisitorError: (state) => {
       state.error = null;
     },
   },
@@ -82,10 +159,22 @@ const securityVisitorSlice = createSlice({
       })
       .addCase(getAllVisitors.rejected, (state, action) => {
         state.getAllVisitorsStatus = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to fetch visitors";
+        setRejectedError(state, action);
+      })
+
+      .addCase(getVisitorDetailsByCode.pending, (state) => {
+        state.viewDetailsStatus = "isLoading";
+        state.error = null;
+      })
+      .addCase(getVisitorDetailsByCode.fulfilled, (state, action) => {
+        state.viewDetailsStatus = "succeeded";
+        const visitor = visitorFromPayload(action.payload);
+        if (visitor) state.activeVisitor = visitor;
+      })
+      .addCase(getVisitorDetailsByCode.rejected, (state, action) => {
+        state.viewDetailsStatus = "failed";
+        state.activeVisitor = null;
+        setRejectedError(state, action);
       })
 
       .addCase(scanVisitor.pending, (state) => {
@@ -94,15 +183,12 @@ const securityVisitorSlice = createSlice({
       })
       .addCase(scanVisitor.fulfilled, (state, action) => {
         state.scanVisitorStatus = "succeeded";
-        const data = (action.payload as { data?: SecurityVisitorItem })?.data;
-        if (data) state.lastScannedVisitor = data;
+        const visitor = visitorFromPayload(action.payload);
+        if (visitor) state.activeVisitor = visitor;
       })
       .addCase(scanVisitor.rejected, (state, action) => {
         state.scanVisitorStatus = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to verify visitor";
+        setRejectedError(state, action);
       })
 
       .addCase(verifyVisitor.pending, (state) => {
@@ -111,18 +197,36 @@ const securityVisitorSlice = createSlice({
       })
       .addCase(verifyVisitor.fulfilled, (state, action) => {
         state.verifyVisitorStatus = "succeeded";
-        const data = (action.payload as { data?: SecurityVisitorItem })?.data;
-        if (data) state.lastScannedVisitor = data;
+        const visitor = visitorFromPayload(action.payload);
+        if (visitor) state.activeVisitor = visitor;
       })
       .addCase(verifyVisitor.rejected, (state, action) => {
         state.verifyVisitorStatus = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to verify visitor";
+        setRejectedError(state, action);
+      })
+
+      .addCase(checkoutVisitor.pending, (state) => {
+        state.checkoutVisitorStatus = "isLoading";
+        state.error = null;
+      })
+      .addCase(checkoutVisitor.fulfilled, (state) => {
+        state.checkoutVisitorStatus = "succeeded";
+      })
+      .addCase(checkoutVisitor.rejected, (state, action) => {
+        state.checkoutVisitorStatus = "failed";
+        setRejectedError(state, action);
       });
   },
 });
 
-export const { resetSecurityVisitorState } = securityVisitorSlice.actions;
+export const {
+  resetSecurityVisitorState,
+  setSecurityEstateId,
+  setSecurityVerificationContext,
+  setActiveVisitor,
+  setLookupSource,
+  clearActiveVisitor,
+  clearSecurityVisitorError,
+} = securityVisitorSlice.actions;
+
 export default securityVisitorSlice.reducer;

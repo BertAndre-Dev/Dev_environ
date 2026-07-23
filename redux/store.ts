@@ -108,6 +108,7 @@ import energyProviderFieldSliceReducer from "@/redux/slice/energy-provider/addre
 import energyProviderEntrySliceReducer from "@/redux/slice/energy-provider/address-mgt/entry/energy-provider-entry-slice";
 import energyProviderEstateSliceReducer from "@/redux/slice/energy-provider/estate-mgt/energy-provider-estate-slice";
 import energyProviderUserSliceReducer from "@/redux/slice/energy-provider/user-mgt/energy-provider-user-slice";
+import superAdminRatesSliceReducer from "@/redux/slice/super-admin/rates/rates-slice";
 
 const persistConfig = {
   key: "root",
@@ -374,6 +375,7 @@ export const store = configureStore({
     energyProviderEntry: energyProviderEntrySliceReducer,
     energyProviderEstate: energyProviderEstateSliceReducer,
     energyProviderUser: energyProviderUserSliceReducer,
+    superAdminRates: superAdminRatesSliceReducer,
     [mapsApi.reducerPath]: mapsApi.reducer,
   },
 

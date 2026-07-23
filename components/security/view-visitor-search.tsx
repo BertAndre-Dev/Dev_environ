@@ -1,14 +1,22 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "@/redux/store";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "@/redux/store";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-toastify";
-import { getVisitorDetailsByCode } from "@/redux/slice/admin/visitor/visitor";
+import { getVisitorDetailsByCode } from "@/redux/slice/security/visitor/visitor";
+import {
+  setActiveVisitor,
+  setLookupSource,
+} from "@/redux/slice/security/visitor/visitor-slice";
 import { normalizeBarcodeInput } from "@/lib/utils";
+import {
+  getApiErrorMessage,
+  getApiSuccessMessage,
+} from "@/lib/api-error";
 import { Eye, ScanLine, ShieldCheck } from "lucide-react";
 import BarcodeScannerModal from "@/components/security/barcode-scanner-modal";
 import type { VisitorDetailsData } from "@/app/dashboard/security/types";
@@ -21,6 +29,8 @@ interface ViewVisitorSearchProps {
   onLookupSource?: (source: "code" | "scan") => void;
   verificationFlags?: VisitorVerificationFlags;
   verificationDescription?: string | null;
+  /** When embedded in a modal, drop the outer page card chrome. */
+  embedded?: boolean;
 }
 
 function ScannerGraphic() {
@@ -52,12 +62,16 @@ export default function ViewVisitorSearch({
   onLookupSource,
   verificationFlags,
   verificationDescription,
+  embedded = false,
 }: ViewVisitorSearchProps = {}) {
   const dispatch = useDispatch<AppDispatch>();
   const flags = verificationFlags ?? getVerificationFlags(null);
+  const loading = useSelector(
+    (state: RootState) =>
+      state.securityVisitor?.viewDetailsStatus === "isLoading",
+  );
 
   const [code, setCode] = useState("");
-  const [loading, setLoading] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
 
   const primaryLabel = flags.verifyOnly ? "Verify code" : "View visitor";
@@ -85,41 +99,31 @@ export default function ViewVisitorSearch({
       }
 
       try {
-        setLoading(true);
-        const res: { data: VisitorDetailsData; message?: string } =
-          await dispatch(
-            getVisitorDetailsByCode({ code: trimmed }),
-          ).unwrap();
+        const res = await dispatch(
+          getVisitorDetailsByCode({ code: trimmed }),
+        ).unwrap();
 
         setCode(trimmed);
+        dispatch(setLookupSource(source));
         onLookupSource?.(source);
-        onDetailsLoaded?.(res.data);
 
-        if (flags.viewOnly) {
-          toast.success(
-            source === "scan"
-              ? "QR code scanned — visitor recorded as viewed."
-              : "Visitor code viewed and recorded.",
-          );
-        } else if (flags.verifyOnly) {
-          toast.success(
-            source === "scan"
-              ? "QR code scanned — ready to verify."
-              : "Visitor loaded — ready to verify.",
-          );
-        } else {
-          toast.success(res.message ?? "Visitor retrieved");
+        const visitor =
+          (res as { data?: VisitorDetailsData })?.data ?? null;
+        if (visitor) {
+          dispatch(setActiveVisitor(visitor));
+          onDetailsLoaded?.(visitor);
         }
+
+        const apiMessage = getApiSuccessMessage(res);
+        if (apiMessage) toast.success(apiMessage);
       } catch (error: unknown) {
-        toast.error(
-          (error as { message?: string })?.message || "Invalid visitor code",
-        );
+        const message = getApiErrorMessage(error);
+        if (message) toast.error(message);
+        dispatch(setActiveVisitor(null));
         onDetailsLoaded?.(null);
-      } finally {
-        setLoading(false);
       }
     },
-    [dispatch, flags.verifyOnly, flags.viewOnly, onDetailsLoaded, onLookupSource],
+    [dispatch, onDetailsLoaded, onLookupSource],
   );
 
   const handlePrimaryAction = () => {
@@ -136,8 +140,14 @@ export default function ViewVisitorSearch({
 
   return (
     <>
-      <Card className="mx-auto w-full p-6 sm:p-8 shadow-lg">
-        <CardHeader className="p-0">
+      <Card
+        className={
+          embedded
+            ? "w-full border-0 shadow-none p-0"
+            : "mx-auto w-full p-6 sm:p-8 shadow-lg"
+        }
+      >
+        <CardHeader className={embedded ? "p-0 pb-4" : "p-0"}>
           <CardTitle className="text-xl sm:text-2xl font-semibold tracking-tight">
             Scan Visitor
           </CardTitle>

@@ -35,7 +35,7 @@ import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useState } from "react";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import Loader from "@/components/ui/Loader";
 import { formatAmountDisplay } from "@/lib/format-number";
@@ -86,6 +86,11 @@ export default function BillPage() {
     isActive?: boolean;
   } | null>(null);
   const [suspendSubmitting, setSuspendSubmitting] = useState(false);
+  const [billToDelete, setBillToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<BillsTab>("bills");
 
   const [addressOptions, setAddressOptions] = useState<
@@ -338,17 +343,25 @@ export default function BillPage() {
     }
   };
 
-  const handleDeleteBill = async (id?: string, name?: string) => {
+  const handleDeleteBill = (id?: string, name?: string) => {
     if (!id || !estateId) return;
+    setBillToDelete({ id, name: name || "this bill" });
+  };
 
-    confirmDeleteToast({
-      name,
-      onConfirm: async () => {
-        await dispatch(deleteBill(id)).unwrap();
-        toast.success(`${name} deleted successfully.`);
-        await refreshCurrentBillsList();
-      },
-    });
+  const handleConfirmDeleteBill = async () => {
+    if (!billToDelete?.id || !estateId) return;
+    try {
+      setDeleteSubmitting(true);
+      await dispatch(deleteBill(billToDelete.id)).unwrap();
+      toast.success(`${billToDelete.name} deleted successfully.`);
+      setBillToDelete(null);
+      await refreshCurrentBillsList();
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to delete bill.");
+      throw err;
+    } finally {
+      setDeleteSubmitting(false);
+    }
   };
 
   const getAssignedBillActionId = (item: AssignedBillData) =>
@@ -887,6 +900,15 @@ export default function BillPage() {
           confirmLabel="Suspend"
           onConfirm={handleSuspendConfirm}
           loading={suspendSubmitting}
+        />
+
+        <DeleteModal
+          visible={!!billToDelete}
+          onClose={() => setBillToDelete(null)}
+          itemName={billToDelete?.name ?? "this bill"}
+          title="Delete bill"
+          onConfirm={handleConfirmDeleteBill}
+          loading={deleteSubmitting}
         />
       </div>
     </div>

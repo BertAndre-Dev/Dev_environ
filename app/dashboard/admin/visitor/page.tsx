@@ -11,7 +11,7 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   getVisitorsByEstate,
   // verifyVisitor,
-  deleteVisitor,
+  // deleteVisitor,
 } from "@/redux/slice/admin/visitor/visitor";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
@@ -20,12 +20,12 @@ import {
   QrCode,
   // ShieldCheck,
   ShieldCheckIcon,
-  Trash2,
+  // Trash2,
   UserPlus,
   UserPlus2,
 } from "lucide-react";
 import AdminVisitorForm from "@/components/admin/visitor-form/page";
-import DeleteModal from "@/components/resident/delete-modal/page";
+// import DeleteModal from "@/components/resident/delete-modal/page";
 import Loader from "@/components/ui/Loader";
 import {
   VisitorQrCodeModal,
@@ -59,7 +59,7 @@ export default function AdminVisitorManagement() {
   //   firstName?: string;
   //   lastName?: string;
   // } | null>(null);
-  const [visitorToDelete, setVisitorToDelete] = useState<any | null>(null);
+  // const [visitorToDelete, setVisitorToDelete] = useState<any | null>(null);
   const [qrCodeVisitor, setQrCodeVisitor] = useState<QrCodeVisitor | null>(
     null,
   );
@@ -225,24 +225,24 @@ export default function AdminVisitorManagement() {
     );
   };
 
-  const handleOpenDeleteModal = (visitor: any, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    setVisitorToDelete(visitor);
-  };
+  // const handleOpenDeleteModal = (visitor: any, e?: React.MouseEvent) => {
+  //   if (e) e.stopPropagation();
+  //   setVisitorToDelete(visitor);
+  // };
 
-  const handleCloseDeleteModal = () => setVisitorToDelete(null);
+  // const handleCloseDeleteModal = () => setVisitorToDelete(null);
 
-  const handleConfirmDelete = async () => {
-    if (!visitorToDelete?.id) return;
-    try {
-      await dispatch(deleteVisitor(visitorToDelete.id)).unwrap();
-      toast.success("Visitor deleted successfully.");
-      setVisitorToDelete(null);
-      refreshVisitors();
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to delete visitor");
-    }
-  };
+  // const handleConfirmDelete = async () => {
+  //   if (!visitorToDelete?.id) return;
+  //   try {
+  //     await dispatch(deleteVisitor(visitorToDelete.id)).unwrap();
+  //     toast.success("Visitor deleted successfully.");
+  //     setVisitorToDelete(null);
+  //     refreshVisitors();
+  //   } catch (err: any) {
+  //     toast.error(err?.message || "Failed to delete visitor");
+  //   }
+  // };
 
   const columns = [
     {
@@ -367,6 +367,48 @@ export default function AdminVisitorManagement() {
         ]
       : []),
     {
+      header: "Check-in Time",
+      key: "checkinTime",
+      render: (item: any) =>
+        item.checkinTime ? (
+          <div className="text-sm">
+            {new Date(item.checkinTime).toLocaleString()}
+          </div>
+        ) : (
+          <span className="text-gray-500 text-xs">—</span>
+        ),
+    },
+    {
+      header: "Check-out Time",
+      key: "checkoutTime",
+      render: (item: any) =>
+        item.checkoutTime ? (
+          <div className="text-sm">
+            {new Date(item.checkoutTime).toLocaleString()}
+          </div>
+        ) : (
+          <span className="text-gray-500 text-xs">—</span>
+        ),
+    },
+    {
+      header: "Checked Out By",
+      key: "checkedOutBy",
+      render: (item: any) => {
+        const checkedOutBy = item.checkedOutBy;
+        if (!checkedOutBy) {
+          return <span className="text-gray-500 text-xs">—</span>;
+        }
+        if (typeof checkedOutBy === "string") {
+          return <div className="text-xs font-mono">{checkedOutBy}</div>;
+        }
+        const name =
+          `${checkedOutBy.firstName ?? ""} ${checkedOutBy.lastName ?? ""}`.trim();
+        return (
+          <div className="text-sm">{name || "—"}</div>
+        );
+      },
+    },
+    {
       header: "Actions",
       key: "actions",
       render: (item: any) => (
@@ -414,7 +456,7 @@ export default function AdminVisitorManagement() {
             <QrCode className="w-4 h-4" />
             <span className="text-xs">QR Code</span>
           </Button>
-          <Button
+          {/* <Button
             variant="ghost"
             size="sm"
             onClick={(e) => handleOpenDeleteModal(item, e)}
@@ -422,7 +464,7 @@ export default function AdminVisitorManagement() {
             title="Delete visitor"
           >
             <Trash2 className="w-4 h-4" />
-          </Button>
+          </Button> */}
         </div>
       ),
     },
@@ -462,7 +504,7 @@ export default function AdminVisitorManagement() {
         </div>
 
         {/* Stats Card */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {(() => {
             const stats = [
               {
@@ -581,7 +623,7 @@ export default function AdminVisitorManagement() {
         </Modal>
         */}
 
-        <DeleteModal
+        {/* <DeleteModal
           visible={!!visitorToDelete}
           onClose={handleCloseDeleteModal}
           itemName={
@@ -595,7 +637,7 @@ export default function AdminVisitorManagement() {
           }
           title="Delete visitor"
           onConfirm={handleConfirmDelete}
-        />
+        /> */}
 
         <VisitorQrCodeModal
           open={!!qrCodeVisitor}

@@ -7,7 +7,6 @@ import Modal from "@/components/modal/page";
 export interface VisitorDetailsForResident {
   residentId?: { id: string; firstName: string; lastName: string } | null;
   addressId?: { id: string; data: Record<string, string> };
-  phone?: string;
 }
 
 interface ResidentDetailsProps {
@@ -51,7 +50,8 @@ export default function ResidentDetails({
         name: residentName,
         block,
         apartment,
-        phone: visitorDetails.phone ?? phoneProp,
+        // Resident has no phone; phone on visitorDetails belongs to the visitor.
+        phone: phoneProp,
       };
     }
     return {

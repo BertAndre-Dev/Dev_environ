@@ -2,23 +2,26 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "react-toastify";
 import { RootState, AppDispatch } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getAllVisitors } from "@/redux/slice/security/visitor/visitor";
 import type { SecurityVisitorItem } from "@/redux/slice/security/visitor/visitor-slice";
+import {
+  setSecurityEstateId,
+  setSecurityVerificationContext,
+} from "@/redux/slice/security/visitor/visitor-slice";
 import Table from "@/components/tables/list/page";
 import Loader from "@/components/ui/Loader";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Eye } from "lucide-react";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   getVerificationFlags,
+  resolveVisitorVerificationDescription,
   resolveVisitorVerificationMode,
 } from "@/lib/visitor-verification-mode";
 import { VisitorVerificationMode } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
@@ -55,30 +58,30 @@ function personName(
 
 export default function ActivityLogPage() {
   const dispatch = useDispatch<AppDispatch>();
-  const [estateId, setEstateId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [visitorVerificationMode, setVisitorVerificationMode] = useState(
-    VisitorVerificationMode.VIEW_AND_VERIFY,
-  );
   const [viewingVisitor, setViewingVisitor] =
     useState<SecurityVisitorItem | null>(null);
 
   const authUser = useSelector((state: RootState) => state.auth.user);
 
+  const { allVisitors, loading, estateId, visitorVerificationMode } =
+    useSelector((state: RootState) => {
+      const v = state.securityVisitor;
+      return {
+        allVisitors: v?.allVisitors ?? null,
+        loading: v?.getAllVisitorsStatus === "isLoading",
+        estateId: v?.estateId ?? null,
+        visitorVerificationMode:
+          v?.visitorVerificationMode ?? VisitorVerificationMode.VIEW_AND_VERIFY,
+      };
+    });
+
   const verificationFlags = useMemo(
     () => getVerificationFlags(visitorVerificationMode),
     [visitorVerificationMode],
   );
-
-  const { allVisitors, loading } = useSelector((state: RootState) => {
-    const v = state.securityVisitor;
-    return {
-      allVisitors: v?.allVisitors ?? null,
-      loading: v?.getAllVisitorsStatus === "isLoading",
-    };
-  });
 
   const list = useMemo(() => allVisitors?.data ?? [], [allVisitors?.data]);
   const rawPagination = allVisitors?.pagination;
@@ -143,18 +146,23 @@ export default function ActivityLogPage() {
           resolveVisitorVerificationMode(data) ??
           resolveVisitorVerificationMode(priorUser) ??
           VisitorVerificationMode.VIEW_AND_VERIFY;
-        setVisitorVerificationMode(mode);
 
-        if (!foundEstateId) {
-          toast.warning("No estate found for this user");
-          return;
-        }
-
-        setEstateId(foundEstateId);
-      } catch (error: unknown) {
-        toast.error(
-          (error as { message?: string })?.message ?? "Failed to load visitors",
+        dispatch(
+          setSecurityVerificationContext({
+            mode,
+            description:
+              resolveVisitorVerificationDescription(data) ??
+              resolveVisitorVerificationDescription(priorUser),
+            ready: true,
+          }),
         );
+
+        if (!foundEstateId) return;
+
+        dispatch(setSecurityEstateId(foundEstateId));
+      } catch (error: unknown) {
+        const message = getApiErrorMessage(error);
+        if (message) toast.error(message);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -162,15 +170,17 @@ export default function ActivityLogPage() {
 
   useEffect(() => {
     if (!estateId) return;
-    fetchVisitors(1).catch(() => toast.error("Failed to fetch visitors"));
+    fetchVisitors(1).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
   }, [estateId, fetchVisitors]);
 
   const onPageChange = (page: number) => {
-    fetchVisitors(page).catch((err: unknown) =>
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to load page",
-      ),
-    );
+    fetchVisitors(page).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
   };
 
   const columns = useMemo(
@@ -218,10 +228,7 @@ export default function ActivityLogPage() {
               <span className="font-mono text-sm font-semibold">
                 {row.visitorCode}
               </span>
-              <CopyButton
-                value={row.visitorCode}
-                title="Copy visitor code"
-              />
+              <CopyButton value={row.visitorCode} title="Copy visitor code" />
             </div>
           ) : (
             "N/A"
@@ -335,7 +342,10 @@ export default function ActivityLogPage() {
               endDate={endDate}
               startDatePlaceholder={DATE_RANGE_PLACEHOLDERS.start}
               endDatePlaceholder={DATE_RANGE_PLACEHOLDERS.end}
-              onDateRangeChange={({ startDate: nextStart, endDate: nextEnd }) => {
+              onDateRangeChange={({
+                startDate: nextStart,
+                endDate: nextEnd,
+              }) => {
                 setStartDate(nextStart);
                 setEndDate(nextEnd);
               }}

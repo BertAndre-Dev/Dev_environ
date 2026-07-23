@@ -93,6 +93,22 @@ export function VisitorsTableCard({
           );
         },
       },
+      {
+        key: "visitStartDate",
+        header: "Visit Start",
+        render: (item: ResidentVisitorData) =>
+          item.visitStartDate
+            ? new Date(item.visitStartDate).toLocaleString()
+            : "—",
+      },
+      {
+        key: "visitEndDate",
+        header: "Visit End",
+        render: (item: ResidentVisitorData) =>
+          item.visitEndDate
+            ? new Date(item.visitEndDate).toLocaleString()
+            : "—",
+      },
       // {
       //   key: "isVerified",
       //   header: "Status",

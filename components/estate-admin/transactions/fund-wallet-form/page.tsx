@@ -20,7 +20,7 @@ import {
 import { getWallet, getEstateCredits } from "@/redux/slice/estate-admin/wallet-mgt/wallet-mgt";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import OtpVerification from "@/components/otp-modal/otp-verification/page";
-import PaymentGatewaySelect from "@/components/payment/PaymentGatewaySelect";
+// import PaymentGatewaySelect from "@/components/payment/PaymentGatewaySelect";
 
 const DEFAULT_COUNTRY = "NG";
 const DEFAULT_CURRENCY = "NGN";
@@ -64,7 +64,8 @@ export default function FundWalletForm({
   const [description, setDescription] = useState<string>("");
   const [currency] = useState<string>(DEFAULT_CURRENCY);
   const [country] = useState<string>(DEFAULT_COUNTRY);
-  const [gatewayType, setGatewayType] = useState<string>("");
+  const [gatewayType] = useState<string>("");
+  // Payment gateway UI temporarily disabled — gatewayType kept for API payloads.
   const [submitting, setSubmitting] = useState(false);
   const [otpRequested, setOtpRequested] = useState(false);
   const [txRef, setTxRef] = useState<string | null>(null);
@@ -125,10 +126,10 @@ export default function FundWalletForm({
       return;
     }
 
-    if (!gatewayType) {
-      toast.error("Please select a payment gateway.");
-      return;
-    }
+    // if (!gatewayType) {
+    //   toast.error("Please select a payment gateway.");
+    //   return;
+    // }
 
     // const MAX_AMOUNT = 200_000;
     // if (amount > MAX_AMOUNT) {
@@ -397,17 +398,17 @@ export default function FundWalletForm({
                 />
               </div>
 
-              <PaymentGatewaySelect
+              {/* <PaymentGatewaySelect
                 id="withdraw-payment-gateway"
                 value={gatewayType}
                 onChange={setGatewayType}
                 disabled={submitting}
-              />
+              /> */}
 
               <Button
                 type="submit"
                 className="w-full mt-4"
-                disabled={submitting || !gatewayType}
+                disabled={submitting}
               >
                 {submitting ? "Processing..." : "Request OTP"}
               </Button>

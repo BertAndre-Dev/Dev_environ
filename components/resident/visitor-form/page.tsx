@@ -169,7 +169,7 @@ export default function VisitorForm({
         toast.error("End date must be after start date");
         return;
       }
-    } else if (!formData.visitStartDate) {
+    } else if (visitorId && !formData.visitStartDate) {
       toast.error("Visit start date is required for a short visit");
       return;
     }
@@ -338,6 +338,10 @@ export default function VisitorForm({
                   setFormData((prev) => ({
                     ...prev,
                     visitingType: e.target.value as VisitingType,
+                    visitStartDate:
+                      e.target.value === "SHORT_VISIT" && !visitorId
+                        ? ""
+                        : prev.visitStartDate,
                     visitEndDate:
                       e.target.value === "SHORT_VISIT"
                         ? ""
@@ -351,24 +355,28 @@ export default function VisitorForm({
               </select>
               <p className="text-xs text-gray-500 mt-1">
                 {formData.visitingType === "SHORT_VISIT"
-                  ? "Choose when the short visit should start."
+                  ? visitorId
+                    ? "Choose when the short visit should start."
+                    : "Short visits start when the visitor arrives."
                   : "Long visits require a start and end date."}
               </p>
             </div>
 
             {formData.visitingType === "SHORT_VISIT" ? (
-              <div>
-                <Label htmlFor="visitStartDate">Visit Start Date *</Label>
-                <Input
-                  id="visitStartDate"
-                  name="visitStartDate"
-                  type="datetime-local"
-                  value={formData.visitStartDate}
-                  onChange={handleInputChange}
-                  required
-                  className="mt-1"
-                />
-              </div>
+              visitorId ? (
+                <div>
+                  <Label htmlFor="visitStartDate">Visit Start Date *</Label>
+                  <Input
+                    id="visitStartDate"
+                    name="visitStartDate"
+                    type="datetime-local"
+                    value={formData.visitStartDate}
+                    onChange={handleInputChange}
+                    required
+                    className="mt-1"
+                  />
+                </div>
+              ) : null
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>

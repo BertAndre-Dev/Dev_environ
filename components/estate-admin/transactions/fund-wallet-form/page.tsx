@@ -202,7 +202,7 @@ export default function FundWalletForm({
                 description ||
                 `Withdrawal of ${currency} ${amount.toLocaleString()}`,
               tx_ref,
-              gatewayType,
+              ...(gatewayType ? { gatewayType } : {}),
             }),
           ).unwrap();
         }
@@ -326,7 +326,7 @@ export default function FundWalletForm({
               description ||
               `Withdrawal of ${currency} ${(amount ?? 0).toLocaleString()}`,
             tx_ref: txRef,
-            gatewayType,
+            ...(gatewayType ? { gatewayType } : {}),
           }),
         ).unwrap();
       }

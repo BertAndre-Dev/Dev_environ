@@ -13,8 +13,31 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  IsoDatePicker,
+  IsoLinkedRangeEnd,
+  IsoLinkedRangeStart,
+  todayIsoString,
+} from "@/components/ui/iso-date-picker";
 import { toast } from "react-toastify";
 import { formatAddressEntryLabel } from "@/lib/address";
+
+/** Normalize API / datetime values to YYYY-MM-DD for IsoDatePicker. */
+function toDateOnlyValue(val?: string | null) {
+  if (!val) return "";
+  const trimmed = String(val).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) return trimmed.slice(0, 10);
+  const d = new Date(trimmed);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function toIsoOrNull(val: string, endOfDay = false) {
+  if (!val) return null;
+  const d = new Date(`${val}T${endOfDay ? "23:59:59" : "00:00:00"}`);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
 
 interface VisitorFormProps {
   visitorId?: string | null;
@@ -40,6 +63,8 @@ export default function VisitorForm({
 
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  /** Stable min for edit: preserves an existing past start date without shrinking as user changes. */
+  const [visitStartMinDate, setVisitStartMinDate] = useState(todayIsoString());
   const [formData, setFormData] = useState<{
     firstName: string;
     lastName: string;
@@ -76,6 +101,12 @@ export default function VisitorForm({
   }, [addressId]);
 
   useEffect(() => {
+    if (!visitorId) {
+      setVisitStartMinDate(todayIsoString());
+    }
+  }, [visitorId]);
+
+  useEffect(() => {
     if (visitorId) {
       const loadVisitor = async () => {
         setLoading(true);
@@ -84,13 +115,9 @@ export default function VisitorForm({
           // API response has flat structure, not nested visitor object
           const visitor = res?.data?.visitor || res?.data;
           if (visitor) {
-            const toDateInputValue = (val?: string | null) => {
-              if (!val) return "";
-              const d = new Date(val);
-              if (Number.isNaN(d.getTime())) return "";
-              const pad = (n: number) => String(n).padStart(2, "0");
-              return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-            };
+            const start = toDateOnlyValue(visitor.visitStartDate);
+            const today = todayIsoString();
+            setVisitStartMinDate(start && start < today ? start : today);
             setFormData({
               firstName: visitor.firstName || "",
               lastName: visitor.lastName || "",
@@ -99,8 +126,8 @@ export default function VisitorForm({
               address: visitor.address || "",
               visitingType:
                 (visitor.visitingType as VisitingType) || "SHORT_VISIT",
-              visitStartDate: toDateInputValue(visitor.visitStartDate),
-              visitEndDate: toDateInputValue(visitor.visitEndDate),
+              visitStartDate: start,
+              visitEndDate: toDateOnlyValue(visitor.visitEndDate),
             });
           }
         } catch (err: any) {
@@ -162,28 +189,27 @@ export default function VisitorForm({
         );
         return;
       }
-      if (
-        new Date(formData.visitEndDate).getTime() <
-        new Date(formData.visitStartDate).getTime()
-      ) {
-        toast.error("End date must be after start date");
+      if (formData.visitEndDate < formData.visitStartDate) {
+        toast.error("End date must be on or after the start date");
         return;
       }
-    } else if (!formData.visitStartDate) {
+    } else if (visitorId && !formData.visitStartDate) {
       toast.error("Visit start date is required for a short visit");
       return;
     }
 
+    const today = todayIsoString();
     if (
       formData.visitStartDate &&
-      new Date(formData.visitStartDate).getTime() < Date.now()
+      formData.visitStartDate < visitStartMinDate
     ) {
-      toast.error("Visit start date must be the current date and time or later.");
+      toast.error(
+        visitStartMinDate === today
+          ? "Visit start date must be today or later."
+          : "Visit start date is before the allowed range.",
+      );
       return;
     }
-
-    const toIsoOrNull = (val: string) =>
-      val ? new Date(val).toISOString() : null;
 
     const visitStartDate = toIsoOrNull(formData.visitStartDate);
     const isLongVisit = formData.visitingType === "LONG_VISIT";
@@ -199,7 +225,7 @@ export default function VisitorForm({
       visitingType: formData.visitingType,
       visitStartDate,
       ...(isLongVisit
-        ? { visitEndDate: toIsoOrNull(formData.visitEndDate) }
+        ? { visitEndDate: toIsoOrNull(formData.visitEndDate, true) }
         : {}),
     };
 
@@ -338,6 +364,10 @@ export default function VisitorForm({
                   setFormData((prev) => ({
                     ...prev,
                     visitingType: e.target.value as VisitingType,
+                    visitStartDate:
+                      e.target.value === "SHORT_VISIT" && !visitorId
+                        ? ""
+                        : prev.visitStartDate,
                     visitEndDate:
                       e.target.value === "SHORT_VISIT"
                         ? ""
@@ -351,57 +381,85 @@ export default function VisitorForm({
               </select>
               <p className="text-xs text-gray-500 mt-1">
                 {formData.visitingType === "SHORT_VISIT"
-                  ? "Choose when the short visit should start."
+                  ? visitorId
+                    ? "Choose when the short visit should start."
+                    : "Short visits start when the visitor arrives."
                   : "Long visits require a start and end date."}
               </p>
             </div>
 
             {formData.visitingType === "SHORT_VISIT" ? (
-              <div>
-                <Label htmlFor="visitStartDate">Visit Start Date *</Label>
-                <Input
-                  id="visitStartDate"
-                  name="visitStartDate"
-                  type="datetime-local"
-                  value={formData.visitStartDate}
-                  onChange={handleInputChange}
-                  required
-                  className="mt-1"
-                />
-              </div>
+              visitorId ? (
+                <div>
+                  <Label htmlFor="visitStartDate">Visit Start Date *</Label>
+                  <div className="mt-1">
+                    <IsoDatePicker
+                      id="visitStartDate"
+                      value={formData.visitStartDate}
+                      minDate={visitStartMinDate}
+                      onChange={(iso) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          visitStartDate: iso,
+                        }))
+                      }
+                      placeholder="Select visit start date"
+                      ariaLabel="Visit start date"
+                    />
+                  </div>
+                </div>
+              ) : null
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="visitStartDate">Visit Start Date *</Label>
-                  <Input
-                    id="visitStartDate"
-                    name="visitStartDate"
-                    type="datetime-local"
-                    value={formData.visitStartDate}
-                    onChange={handleInputChange}
-                    required
-                    className="mt-1"
-                  />
+                  <div className="mt-1">
+                    <IsoLinkedRangeStart
+                      id="visitStartDate"
+                      startDate={formData.visitStartDate}
+                      endDate={formData.visitEndDate}
+                      minDate={visitStartMinDate}
+                      onStartChange={(iso) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          visitStartDate: iso,
+                        }))
+                      }
+                      onEndChange={(iso) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          visitEndDate: iso,
+                        }))
+                      }
+                      placeholder="Select start date"
+                      ariaLabel="Visit start date"
+                    />
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="visitEndDate">Visit End Date *</Label>
-                  <Input
-                    id="visitEndDate"
-                    name="visitEndDate"
-                    type="datetime-local"
-                    value={formData.visitEndDate}
-                    min={formData.visitStartDate || undefined}
-                    onChange={handleInputChange}
-                    required
-                    className="mt-1"
-                  />
+                  <div className="mt-1">
+                    <IsoLinkedRangeEnd
+                      id="visitEndDate"
+                      startDate={formData.visitStartDate}
+                      endDate={formData.visitEndDate}
+                      onEndChange={(iso) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          visitEndDate: iso,
+                        }))
+                      }
+                      placeholder="Select end date"
+                      ariaLabel="Visit end date"
+                    />
+                  </div>
                 </div>
               </div>
             )}
           </div>
         )}
 
-        <div className="pt-6 flex gap-2">
+        <div className="pt-2 flex gap-2">
           <Button
             type="button"
             variant="outline"

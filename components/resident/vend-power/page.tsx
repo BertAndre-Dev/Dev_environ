@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import Modal from "@/components/modal/page";
 import Loader from "@/components/ui/Loader";
 import {
   vendPower,
@@ -158,122 +157,129 @@ export default function VendPowerForm({
     }
   };
 
-  return (
-    <>
-      <div className="relative">
-        {tariffLoading && (
-          <div
-            className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/40 backdrop-blur-sm"
-            aria-busy="true"
-            aria-live="polite"
-          >
-            <div className="flex h-28 w-full max-w-[200px] items-center justify-center">
-              <Loader label="Loading tariff…" />
-            </div>
+  if (showSuccessModal) {
+    return (
+      <div className="w-full p-2 text-center">
+        <div className="flex justify-center mb-4">
+          <div className="rounded-full bg-green-100 p-3">
+            <CheckCircle className="w-12 h-12 text-green-600" />
           </div>
+        </div>
+        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+          Vending was successful
+        </h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Use the token below to recharge your meter.
+        </p>
+        {successToken ? (
+          <>
+            <div className="bg-gray-100 rounded-lg px-4 py-3 mb-4 font-mono text-lg break-all select-all">
+              {successToken}
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full gap-2"
+              onClick={handleCopyToken}
+            >
+              {copied ? (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  Copy token
+                </>
+              )}
+            </Button>
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No token was returned. Please check your meter or contact support.
+          </p>
         )}
-        <form
-          onSubmit={handleSubmit}
-          className={
-            tariffLoading
-              ? "pointer-events-none blur-sm transition-[filter] duration-200"
-              : undefined
-          }
+        <Button
+          type="button"
+          className="w-full mt-4"
+          onClick={closeSuccessModal}
         >
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-blue-600">
-              Vend Power Payment
-            </CardTitle>
-          </CardHeader>
+          Done
+        </Button>
+        <p className="text-xs text-muted-foreground mt-4">
+          This will close automatically in 20 seconds.
+        </p>
+      </div>
+    );
+  }
 
-          <CardContent className="space-y-6">
-            <div>
-              <Label>Amount</Label>
-              <Input
-                type="number"
-                value={amount === 0 ? "" : amount}
-                onChange={(e) => setAmount(Number(e.target.value))}
-                placeholder="Enter amount"
-                disabled={tariffLoading}
-              />
-              <div className="flex flex-row items-center gap-1">
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Price per kWh:{" "}
-                  <strong>
-                    {effectiveTariffPrice != null
-                      ? `₦${Number(effectiveTariffPrice).toLocaleString()}`
-                      : "—"}
-                  </strong>
-                </p>
-                <p className="mt-1 text-sm font-semibold text-red-500">
-                  (Tariff is VAT exclusive.)
-                </p>
-              </div>
+  return (
+    <div className="relative">
+      {tariffLoading && (
+        <div
+          className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/40 backdrop-blur-sm"
+          aria-busy="true"
+          aria-live="polite"
+        >
+          <div className="flex h-28 w-full max-w-[200px] items-center justify-center">
+            <Loader label="Loading tariff…" />
+          </div>
+        </div>
+      )}
+      <form
+        onSubmit={handleSubmit}
+        className={
+          tariffLoading
+            ? "pointer-events-none blur-sm transition-[filter] duration-200"
+            : undefined
+        }
+      >
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-blue-600">
+            Vend Power Payment
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent className="space-y-6">
+          <div>
+            <Label>Amount</Label>
+            <Input
+              type="number"
+              value={amount === 0 ? "" : amount}
+              onChange={(e) => setAmount(Number(e.target.value))}
+              placeholder="Enter amount"
+              disabled={tariffLoading}
+            />
+            <div className="flex flex-row items-center gap-1">
               <p className="mt-1 text-sm text-muted-foreground">
-                You will get <strong>{kwh} kWh</strong> for this amount.
+                Price per kWh:{" "}
+                <strong>
+                  {effectiveTariffPrice != null
+                    ? `₦${Number(effectiveTariffPrice).toLocaleString()}`
+                    : "—"}
+                </strong>
+              </p>
+              <p className="mt-1 text-sm font-semibold text-red-500">
+                (Tariff is VAT exclusive.)
               </p>
             </div>
-
-            <div className="pt-6">
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={submitting || tariffLoading}
-              >
-                {submitting ? "Processing..." : `Pay ₦${amount}`}
-              </Button>
-            </div>
-          </CardContent>
-        </form>
-      </div>
-
-      <Modal visible={showSuccessModal} onClose={closeSuccessModal}>
-        <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="rounded-full bg-green-100 p-3">
-              <CheckCircle className="w-12 h-12 text-green-600" />
-            </div>
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            Vending was successful
-          </h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Use the token below to recharge your meter.
-          </p>
-          {successToken ? (
-            <>
-              <div className="bg-gray-100 rounded-lg px-4 py-3 mb-4 font-mono text-lg break-all select-all">
-                {successToken}
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full gap-2"
-                onClick={handleCopyToken}
-              >
-                {copied ? (
-                  <>
-                    <CheckCircle className="w-4 h-4" />
-                    Copied
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-4 h-4" />
-                    Copy token
-                  </>
-                )}
-              </Button>
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No token was returned. Please check your meter or contact support.
+            <p className="mt-1 text-sm text-muted-foreground">
+              You will get <strong>{kwh} kWh</strong> for this amount.
             </p>
-          )}
-          <p className="text-xs text-muted-foreground mt-4">
-            This modal will close automatically in 20 seconds.
-          </p>
-        </div>
-      </Modal>
-    </>
+          </div>
+
+          <div className="pt-6">
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={submitting || tariffLoading}
+            >
+              {submitting ? "Processing..." : `Pay ₦${amount}`}
+            </Button>
+          </div>
+        </CardContent>
+      </form>
+    </div>
   );
 }

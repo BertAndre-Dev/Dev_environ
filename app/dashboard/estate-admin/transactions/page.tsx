@@ -29,6 +29,7 @@ import {
 import { formatDateTime } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
 import { Eye } from "lucide-react";
+import Loader from "@/components/ui/Loader";
 
 interface TransactionData {
   walletId: string;
@@ -49,6 +50,7 @@ export default function TransactionPage() {
   const [estateId, setEstateId] = useState<string | null>(null);
   const [estateName, setEstateName] = useState("Estate");
   const [email, setEmail] = useState<string>("");
+  const [bootstrapping, setBootstrapping] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [limit] = useState(10);
   const [activeTab, setActiveTab] = useState<TransactionsActiveTab>("vends");
@@ -89,6 +91,14 @@ export default function TransactionPage() {
       (state: RootState) =>
         (state as any).estateAdminTransaction?.getEstateTransactionHistoryState,
     ) === "isLoading";
+
+  const pageLoading =
+    bootstrapping ||
+    (activeTab === "history" && loading && transactions.length === 0) ||
+    (activeTab === "vends" && loadingVends && vendsData.length === 0) ||
+    (activeTab === "paid-bills" &&
+      loadingPaidBills &&
+      paidBillsData.length === 0);
 
   // 🔹 Fetch signed-in user and wallet on mount
   useEffect(() => {
@@ -166,6 +176,8 @@ export default function TransactionPage() {
         ]);
       } catch (err) {
         toast.error("Failed to load data.");
+      } finally {
+        setBootstrapping(false);
       }
     })();
   }, [dispatch, limit]);
@@ -748,7 +760,15 @@ export default function TransactionPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="relative">
+      {pageLoading && <Loader fullScreen label="Loading transactions..." />}
+
+      <div
+        className={[
+          "space-y-6",
+          pageLoading ? "pointer-events-none select-none" : "",
+        ].join(" ")}
+      >
       <TransactionsPageHeader estateName={estateName} />
       <TransactionsSearchCard search={search} onSearchChange={setSearch} />
       <TransactionsTabsCard
@@ -886,6 +906,7 @@ export default function TransactionPage() {
           if (!open) setViewingPaidBill(null);
         }}
       />
+      </div>
     </div>
   );
 }

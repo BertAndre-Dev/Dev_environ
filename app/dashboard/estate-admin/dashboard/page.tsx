@@ -24,6 +24,7 @@ import { getEstateAdminEstateEnergyUsage } from "@/redux/slice/estate-admin/esta
 import { getEstateAdminTransactionSummary } from "@/redux/slice/estate-admin/transaction-summary/estate-admin-transaction-summary";
 import { extractEstateIdFromUser, extractEstateNameFromUser } from "@/lib/user-id";
 import type { AppDispatch, RootState } from "@/redux/store";
+import Loader from "@/components/ui/Loader";
 
 const formatNaira = (n: number) => `${n.toLocaleString()}`;
 
@@ -33,6 +34,7 @@ export default function DummyDashboard() {
   const [meterChartView, setMeterChartView] = useState("assignment");
   const [estateId, setEstateId] = useState<string | null>(null);
   const [estateName, setEstateName] = useState("Sunshine Estate");
+  const [bootstrapping, setBootstrapping] = useState(true);
   const [energyPeriod, setEnergyPeriod] =
     useState<EnergyConsumptionPeriod>("weekly");
   const [usageRange, setUsageRange] = useState<EstateEnergyUsageRange>("weekly");
@@ -89,6 +91,8 @@ export default function DummyDashboard() {
             ? (err as { message: string }).message
             : "Failed to load user.";
         toast.error(msg);
+      } finally {
+        setBootstrapping(false);
       }
     })();
   }, [dispatch]);
@@ -205,8 +209,22 @@ export default function DummyDashboard() {
   //   },
   // ];
 
+  const pageLoading =
+    bootstrapping ||
+    (!!estateId &&
+      ((estateEnergyUsageLoading && !estateEnergyUsage) ||
+        (energyChartLoading && !energyConsumptionChart)));
+
   return (
-    <div className="space-y-8">
+    <div className="relative">
+      {pageLoading && <Loader fullScreen label="Loading dashboard..." />}
+
+      <div
+        className={[
+          "space-y-8",
+          pageLoading ? "pointer-events-none select-none" : "",
+        ].join(" ")}
+      >
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">Overview</h1>
@@ -346,6 +364,7 @@ export default function DummyDashboard() {
           />
         )}
       </div> */}
+      </div>
     </div>
   );
 }

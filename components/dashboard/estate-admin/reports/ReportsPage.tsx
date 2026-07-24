@@ -39,6 +39,7 @@ import {
 } from "@/lib/financial-report-utils";
 import { RevenueChartCard } from "@/components/dashboard/estate-admin/reports/RevenueChartCard";
 import { ExpenseChartCard } from "@/components/dashboard/estate-admin/reports/ExpenseChartCard";
+import Loader from "@/components/ui/Loader";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -135,6 +136,7 @@ export default function ReportsPage() {
 
   const [estateId, setEstateId] = useState("");
   const [estateName, setEstateName] = useState("Estate");
+  const [bootstrapping, setBootstrapping] = useState(true);
 
   // Chart filters — isolated to the Insights card only
   const [chartStartDate, setChartStartDate] = useState("");
@@ -175,6 +177,8 @@ export default function ReportsPage() {
         setEstateName(estateName);
       } catch (err: any) {
         toast.error(err?.message ?? "Failed to load user.");
+      } finally {
+        setBootstrapping(false);
       }
     })();
   }, [dispatch]);
@@ -316,9 +320,24 @@ export default function ReportsPage() {
     [revenueReport?.revenue],
   );
 
+  const pageLoading =
+    bootstrapping ||
+    (!!estateId &&
+      ((revenueLoading && !revenueReport) ||
+        (expensesLoading && !expensesReport) ||
+        (chartLoading && !chartData)));
+
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6">
+    <div className="relative">
+      {pageLoading && <Loader fullScreen label="Loading reports..." />}
+
+      <div
+        className={[
+          "space-y-6",
+          pageLoading ? "pointer-events-none select-none" : "",
+        ].join(" ")}
+      >
       {/* Page header */}
       <div>
         <h1 className="font-heading text-3xl font-bold">Report</h1>
@@ -521,6 +540,7 @@ export default function ReportsPage() {
         }}
         exportFileName="expenses_report"
       />
+      </div>
     </div>
   );
 }

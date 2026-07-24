@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
@@ -22,10 +23,11 @@ const MONTHS = [
   "December",
 ] as const;
 
-const YEAR_RANGE = 40;
+const PAST_YEAR_SPAN = 30;
+const FUTURE_YEAR_SPAN = 30;
 
 const inputClassName =
-  "h-9 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary w-full max-w-full cursor-pointer placeholder:text-muted-foreground";
+  "h-10 rounded-md border border-border bg-background px-3 pr-10 text-sm outline-none focus:ring-2 focus:ring-primary w-full max-w-full cursor-pointer placeholder:text-muted-foreground";
 
 /** Shown next to every date field for consistent affordance. */
 const datePickerIcon = (
@@ -35,9 +37,43 @@ const datePickerIcon = (
   />
 );
 
-function buildYearOptions(centerYear: number) {
-  const start = centerYear - Math.floor(YEAR_RANGE / 2);
-  return Array.from({ length: YEAR_RANGE }, (_, i) => start + i);
+function startOfDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function buildYearOptions(
+  viewYear: number,
+  minDate?: Date | null,
+  maxDate?: Date | null,
+) {
+  const nowYear = new Date().getFullYear();
+  let start = Math.min(viewYear, nowYear) - PAST_YEAR_SPAN;
+  let end = Math.max(viewYear, nowYear) + FUTURE_YEAR_SPAN;
+
+  if (minDate) start = Math.min(start, minDate.getFullYear());
+  if (maxDate) end = Math.max(end, maxDate.getFullYear());
+  if (minDate) start = Math.max(start, minDate.getFullYear());
+  if (maxDate) end = Math.min(end, maxDate.getFullYear());
+  if (end < start) end = start;
+
+  return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+}
+
+function monthAllowed(
+  year: number,
+  month: number,
+  minDate?: Date | null,
+  maxDate?: Date | null,
+) {
+  if (minDate) {
+    const minBound = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+    if (new Date(year, month, 1) < minBound) return false;
+  }
+  if (maxDate) {
+    const maxBound = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
+    if (new Date(year, month, 1) > maxBound) return false;
+  }
+  return true;
 }
 
 type CustomHeaderProps = {
@@ -48,6 +84,8 @@ type CustomHeaderProps = {
   increaseMonth: () => void;
   prevMonthButtonDisabled: boolean;
   nextMonthButtonDisabled: boolean;
+  minDate?: Date | null;
+  maxDate?: Date | null;
 };
 
 function DatePickerHeader({
@@ -58,8 +96,11 @@ function DatePickerHeader({
   increaseMonth,
   prevMonthButtonDisabled,
   nextMonthButtonDisabled,
+  minDate,
+  maxDate,
 }: Readonly<CustomHeaderProps>) {
-  const years = buildYearOptions(date.getFullYear());
+  const years = buildYearOptions(date.getFullYear(), minDate, maxDate);
+  const year = date.getFullYear();
 
   return (
     <div className="iso-datepicker-custom-header flex items-center justify-between gap-2 px-1 pb-2">
@@ -81,20 +122,24 @@ function DatePickerHeader({
           onChange={(e) => changeMonth(Number(e.target.value))}
         >
           {MONTHS.map((month, index) => (
-            <option key={month} value={index}>
+            <option
+              key={month}
+              value={index}
+              disabled={!monthAllowed(year, index, minDate, maxDate)}
+            >
               {month}
             </option>
           ))}
         </select>
         <select
           aria-label="Year"
-          className="iso-datepicker-select"
-          value={date.getFullYear()}
+          className="iso-datepicker-select iso-datepicker-select-year"
+          value={year}
           onChange={(e) => changeYear(Number(e.target.value))}
         >
-          {years.map((year) => (
-            <option key={year} value={year}>
-              {year}
+          {years.map((y) => (
+            <option key={y} value={y}>
+              {y}
             </option>
           ))}
         </select>
@@ -113,23 +158,34 @@ function DatePickerHeader({
   );
 }
 
-const sharedPickerProps = {
-  dateFormat: DISPLAY_DATE_FORMAT,
-  showPopperArrow: false,
-  showIcon: true,
-  toggleCalendarOnIconClick: true,
-  icon: datePickerIcon,
-  todayButton: "Today",
-  withPortal: true,
-  shouldCloseOnSelect: true,
-  isClearable: true,
-  fixedHeight: true,
-  popperClassName: "iso-datepicker-popper",
-  calendarClassName: "iso-datepicker-calendar",
-  renderCustomHeader: (props: CustomHeaderProps) => (
-    <DatePickerHeader {...props} />
-  ),
-};
+function sharedPickerProps(
+  minDate?: Date | null,
+  maxDate?: Date | null,
+  hasValue = false,
+) {
+  return {
+    dateFormat: DISPLAY_DATE_FORMAT,
+    showPopperArrow: false,
+    // Empty: calendar icon. Selected: clear (X) only — never both at once.
+    showIcon: !hasValue,
+    toggleCalendarOnIconClick: true,
+    icon: datePickerIcon,
+    todayButton: "Jump to today",
+    withPortal: true,
+    shouldCloseOnSelect: true,
+    isClearable: hasValue,
+    fixedHeight: true,
+    popperClassName: "iso-datepicker-popper",
+    calendarClassName: "iso-datepicker-calendar",
+    wrapperClassName: cn(
+      "w-full iso-datepicker-wrapper",
+      hasValue ? "iso-datepicker-has-value" : "iso-datepicker-empty",
+    ),
+    renderCustomHeader: (props: CustomHeaderProps) => (
+      <DatePickerHeader {...props} minDate={minDate} maxDate={maxDate} />
+    ),
+  };
+}
 
 export function parseIsoToDate(value: string | undefined | null): Date | null {
   if (value == null || String(value).trim() === "") return null;
@@ -151,6 +207,11 @@ export function dateToIsoString(d: Date | null): string {
   return `${y}-${mo}-${day}`;
 }
 
+/** Local calendar date for “today” as YYYY-MM-DD. */
+export function todayIsoString() {
+  return dateToIsoString(startOfDay(new Date()));
+}
+
 export type IsoDatePickerProps = {
   id?: string;
   value: string;
@@ -167,7 +228,7 @@ export function IsoDatePicker({
   id,
   value,
   onChange,
-  placeholder = "Select date",
+  placeholder = "Select a date",
   minDate,
   maxDate,
   disabled,
@@ -175,20 +236,24 @@ export function IsoDatePicker({
   ariaLabel,
 }: Readonly<IsoDatePickerProps>) {
   const selected = parseIsoToDate(value);
+  const min = useMemo(() => parseIsoToDate(minDate), [minDate]);
+  const max = useMemo(() => parseIsoToDate(maxDate), [maxDate]);
+  const openTo = selected ?? min ?? startOfDay(new Date());
+
   return (
     <DatePicker
-      {...sharedPickerProps}
+      {...sharedPickerProps(min, max, Boolean(selected))}
       id={id}
       selected={selected}
       onChange={(d: Date | null) => onChange(dateToIsoString(d))}
       placeholderText={placeholder}
-      minDate={parseIsoToDate(minDate) ?? undefined}
-      maxDate={parseIsoToDate(maxDate) ?? undefined}
-      openToDate={selected ?? undefined}
+      minDate={min ?? undefined}
+      maxDate={max ?? undefined}
+      openToDate={openTo}
       disabled={disabled}
       className={cn(inputClassName, className)}
-      wrapperClassName="w-full"
       ariaLabel={ariaLabel}
+      autoComplete="off"
     />
   );
 }
@@ -226,6 +291,7 @@ export function IsoLinkedRangeStart({
   id,
   ariaLabel,
   placeholder = "Select start date",
+  minDate,
   disabled,
   className,
 }: Omit<LinkedRangeBase, "onEndChange"> & {
@@ -233,12 +299,14 @@ export function IsoLinkedRangeStart({
   id?: string;
   ariaLabel?: string;
   placeholder?: string;
+  minDate?: string;
 }) {
   const s = parseIsoToDate(startDate);
   const e = parseIsoToDate(endDate);
+  const min = parseIsoToDate(minDate);
   return (
     <DatePicker
-      {...sharedPickerProps}
+      {...sharedPickerProps(min, e, Boolean(s))}
       id={id}
       selected={s}
       onChange={(d: Date | null) => {
@@ -252,12 +320,13 @@ export function IsoLinkedRangeStart({
       selectsStart
       startDate={s}
       endDate={e}
-      openToDate={s ?? new Date()}
+      minDate={min ?? undefined}
+      openToDate={s ?? min ?? startOfDay(new Date())}
       placeholderText={placeholder}
       disabled={disabled}
       className={cn(inputClassName, className)}
-      wrapperClassName="w-full"
       ariaLabel={ariaLabel}
+      autoComplete="off"
     />
   );
 }
@@ -281,7 +350,7 @@ export function IsoLinkedRangeEnd({
   const e = parseIsoToDate(endDate);
   return (
     <DatePicker
-      {...sharedPickerProps}
+      {...sharedPickerProps(s, null, Boolean(e))}
       id={id}
       selected={e}
       onChange={(d: Date | null) => onEndChange(dateToIsoString(d))}
@@ -289,12 +358,12 @@ export function IsoLinkedRangeEnd({
       startDate={s}
       endDate={e}
       minDate={s ?? undefined}
-      openToDate={e ?? s ?? new Date()}
+      openToDate={e ?? s ?? startOfDay(new Date())}
       placeholderText={placeholder}
       disabled={disabled}
       className={cn(inputClassName, className)}
-      wrapperClassName="w-full"
       ariaLabel={ariaLabel}
+      autoComplete="off"
     />
   );
 }

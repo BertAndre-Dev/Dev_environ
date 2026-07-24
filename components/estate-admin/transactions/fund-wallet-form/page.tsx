@@ -262,7 +262,7 @@ export default function FundWalletForm({
               description ||
               `Withdrawal of ${currency} ${(amount ?? 0).toLocaleString()}`,
             tx_ref: txRef,
-            gatewayType,
+            ...(gatewayType ? { gatewayType } : {}),
             otp: code,
           }),
         ).unwrap();

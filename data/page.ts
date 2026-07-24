@@ -26,11 +26,11 @@ import {
 } from "lucide-react";
 
 export const superAdminNav = [
-  // {
-  //   label: "Overview",
-  //   icon: FiHome,
-  //   path: "/dashboard/super-admin/dashboard",
-  // },
+  {
+    label: "Overview",
+    icon: FiHome,
+    path: "/dashboard/super-admin/dashboard",
+  },
   {
     label: "Transactions",
     icon: ArrowLeftRight,

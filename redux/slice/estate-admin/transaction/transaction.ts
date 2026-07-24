@@ -60,7 +60,7 @@ interface EstateAdminOtpPayload {
   accountNumber: string;
   narration: string;
   tx_ref: string;
-  gatewayType: string;
+  gatewayType?: string;
 }
 
 // ✅ Generate transaction reference for withdrawals/payments
@@ -103,9 +103,13 @@ export const requestEstateAdminOtp = createAsyncThunk(
   "estate-admin-transaction/requestEstateAdminOtp",
   async (data: EstateAdminOtpPayload, { rejectWithValue }) => {
     try {
+      const { gatewayType, ...rest } = data;
       const res = await axiosInstance.post(
         "/api/v1/payment-mgt/estate-admin/request-otp",
-        data,
+        {
+          ...rest,
+          ...(gatewayType ? { gatewayType } : {}),
+        },
       );
       return res.data;
     } catch (error: any) {

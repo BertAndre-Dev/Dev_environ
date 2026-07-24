@@ -48,7 +48,7 @@ interface TransferPayload {
   accountNumber: string;
   narration: string;
   tx_ref: string;
-  gatewayType: string;
+  gatewayType?: string;
   otp?: string;
 }
 
@@ -246,8 +246,15 @@ export const transferFunds = createAsyncThunk(
   "estate-admin-transaction/transferFunds",
   async (data: TransferPayload, { rejectWithValue }) => {
     try {
+      const { gatewayType, ...rest } = data;
       console.log("💸 Transferring funds:", data);
-      const res = await axiosInstance.post("/api/v1/payment-mgt/estate-admin/transfer", data);
+      const res = await axiosInstance.post(
+        "/api/v1/payment-mgt/estate-admin/transfer",
+        {
+          ...rest,
+          ...(gatewayType ? { gatewayType } : {}),
+        },
+      );
       return res.data;
     } catch (error: any) {
       console.error("❌ Transfer funds error:", error.response?.data || error.message);

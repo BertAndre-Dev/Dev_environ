@@ -62,3 +62,17 @@ export interface AveragePurchaseValueResponse {
   data: AveragePurchaseValueData;
   scope: AnalyticsScope;
 }
+
+export interface TopEstateEnergyEntry {
+  rank: number;
+  estate: EstateScope;
+  totalAmount: number;
+  vendCount: number;
+}
+
+export interface TopEstatesEnergyResponse {
+  success: boolean;
+  message: string;
+  data: TopEstateEnergyEntry[];
+  scope: AnalyticsScope;
+}

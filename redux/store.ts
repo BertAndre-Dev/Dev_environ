@@ -111,6 +111,7 @@ import energyProviderUserSliceReducer from "@/redux/slice/energy-provider/user-m
 import superAdminRatesSliceReducer from "@/redux/slice/super-admin/rates/rates-slice";
 import superAdminRevenueTrendSliceReducer from "@/redux/slice/super-admin/revenue-trend/revenue-trend-slice";
 import superAdminAveragePurchaseSliceReducer from "@/redux/slice/super-admin/average-purchase/average-purchase-slice";
+import superAdminTopEstatesEnergySliceReducer from "@/redux/slice/super-admin/top-estates-energy/top-estates-energy-slice";
 
 const persistConfig = {
   key: "root",
@@ -380,6 +381,7 @@ export const store = configureStore({
     superAdminRates: superAdminRatesSliceReducer,
     superAdminRevenueTrend: superAdminRevenueTrendSliceReducer,
     superAdminAveragePurchase: superAdminAveragePurchaseSliceReducer,
+    superAdminTopEstatesEnergy: superAdminTopEstatesEnergySliceReducer,
     [mapsApi.reducerPath]: mapsApi.reducer,
   },
 

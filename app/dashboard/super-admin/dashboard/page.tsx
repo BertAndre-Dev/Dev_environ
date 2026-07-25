@@ -18,6 +18,10 @@ import {
 } from "./components"
 import TransactionsChart from "@/components/charts/transactions-chart"
 import { RevenueTrendChart } from "@/components/charts/RevenueTrendChart"
+import {
+  TopEstatesEnergyChart,
+  formatTopEstatesPeriodLabel,
+} from "@/components/charts/TopEstatesEnergyChart"
 import { AveragePurchaseStatCard } from "@/components/dashboard/super-admin/AveragePurchaseStatCard"
 import { Select } from "@/components/ui/select"
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt"
@@ -36,6 +40,13 @@ import {
   selectAveragePurchaseError,
   selectAveragePurchaseLoading,
 } from "@/redux/slice/super-admin/average-purchase/average-purchase-slice"
+import { getTopEstatesEnergy } from "@/redux/slice/super-admin/top-estates-energy/top-estates-energy"
+import {
+  selectTopEstatesEnergyError,
+  selectTopEstatesEnergyLoading,
+  selectTopEstatesEnergyScope,
+  selectTopEstatesEnergySeries,
+} from "@/redux/slice/super-admin/top-estates-energy/top-estates-energy-slice"
 import type { RootState, AppDispatch } from "@/redux/store"
 import type { RevenueTrendGranularity } from "@/types/analytics"
 import { toast } from "react-toastify"
@@ -71,6 +82,10 @@ export default function SuperAdminDashboard() {
   const averagePurchase = useSelector(selectAveragePurchaseData)
   const averagePurchaseLoading = useSelector(selectAveragePurchaseLoading)
   const averagePurchaseError = useSelector(selectAveragePurchaseError)
+  const topEstatesSeries = useSelector(selectTopEstatesEnergySeries)
+  const topEstatesLoading = useSelector(selectTopEstatesEnergyLoading)
+  const topEstatesError = useSelector(selectTopEstatesEnergyError)
+  const topEstatesScope = useSelector(selectTopEstatesEnergyScope)
 
   const estates = estateState?.allEstates?.data ?? []
   const estatesPagination = estateState?.allEstates?.pagination ?? null
@@ -99,6 +114,10 @@ export default function SuperAdminDashboard() {
     void dispatch(getAveragePurchaseValue())
   }, [dispatch])
 
+  useEffect(() => {
+    void dispatch(getTopEstatesEnergy({ limit: 10 }))
+  }, [dispatch])
+
   const handleRevenueGranularity = (next: RevenueTrendGranularity) => {
     if (next === revenueGranularity) return
     dispatch(setRevenueTrendGranularity(next))
@@ -111,6 +130,15 @@ export default function SuperAdminDashboard() {
   const handleAveragePurchaseRetry = () => {
     void dispatch(getAveragePurchaseValue())
   }
+
+  const handleTopEstatesRetry = () => {
+    void dispatch(getTopEstatesEnergy({ limit: 10 }))
+  }
+
+  const topEstatesPeriodLabel = formatTopEstatesPeriodLabel(
+    topEstatesScope?.period?.startDate,
+    topEstatesScope?.period?.endDate,
+  )
 
   useEffect(() => {
     if (!selectedEstateId) return
@@ -205,6 +233,15 @@ export default function SuperAdminDashboard() {
         error={revenueError}
         onGranularityChange={handleRevenueGranularity}
         onRetry={handleRevenueRetry}
+      />
+
+      <TopEstatesEnergyChart
+        series={topEstatesSeries}
+        loading={topEstatesLoading}
+        error={topEstatesError}
+        periodLabel={topEstatesPeriodLabel}
+        estateCount={topEstatesScope?.estateCount ?? null}
+        onRetry={handleTopEstatesRetry}
       />
 
       <DashboardChartCard title="Transactions" totalLabel="" totalValue="">

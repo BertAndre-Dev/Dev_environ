@@ -43,14 +43,14 @@ export default function EstateWalletOverviewCard({
   return (
     <div className="space-y-4">
       <Card className="p-4 md:p-6 shadow-md">
-        <CardContent className="p-0 space-y-6">
+        <div className="p-0 space-y-6">
           {wallet ? (
             <>
               {/* Top: Available balance | Withdrawable balance */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 lg:gap-6">
                 <div className="flex flex-col justify-center items-center w-full h-[150px] border border-[#CCCCCC] rounded-lg lg:px-4 lg:py-4">
                   <p className="text-sm text-muted-foreground">
-                    Available Wallet Balance
+                    Available Balance
                   </p>
                   <p className="text-3xl md:text-4xl font-bold mt-1">
                     {formatNaira(wallet.availableBalance ?? 0)}
@@ -58,7 +58,7 @@ export default function EstateWalletOverviewCard({
                 </div>
                 <div className="flex flex-col justify-center items-center w-full h-[150px] border border-[#CCCCCC] rounded-lg lg:px-4 lg:py-4">
                   <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    Withdrawable Wallet Balance
+                    Withdrawable Balance
                     <span
                       className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-muted text-muted-foreground text-xs cursor-help"
                       title="You can only withdraw from this balance."
@@ -98,7 +98,7 @@ export default function EstateWalletOverviewCard({
               </Button>
             </div>
           )}
-        </CardContent>
+        </div>
       </Card>
 
       {/* Filter / Export bar (Figma: Filter by Ref, Filter by Status, Export) */}

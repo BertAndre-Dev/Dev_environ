@@ -17,10 +17,27 @@ import {
   BillsOverviewChart,
 } from "./components"
 import TransactionsChart from "@/components/charts/transactions-chart"
+import { RevenueTrendChart } from "@/components/charts/RevenueTrendChart"
+import { AveragePurchaseStatCard } from "@/components/dashboard/super-admin/AveragePurchaseStatCard"
 import { Select } from "@/components/ui/select"
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt"
 import { getSuperAdminBillsAnalyticsDashboard } from "@/redux/slice/super-admin/super-admin-bills-analytics/super-admin-bills-analytics"
+import { getRevenueTrend } from "@/redux/slice/super-admin/revenue-trend/revenue-trend"
+import {
+  selectRevenueTrendError,
+  selectRevenueTrendGranularity,
+  selectRevenueTrendLoading,
+  selectRevenueTrendSeries,
+  setRevenueTrendGranularity,
+} from "@/redux/slice/super-admin/revenue-trend/revenue-trend-slice"
+import { getAveragePurchaseValue } from "@/redux/slice/super-admin/average-purchase/average-purchase"
+import {
+  selectAveragePurchaseData,
+  selectAveragePurchaseError,
+  selectAveragePurchaseLoading,
+} from "@/redux/slice/super-admin/average-purchase/average-purchase-slice"
 import type { RootState, AppDispatch } from "@/redux/store"
+import type { RevenueTrendGranularity } from "@/types/analytics"
 import { toast } from "react-toastify"
 
 const BILLS_CHART_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"]
@@ -47,6 +64,13 @@ export default function SuperAdminDashboard() {
 
   const estateState = useSelector((state: RootState) => (state as any).estate)
   const billsState = useSelector((state: RootState) => (state as any).superAdminBillsAnalytics)
+  const revenueSeries = useSelector(selectRevenueTrendSeries)
+  const revenueGranularity = useSelector(selectRevenueTrendGranularity)
+  const revenueLoading = useSelector(selectRevenueTrendLoading)
+  const revenueError = useSelector(selectRevenueTrendError)
+  const averagePurchase = useSelector(selectAveragePurchaseData)
+  const averagePurchaseLoading = useSelector(selectAveragePurchaseLoading)
+  const averagePurchaseError = useSelector(selectAveragePurchaseError)
 
   const estates = estateState?.allEstates?.data ?? []
   const estatesPagination = estateState?.allEstates?.pagination ?? null
@@ -66,6 +90,27 @@ export default function SuperAdminDashboard() {
       toast.error(err?.message ?? "Failed to fetch estates")
     )
   }, [dispatch])
+
+  useEffect(() => {
+    void dispatch(getRevenueTrend({ granularity: revenueGranularity }))
+  }, [dispatch, revenueGranularity])
+
+  useEffect(() => {
+    void dispatch(getAveragePurchaseValue())
+  }, [dispatch])
+
+  const handleRevenueGranularity = (next: RevenueTrendGranularity) => {
+    if (next === revenueGranularity) return
+    dispatch(setRevenueTrendGranularity(next))
+  }
+
+  const handleRevenueRetry = () => {
+    void dispatch(getRevenueTrend({ granularity: revenueGranularity }))
+  }
+
+  const handleAveragePurchaseRetry = () => {
+    void dispatch(getAveragePurchaseValue())
+  }
 
   useEffect(() => {
     if (!selectedEstateId) return
@@ -144,6 +189,23 @@ export default function SuperAdminDashboard() {
           <KpiCard key={card.label} {...card} />
         ))}
       </div>
+
+      <AveragePurchaseStatCard
+        data={averagePurchase}
+        loading={averagePurchaseLoading}
+        error={averagePurchaseError}
+        onRetry={handleAveragePurchaseRetry}
+        className="max-w-xl"
+      />
+
+      <RevenueTrendChart
+        series={revenueSeries}
+        granularity={revenueGranularity}
+        loading={revenueLoading}
+        error={revenueError}
+        onGranularityChange={handleRevenueGranularity}
+        onRetry={handleRevenueRetry}
+      />
 
       <DashboardChartCard title="Transactions" totalLabel="" totalValue="">
         <TransactionsChart

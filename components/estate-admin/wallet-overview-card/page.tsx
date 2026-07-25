@@ -43,7 +43,7 @@ export default function EstateWalletOverviewCard({
   return (
     <div className="space-y-4">
       <Card className="p-4 md:p-6 shadow-md">
-        <CardContent className="p-0 space-y-6">
+        <div className="p-0 space-y-6">
           {wallet ? (
             <>
               {/* Top: Available balance | Withdrawable balance */}
@@ -98,7 +98,7 @@ export default function EstateWalletOverviewCard({
               </Button>
             </div>
           )}
-        </CardContent>
+        </div>
       </Card>
 
       {/* Filter / Export bar (Figma: Filter by Ref, Filter by Status, Export) */}

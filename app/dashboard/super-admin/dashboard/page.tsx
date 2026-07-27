@@ -211,24 +211,24 @@ export default function SuperAdminDashboard() {
     }
   }, [estates, selectedEstateId]);
 
-  const billsChartData = useMemo(() => {
-    const topBills = billsDashboard?.topBillsByCollection ?? [];
-    if (topBills.length === 0) return [];
-    return topBills.map(
-      (
-        bill: {
-          name: string;
-          totalAmountCollected?: number;
-          totalAssignments?: number;
-        },
-        i: number,
-      ) => ({
-        name: bill.name,
-        value: bill.totalAmountCollected ?? bill.totalAssignments ?? 0,
-        fill: BILLS_CHART_COLORS[i % BILLS_CHART_COLORS.length],
-      }),
-    );
-  }, [billsDashboard]);
+  // const billsChartData = useMemo(() => {
+  //   const topBills = billsDashboard?.topBillsByCollection ?? [];
+  //   if (topBills.length === 0) return [];
+  //   return topBills.map(
+  //     (
+  //       bill: {
+  //         name: string;
+  //         totalAmountCollected?: number;
+  //         totalAssignments?: number;
+  //       },
+  //       i: number,
+  //     ) => ({
+  //       name: bill.name,
+  //       value: bill.totalAmountCollected ?? bill.totalAssignments ?? 0,
+  //       fill: BILLS_CHART_COLORS[i % BILLS_CHART_COLORS.length],
+  //     }),
+  //   );
+  // }, [billsDashboard]);
 
   const kpiCards = useMemo(() => {
     const totalEstates = estatesPagination?.total ?? 0;
@@ -257,13 +257,12 @@ export default function SuperAdminDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <AveragePurchaseStatCard
           data={averagePurchase}
           loading={averagePurchaseLoading}
           error={averagePurchaseError}
           onRetry={handleAveragePurchaseRetry}
-          className="max-w-xl"
         />
 
         <PowerAvailabilityCard

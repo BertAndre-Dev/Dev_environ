@@ -6,6 +6,7 @@ import { Building2, Gauge, Users } from "lucide-react";
 import { DashboardHeader, KpiCard } from "./components";
 import { RevenueTrendChart } from "@/components/charts/RevenueTrendChart";
 import { RechargeBehaviorChart } from "@/components/charts/RechargeBehaviorChart";
+import { ConsumptionSnapshotChart } from "@/components/charts/ConsumptionSnapshotChart";
 import {
   TopEstatesEnergyChart,
   formatTopEstatesPeriodLabel,
@@ -16,6 +17,7 @@ import { PowerAvailabilityCard } from "@/components/charts/PowerAvailabilityCard
 import { PaymentChannelsChart } from "@/components/charts/PaymentChannelsChart";
 import { CollectionEfficiencyChart } from "@/components/charts/CollectionEfficiencyChart";
 import { AveragePurchaseStatCard } from "@/components/dashboard/super-admin/AveragePurchaseStatCard";
+import { CustomerMeterSummaryCard } from "@/components/charts/CustomerMeterSummaryCard";
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
 import { getRevenueTrend } from "@/redux/slice/super-admin/revenue-trend/revenue-trend";
 import {
@@ -82,6 +84,22 @@ import {
   selectRechargeBehaviorSeries,
   setRechargeBehaviorBucket,
 } from "@/redux/slice/super-admin/recharge-behavior/recharge-behavior-slice";
+import { getConsumptionSnapshot } from "@/redux/slice/super-admin/consumption-snapshot/consumption-snapshot";
+import {
+  selectConsumptionSnapshotData,
+  selectConsumptionSnapshotError,
+  selectConsumptionSnapshotLoading,
+  selectConsumptionSnapshotScope,
+} from "@/redux/slice/super-admin/consumption-snapshot/consumption-snapshot-slice";
+import { getCustomerMeterSummary } from "@/redux/slice/super-admin/customer-meter-summary/customer-meter-summary";
+import {
+  selectCustomerMeterSummaryData,
+  selectCustomerMeterSummaryError,
+  selectCustomerMeterSummaryLoading,
+  selectCustomerMeterSummaryScope,
+  selectCustomerMeterSummarySelectedEstateId,
+  setSelectedEstateId,
+} from "@/redux/slice/super-admin/customer-meter-summary/customer-meter-summary-slice";
 import type { RootState, AppDispatch } from "@/redux/store";
 import type {
   CustomerGrowthMetric,
@@ -150,10 +168,42 @@ export default function SuperAdminDashboard() {
   const rechargeBucket = useSelector(selectRechargeBehaviorBucket);
   const rechargeLoading = useSelector(selectRechargeBehaviorLoading);
   const rechargeError = useSelector(selectRechargeBehaviorError);
+  const consumptionSnapshot = useSelector(selectConsumptionSnapshotData);
+  const consumptionSnapshotScope = useSelector(selectConsumptionSnapshotScope);
+  const consumptionSnapshotLoading = useSelector(
+    selectConsumptionSnapshotLoading,
+  );
+  const consumptionSnapshotError = useSelector(selectConsumptionSnapshotError);
+  const customerMeterSummary = useSelector(selectCustomerMeterSummaryData);
+  const customerMeterSummaryScope = useSelector(
+    selectCustomerMeterSummaryScope,
+  );
+  const customerMeterSummaryLoading = useSelector(
+    selectCustomerMeterSummaryLoading,
+  );
+  const customerMeterSummaryError = useSelector(
+    selectCustomerMeterSummaryError,
+  );
+  const customerMeterSummaryEstateId = useSelector(
+    selectCustomerMeterSummarySelectedEstateId,
+  );
 
   const estates = estateState?.allEstates?.data ?? [];
   const estatesPagination = estateState?.allEstates?.pagination ?? null;
   const estatesLoading = estateState?.getAllEstatesState === "isLoading";
+
+  const customerMeterEstateOptions = useMemo(
+    () => [
+      { label: "All estates (aggregate)", value: "all" },
+      ...estates
+        .filter((e: { id?: string }) => Boolean(e?.id))
+        .map((e: { id: string; name?: string }) => ({
+          label: e.name?.trim() || e.id,
+          value: String(e.id),
+        })),
+    ],
+    [estates],
+  );
 
   useEffect(() => {
     dispatch(getAllEstates({ page: 1, limit: 200 })).catch((err: any) =>
@@ -201,6 +251,20 @@ export default function SuperAdminDashboard() {
     void dispatch(getRechargeBehavior({ bucket: rechargeBucket }));
   }, [dispatch, rechargeBucket]);
 
+  useEffect(() => {
+    void dispatch(getConsumptionSnapshot());
+  }, [dispatch]);
+
+  useEffect(() => {
+    void dispatch(
+      getCustomerMeterSummary(
+        customerMeterSummaryEstateId
+          ? { estateId: customerMeterSummaryEstateId }
+          : undefined,
+      ),
+    );
+  }, [dispatch, customerMeterSummaryEstateId]);
+
   const handleRevenueGranularity = (next: RevenueTrendGranularity) => {
     if (next === revenueGranularity) return;
     dispatch(setRevenueTrendGranularity(next));
@@ -217,6 +281,27 @@ export default function SuperAdminDashboard() {
 
   const handleRechargeRetry = () => {
     void dispatch(getRechargeBehavior({ bucket: rechargeBucket }));
+  };
+
+  const handleConsumptionSnapshotRetry = () => {
+    void dispatch(getConsumptionSnapshot());
+  };
+
+  const handleCustomerMeterSummaryEstateChange = (
+    estateId: string | undefined,
+  ) => {
+    if (estateId === customerMeterSummaryEstateId) return;
+    dispatch(setSelectedEstateId(estateId));
+  };
+
+  const handleCustomerMeterSummaryRetry = () => {
+    void dispatch(
+      getCustomerMeterSummary(
+        customerMeterSummaryEstateId
+          ? { estateId: customerMeterSummaryEstateId }
+          : undefined,
+      ),
+    );
   };
 
   const handleAveragePurchaseRetry = () => {
@@ -294,7 +379,9 @@ export default function SuperAdminDashboard() {
     (faultsSummaryLoading && !faultsSummary) ||
     (meterCommStatusLoading && !meterCommStatus) ||
     (customerGrowthLoading && !customerGrowth) ||
-    (rechargeLoading && rechargeSeries.length === 0);
+    (rechargeLoading && rechargeSeries.length === 0) ||
+    (consumptionSnapshotLoading && !consumptionSnapshot) ||
+    (customerMeterSummaryLoading && !customerMeterSummary);
 
   return (
     <div className="relative">
@@ -333,6 +420,17 @@ export default function SuperAdminDashboard() {
           />
         </div>
 
+        <CustomerMeterSummaryCard
+          data={customerMeterSummary}
+          scope={customerMeterSummaryScope}
+          loading={customerMeterSummaryLoading}
+          error={customerMeterSummaryError}
+          onRetry={handleCustomerMeterSummaryRetry}
+          estateOptions={customerMeterEstateOptions}
+          selectedEstateId={customerMeterSummaryEstateId}
+          onEstateChange={handleCustomerMeterSummaryEstateChange}
+        />
+
         <RevenueTrendChart
           series={revenueSeries}
           granularity={revenueGranularity}
@@ -358,6 +456,14 @@ export default function SuperAdminDashboard() {
           periodLabel={topEstatesPeriodLabel}
           estateCount={topEstatesScope?.estateCount ?? null}
           onRetry={handleTopEstatesRetry}
+        />
+
+        <ConsumptionSnapshotChart
+          data={consumptionSnapshot}
+          scope={consumptionSnapshotScope}
+          loading={consumptionSnapshotLoading}
+          error={consumptionSnapshotError}
+          onRetry={handleConsumptionSnapshotRetry}
         />
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">

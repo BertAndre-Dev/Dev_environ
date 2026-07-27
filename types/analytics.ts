@@ -205,3 +205,43 @@ export interface RechargeBehaviorResponse {
   data: RechargeBehaviorData;
   scope: AnalyticsScope;
 }
+
+export interface EstateConsumptionEntry {
+  estateId: string;
+  estateName: string | null;
+  metersWithReading: number;
+  totalLastReadingConsumption: number;
+  averageConsumptionPerMeter: number;
+}
+
+export interface ConsumptionSnapshotData {
+  estateCount: number;
+  metersWithReading: number;
+  totalLastReadingConsumption: number;
+  averageConsumptionPerMeter: number;
+  note: string;
+  estates: EstateConsumptionEntry[];
+}
+
+export interface ConsumptionSnapshotResponse {
+  success: boolean;
+  message: string;
+  data: ConsumptionSnapshotData;
+  scope: AnalyticsScope;
+}
+
+export interface CustomerMeterSummaryData {
+  totalMeters: number;
+  activeMeters: number;
+  assignedActiveMeters: number;
+  totalResidents: number;
+  activeResidents: number;
+  period: AnalyticsPeriodRange;
+}
+
+export interface CustomerMeterSummaryResponse {
+  success: boolean;
+  message: string;
+  data: CustomerMeterSummaryData;
+  scope: AnalyticsScope;
+}

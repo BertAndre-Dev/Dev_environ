@@ -495,7 +495,7 @@ function SegmentedControl<T extends string>({
               aria-pressed="true"
               onClick={() => onChange(opt.value)}
               className={cn(
-                "rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors",
+                "cursor-pointer rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors",
                 "bg-card text-foreground shadow-sm",
                 disabled && "cursor-not-allowed opacity-60",
               )}
@@ -512,7 +512,7 @@ function SegmentedControl<T extends string>({
             aria-pressed="false"
             onClick={() => onChange(opt.value)}
             className={cn(
-              "rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors",
+              "cursor-pointer rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors",
               "text-muted-foreground hover:text-foreground",
               disabled && "cursor-not-allowed opacity-60",
             )}

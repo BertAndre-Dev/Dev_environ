@@ -5,7 +5,7 @@ export function getDashboardPathForRole(
   const r = (role ?? "").toString().toLowerCase().trim();
   switch (r) {
     case "super admin":
-      return "/dashboard/super-admin/user";
+      return "/dashboard/super-admin/dashboard";
     case "admin":
       return "/dashboard/admin/user";
     case "security":

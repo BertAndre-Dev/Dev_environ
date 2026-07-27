@@ -76,3 +76,54 @@ export interface TopEstatesEnergyResponse {
   data: TopEstateEnergyEntry[];
   scope: AnalyticsScope;
 }
+
+export interface FaultBreakdownEntry {
+  category: string;
+  status: string;
+  count: number;
+}
+
+export interface FaultsSummaryData {
+  totalComplaints: number;
+  breakdown: FaultBreakdownEntry[];
+  note: string;
+  period: AnalyticsPeriodRange;
+}
+
+export interface FaultsSummaryResponse {
+  success: boolean;
+  message: string;
+  data: FaultsSummaryData;
+  scope: AnalyticsScope;
+}
+
+export interface MeterCommunicationStatusData {
+  totalAssignedMeters: number;
+  online: number;
+  offline: number;
+  unknownStatus: number;
+  staleLastSeenCount: number;
+  staleThresholdHours: number;
+}
+
+export interface MeterCommunicationStatusResponse {
+  success: boolean;
+  message: string;
+  data: MeterCommunicationStatusData;
+  scope: AnalyticsScope;
+}
+
+export interface PowerAvailabilityData {
+  connected: number;
+  disconnected: number;
+  unknown: number;
+  pending_disconnect: number;
+  note: string;
+}
+
+export interface PowerAvailabilityResponse {
+  success: boolean;
+  message: string;
+  data: PowerAvailabilityData;
+  scope: AnalyticsScope;
+}

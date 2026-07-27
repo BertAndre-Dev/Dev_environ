@@ -494,7 +494,6 @@ export default function SuperAdminDashboard() {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
           <CustomerActivationsCard
             data={customerActivations}
             loading={customerActivationsLoading}
@@ -513,7 +512,6 @@ export default function SuperAdminDashboard() {
             estateOptions={customerMeterEstateOptions}
             companyOptions={customerMeterCompanyOptions}
           />
-        </div>
 
         <RevenueTrendChart
           series={revenueSeries}

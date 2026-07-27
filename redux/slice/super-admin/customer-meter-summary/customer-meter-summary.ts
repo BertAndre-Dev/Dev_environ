@@ -7,6 +7,22 @@ export type GetCustomerMeterSummaryArgs = {
   companyId?: string;
 };
 
+export type CustomerMeterSummaryFilter =
+  | { mode: "estate"; estateId: string }
+  | { mode: "company"; companyId: string };
+
+/** Map filter to mutually exclusive query args. Returns undefined until an id is set. */
+export function filterToSummaryArgs(
+  filter: CustomerMeterSummaryFilter,
+): GetCustomerMeterSummaryArgs | undefined {
+  if (filter.mode === "estate") {
+    const estateId = filter.estateId.trim();
+    return estateId ? { estateId } : undefined;
+  }
+  const companyId = filter.companyId.trim();
+  return companyId ? { companyId } : undefined;
+}
+
 /** GET /api/v1/analytics/commercial/customers/summary */
 export const getCustomerMeterSummary = createAsyncThunk<
   CustomerMeterSummaryResponse,
@@ -17,8 +33,13 @@ export const getCustomerMeterSummary = createAsyncThunk<
   async (args, { rejectWithValue }) => {
     try {
       const params: Record<string, string> = {};
-      if (args?.estateId) params.estateId = args.estateId;
-      if (args?.companyId) params.companyId = args.companyId;
+      const estateId = args?.estateId?.trim();
+      const companyId = args?.companyId?.trim();
+      if (estateId) {
+        params.estateId = estateId;
+      } else if (companyId) {
+        params.companyId = companyId;
+      }
 
       const res = await axiosInstance.get<CustomerMeterSummaryResponse>(
         "/api/v1/analytics/commercial/customers/summary",

@@ -6,11 +6,12 @@ import type {
 } from "@/types/analytics";
 import {
   getCustomerMeterSummary,
+  type CustomerMeterSummaryFilter,
   type GetCustomerMeterSummaryArgs,
 } from "./customer-meter-summary";
 
 export interface CustomerMeterSummaryState {
-  selectedEstateId: string | undefined;
+  filter: CustomerMeterSummaryFilter;
   data: CustomerMeterSummaryData | null;
   scope: AnalyticsScope | null;
   status: "idle" | "isLoading" | "succeeded" | "failed";
@@ -18,37 +19,50 @@ export interface CustomerMeterSummaryState {
 }
 
 const initialState: CustomerMeterSummaryState = {
-  selectedEstateId: undefined,
+  filter: { mode: "estate", estateId: "" },
   data: null,
   scope: null,
   status: "idle",
   error: null,
 };
 
-function normalizeEstateId(id: string | undefined): string | undefined {
-  const trimmed = id?.trim();
-  return trimmed || undefined;
+function normalizeId(id: string | undefined): string {
+  return id?.trim() ?? "";
 }
 
-function argMatchesSelection(
+function normalizeFilter(
+  filter: CustomerMeterSummaryFilter,
+): CustomerMeterSummaryFilter {
+  if (filter.mode === "estate") {
+    return { mode: "estate", estateId: normalizeId(filter.estateId) };
+  }
+  return { mode: "company", companyId: normalizeId(filter.companyId) };
+}
+
+function argMatchesFilter(
   arg: GetCustomerMeterSummaryArgs | undefined,
-  selectedEstateId: string | undefined,
+  filter: CustomerMeterSummaryFilter,
 ): boolean {
-  return normalizeEstateId(arg?.estateId) === selectedEstateId;
+  const estateId = normalizeId(arg?.estateId);
+  const companyId = normalizeId(arg?.companyId);
+
+  if (filter.mode === "estate") {
+    if (!filter.estateId) return !estateId && !companyId;
+    return estateId === filter.estateId && !companyId;
+  }
+  if (!filter.companyId) return !estateId && !companyId;
+  return companyId === filter.companyId && !estateId;
 }
 
 const customerMeterSummarySlice = createSlice({
   name: "superAdminCustomerMeterSummary",
   initialState,
   reducers: {
-    setSelectedEstateId: (
-      state,
-      action: PayloadAction<string | undefined>,
-    ) => {
-      state.selectedEstateId = normalizeEstateId(action.payload);
+    setFilter: (state, action: PayloadAction<CustomerMeterSummaryFilter>) => {
+      state.filter = normalizeFilter(action.payload);
     },
     clearCustomerMeterSummary: (state) => {
-      state.selectedEstateId = undefined;
+      state.filter = { mode: "estate", estateId: "" };
       state.data = null;
       state.scope = null;
       state.status = "idle";
@@ -58,25 +72,19 @@ const customerMeterSummarySlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(getCustomerMeterSummary.pending, (state, action) => {
-        if (!argMatchesSelection(action.meta.arg, state.selectedEstateId)) {
-          return;
-        }
+        if (!argMatchesFilter(action.meta.arg, state.filter)) return;
         state.status = "isLoading";
         state.error = null;
       })
       .addCase(getCustomerMeterSummary.fulfilled, (state, action) => {
-        if (!argMatchesSelection(action.meta.arg, state.selectedEstateId)) {
-          return;
-        }
+        if (!argMatchesFilter(action.meta.arg, state.filter)) return;
         state.status = "succeeded";
         state.data = action.payload?.data ?? null;
         state.scope = action.payload?.scope ?? null;
         state.error = null;
       })
       .addCase(getCustomerMeterSummary.rejected, (state, action) => {
-        if (!argMatchesSelection(action.meta.arg, state.selectedEstateId)) {
-          return;
-        }
+        if (!argMatchesFilter(action.meta.arg, state.filter)) return;
         state.status = "failed";
         state.error =
           action.payload?.message ||
@@ -86,7 +94,7 @@ const customerMeterSummarySlice = createSlice({
   },
 });
 
-export const { setSelectedEstateId, clearCustomerMeterSummary } =
+export const { setFilter, clearCustomerMeterSummary } =
   customerMeterSummarySlice.actions;
 
 export const selectCustomerMeterSummaryData = (
@@ -105,10 +113,9 @@ export const selectCustomerMeterSummaryError = (
   state: RootState,
 ): string | null => state.superAdminCustomerMeterSummary.error;
 
-export const selectCustomerMeterSummarySelectedEstateId = (
+export const selectCustomerMeterSummaryFilter = (
   state: RootState,
-): string | undefined =>
-  state.superAdminCustomerMeterSummary.selectedEstateId;
+): CustomerMeterSummaryFilter => state.superAdminCustomerMeterSummary.filter;
 
 export const selectCustomerMeterSummaryStatus = (
   state: RootState,

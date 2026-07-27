@@ -278,7 +278,7 @@ export function PaymentChannelsChart({
         </p>
       </div>
 
-      <div className="space-y-3 px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
+      <div className="space-y-3 pr-6 pt-4">
         <ChartBody
           showError={showError}
           showEmpty={showEmpty}

@@ -115,6 +115,8 @@ import superAdminTopEstatesEnergySliceReducer from "@/redux/slice/super-admin/to
 import superAdminFaultsSummarySliceReducer from "@/redux/slice/super-admin/faults-summary/faults-summary-slice";
 import superAdminMeterCommunicationStatusSliceReducer from "@/redux/slice/super-admin/meter-communication-status/meter-communication-status-slice";
 import superAdminPowerAvailabilitySliceReducer from "@/redux/slice/super-admin/power-availability/power-availability-slice";
+import superAdminPaymentChannelsSliceReducer from "@/redux/slice/super-admin/payment-channels/payment-channels-slice";
+import superAdminCollectionEfficiencySliceReducer from "@/redux/slice/super-admin/collection-efficiency/collection-efficiency-slice";
 
 const persistConfig = {
   key: "root",
@@ -388,6 +390,8 @@ export const store = configureStore({
     superAdminFaultsSummary: superAdminFaultsSummarySliceReducer,
     superAdminMeterCommunicationStatus: superAdminMeterCommunicationStatusSliceReducer,
     superAdminPowerAvailability: superAdminPowerAvailabilitySliceReducer,
+    superAdminPaymentChannels: superAdminPaymentChannelsSliceReducer,
+    superAdminCollectionEfficiency: superAdminCollectionEfficiencySliceReducer,
     [mapsApi.reducerPath]: mapsApi.reducer,
   },
 

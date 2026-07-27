@@ -127,3 +127,39 @@ export interface PowerAvailabilityResponse {
   data: PowerAvailabilityData;
   scope: AnalyticsScope;
 }
+
+export interface PaymentChannelEntry {
+  gateway: string;
+  transactionCount: number;
+  totalAmount: number;
+  paidCount: number;
+  failedCount: number;
+  successRatePercent: number;
+}
+
+export interface PaymentChannelsResponse {
+  success: boolean;
+  message: string;
+  data: PaymentChannelEntry[];
+  period: AnalyticsPeriodRange;
+  scope: AnalyticsScope;
+}
+
+export interface CollectionEfficiencyCategory {
+  expected: number;
+  collected: number;
+  efficiencyPercent: number;
+}
+
+export interface CollectionEfficiencyData {
+  bills: CollectionEfficiencyCategory;
+  rent: CollectionEfficiencyCategory;
+  overall: CollectionEfficiencyCategory;
+}
+
+export interface CollectionEfficiencyResponse {
+  success: boolean;
+  message: string;
+  data: CollectionEfficiencyData;
+  scope: AnalyticsScope;
+}

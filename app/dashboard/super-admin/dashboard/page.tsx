@@ -25,6 +25,8 @@ import {
 import { FaultsSummaryChart } from "@/components/charts/FaultsSummaryChart";
 import { MeterCommunicationStatusChart } from "@/components/charts/MeterCommunicationStatusChart";
 import { PowerAvailabilityCard } from "@/components/charts/PowerAvailabilityCard";
+import { PaymentChannelsChart } from "@/components/charts/PaymentChannelsChart";
+import { CollectionEfficiencyChart } from "@/components/charts/CollectionEfficiencyChart";
 import { AveragePurchaseStatCard } from "@/components/dashboard/super-admin/AveragePurchaseStatCard";
 import { Select } from "@/components/ui/select";
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
@@ -68,6 +70,19 @@ import {
   selectPowerAvailabilityError,
   selectPowerAvailabilityLoading,
 } from "@/redux/slice/super-admin/power-availability/power-availability-slice";
+import { getPaymentChannels } from "@/redux/slice/super-admin/payment-channels/payment-channels";
+import {
+  selectPaymentChannelsError,
+  selectPaymentChannelsLoading,
+  selectPaymentChannelsPeriod,
+  selectPaymentChannelsSeries,
+} from "@/redux/slice/super-admin/payment-channels/payment-channels-slice";
+import { getCollectionEfficiency } from "@/redux/slice/super-admin/collection-efficiency/collection-efficiency";
+import {
+  selectCollectionEfficiencyData,
+  selectCollectionEfficiencyError,
+  selectCollectionEfficiencyLoading,
+} from "@/redux/slice/super-admin/collection-efficiency/collection-efficiency-slice";
 import type { RootState, AppDispatch } from "@/redux/store";
 import type { RevenueTrendGranularity } from "@/types/analytics";
 import { toast } from "react-toastify";
@@ -113,6 +128,17 @@ export default function SuperAdminDashboard() {
   const powerAvailability = useSelector(selectPowerAvailabilityData);
   const powerAvailabilityLoading = useSelector(selectPowerAvailabilityLoading);
   const powerAvailabilityError = useSelector(selectPowerAvailabilityError);
+  const paymentChannelsSeries = useSelector(selectPaymentChannelsSeries);
+  const paymentChannelsLoading = useSelector(selectPaymentChannelsLoading);
+  const paymentChannelsError = useSelector(selectPaymentChannelsError);
+  const paymentChannelsPeriod = useSelector(selectPaymentChannelsPeriod);
+  const collectionEfficiency = useSelector(selectCollectionEfficiencyData);
+  const collectionEfficiencyLoading = useSelector(
+    selectCollectionEfficiencyLoading,
+  );
+  const collectionEfficiencyError = useSelector(
+    selectCollectionEfficiencyError,
+  );
 
   const estates = estateState?.allEstates?.data ?? [];
   const estatesPagination = estateState?.allEstates?.pagination ?? null;
@@ -160,6 +186,14 @@ export default function SuperAdminDashboard() {
     void dispatch(getPowerAvailability());
   }, [dispatch]);
 
+  useEffect(() => {
+    void dispatch(getPaymentChannels());
+  }, [dispatch]);
+
+  useEffect(() => {
+    void dispatch(getCollectionEfficiency());
+  }, [dispatch]);
+
   const handleRevenueGranularity = (next: RevenueTrendGranularity) => {
     if (next === revenueGranularity) return;
     dispatch(setRevenueTrendGranularity(next));
@@ -187,6 +221,14 @@ export default function SuperAdminDashboard() {
 
   const handlePowerAvailabilityRetry = () => {
     void dispatch(getPowerAvailability());
+  };
+
+  const handlePaymentChannelsRetry = () => {
+    void dispatch(getPaymentChannels());
+  };
+
+  const handleCollectionEfficiencyRetry = () => {
+    void dispatch(getCollectionEfficiency());
   };
 
   const topEstatesPeriodLabel = formatTopEstatesPeriodLabel(
@@ -290,6 +332,23 @@ export default function SuperAdminDashboard() {
         estateCount={topEstatesScope?.estateCount ?? null}
         onRetry={handleTopEstatesRetry}
       />
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+        <PaymentChannelsChart
+          series={paymentChannelsSeries}
+          loading={paymentChannelsLoading}
+          error={paymentChannelsError}
+          period={paymentChannelsPeriod}
+          onRetry={handlePaymentChannelsRetry}
+        />
+
+        <CollectionEfficiencyChart
+          data={collectionEfficiency}
+          loading={collectionEfficiencyLoading}
+          error={collectionEfficiencyError}
+          onRetry={handleCollectionEfficiencyRetry}
+        />
+      </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
         <FaultsSummaryChart

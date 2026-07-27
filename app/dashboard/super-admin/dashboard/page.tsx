@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { Building2, Gauge, Users } from "lucide-react";
 import { DashboardHeader, KpiCard } from "./components";
 import { RevenueTrendChart } from "@/components/charts/RevenueTrendChart";
+import { RechargeBehaviorChart } from "@/components/charts/RechargeBehaviorChart";
 import {
   TopEstatesEnergyChart,
   formatTopEstatesPeriodLabel,
@@ -73,9 +74,18 @@ import {
   selectCustomerGrowthData,
   selectCustomerGrowthLoading,
 } from "@/redux/slice/super-admin/customer-growth/customer-growth-slice";
+import { getRechargeBehavior } from "@/redux/slice/super-admin/recharge-behavior/recharge-behavior";
+import {
+  selectRechargeBehaviorBucket,
+  selectRechargeBehaviorError,
+  selectRechargeBehaviorLoading,
+  selectRechargeBehaviorSeries,
+  setRechargeBehaviorBucket,
+} from "@/redux/slice/super-admin/recharge-behavior/recharge-behavior-slice";
 import type { RootState, AppDispatch } from "@/redux/store";
 import type {
   CustomerGrowthMetric,
+  RechargeBehaviorBucket,
   RevenueTrendGranularity,
 } from "@/types/analytics";
 import Loader from "@/components/ui/Loader";
@@ -136,6 +146,10 @@ export default function SuperAdminDashboard() {
   );
   const customerGrowth = useSelector(selectCustomerGrowthData);
   const customerGrowthLoading = useSelector(selectCustomerGrowthLoading);
+  const rechargeSeries = useSelector(selectRechargeBehaviorSeries);
+  const rechargeBucket = useSelector(selectRechargeBehaviorBucket);
+  const rechargeLoading = useSelector(selectRechargeBehaviorLoading);
+  const rechargeError = useSelector(selectRechargeBehaviorError);
 
   const estates = estateState?.allEstates?.data ?? [];
   const estatesPagination = estateState?.allEstates?.pagination ?? null;
@@ -183,6 +197,10 @@ export default function SuperAdminDashboard() {
     void dispatch(getCustomerGrowth());
   }, [dispatch]);
 
+  useEffect(() => {
+    void dispatch(getRechargeBehavior({ bucket: rechargeBucket }));
+  }, [dispatch, rechargeBucket]);
+
   const handleRevenueGranularity = (next: RevenueTrendGranularity) => {
     if (next === revenueGranularity) return;
     dispatch(setRevenueTrendGranularity(next));
@@ -190,6 +208,15 @@ export default function SuperAdminDashboard() {
 
   const handleRevenueRetry = () => {
     void dispatch(getRevenueTrend({ granularity: revenueGranularity }));
+  };
+
+  const handleRechargeBucket = (next: RechargeBehaviorBucket) => {
+    if (next === rechargeBucket) return;
+    dispatch(setRechargeBehaviorBucket(next));
+  };
+
+  const handleRechargeRetry = () => {
+    void dispatch(getRechargeBehavior({ bucket: rechargeBucket }));
   };
 
   const handleAveragePurchaseRetry = () => {
@@ -266,7 +293,8 @@ export default function SuperAdminDashboard() {
     (collectionEfficiencyLoading && !collectionEfficiency) ||
     (faultsSummaryLoading && !faultsSummary) ||
     (meterCommStatusLoading && !meterCommStatus) ||
-    (customerGrowthLoading && !customerGrowth);
+    (customerGrowthLoading && !customerGrowth) ||
+    (rechargeLoading && rechargeSeries.length === 0);
 
   return (
     <div className="relative">
@@ -312,6 +340,15 @@ export default function SuperAdminDashboard() {
           error={revenueError}
           onGranularityChange={handleRevenueGranularity}
           onRetry={handleRevenueRetry}
+        />
+
+        <RechargeBehaviorChart
+          series={rechargeSeries}
+          bucket={rechargeBucket}
+          loading={rechargeLoading}
+          error={rechargeError}
+          onBucketChange={handleRechargeBucket}
+          onRetry={handleRechargeRetry}
         />
 
         <TopEstatesEnergyChart

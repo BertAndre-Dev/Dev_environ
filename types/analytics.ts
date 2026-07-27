@@ -183,3 +183,25 @@ export interface CustomerGrowthResponse {
   data: CustomerGrowthData;
   scope: AnalyticsScope;
 }
+
+export type RechargeBehaviorBucket = "daily" | "weekly" | "monthly";
+
+export interface RechargeBehaviorPoint {
+  key: string;
+  label: string;
+  value: number;
+  count: number;
+}
+
+export interface RechargeBehaviorData {
+  bucket: RechargeBehaviorBucket;
+  series: RechargeBehaviorPoint[];
+  period: AnalyticsPeriodRange;
+}
+
+export interface RechargeBehaviorResponse {
+  success: boolean;
+  message: string;
+  data: RechargeBehaviorData;
+  scope: AnalyticsScope;
+}

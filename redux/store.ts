@@ -112,6 +112,9 @@ import superAdminRatesSliceReducer from "@/redux/slice/super-admin/rates/rates-s
 import superAdminRevenueTrendSliceReducer from "@/redux/slice/super-admin/revenue-trend/revenue-trend-slice";
 import superAdminAveragePurchaseSliceReducer from "@/redux/slice/super-admin/average-purchase/average-purchase-slice";
 import superAdminTopEstatesEnergySliceReducer from "@/redux/slice/super-admin/top-estates-energy/top-estates-energy-slice";
+import superAdminFaultsSummarySliceReducer from "@/redux/slice/super-admin/faults-summary/faults-summary-slice";
+import superAdminMeterCommunicationStatusSliceReducer from "@/redux/slice/super-admin/meter-communication-status/meter-communication-status-slice";
+import superAdminPowerAvailabilitySliceReducer from "@/redux/slice/super-admin/power-availability/power-availability-slice";
 
 const persistConfig = {
   key: "root",
@@ -382,6 +385,9 @@ export const store = configureStore({
     superAdminRevenueTrend: superAdminRevenueTrendSliceReducer,
     superAdminAveragePurchase: superAdminAveragePurchaseSliceReducer,
     superAdminTopEstatesEnergy: superAdminTopEstatesEnergySliceReducer,
+    superAdminFaultsSummary: superAdminFaultsSummarySliceReducer,
+    superAdminMeterCommunicationStatus: superAdminMeterCommunicationStatusSliceReducer,
+    superAdminPowerAvailability: superAdminPowerAvailabilitySliceReducer,
     [mapsApi.reducerPath]: mapsApi.reducer,
   },
 

@@ -18,6 +18,7 @@ import { PaymentChannelsChart } from "@/components/charts/PaymentChannelsChart";
 import { CollectionEfficiencyChart } from "@/components/charts/CollectionEfficiencyChart";
 import { AveragePurchaseStatCard } from "@/components/dashboard/super-admin/AveragePurchaseStatCard";
 import { CustomerMeterSummaryCard } from "@/components/charts/CustomerMeterSummaryCard";
+import { CustomerActivationsCard } from "@/components/charts/CustomerActivationsCard";
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
 import { getRevenueTrend } from "@/redux/slice/super-admin/revenue-trend/revenue-trend";
 import {
@@ -105,6 +106,12 @@ import {
   setFilter,
 } from "@/redux/slice/super-admin/customer-meter-summary/customer-meter-summary-slice";
 import { getCompanies } from "@/redux/slice/super-admin/company-mgt/company";
+import { getCustomerActivations } from "@/redux/slice/super-admin/customer-activations/customer-activations";
+import {
+  selectCustomerActivationsData,
+  selectCustomerActivationsError,
+  selectCustomerActivationsLoading,
+} from "@/redux/slice/super-admin/customer-activations/customer-activations-slice";
 import type { RootState, AppDispatch } from "@/redux/store";
 import type {
   CustomerGrowthMetric,
@@ -119,9 +126,10 @@ function formatGrowthCount(metric: CustomerGrowthMetric | null): string {
   return Number(metric.current ?? 0).toLocaleString();
 }
 
-function growthTrendProps(
-  metric: CustomerGrowthMetric | null,
-): { trend?: string; trendUp?: boolean } {
+function growthTrendProps(metric: CustomerGrowthMetric | null): {
+  trend?: string;
+  trendUp?: boolean;
+} {
   if (!metric) return {};
   const rate = Number(metric.growthRatePercent ?? 0);
   return {
@@ -192,6 +200,11 @@ export default function SuperAdminDashboard() {
   const customerMeterSummaryFilter = useSelector(
     selectCustomerMeterSummaryFilter,
   );
+  const customerActivations = useSelector(selectCustomerActivationsData);
+  const customerActivationsLoading = useSelector(
+    selectCustomerActivationsLoading,
+  );
+  const customerActivationsError = useSelector(selectCustomerActivationsError);
 
   const estates = estateState?.allEstates?.data ?? [];
   const estatesPagination = estateState?.allEstates?.pagination ?? null;
@@ -201,8 +214,7 @@ export default function SuperAdminDashboard() {
     (state: RootState) => state.superAdminCompany.list ?? [],
   );
   const companiesLoading = useSelector(
-    (state: RootState) =>
-      state.superAdminCompany.getListStatus === "isLoading",
+    (state: RootState) => state.superAdminCompany.getListStatus === "isLoading",
   );
 
   const customerMeterEstateOptions = useMemo(() => {
@@ -233,9 +245,7 @@ export default function SuperAdminDashboard() {
             value,
           };
         })
-        .filter(
-          (opt): opt is { label: string; value: string } => opt !== null,
-        ),
+        .filter((opt): opt is { label: string; value: string } => opt !== null),
     [companies],
   );
 
@@ -284,6 +294,10 @@ export default function SuperAdminDashboard() {
   }, [dispatch]);
 
   useEffect(() => {
+    void dispatch(getCustomerActivations());
+  }, [dispatch]);
+
+  useEffect(() => {
     void dispatch(getPaymentChannels());
   }, [dispatch]);
 
@@ -310,11 +324,7 @@ export default function SuperAdminDashboard() {
     const firstEstateId = customerMeterEstateOptions[0]?.value;
     if (!firstEstateId) return;
     dispatch(setFilter({ mode: "estate", estateId: firstEstateId }));
-  }, [
-    dispatch,
-    customerMeterSummaryFilter,
-    customerMeterEstateOptions,
-  ]);
+  }, [dispatch, customerMeterSummaryFilter, customerMeterEstateOptions]);
 
   useEffect(() => {
     const args = filterToSummaryArgs(customerMeterSummaryFilter);
@@ -360,6 +370,10 @@ export default function SuperAdminDashboard() {
     const args = filterToSummaryArgs(customerMeterSummaryFilter);
     if (!args) return;
     void dispatch(getCustomerMeterSummary(args));
+  };
+
+  const handleCustomerActivationsRetry = () => {
+    void dispatch(getCustomerActivations());
   };
 
   const handleAveragePurchaseRetry = () => {
@@ -440,7 +454,8 @@ export default function SuperAdminDashboard() {
     (customerGrowthLoading && !customerGrowth) ||
     (rechargeLoading && rechargeSeries.length === 0) ||
     (consumptionSnapshotLoading && !consumptionSnapshot) ||
-    (customerMeterSummaryLoading && !customerMeterSummary);
+    (customerMeterSummaryLoading && !customerMeterSummary) ||
+    (customerActivationsLoading && !customerActivations);
 
   return (
     <div className="relative">
@@ -479,17 +494,26 @@ export default function SuperAdminDashboard() {
           />
         </div>
 
-        <CustomerMeterSummaryCard
-          data={customerMeterSummary}
-          scope={customerMeterSummaryScope}
-          loading={customerMeterSummaryLoading}
-          error={customerMeterSummaryError}
-          onRetry={handleCustomerMeterSummaryRetry}
-          filter={customerMeterSummaryFilter}
-          onFilterChange={handleCustomerMeterSummaryFilterChange}
-          estateOptions={customerMeterEstateOptions}
-          companyOptions={customerMeterCompanyOptions}
-        />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+          <CustomerActivationsCard
+            data={customerActivations}
+            loading={customerActivationsLoading}
+            error={customerActivationsError}
+            onRetry={handleCustomerActivationsRetry}
+          />
+
+          <CustomerMeterSummaryCard
+            data={customerMeterSummary}
+            scope={customerMeterSummaryScope}
+            loading={customerMeterSummaryLoading}
+            error={customerMeterSummaryError}
+            onRetry={handleCustomerMeterSummaryRetry}
+            filter={customerMeterSummaryFilter}
+            onFilterChange={handleCustomerMeterSummaryFilterChange}
+            estateOptions={customerMeterEstateOptions}
+            companyOptions={customerMeterCompanyOptions}
+          />
+        </div>
 
         <RevenueTrendChart
           series={revenueSeries}

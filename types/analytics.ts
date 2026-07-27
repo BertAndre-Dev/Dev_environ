@@ -245,3 +245,17 @@ export interface CustomerMeterSummaryResponse {
   data: CustomerMeterSummaryData;
   scope: AnalyticsScope;
 }
+
+export interface CustomerActivationsData {
+  newResidents: number;
+  newlyAssignedMeters: number;
+  totalActivations: number;
+  period: AnalyticsPeriodRange;
+}
+
+export interface CustomerActivationsResponse {
+  success: boolean;
+  message: string;
+  data: CustomerActivationsData;
+  scope: AnalyticsScope;
+}

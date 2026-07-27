@@ -121,6 +121,7 @@ import superAdminCustomerGrowthSliceReducer from "@/redux/slice/super-admin/cust
 import superAdminRechargeBehaviorSliceReducer from "@/redux/slice/super-admin/recharge-behavior/recharge-behavior-slice";
 import superAdminConsumptionSnapshotSliceReducer from "@/redux/slice/super-admin/consumption-snapshot/consumption-snapshot-slice";
 import superAdminCustomerMeterSummarySliceReducer from "@/redux/slice/super-admin/customer-meter-summary/customer-meter-summary-slice";
+import superAdminCustomerActivationsSliceReducer from "@/redux/slice/super-admin/customer-activations/customer-activations-slice";
 
 const persistConfig = {
   key: "root",
@@ -400,6 +401,7 @@ export const store = configureStore({
     superAdminRechargeBehavior: superAdminRechargeBehaviorSliceReducer,
     superAdminConsumptionSnapshot: superAdminConsumptionSnapshotSliceReducer,
     superAdminCustomerMeterSummary: superAdminCustomerMeterSummarySliceReducer,
+    superAdminCustomerActivations: superAdminCustomerActivationsSliceReducer,
     [mapsApi.reducerPath]: mapsApi.reducer,
   },
 

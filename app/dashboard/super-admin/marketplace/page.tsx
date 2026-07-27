@@ -309,9 +309,19 @@ export default function SuperAdminMarketplacePage() {
   };
 
   const listLoading = getListStatus === "isLoading";
+  const pageLoading =
+    bootstrapping || (listLoading && listings.length === 0);
 
   return (
-    <div className="space-y-6 sm:space-y-8 pb-8">
+    <div className="relative">
+      {pageLoading && <Loader fullScreen label="Loading marketplace..." />}
+
+      <div
+        className={[
+          "space-y-6 sm:space-y-8 pb-8",
+          pageLoading ? "pointer-events-none select-none" : "",
+        ].join(" ")}
+      >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-2">
           <h1 className="font-heading text-3xl font-bold">Marketplace</h1>
@@ -424,11 +434,7 @@ export default function SuperAdminMarketplacePage() {
             if (activeTab === "Edit Business") {
               return (
                 <div className="space-y-4">
-                  {bootstrapping || getListStatus === "isLoading" ? (
-                    <div className="py-12">
-                      <Loader label="Loading marketplace..." />
-                    </div>
-                  ) : filteredListings.length === 0 ? (
+                  {filteredListings.length === 0 ? (
                     <p className="text-muted-foreground py-8 text-center">
                       {search.trim()
                         ? "No businesses match your search."
@@ -467,7 +473,7 @@ export default function SuperAdminMarketplacePage() {
                   emptyMessage={
                     search.trim()
                       ? "No businesses match your search."
-                      : bootstrapping || getListStatus === "isLoading"
+                      : pageLoading
                         ? "Loading..."
                         : 'No businesses yet. Click "Add business" to create one.'
                   }
@@ -524,6 +530,7 @@ export default function SuperAdminMarketplacePage() {
         onConfirm={handleSuspendConfirm}
         loading={suspendSubmitting}
       />
+      </div>
     </div>
   );
 }

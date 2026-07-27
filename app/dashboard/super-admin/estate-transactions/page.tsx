@@ -27,6 +27,7 @@ import { HistoryTransactionsTab } from "@/app/dashboard/estate-admin/transaction
 import { VendsTab } from "@/app/dashboard/estate-admin/transactions/components/VendsTab";
 import { PaidBillsTab } from "@/app/dashboard/estate-admin/transactions/components/PaidBillsTab";
 import { formatDateTime } from "@/lib/format-date";
+import Loader from "@/components/ui/Loader";
 
 const ESTATE_FILTER_FETCH_LIMIT = 500;
 
@@ -543,8 +544,25 @@ export default function SuperAdminEstateTransactionsPage() {
     },
   ];
 
+  const pageLoading =
+    (estateLoading && estateOptions.length === 0) ||
+    (Boolean(selectedEstateId) &&
+      ((activeTab === "history" && loading && transactions.length === 0) ||
+        (activeTab === "vends" && loadingVends && vendsData.length === 0) ||
+        (activeTab === "paid-bills" &&
+          loadingPaidBills &&
+          paidBillsData.length === 0)));
+
   return (
-    <div className="space-y-6">
+    <div className="relative">
+      {pageLoading && <Loader fullScreen label="Loading transactions..." />}
+
+      <div
+        className={[
+          "space-y-6",
+          pageLoading ? "pointer-events-none select-none" : "",
+        ].join(" ")}
+      >
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-heading text-3xl font-bold">Estate Transactions</h1>
@@ -712,6 +730,7 @@ export default function SuperAdminEstateTransactionsPage() {
           />
         }
       />
+      </div>
     </div>
   );
 }

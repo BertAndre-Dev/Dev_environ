@@ -163,3 +163,23 @@ export interface CollectionEfficiencyResponse {
   data: CollectionEfficiencyData;
   scope: AnalyticsScope;
 }
+
+export interface CustomerGrowthMetric {
+  current: number;
+  previous: number;
+  growthRatePercent: number;
+}
+
+export interface CustomerGrowthData {
+  residents: CustomerGrowthMetric;
+  meters: CustomerGrowthMetric;
+  comparisonPeriod: AnalyticsPeriodRange;
+  period: AnalyticsPeriodRange;
+}
+
+export interface CustomerGrowthResponse {
+  success: boolean;
+  message: string;
+  data: CustomerGrowthData;
+  scope: AnalyticsScope;
+}

@@ -14,7 +14,7 @@ import {
 import { FaultsSummaryChart } from "@/components/charts/FaultsSummaryChart";
 import { MeterCommunicationStatusChart } from "@/components/charts/MeterCommunicationStatusChart";
 import { PowerAvailabilityCard } from "@/components/charts/PowerAvailabilityCard";
-import { PaymentChannelsChart } from "@/components/charts/PaymentChannelsChart";
+// import { PaymentChannelsChart } from "@/components/charts/PaymentChannelsChart";
 import { CollectionEfficiencyChart } from "@/components/charts/CollectionEfficiencyChart";
 import { AveragePurchaseStatCard } from "@/components/dashboard/super-admin/AveragePurchaseStatCard";
 import { CustomerMeterSummaryCard } from "@/components/charts/CustomerMeterSummaryCard";
@@ -61,9 +61,9 @@ import {
 } from "@/redux/slice/super-admin/power-availability/power-availability-slice";
 import { getPaymentChannels } from "@/redux/slice/super-admin/payment-channels/payment-channels";
 import {
-  selectPaymentChannelsError,
+  // selectPaymentChannelsError,
   selectPaymentChannelsLoading,
-  selectPaymentChannelsPeriod,
+  // selectPaymentChannelsPeriod,
   selectPaymentChannelsSeries,
 } from "@/redux/slice/super-admin/payment-channels/payment-channels-slice";
 import { getCollectionEfficiency } from "@/redux/slice/super-admin/collection-efficiency/collection-efficiency";
@@ -166,8 +166,8 @@ export default function SuperAdminDashboard() {
   const powerAvailabilityError = useSelector(selectPowerAvailabilityError);
   const paymentChannelsSeries = useSelector(selectPaymentChannelsSeries);
   const paymentChannelsLoading = useSelector(selectPaymentChannelsLoading);
-  const paymentChannelsError = useSelector(selectPaymentChannelsError);
-  const paymentChannelsPeriod = useSelector(selectPaymentChannelsPeriod);
+  // const paymentChannelsError = useSelector(selectPaymentChannelsError);
+  // const paymentChannelsPeriod = useSelector(selectPaymentChannelsPeriod);
   const collectionEfficiency = useSelector(selectCollectionEfficiencyData);
   const collectionEfficiencyLoading = useSelector(
     selectCollectionEfficiencyLoading,
@@ -548,14 +548,14 @@ export default function SuperAdminDashboard() {
           onRetry={handleConsumptionSnapshotRetry}
         />
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+        {/* <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
           <PaymentChannelsChart
             series={paymentChannelsSeries}
             loading={paymentChannelsLoading}
             error={paymentChannelsError}
             period={paymentChannelsPeriod}
             onRetry={handlePaymentChannelsRetry}
-          />
+          /> */}
 
           <CollectionEfficiencyChart
             data={collectionEfficiency}
@@ -563,7 +563,7 @@ export default function SuperAdminDashboard() {
             error={collectionEfficiencyError}
             onRetry={handleCollectionEfficiencyRetry}
           />
-        </div>
+        {/* </div> */}
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
           <FaultsSummaryChart

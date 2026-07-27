@@ -119,6 +119,8 @@ import superAdminPaymentChannelsSliceReducer from "@/redux/slice/super-admin/pay
 import superAdminCollectionEfficiencySliceReducer from "@/redux/slice/super-admin/collection-efficiency/collection-efficiency-slice";
 import superAdminCustomerGrowthSliceReducer from "@/redux/slice/super-admin/customer-growth/customer-growth-slice";
 import superAdminRechargeBehaviorSliceReducer from "@/redux/slice/super-admin/recharge-behavior/recharge-behavior-slice";
+import superAdminConsumptionSnapshotSliceReducer from "@/redux/slice/super-admin/consumption-snapshot/consumption-snapshot-slice";
+import superAdminCustomerMeterSummarySliceReducer from "@/redux/slice/super-admin/customer-meter-summary/customer-meter-summary-slice";
 
 const persistConfig = {
   key: "root",
@@ -396,6 +398,8 @@ export const store = configureStore({
     superAdminCollectionEfficiency: superAdminCollectionEfficiencySliceReducer,
     superAdminCustomerGrowth: superAdminCustomerGrowthSliceReducer,
     superAdminRechargeBehavior: superAdminRechargeBehaviorSliceReducer,
+    superAdminConsumptionSnapshot: superAdminConsumptionSnapshotSliceReducer,
+    superAdminCustomerMeterSummary: superAdminCustomerMeterSummarySliceReducer,
     [mapsApi.reducerPath]: mapsApi.reducer,
   },
 

@@ -479,3 +479,14 @@ input[type="number"] {
   height: 0;
   display: none; /* Chrome, Safari, Opera */
 }
+
+/* Interactive chart hover affordance (Recharts) */
+.recharts-wrapper .recharts-surface,
+.recharts-bar-rectangle,
+.recharts-pie-sector,
+.recharts-sector,
+.recharts-dot,
+.recharts-active-dot,
+.recharts-legend-item {
+  cursor: pointer;
+}

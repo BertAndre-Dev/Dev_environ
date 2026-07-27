@@ -91,15 +91,20 @@ import {
   selectConsumptionSnapshotLoading,
   selectConsumptionSnapshotScope,
 } from "@/redux/slice/super-admin/consumption-snapshot/consumption-snapshot-slice";
-import { getCustomerMeterSummary } from "@/redux/slice/super-admin/customer-meter-summary/customer-meter-summary";
+import {
+  getCustomerMeterSummary,
+  filterToSummaryArgs,
+  type CustomerMeterSummaryFilter,
+} from "@/redux/slice/super-admin/customer-meter-summary/customer-meter-summary";
 import {
   selectCustomerMeterSummaryData,
   selectCustomerMeterSummaryError,
+  selectCustomerMeterSummaryFilter,
   selectCustomerMeterSummaryLoading,
   selectCustomerMeterSummaryScope,
-  selectCustomerMeterSummarySelectedEstateId,
-  setSelectedEstateId,
+  setFilter,
 } from "@/redux/slice/super-admin/customer-meter-summary/customer-meter-summary-slice";
+import { getCompanies } from "@/redux/slice/super-admin/company-mgt/company";
 import type { RootState, AppDispatch } from "@/redux/store";
 import type {
   CustomerGrowthMetric,
@@ -184,31 +189,74 @@ export default function SuperAdminDashboard() {
   const customerMeterSummaryError = useSelector(
     selectCustomerMeterSummaryError,
   );
-  const customerMeterSummaryEstateId = useSelector(
-    selectCustomerMeterSummarySelectedEstateId,
+  const customerMeterSummaryFilter = useSelector(
+    selectCustomerMeterSummaryFilter,
   );
 
   const estates = estateState?.allEstates?.data ?? [];
   const estatesPagination = estateState?.allEstates?.pagination ?? null;
   const estatesLoading = estateState?.getAllEstatesState === "isLoading";
 
-  const customerMeterEstateOptions = useMemo(
-    () => [
-      { label: "All estates (aggregate)", value: "all" },
-      ...estates
-        .filter((e: { id?: string }) => Boolean(e?.id))
-        .map((e: { id: string; name?: string }) => ({
-          label: e.name?.trim() || e.id,
-          value: String(e.id),
-        })),
-    ],
-    [estates],
+  const companies = useSelector(
+    (state: RootState) => state.superAdminCompany.list ?? [],
+  );
+  const companiesLoading = useSelector(
+    (state: RootState) =>
+      state.superAdminCompany.getListStatus === "isLoading",
+  );
+
+  const customerMeterEstateOptions = useMemo(() => {
+    const options: { label: string; value: string }[] = [];
+    for (const e of estates as Array<{
+      id?: string;
+      _id?: string;
+      name?: string;
+    }>) {
+      const value = String(e?.id ?? e?._id ?? "").trim();
+      if (!value) continue;
+      options.push({
+        label: e.name?.trim() || value,
+        value,
+      });
+    }
+    return options;
+  }, [estates]);
+
+  const customerMeterCompanyOptions = useMemo(
+    () =>
+      companies
+        .map((c) => {
+          const value = String(c?.id ?? c?._id ?? "").trim();
+          if (!value) return null;
+          return {
+            label: c?.name?.trim() || "Unnamed company",
+            value,
+          };
+        })
+        .filter(
+          (opt): opt is { label: string; value: string } => opt !== null,
+        ),
+    [companies],
   );
 
   useEffect(() => {
-    dispatch(getAllEstates({ page: 1, limit: 200 })).catch((err: any) =>
-      toast.error(err?.message ?? "Failed to fetch estates"),
-    );
+    dispatch(getAllEstates({ page: 1, limit: 200 })).catch((err: unknown) => {
+      const message =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message?: string }).message)
+          : "Failed to fetch estates";
+      toast.error(message);
+    });
+  }, [dispatch]);
+
+  useEffect(() => {
+    dispatch(getCompanies({ page: 1, limit: 200 })).catch((err: unknown) => {
+      const message =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message?: string }).message)
+          : "Failed to fetch companies";
+      toast.error(message);
+    });
   }, [dispatch]);
 
   useEffect(() => {
@@ -256,14 +304,23 @@ export default function SuperAdminDashboard() {
   }, [dispatch]);
 
   useEffect(() => {
-    void dispatch(
-      getCustomerMeterSummary(
-        customerMeterSummaryEstateId
-          ? { estateId: customerMeterSummaryEstateId }
-          : undefined,
-      ),
-    );
-  }, [dispatch, customerMeterSummaryEstateId]);
+    // Default to first estate once the list loads (estate mode is default).
+    if (customerMeterSummaryFilter.mode !== "estate") return;
+    if (customerMeterSummaryFilter.estateId) return;
+    const firstEstateId = customerMeterEstateOptions[0]?.value;
+    if (!firstEstateId) return;
+    dispatch(setFilter({ mode: "estate", estateId: firstEstateId }));
+  }, [
+    dispatch,
+    customerMeterSummaryFilter,
+    customerMeterEstateOptions,
+  ]);
+
+  useEffect(() => {
+    const args = filterToSummaryArgs(customerMeterSummaryFilter);
+    if (!args) return;
+    void dispatch(getCustomerMeterSummary(args));
+  }, [dispatch, customerMeterSummaryFilter]);
 
   const handleRevenueGranularity = (next: RevenueTrendGranularity) => {
     if (next === revenueGranularity) return;
@@ -287,21 +344,22 @@ export default function SuperAdminDashboard() {
     void dispatch(getConsumptionSnapshot());
   };
 
-  const handleCustomerMeterSummaryEstateChange = (
-    estateId: string | undefined,
+  const handleCustomerMeterSummaryFilterChange = (
+    next: CustomerMeterSummaryFilter,
   ) => {
-    if (estateId === customerMeterSummaryEstateId) return;
-    dispatch(setSelectedEstateId(estateId));
+    const current = customerMeterSummaryFilter;
+    if (current.mode === "estate" && next.mode === "estate") {
+      if (current.estateId === next.estateId) return;
+    } else if (current.mode === "company" && next.mode === "company") {
+      if (current.companyId === next.companyId) return;
+    }
+    dispatch(setFilter(next));
   };
 
   const handleCustomerMeterSummaryRetry = () => {
-    void dispatch(
-      getCustomerMeterSummary(
-        customerMeterSummaryEstateId
-          ? { estateId: customerMeterSummaryEstateId }
-          : undefined,
-      ),
-    );
+    const args = filterToSummaryArgs(customerMeterSummaryFilter);
+    if (!args) return;
+    void dispatch(getCustomerMeterSummary(args));
   };
 
   const handleAveragePurchaseRetry = () => {
@@ -370,6 +428,7 @@ export default function SuperAdminDashboard() {
 
   const pageLoading =
     (estatesLoading && estates.length === 0) ||
+    (companiesLoading && companies.length === 0) ||
     (averagePurchaseLoading && !averagePurchase) ||
     (powerAvailabilityLoading && !powerAvailability) ||
     (revenueLoading && revenueSeries.length === 0) ||
@@ -426,9 +485,10 @@ export default function SuperAdminDashboard() {
           loading={customerMeterSummaryLoading}
           error={customerMeterSummaryError}
           onRetry={handleCustomerMeterSummaryRetry}
+          filter={customerMeterSummaryFilter}
+          onFilterChange={handleCustomerMeterSummaryFilterChange}
           estateOptions={customerMeterEstateOptions}
-          selectedEstateId={customerMeterSummaryEstateId}
-          onEstateChange={handleCustomerMeterSummaryEstateChange}
+          companyOptions={customerMeterCompanyOptions}
         />
 
         <RevenueTrendChart

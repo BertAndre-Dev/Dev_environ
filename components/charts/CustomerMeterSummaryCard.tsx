@@ -6,15 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { resolveEstateName } from "@/lib/analytics/resolveEstateName";
+import type { CustomerMeterSummaryFilter } from "@/redux/slice/super-admin/customer-meter-summary/customer-meter-summary";
 import type {
   AnalyticsScope,
   CustomerMeterSummaryData,
 } from "@/types/analytics";
 
-export type EstateFilterOption = {
+export type FilterOption = {
   label: string;
   value: string;
 };
+
+type FilterMode = CustomerMeterSummaryFilter["mode"];
 
 type RatioTone = "green" | "amber" | "red";
 
@@ -56,9 +59,39 @@ function activePercent(active: number, total: number): number {
   return (active / total) * 100;
 }
 
-function formatRatio(residents: number, meters: number): string {
-  if (meters <= 0) return "—";
-  return (residents / meters).toFixed(2);
+function formatPeriodRange(startDate: string, endDate: string): string {
+  const opts: Intl.DateTimeFormatOptions = {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  };
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return "—";
+  }
+  return `${start.toLocaleDateString(undefined, opts)} – ${end.toLocaleDateString(undefined, opts)}`;
+}
+
+function resolveTitle(
+  filter: CustomerMeterSummaryFilter,
+  scope: AnalyticsScope | null,
+  estateOptions: ReadonlyArray<FilterOption>,
+  companyOptions: ReadonlyArray<FilterOption>,
+): string {
+  if (filter.mode === "estate") {
+    if (!filter.estateId) return "Select estate";
+    const fromScope = scope?.estates?.find((e) => e.id === filter.estateId);
+    if (fromScope?.name?.trim()) return fromScope.name.trim();
+    const fromOptions = estateOptions.find((o) => o.value === filter.estateId);
+    if (fromOptions?.label) return fromOptions.label;
+    return resolveEstateName(filter.estateId, scope?.estates ?? []);
+  }
+
+  if (!filter.companyId) return "Select company";
+  const fromOptions = companyOptions.find((o) => o.value === filter.companyId);
+  if (fromOptions?.label) return fromOptions.label;
+  return filter.companyId;
 }
 
 type CustomerMeterSummaryCardProps = Readonly<{
@@ -67,9 +100,10 @@ type CustomerMeterSummaryCardProps = Readonly<{
   loading?: boolean;
   error?: string | null;
   onRetry: () => void;
-  estateOptions: ReadonlyArray<EstateFilterOption>;
-  selectedEstateId: string | undefined;
-  onEstateChange: (estateId: string | undefined) => void;
+  filter: CustomerMeterSummaryFilter;
+  onFilterChange: (filter: CustomerMeterSummaryFilter) => void;
+  estateOptions: ReadonlyArray<FilterOption>;
+  companyOptions: ReadonlyArray<FilterOption>;
   className?: string;
 }>;
 
@@ -79,9 +113,10 @@ export function CustomerMeterSummaryCard({
   loading = false,
   error = null,
   onRetry,
+  filter,
+  onFilterChange,
   estateOptions,
-  selectedEstateId,
-  onEstateChange,
+  companyOptions,
   className,
 }: CustomerMeterSummaryCardProps) {
   const showError = Boolean(error) && !data && !loading;
@@ -92,19 +127,44 @@ export function CustomerMeterSummaryCard({
     Number(data.totalMeters ?? 0) === 0 &&
     Number(data.totalResidents ?? 0) === 0;
 
-  const selectValue = selectedEstateId ?? "all";
-  const optionLabel =
-    estateOptions.find((o) => o.value === selectValue)?.label ?? null;
+  const title = resolveTitle(filter, scope, estateOptions, companyOptions);
+  const isEstateMode = filter.mode === "estate";
 
-  const estateTitle = (() => {
-    if (!selectedEstateId) return "All estates";
-    const fromScope = scope?.estates?.find((e) => e.id === selectedEstateId);
-    if (fromScope?.name?.trim()) return fromScope.name.trim();
-    if (optionLabel && optionLabel !== "All estates (aggregate)") {
-      return optionLabel;
+  const selectOptions = isEstateMode
+    ? [
+        { label: "Select estate", value: "" },
+        ...estateOptions,
+      ]
+    : [
+        { label: "Select company", value: "" },
+        ...companyOptions,
+      ];
+
+  const selectValue = isEstateMode ? filter.estateId : filter.companyId;
+
+  const handleModeChange = (mode: FilterMode) => {
+    if (mode === filter.mode) return;
+    if (mode === "estate") {
+      onFilterChange({
+        mode: "estate",
+        estateId: estateOptions[0]?.value ?? "",
+      });
+      return;
     }
-    return resolveEstateName(selectedEstateId, scope?.estates ?? []);
-  })();
+    onFilterChange({
+      mode: "company",
+      companyId: companyOptions[0]?.value ?? "",
+    });
+  };
+
+  const handleSelectChange = (raw: string) => {
+    const id = raw.trim();
+    if (isEstateMode) {
+      onFilterChange({ mode: "estate", estateId: id });
+      return;
+    }
+    onFilterChange({ mode: "company", companyId: id });
+  };
 
   return (
     <Card
@@ -113,36 +173,45 @@ export function CustomerMeterSummaryCard({
         className,
       )}
     >
-      <div className="flex flex-col gap-3 px-5 pt-5 sm:flex-row sm:items-start sm:justify-between sm:px-6 sm:pt-6">
-        <div className="min-w-0">
-          <h2 className="font-heading text-lg font-bold tracking-tight text-foreground sm:text-xl">
-            Customer & meter summary — {estateTitle}
+      <div className="flex flex-col gap-4 px-4 pt-4 sm:px-5 sm:pt-5 lg:flex-row lg:items-start lg:justify-between lg:gap-6 lg:px-6 lg:pt-6">
+        <div className="min-w-0 flex-1">
+          <h2 className="font-heading text-base font-bold tracking-tight break-words text-foreground sm:text-lg md:text-xl">
+            <span className="block sm:inline">Customer & meter summary</span>
+            <span className="hidden text-muted-foreground sm:inline"> — </span>
+            <span className="mt-0.5 block text-sm font-semibold text-muted-foreground sm:mt-0 sm:inline sm:text-inherit sm:font-bold sm:text-foreground">
+              {title}
+            </span>
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
             {loading && !data
               ? "Loading…"
-              : "Active meters and residents for the selected scope"}
+              : `Active meters and residents for ${title}`}
           </p>
         </div>
-        <div className="relative flex w-full items-center sm:w-auto">
-          <Select
-            aria-label="Filter by estate"
-            options={estateOptions.map((o) => ({
-              ...o,
-              value: String(o.value),
-            }))}
-            value={selectValue}
+        <div className="flex w-full shrink-0 flex-col gap-2 sm:flex-row sm:items-center lg:w-auto lg:max-w-md">
+          <ModeSegmentedControl
+            value={filter.mode}
+            onChange={handleModeChange}
             disabled={loading}
-            onChange={(e) => {
-              const next = e.target.value;
-              onEstateChange(next === "all" ? undefined : next);
-            }}
-            className="h-9 w-full min-w-[160px] appearance-none pr-8 sm:min-w-[200px]"
+            className="w-full sm:w-auto"
           />
-          <ChevronDown
-            className="pointer-events-none absolute right-2.5 h-4 w-4 text-muted-foreground"
-            aria-hidden
-          />
+          <div className="relative flex min-w-0 flex-1 items-center lg:min-w-[200px]">
+            <Select
+              aria-label={isEstateMode ? "Filter by estate" : "Filter by company"}
+              options={selectOptions.map((o) => ({
+                ...o,
+                value: String(o.value),
+              }))}
+              value={selectValue}
+              disabled={loading}
+              onChange={(e) => handleSelectChange(e.target.value)}
+              className="h-9 w-full appearance-none truncate pr-8"
+            />
+            <ChevronDown
+              className="pointer-events-none absolute right-2.5 h-4 w-4 shrink-0 text-muted-foreground"
+              aria-hidden
+            />
+          </div>
         </div>
       </div>
 
@@ -158,6 +227,71 @@ export function CustomerMeterSummaryCard({
         />
       </div>
     </Card>
+  );
+}
+
+function ModeSegmentedControl({
+  value,
+  onChange,
+  disabled,
+  className,
+}: Readonly<{
+  value: FilterMode;
+  onChange: (mode: FilterMode) => void;
+  disabled?: boolean;
+  className?: string;
+}>) {
+  const options: ReadonlyArray<{ value: FilterMode; label: string }> = [
+    { value: "estate", label: "Estate" },
+    { value: "company", label: "Company" },
+  ];
+
+  return (
+    <div
+      aria-label="Filter by estate or company"
+      className={cn(
+        "inline-flex shrink-0 rounded-xl bg-muted/70 p-1",
+        className,
+      )}
+    >
+      {options.map((opt) => {
+        const active = value === opt.value;
+        if (active) {
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              disabled={disabled}
+              aria-pressed="true"
+              onClick={() => onChange(opt.value)}
+              className={cn(
+                "flex-1 cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium transition-colors sm:flex-none sm:px-3.5",
+                "bg-card text-foreground shadow-sm",
+                disabled && "cursor-not-allowed opacity-60",
+              )}
+            >
+              {opt.label}
+            </button>
+          );
+        }
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            disabled={disabled}
+            aria-pressed="false"
+            onClick={() => onChange(opt.value)}
+            className={cn(
+              "flex-1 cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium transition-colors sm:flex-none sm:px-3.5",
+              "text-muted-foreground hover:text-foreground",
+              disabled && "cursor-not-allowed opacity-60",
+            )}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -200,6 +334,10 @@ function CardBody({
   const metersPct = activePercent(activeMeters, totalMeters);
   const residentsPct = activePercent(activeResidents, totalResidents);
   const unassignedActive = activeMeters - assignedActiveMeters;
+  const periodLabel =
+    data.period?.startDate && data.period?.endDate
+      ? formatPeriodRange(data.period.startDate, data.period.endDate)
+      : null;
 
   return (
     <div className={cn("space-y-4", loading && "opacity-60")}>
@@ -227,14 +365,11 @@ function CardBody({
         />
       </div>
 
-      <div className="rounded-2xl border border-violet-200/70 bg-gradient-to-br from-white to-violet-50 px-4 py-3.5 shadow-sm dark:border-violet-500/25 dark:from-violet-950/50 dark:to-violet-900/20">
-        <p className="text-sm font-medium text-violet-700/80 dark:text-violet-300">
-          Residents per meter
+      {periodLabel ? (
+        <p className="inline-flex rounded-full bg-muted/80 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+          {periodLabel}
         </p>
-        <p className="mt-1 bg-gradient-to-r from-violet-700 via-fuchsia-600 to-orange-500 bg-clip-text font-heading text-3xl font-bold tabular-nums tracking-tight text-transparent sm:text-4xl">
-          {formatRatio(totalResidents, totalMeters)}
-        </p>
-      </div>
+      ) : null}
     </div>
   );
 }
@@ -346,7 +481,6 @@ function CardSkeleton({ className }: Readonly<{ className?: string }>) {
         <div className="h-28 animate-pulse rounded-2xl bg-teal-200/40 dark:bg-teal-500/15" />
         <div className="h-28 animate-pulse rounded-2xl bg-amber-200/40 dark:bg-amber-500/15" />
       </div>
-      <div className="h-20 animate-pulse rounded-2xl bg-violet-200/40 dark:bg-violet-500/15" />
     </div>
   );
 }

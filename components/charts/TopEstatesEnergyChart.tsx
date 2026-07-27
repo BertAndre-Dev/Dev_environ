@@ -207,7 +207,7 @@ export function TopEstatesEnergyChart({
         </div>
       </div>
 
-      <div className="space-y-4 px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
+      <div className="space-y-4 pr-6 py-4">
         <ChartBody
           showError={showError}
           showEmpty={showEmpty}

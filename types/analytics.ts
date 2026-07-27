@@ -163,3 +163,45 @@ export interface CollectionEfficiencyResponse {
   data: CollectionEfficiencyData;
   scope: AnalyticsScope;
 }
+
+export interface CustomerGrowthMetric {
+  current: number;
+  previous: number;
+  growthRatePercent: number;
+}
+
+export interface CustomerGrowthData {
+  residents: CustomerGrowthMetric;
+  meters: CustomerGrowthMetric;
+  comparisonPeriod: AnalyticsPeriodRange;
+  period: AnalyticsPeriodRange;
+}
+
+export interface CustomerGrowthResponse {
+  success: boolean;
+  message: string;
+  data: CustomerGrowthData;
+  scope: AnalyticsScope;
+}
+
+export type RechargeBehaviorBucket = "daily" | "weekly" | "monthly";
+
+export interface RechargeBehaviorPoint {
+  key: string;
+  label: string;
+  value: number;
+  count: number;
+}
+
+export interface RechargeBehaviorData {
+  bucket: RechargeBehaviorBucket;
+  series: RechargeBehaviorPoint[];
+  period: AnalyticsPeriodRange;
+}
+
+export interface RechargeBehaviorResponse {
+  success: boolean;
+  message: string;
+  data: RechargeBehaviorData;
+  scope: AnalyticsScope;
+}

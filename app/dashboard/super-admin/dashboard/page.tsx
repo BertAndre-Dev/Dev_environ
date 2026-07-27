@@ -1,23 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  Building2,
-  Users,
-  Gauge,
-  ArrowLeftRight,
-  ChevronDown,
-} from "lucide-react";
-import {
-  DashboardHeader,
-  KpiCard,
-  DashboardChartCard,
-  VendingTrendChart,
-  BillsOverviewChart,
-} from "./components";
-import TransactionsChart from "@/components/charts/transactions-chart";
+import { Building2, Gauge, Users } from "lucide-react";
+import { DashboardHeader, KpiCard } from "./components";
 import { RevenueTrendChart } from "@/components/charts/RevenueTrendChart";
+import { RechargeBehaviorChart } from "@/components/charts/RechargeBehaviorChart";
 import {
   TopEstatesEnergyChart,
   formatTopEstatesPeriodLabel,
@@ -28,9 +16,7 @@ import { PowerAvailabilityCard } from "@/components/charts/PowerAvailabilityCard
 import { PaymentChannelsChart } from "@/components/charts/PaymentChannelsChart";
 import { CollectionEfficiencyChart } from "@/components/charts/CollectionEfficiencyChart";
 import { AveragePurchaseStatCard } from "@/components/dashboard/super-admin/AveragePurchaseStatCard";
-import { Select } from "@/components/ui/select";
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
-import { getSuperAdminBillsAnalyticsDashboard } from "@/redux/slice/super-admin/super-admin-bills-analytics/super-admin-bills-analytics";
 import { getRevenueTrend } from "@/redux/slice/super-admin/revenue-trend/revenue-trend";
 import {
   selectRevenueTrendError,
@@ -83,29 +69,48 @@ import {
   selectCollectionEfficiencyError,
   selectCollectionEfficiencyLoading,
 } from "@/redux/slice/super-admin/collection-efficiency/collection-efficiency-slice";
+import { getCustomerGrowth } from "@/redux/slice/super-admin/customer-growth/customer-growth";
+import {
+  selectCustomerGrowthData,
+  selectCustomerGrowthLoading,
+} from "@/redux/slice/super-admin/customer-growth/customer-growth-slice";
+import { getRechargeBehavior } from "@/redux/slice/super-admin/recharge-behavior/recharge-behavior";
+import {
+  selectRechargeBehaviorBucket,
+  selectRechargeBehaviorError,
+  selectRechargeBehaviorLoading,
+  selectRechargeBehaviorSeries,
+  setRechargeBehaviorBucket,
+} from "@/redux/slice/super-admin/recharge-behavior/recharge-behavior-slice";
 import type { RootState, AppDispatch } from "@/redux/store";
-import type { RevenueTrendGranularity } from "@/types/analytics";
+import type {
+  CustomerGrowthMetric,
+  RechargeBehaviorBucket,
+  RevenueTrendGranularity,
+} from "@/types/analytics";
+import Loader from "@/components/ui/Loader";
 import { toast } from "react-toastify";
 
-const BILLS_CHART_COLORS = [
-  "#3b82f6",
-  "#10b981",
-  "#f59e0b",
-  "#ef4444",
-  "#8b5cf6",
-  "#ec4899",
-];
+function formatGrowthCount(metric: CustomerGrowthMetric | null): string {
+  if (!metric) return "—";
+  return Number(metric.current ?? 0).toLocaleString();
+}
 
-// Transactions bar chart data (dummy until transaction analytics for super admin)
+function growthTrendProps(
+  metric: CustomerGrowthMetric | null,
+): { trend?: string; trendUp?: boolean } {
+  if (!metric) return {};
+  const rate = Number(metric.growthRatePercent ?? 0);
+  return {
+    trend: `${rate.toFixed(1)}% vs last period`,
+    trendUp: rate >= 0,
+  };
+}
 
 export default function SuperAdminDashboard() {
   const dispatch = useDispatch<AppDispatch>();
-  const [selectedEstateId, setSelectedEstateId] = useState<string>("");
 
   const estateState = useSelector((state: RootState) => (state as any).estate);
-  const billsState = useSelector(
-    (state: RootState) => (state as any).superAdminBillsAnalytics,
-  );
   const revenueSeries = useSelector(selectRevenueTrendSeries);
   const revenueGranularity = useSelector(selectRevenueTrendGranularity);
   const revenueLoading = useSelector(selectRevenueTrendLoading);
@@ -139,22 +144,16 @@ export default function SuperAdminDashboard() {
   const collectionEfficiencyError = useSelector(
     selectCollectionEfficiencyError,
   );
+  const customerGrowth = useSelector(selectCustomerGrowthData);
+  const customerGrowthLoading = useSelector(selectCustomerGrowthLoading);
+  const rechargeSeries = useSelector(selectRechargeBehaviorSeries);
+  const rechargeBucket = useSelector(selectRechargeBehaviorBucket);
+  const rechargeLoading = useSelector(selectRechargeBehaviorLoading);
+  const rechargeError = useSelector(selectRechargeBehaviorError);
 
   const estates = estateState?.allEstates?.data ?? [];
   const estatesPagination = estateState?.allEstates?.pagination ?? null;
-  const billsDashboard = billsState?.dashboard ?? null;
-  const billsLoading = billsState?.status === "isLoading";
-
-  const estateFilterOptions = useMemo(() => {
-    if (!estates.length) return [{ label: "Select estate", value: "" }];
-    return [
-      { label: "Select estate", value: "" },
-      ...estates.map((e: { id: string; name: string }) => ({
-        label: e.name,
-        value: e.id,
-      })),
-    ];
-  }, [estates]);
+  const estatesLoading = estateState?.getAllEstatesState === "isLoading";
 
   useEffect(() => {
     dispatch(getAllEstates({ page: 1, limit: 200 })).catch((err: any) =>
@@ -194,6 +193,14 @@ export default function SuperAdminDashboard() {
     void dispatch(getCollectionEfficiency());
   }, [dispatch]);
 
+  useEffect(() => {
+    void dispatch(getCustomerGrowth());
+  }, [dispatch]);
+
+  useEffect(() => {
+    void dispatch(getRechargeBehavior({ bucket: rechargeBucket }));
+  }, [dispatch, rechargeBucket]);
+
   const handleRevenueGranularity = (next: RevenueTrendGranularity) => {
     if (next === revenueGranularity) return;
     dispatch(setRevenueTrendGranularity(next));
@@ -201,6 +208,15 @@ export default function SuperAdminDashboard() {
 
   const handleRevenueRetry = () => {
     void dispatch(getRevenueTrend({ granularity: revenueGranularity }));
+  };
+
+  const handleRechargeBucket = (next: RechargeBehaviorBucket) => {
+    if (next === rechargeBucket) return;
+    dispatch(setRechargeBehaviorBucket(next));
+  };
+
+  const handleRechargeRetry = () => {
+    void dispatch(getRechargeBehavior({ bucket: rechargeBucket }));
   };
 
   const handleAveragePurchaseRetry = () => {
@@ -236,44 +252,11 @@ export default function SuperAdminDashboard() {
     topEstatesScope?.period?.endDate,
   );
 
-  useEffect(() => {
-    if (!selectedEstateId) return;
-    dispatch(
-      getSuperAdminBillsAnalyticsDashboard({ estateId: selectedEstateId }),
-    ).catch((err: any) =>
-      toast.error(err?.message ?? "Failed to fetch bills analytics"),
-    );
-  }, [selectedEstateId, dispatch]);
-
-  // When estates load, auto-select first estate
-  useEffect(() => {
-    if (estates.length > 0 && !selectedEstateId) {
-      const first = estates[0] as { id: string };
-      if (first?.id) setSelectedEstateId(first.id);
-    }
-  }, [estates, selectedEstateId]);
-
-  // const billsChartData = useMemo(() => {
-  //   const topBills = billsDashboard?.topBillsByCollection ?? [];
-  //   if (topBills.length === 0) return [];
-  //   return topBills.map(
-  //     (
-  //       bill: {
-  //         name: string;
-  //         totalAmountCollected?: number;
-  //         totalAssignments?: number;
-  //       },
-  //       i: number,
-  //     ) => ({
-  //       name: bill.name,
-  //       value: bill.totalAmountCollected ?? bill.totalAssignments ?? 0,
-  //       fill: BILLS_CHART_COLORS[i % BILLS_CHART_COLORS.length],
-  //     }),
-  //   );
-  // }, [billsDashboard]);
-
   const kpiCards = useMemo(() => {
     const totalEstates = estatesPagination?.total ?? 0;
+    const residents = customerGrowth?.residents ?? null;
+    const meters = customerGrowth?.meters ?? null;
+
     return [
       {
         label: "Total Estates",
@@ -283,158 +266,133 @@ export default function SuperAdminDashboard() {
         icon: Building2,
         iconBgClassName: "bg-blue-500/10 text-blue-600",
       },
+      {
+        label: "Total Residents",
+        value: formatGrowthCount(residents),
+        ...growthTrendProps(residents),
+        icon: Users,
+        iconBgClassName: "bg-emerald-500/10 text-emerald-600",
+      },
+      {
+        label: "Total Meters",
+        value: formatGrowthCount(meters),
+        ...growthTrendProps(meters),
+        icon: Gauge,
+        iconBgClassName: "bg-amber-500/10 text-amber-600",
+      },
     ];
-  }, [estatesPagination?.total]);
+  }, [estatesPagination?.total, customerGrowth]);
+
+  const pageLoading =
+    (estatesLoading && estates.length === 0) ||
+    (averagePurchaseLoading && !averagePurchase) ||
+    (powerAvailabilityLoading && !powerAvailability) ||
+    (revenueLoading && revenueSeries.length === 0) ||
+    (topEstatesLoading && topEstatesSeries.length === 0) ||
+    (paymentChannelsLoading && paymentChannelsSeries.length === 0) ||
+    (collectionEfficiencyLoading && !collectionEfficiency) ||
+    (faultsSummaryLoading && !faultsSummary) ||
+    (meterCommStatusLoading && !meterCommStatus) ||
+    (customerGrowthLoading && !customerGrowth) ||
+    (rechargeLoading && rechargeSeries.length === 0);
 
   return (
-    <div className="space-y-6 sm:space-y-8 pb-8">
-      <DashboardHeader
-        title="Dashboard"
-        subtitle="Welcome back! Here's an overview"
-      />
+    <div className="relative">
+      {pageLoading && <Loader fullScreen label="Loading dashboard..." />}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6 ">
-        {kpiCards.map((card) => (
-          <KpiCard key={card.label} {...card} />
-        ))}
+      <div
+        className={[
+          "space-y-6 sm:space-y-8 pb-8",
+          pageLoading ? "pointer-events-none select-none" : "",
+        ].join(" ")}
+      >
+        <DashboardHeader
+          title="Dashboard"
+          subtitle="Welcome back! Here's an overview"
+        />
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6 ">
+          {kpiCards.map((card) => (
+            <KpiCard key={card.label} {...card} />
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <AveragePurchaseStatCard
+            data={averagePurchase}
+            loading={averagePurchaseLoading}
+            error={averagePurchaseError}
+            onRetry={handleAveragePurchaseRetry}
+          />
+
+          <PowerAvailabilityCard
+            data={powerAvailability}
+            loading={powerAvailabilityLoading}
+            error={powerAvailabilityError}
+            onRetry={handlePowerAvailabilityRetry}
+          />
+        </div>
+
+        <RevenueTrendChart
+          series={revenueSeries}
+          granularity={revenueGranularity}
+          loading={revenueLoading}
+          error={revenueError}
+          onGranularityChange={handleRevenueGranularity}
+          onRetry={handleRevenueRetry}
+        />
+
+        <RechargeBehaviorChart
+          series={rechargeSeries}
+          bucket={rechargeBucket}
+          loading={rechargeLoading}
+          error={rechargeError}
+          onBucketChange={handleRechargeBucket}
+          onRetry={handleRechargeRetry}
+        />
+
+        <TopEstatesEnergyChart
+          series={topEstatesSeries}
+          loading={topEstatesLoading}
+          error={topEstatesError}
+          periodLabel={topEstatesPeriodLabel}
+          estateCount={topEstatesScope?.estateCount ?? null}
+          onRetry={handleTopEstatesRetry}
+        />
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+          <PaymentChannelsChart
+            series={paymentChannelsSeries}
+            loading={paymentChannelsLoading}
+            error={paymentChannelsError}
+            period={paymentChannelsPeriod}
+            onRetry={handlePaymentChannelsRetry}
+          />
+
+          <CollectionEfficiencyChart
+            data={collectionEfficiency}
+            loading={collectionEfficiencyLoading}
+            error={collectionEfficiencyError}
+            onRetry={handleCollectionEfficiencyRetry}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+          <FaultsSummaryChart
+            data={faultsSummary}
+            loading={faultsSummaryLoading}
+            error={faultsSummaryError}
+            onRetry={handleFaultsSummaryRetry}
+          />
+
+          <MeterCommunicationStatusChart
+            data={meterCommStatus}
+            loading={meterCommStatusLoading}
+            error={meterCommStatusError}
+            onRetry={handleMeterCommStatusRetry}
+          />
+        </div>
       </div>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <AveragePurchaseStatCard
-          data={averagePurchase}
-          loading={averagePurchaseLoading}
-          error={averagePurchaseError}
-          onRetry={handleAveragePurchaseRetry}
-        />
-
-        <PowerAvailabilityCard
-          data={powerAvailability}
-          loading={powerAvailabilityLoading}
-          error={powerAvailabilityError}
-          onRetry={handlePowerAvailabilityRetry}
-        />
-      </div>
-
-      <RevenueTrendChart
-        series={revenueSeries}
-        granularity={revenueGranularity}
-        loading={revenueLoading}
-        error={revenueError}
-        onGranularityChange={handleRevenueGranularity}
-        onRetry={handleRevenueRetry}
-      />
-
-      <TopEstatesEnergyChart
-        series={topEstatesSeries}
-        loading={topEstatesLoading}
-        error={topEstatesError}
-        periodLabel={topEstatesPeriodLabel}
-        estateCount={topEstatesScope?.estateCount ?? null}
-        onRetry={handleTopEstatesRetry}
-      />
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-        <PaymentChannelsChart
-          series={paymentChannelsSeries}
-          loading={paymentChannelsLoading}
-          error={paymentChannelsError}
-          period={paymentChannelsPeriod}
-          onRetry={handlePaymentChannelsRetry}
-        />
-
-        <CollectionEfficiencyChart
-          data={collectionEfficiency}
-          loading={collectionEfficiencyLoading}
-          error={collectionEfficiencyError}
-          onRetry={handleCollectionEfficiencyRetry}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-        <FaultsSummaryChart
-          data={faultsSummary}
-          loading={faultsSummaryLoading}
-          error={faultsSummaryError}
-          onRetry={handleFaultsSummaryRetry}
-        />
-
-        <MeterCommunicationStatusChart
-          data={meterCommStatus}
-          loading={meterCommStatusLoading}
-          error={meterCommStatusError}
-          onRetry={handleMeterCommStatusRetry}
-        />
-      </div>
-
-      {/* <DashboardChartCard title="Transactions" totalLabel="" totalValue="">
-        <TransactionsChart
-          title="Transactions"
-          subtitle="This month's comparison"
-          data={transactionsData}
-          estateOptions={estateFilterOptions}
-          onExport={handleExport}
-        />
-      </DashboardChartCard> */}
-
-      {/* <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-        <DashboardChartCard
-          title="Bills by collection"
-          totalLabel={
-            billsDashboard?.paymentStatistics
-              ? `Collected: N${Number(billsDashboard.paymentStatistics.totalAmountCollected).toLocaleString()}`
-              : undefined
-          }
-          totalValue={
-            billsDashboard?.paymentStatistics
-              ? `Expected: N${Number(billsDashboard.paymentStatistics.totalAmountExpected).toLocaleString()}`
-              : undefined
-          }
-        >
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Select
-                options={estateFilterOptions}
-                value={selectedEstateId}
-                onChange={(e) => setSelectedEstateId(e.target.value)}
-                className="h-9 min-w-[180px] appearance-none pr-8"
-              />
-              <ChevronDown
-                className="h-4 w-4 text-muted-foreground pointer-events-none"
-                aria-hidden
-              />
-            </div>
-            {selectedEstateId === "" && (
-              <p className="text-sm text-muted-foreground py-8 text-center">
-                Select an estate to view bills
-              </p>
-            )}
-            {selectedEstateId !== "" && billsLoading && (
-              <p className="text-sm text-muted-foreground py-8 text-center">
-                Loading bills...
-              </p>
-            )}
-            {selectedEstateId !== "" &&
-              !billsLoading &&
-              billsChartData.length === 0 && (
-                <p className="text-sm text-muted-foreground py-8 text-center">
-                  No bills data for this estate
-                </p>
-              )}
-            {selectedEstateId !== "" &&
-              !billsLoading &&
-              billsChartData.length > 0 && (
-                <BillsOverviewChart data={billsChartData} />
-              )}
-          </div>
-        </DashboardChartCard>
-        <DashboardChartCard
-          title="Vending"
-          totalLabel="Total Transactions"
-          totalValue="N150,000,000"
-        >
-          <VendingTrendChart />
-        </DashboardChartCard>
-      </div> */}
     </div>
   );
 }

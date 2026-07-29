@@ -39,6 +39,7 @@ import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import { IoSpeedometerOutline } from "react-icons/io5";
 import Loader from "@/components/ui/Loader";
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
+import axiosInstance from "@/utils/axiosInstance";
 
 /** addressId from list API can be a string or populated object with id */
 type AddressIdInput = string | { id: string; data?: Record<string, unknown> };
@@ -708,13 +709,18 @@ export default function AdminMeterManagement() {
                         enableExport
                         exportFileName="meters"
                         onExportRequest={async () => {
-                          const res = await dispatch(
-                            getAllMeters({
-                              page: 1,
-                              limit: 50000,
-                            }),
-                          ).unwrap();
-                          return res?.data ?? [];
+                          // Fetch via axios (not Redux) so the paginated table
+                          // isn't replaced with the full export result set.
+                          const params = new URLSearchParams();
+                          params.set("page", "1");
+                          params.set("limit", "50000");
+                          if (searchQuery.trim()) {
+                            params.set("search", searchQuery.trim());
+                          }
+                          const res = await axiosInstance.get(
+                            `/api/v1/meters?${params.toString()}`,
+                          );
+                          return (res.data?.data ?? []) as AdminMeterData[];
                         }}
                       />
                     </Card>

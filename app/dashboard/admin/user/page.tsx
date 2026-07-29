@@ -37,9 +37,6 @@ import {
   type EstateUserRoleFilter,
 } from "@/lib/estate-user-roles";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
-import { formatUserMeterNumbers } from "@/lib/user-address-meters";
-import { useUserListMeterNumbers } from "@/hooks/useUserListMeterNumbers";
-
 /** Admin user management: exclude company, estate admin, and admin from role filter. */
 const ADMIN_USER_ROLE_FILTER_OPTIONS = ESTATE_USER_ROLE_FILTER_OPTIONS.filter(
   (o) =>
@@ -113,9 +110,6 @@ export default function AdminUserPage() {
       };
     },
   );
-
-  const { meterByAddressId, loading: metersLoading } =
-    useUserListMeterNumbers(allAdminUsers);
 
   const fetchAdminUsers = useCallback(
     async (page = 1) => {
@@ -306,28 +300,6 @@ export default function AdminUserPage() {
     { key: "lastName", header: "Last Name" },
     { key: "email", header: "Email" },
     ...getAddressColumns(allAdminUsers),
-    ...(showResidentColumns
-      ? [
-          {
-            key: "meterNumber",
-            header: "Meter Number",
-            render: (item: AdminUserData) => {
-              if (metersLoading) {
-                return (
-                  <span className="text-xs text-muted-foreground">...</span>
-                );
-              }
-              const value = formatUserMeterNumbers(item, meterByAddressId);
-              if (value === "—") return "-";
-              return <span className="font-mono text-sm">{value}</span>;
-            },
-            exportValue: (item: AdminUserData) => {
-              const value = formatUserMeterNumbers(item, meterByAddressId);
-              return value === "—" ? "" : value;
-            },
-          },
-        ]
-      : []),
     { key: "role", header: "Role" },
     ...(showResidentColumns
       ? [

@@ -396,9 +396,9 @@ export default function SuperAdminDashboard() {
     void dispatch(getPowerAvailability());
   };
 
-  const handlePaymentChannelsRetry = () => {
-    void dispatch(getPaymentChannels());
-  };
+  // const handlePaymentChannelsRetry = () => {
+  //   void dispatch(getPaymentChannels());
+  // };
 
   const handleCollectionEfficiencyRetry = () => {
     void dispatch(getCollectionEfficiency());
@@ -472,7 +472,7 @@ export default function SuperAdminDashboard() {
           subtitle="Welcome back! Here's an overview"
         />
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6 ">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6 ">
           {kpiCards.map((card) => (
             <KpiCard key={card.label} {...card} />
           ))}

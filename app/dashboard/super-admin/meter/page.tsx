@@ -435,6 +435,11 @@ export default function AdminMeterManagement() {
           <span className="font-medium">{estateNameById[id] ?? id}</span>
         );
       },
+      exportValue: (item: AdminMeterData) => {
+        const id = item.estateId;
+        if (!id) return "";
+        return estateNameById[id] ?? id;
+      },
     },
     {
       key: "isActive",

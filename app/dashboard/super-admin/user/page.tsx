@@ -44,9 +44,6 @@ import {
   getEstateUserRoleTotalLabel,
   type EstateUserRoleFilter,
 } from "@/lib/estate-user-roles";
-import { formatUserMeterNumbers } from "@/lib/user-address-meters";
-import { useUserListMeterNumbers } from "@/hooks/useUserListMeterNumbers";
-
 /** Estate scope: company users are filtered under Company, not Estate. */
 const ESTATE_SCOPE_ROLE_FILTER_OPTIONS = ESTATE_USER_ROLE_FILTER_OPTIONS.filter(
   (o) => o.value !== "company",
@@ -176,9 +173,6 @@ export default function SuperAdminUserPage() {
   });
 
   const pageLoading = estateLoading || companyLoading || loading;
-
-  const { meterByAddressId, loading: metersLoading } =
-    useUserListMeterNumbers(allSuperAdminUsers);
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [filterScope, setFilterScope] = useState<FilterScope>("estate");
@@ -449,24 +443,6 @@ export default function SuperAdminUserPage() {
     ...(showResidentColumns
       ? [
           {
-            key: "meterNumber",
-            header: "Meter Number",
-            render: (item: SuperAdminUserData) => {
-              if (metersLoading) {
-                return (
-                  <span className="text-xs text-muted-foreground">...</span>
-                );
-              }
-              const value = formatUserMeterNumbers(item, meterByAddressId);
-              if (value === "—") return "—";
-              return <span className="font-mono text-sm">{value}</span>;
-            },
-            exportValue: (item: SuperAdminUserData) => {
-              const value = formatUserMeterNumbers(item, meterByAddressId);
-              return value === "—" ? "" : value;
-            },
-          },
-          {
             key: "residentType",
             header: "Resident Type",
             render: (item: SuperAdminUserData) => {
@@ -486,28 +462,28 @@ export default function SuperAdminUserPage() {
             exportValue: (item: SuperAdminUserData) =>
               String(Boolean(item.serviceCharge)),
           },
-          {
-            key: "serviceChargesPaidForAddresses",
-            header: "Service Charges Paid (Addresses)",
-            render: (item: SuperAdminUserData) => {
-              const labels = resolvePaidAddressLabels(item);
-              if (!labels.length) return "—";
-              return (
-                <div className="flex flex-col gap-0.5 max-w-[220px]">
-                  {labels.map((label) => (
-                    <span
-                      key={label}
-                      className="text-xs px-2 py-0.5 rounded-md bg-green-100 text-green-700 w-fit"
-                    >
-                      {label}
-                    </span>
-                  ))}
-                </div>
-              );
-            },
-            exportValue: (item: SuperAdminUserData) =>
-              resolvePaidAddressLabels(item).join("; "),
-          },
+          // {
+          //   key: "serviceChargesPaidForAddresses",
+          //   header: "Service Charges Paid (Addresses)",
+          //   render: (item: SuperAdminUserData) => {
+          //     const labels = resolvePaidAddressLabels(item);
+          //     if (!labels.length) return "—";
+          //     return (
+          //       <div className="flex flex-col gap-0.5 max-w-[220px]">
+          //         {labels.map((label) => (
+          //           <span
+          //             key={label}
+          //             className="text-xs px-2 py-0.5 rounded-md bg-green-100 text-green-700 w-fit"
+          //           >
+          //             {label}
+          //           </span>
+          //         ))}
+          //       </div>
+          //     );
+          //   },
+          //   exportValue: (item: SuperAdminUserData) =>
+          //     resolvePaidAddressLabels(item).join("; "),
+          // },
         ]
       : []),
     {

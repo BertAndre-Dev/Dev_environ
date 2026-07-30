@@ -33,6 +33,7 @@ import { MembershipSwitcher } from "@/components/dashboard/MembershipSwitcher";
 import { filterNavItemsByEstateModules } from "@/lib/nav-module-filter";
 import Image from "next/image";
 import Loader from "@/components/ui/Loader";
+import { ResidentProfileModal } from "@/components/resident/ResidentProfileModal";
 
 export default function DashboardLayout({
   children,
@@ -53,6 +54,7 @@ export default function DashboardLayout({
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   // 🔹 Handle sidebar state based on screen size (collapsed on mobile, expanded on desktop)
   useEffect(() => {
@@ -343,8 +345,22 @@ export default function DashboardLayout({
           {/* User Info */}
           <div className="bg-[#f2f2f2] border-t border-sidebar-border px-2 py-4  ">
             <button
-              className="flex items-center gap-0 md:gap-3 w-full hover:bg-sidebar-accent transition-colors overflow-x-scroll"
-              // onClick={handleSignOut}
+              type="button"
+              className="flex items-center gap-0 md:gap-3 w-full hover:bg-sidebar-accent transition-colors overflow-x-scroll cursor-pointer"
+              onClick={() => {
+                const role = (userRole || user?.role || "")
+                  .toString()
+                  .toLowerCase();
+                if (role === "resident") {
+                  setProfileModalOpen(true);
+                }
+              }}
+              title={
+                (userRole || user?.role || "").toString().toLowerCase() ===
+                "resident"
+                  ? "View profile"
+                  : undefined
+              }
             >
               <div className="bg-[#4E61E5] rounded-full overflow-hidden w-8 h-8 flex-shrink-0">
                 <Image
@@ -373,6 +389,11 @@ export default function DashboardLayout({
           </div>
         </div>
       </aside>
+
+      <ResidentProfileModal
+        open={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+      />
 
       {/* Main */}
       <main

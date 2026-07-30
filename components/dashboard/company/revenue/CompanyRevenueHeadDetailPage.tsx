@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import Select from "react-select";
 
 import type { AppDispatch, RootState } from "@/redux/store";
@@ -36,7 +37,6 @@ import {
   type EstateOption,
 } from "@/app/dashboard/company/asset/lib/estate";
 import { slugify } from "@/lib/slug";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 
 import { RevenueHeader } from "@/components/dashboard/admin/revenue/RevenueHeader";
 import { RevenueFiltersBar } from "@/components/dashboard/admin/revenue/RevenueFiltersBar";
@@ -102,6 +102,8 @@ export default function CompanyRevenueHeadDetailPage() {
 
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<CompanyRevenueEntry | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<CompanyRevenueEntry | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [formDescription, setFormDescription] = useState("");
   const [formAmount, setFormAmount] = useState("");
   const [formDocumentNumber, setFormDocumentNumber] = useState("");
@@ -347,13 +349,25 @@ export default function CompanyRevenueHeadDetailPage() {
   const handleDelete = (item: CompanyRevenueEntry) => {
     const id = getId(item);
     if (!id) return;
-    confirmDeleteToast({
-      name: item.documentNumber,
-      onConfirm: async () => {
-        await dispatch(deleteCompanyRevenueEntry(id)).unwrap();
-        toast.success("Revenue entry deleted.");
-      },
-    });
+    setItemToDelete(item);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
+    const id = getId(itemToDelete);
+    if (!id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteCompanyRevenueEntry(id)).unwrap();
+      toast.success("Revenue entry deleted.");
+      setItemToDelete(null);
+    } catch (err: unknown) {
+      const message = (err as { message?: string })?.message;
+      toast.error(message ?? "Failed to delete.");
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const pageLoading = estatesLoading || headsLoading || entriesLoading;
@@ -474,6 +488,15 @@ export default function CompanyRevenueHeadDetailPage() {
           }}
         />
       </div>
+    
+        <DeleteModal
+          visible={Boolean(itemToDelete)}
+          onClose={() => setItemToDelete(null)}
+          itemName={itemToDelete?.documentNumber ?? "this entry"}
+          title="Delete revenue entry"
+          loading={deleting}
+          onConfirm={handleConfirmDelete}
+        />
     </div>
   );
 }

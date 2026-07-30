@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import Select from "react-select";
 import {
   Plus,
@@ -17,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import Loader from "@/components/ui/Loader";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
@@ -82,6 +82,8 @@ export default function CompanyUsersPage() {
   const [companyId, setCompanyId] = useState("");
   const [companyName, setCompanyName] = useState("Company");
   const [open, setOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name?: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [selectedEstate, setSelectedEstate] = useState<EstateOption | null>(
     null,
   );
@@ -247,14 +249,24 @@ export default function CompanyUsersPage() {
 
   const handleDeleteUser = (id?: string, name?: string) => {
     if (!id) return;
-    confirmDeleteToast({
-      name,
-      onConfirm: async () => {
-        await dispatch(deleteCompanyUser(id)).unwrap();
-        toast.success(`${name ?? "User"} deleted successfully!`);
-        await fetchUsers(1);
-      },
-    });
+    setItemToDelete({ id, name });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete?.id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteCompanyUser(itemToDelete.id)).unwrap();
+      toast.success(`${itemToDelete.name ?? "User"} deleted successfully!`);
+      setItemToDelete(null);
+      await fetchUsers(1);
+    } catch (err: unknown) {
+      const message = (err as { message?: string })?.message;
+      toast.error(message ?? "Failed to delete user.");
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const showResidentColumns = roleFilter === "resident";
@@ -543,6 +555,15 @@ export default function CompanyUsersPage() {
           onConfirm={handleConfirmStatus}
         />
       </div>
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={itemToDelete?.name ?? "this user"}
+        title="Delete user"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

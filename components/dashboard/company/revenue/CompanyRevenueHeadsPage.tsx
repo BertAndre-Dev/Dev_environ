@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import Select from "react-select";
 
 import { RevenueHeader } from "@/components/dashboard/admin/revenue/RevenueHeader";
@@ -13,7 +14,6 @@ import {
   type RevenueHeadModalValues,
 } from "@/components/dashboard/admin/revenue/RevenueHeadModal";
 import { ViewRevenueHeadModal } from "@/components/dashboard/admin/revenue/ViewRevenueHeadModal";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
 import {
@@ -82,6 +82,8 @@ export default function CompanyRevenueHeadsPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CompanyRevenueHead | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<CompanyRevenueHead | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [modalValues, setModalValues] = useState<RevenueHeadModalValues>({
     name: "",
     description: "",
@@ -188,13 +190,25 @@ export default function CompanyRevenueHeadsPage() {
   const handleDelete = (item: CompanyRevenueHead) => {
     const id = getId(item);
     if (!id) return;
-    confirmDeleteToast({
-      name: item.name,
-      onConfirm: async () => {
-        await dispatch(deleteCompanyRevenueHead(id)).unwrap();
-        toast.success("Revenue head deleted.");
-      },
-    });
+    setItemToDelete(item);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
+    const id = getId(itemToDelete);
+    if (!id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteCompanyRevenueHead(id)).unwrap();
+      toast.success("Revenue head deleted.");
+      setItemToDelete(null);
+    } catch (err: unknown) {
+      const message = (err as { message?: string })?.message;
+      toast.error(message ?? "Failed to delete.");
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleView = async (item: CompanyRevenueHead) => {
@@ -409,6 +423,15 @@ export default function CompanyRevenueHeadsPage() {
           }}
         />
       </div>
+    
+        <DeleteModal
+          visible={Boolean(itemToDelete)}
+          onClose={() => setItemToDelete(null)}
+          itemName={itemToDelete?.name ?? "this item"}
+          title="Delete revenue head"
+          loading={deleting}
+          onConfirm={handleConfirmDelete}
+        />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import Image from "next/image";
 import {
   ChevronDown,
@@ -31,7 +32,6 @@ import { CopyButton } from "@/components/ui/copy-button";
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import { MaintenanceRequestCard } from "@/components/admin/maintenance/maintenance-request-card";
 import { cn } from "@/lib/utils";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import { normalizeAddresses, type AddressOption } from "@/lib/address";
 import type { AsyncThunk } from "@reduxjs/toolkit";
 import type { AppDispatch } from "@/redux/store";
@@ -402,6 +402,8 @@ export default function UserDetailView({
 
   const [suspendOpen, setSuspendOpen] = useState(false);
   const [suspendSubmitting, setSuspendSubmitting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedComplaintId, setSelectedComplaintId] = useState<string | null>(
     null,
@@ -609,14 +611,25 @@ export default function UserDetailView({
   const handleDelete = () => {
     const id = getUserId(user);
     if (!id) return;
-    confirmDeleteToast({
-      name: displayName,
-      onConfirm: async () => {
-        await dispatch(actions.deleteUser(id)).unwrap();
-        toast.success(`${displayName} deleted successfully.`);
-        router.push(listPath);
-      },
-    });
+    setDeleteOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    const id = getUserId(user);
+    if (!id) return;
+    setDeleting(true);
+    try {
+      await dispatch(actions.deleteUser(id)).unwrap();
+      toast.success(`${displayName} deleted successfully.`);
+      setDeleteOpen(false);
+      router.push(listPath);
+    } catch (err: unknown) {
+      const message = (err as { message?: string })?.message;
+      toast.error(message ?? "Failed to delete user.");
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleViewTransaction = async (transactionId: string) => {
@@ -1063,6 +1076,15 @@ export default function UserDetailView({
         confirmLabel="Suspend"
         onConfirm={handleSuspendConfirm}
         loading={suspendSubmitting}
+      />
+    
+      <DeleteModal
+        visible={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        itemName={displayName}
+        title="Delete user"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
       />
     </div>
   );

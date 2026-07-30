@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import Modal from "@/components/modal/page";
 import Table from "@/components/tables/list/page";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -35,7 +36,6 @@ import {
   setSuperAdminMeterUsageRange,
 } from "@/redux/slice/super-admin/super-admin-meter-mgt/super-admin-meter-slice";
 import AssignMeterForm from "@/components/super-admin/meter-form/page";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import { IoSpeedometerOutline } from "react-icons/io5";
 import Loader from "@/components/ui/Loader";
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
@@ -126,6 +126,8 @@ const METER_TAB_TITLES = ["Meter Management", "Chart Overview"] as const;
 export default function AdminMeterManagement() {
   const dispatch = useDispatch<AppDispatch>();
   const [open, setOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name?: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [selectedMeter, setSelectedMeter] = useState<AdminMeterData | null>(
     null,
   );
@@ -411,15 +413,24 @@ export default function AdminMeterManagement() {
       toast.error("Meter ID is missing");
       return;
     }
+    setItemToDelete({ id: meterId, name: "this meter" });
+  };
 
-    confirmDeleteToast({
-      name: "this meter",
-      onConfirm: async () => {
-        const response = await dispatch(deleteMeter(meterId)).unwrap();
-        toast.success(response?.message || "Meter deleted successfully");
-        handleRefresh();
-      },
-    });
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete?.id) return;
+    setDeleting(true);
+    try {
+      const response = await dispatch(deleteMeter(itemToDelete.id)).unwrap();
+      toast.success(response?.message || "Meter deleted successfully");
+      setItemToDelete(null);
+      handleRefresh();
+    } catch (err: unknown) {
+      const message = (err as { message?: string })?.message;
+      toast.error(message ?? "Failed to delete meter.");
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const columns = [
@@ -881,6 +892,15 @@ export default function AdminMeterManagement() {
             ) : null}
           </div>
         </Modal>
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={"this meter"}
+        title="Delete meter"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

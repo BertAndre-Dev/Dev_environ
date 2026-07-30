@@ -11,10 +11,13 @@ import {
   deactivateRate,
   getEffectiveRate,
   getRates,
+  type EffectiveRateData,
   type PlatformRate,
   type RateFeeType,
+  type RateSplit,
 } from "@/redux/slice/super-admin/rates/rates";
 import { clearRatesState } from "@/redux/slice/super-admin/rates/rates-slice";
+import { SetEstateRateModal } from "./SetEstateRateModal";
 
 const FEE_TYPE_OPTIONS: { value: RateFeeType; label: string }[] = [
   { value: "VENDING", label: "Vending" },
@@ -48,8 +51,27 @@ function formatScope(scope?: string | null) {
   return scope.charAt(0) + scope.slice(1).toLowerCase();
 }
 
+function formatSplits(splits?: RateSplit[] | null) {
+  if (!Array.isArray(splits) || splits.length === 0) return null;
+  return splits
+    .map((split) => {
+      const label = split.label?.trim() || "Split";
+      const percent =
+        split.percent != null && !Number.isNaN(Number(split.percent))
+          ? `${Number(split.percent)}%`
+          : "—";
+      const account = split.accountNumber?.trim() || "—";
+      const bank = split.bankCode?.trim() ? ` · bank ${split.bankCode}` : "";
+      return `${label}: ${percent} · ${account}${bank}`;
+    })
+    .join("; ");
+}
+
 function formatRateValue(rate: PlatformRate | null | undefined) {
   if (!rate) return "—";
+
+  const splitsLabel = formatSplits(rate.splits);
+  if (splitsLabel) return splitsLabel;
 
   const percent =
     rate.percentage ?? rate.feePercent ?? rate.percent ?? rate.rate;
@@ -66,6 +88,68 @@ function formatRateValue(rate: PlatformRate | null | undefined) {
 
   if (parts.length === 0) return "—";
   return parts.join(" + ");
+}
+
+function ActiveBadge({ isActive }: Readonly<{ isActive?: boolean }>) {
+  if (isActive === undefined) return null;
+  return (
+    <span
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+        isActive === false
+          ? "bg-red-100 text-red-700"
+          : "bg-green-100 text-green-700"
+      }`}
+    >
+      {isActive === false ? "Inactive" : "Active"}
+    </span>
+  );
+}
+
+function EffectiveRateCard({
+  data,
+}: Readonly<{ data: EffectiveRateData | null }>) {
+  if (!data?.resolved) {
+    return (
+      <div className="rounded-md border border-dashed p-4">
+        <p className="text-sm font-medium mb-1">Effective rate</p>
+        <p className="text-sm text-muted-foreground">No rate found.</p>
+      </div>
+    );
+  }
+
+  const { estate, feeType, resolved } = data;
+  const splitsLabel = formatSplits(resolved.splits) ?? "—";
+
+  return (
+    <div className="rounded-md border p-4 space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium">Effective rate</p>
+          <p className="text-lg font-semibold mt-0.5">{splitsLabel}</p>
+        </div>
+        <ActiveBadge isActive={resolved.isActive ?? estate?.isActive} />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <DetailRow
+          label="Fee type"
+          value={formatFeeType(feeType ?? resolved.feeType)}
+        />
+        <DetailRow label="Resolved scope" value={formatScope(resolved.scope)} />
+        <DetailRow
+          label="Source"
+          value={formatScope(resolved.source) || "—"}
+        />
+        <DetailRow label="Config ID" value={resolved.configId || "—"} />
+        {estate?.name ? (
+          <DetailRow label="Estate" value={estate.name} />
+        ) : null}
+        {resolved.notes ? (
+          <DetailRow label="Notes" value={resolved.notes} />
+        ) : null}
+      </div>
+    </div>
+  );
 }
 
 function RateCard({
@@ -97,15 +181,7 @@ function RateCard({
             {formatRateValue(rate)}
           </p>
         </div>
-        <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-            rate.isActive === false
-              ? "bg-red-100 text-red-700"
-              : "bg-green-100 text-green-700"
-          }`}
-        >
-          {rate.isActive === false ? "Inactive" : "Active"}
-        </span>
+        <ActiveBadge isActive={rate.isActive} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -119,6 +195,7 @@ function RateCard({
           label="Updated at"
           value={formatDateTime(rate.updatedAt ?? rate.createdAt)}
         />
+        {rate.notes ? <DetailRow label="Notes" value={rate.notes} /> : null}
       </div>
 
       {rate.id && onDeactivate && rate.isActive !== false ? (
@@ -142,6 +219,7 @@ function RateCard({
 export function EstateRatesTab({ estateId }: Props) {
   const dispatch = useDispatch<AppDispatch>();
   const [feeType, setFeeType] = useState<RateFeeType>("VENDING");
+  const [setRateOpen, setSetRateOpen] = useState(false);
 
   const {
     rates,
@@ -155,6 +233,17 @@ export function EstateRatesTab({ estateId }: Props) {
   const loading =
     getRatesStatus === "isLoading" || getEffectiveRateStatus === "isLoading";
   const deactivating = deactivateRateStatus === "isLoading";
+
+  const refreshRates = async (nextFeeType: RateFeeType = feeType) => {
+    await Promise.all([
+      dispatch(
+        getRates({ scope: "ESTATE", estateId, feeType: nextFeeType }),
+      ).unwrap(),
+      dispatch(
+        getEffectiveRate({ estateId, feeType: nextFeeType }),
+      ).unwrap(),
+    ]);
+  };
 
   useEffect(() => {
     if (!estateId) return;
@@ -174,10 +263,7 @@ export function EstateRatesTab({ estateId }: Props) {
     try {
       await dispatch(deactivateRate(id)).unwrap();
       toast.success("Rate deactivated.");
-      await Promise.all([
-        dispatch(getRates({ scope: "ESTATE", estateId, feeType })).unwrap(),
-        dispatch(getEffectiveRate({ estateId, feeType })).unwrap(),
-      ]);
+      await refreshRates();
     } catch (err: unknown) {
       toast.error(
         (err as { message?: string })?.message ?? "Failed to deactivate rate",
@@ -208,6 +294,13 @@ export function EstateRatesTab({ estateId }: Props) {
             ))}
           </select>
         </div>
+        <Button
+          type="button"
+          className="cursor-pointer shrink-0"
+          onClick={() => setSetRateOpen(true)}
+        >
+          Set rate
+        </Button>
       </div>
 
       {loading ? <Loader label="Loading rates..." /> : null}
@@ -218,7 +311,7 @@ export function EstateRatesTab({ estateId }: Props) {
 
       {!loading ? (
         <div className="space-y-4">
-          <RateCard title="Effective rate" rate={effectiveRate} />
+          <EffectiveRateCard data={effectiveRate} />
 
           <div>
             <p className="text-sm font-medium mb-2">
@@ -244,6 +337,23 @@ export function EstateRatesTab({ estateId }: Props) {
           </div>
         </div>
       ) : null}
+
+      <SetEstateRateModal
+        open={setRateOpen}
+        estateId={estateId}
+        initialFeeType={feeType}
+        onClose={() => {
+          setSetRateOpen(false);
+          void refreshRates().catch(() => {});
+        }}
+        onSuccess={(savedFeeType) => {
+          if (savedFeeType !== feeType) {
+            setFeeType(savedFeeType);
+            return;
+          }
+          void refreshRates(savedFeeType).catch(() => {});
+        }}
+      />
     </div>
   );
 }

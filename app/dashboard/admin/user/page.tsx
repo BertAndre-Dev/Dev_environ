@@ -20,6 +20,7 @@ import {
   deleteUser,
 } from "@/redux/slice/admin/user-mgt/user";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useState } from "react";
@@ -27,7 +28,6 @@ import Modal from "@/components/modal/page";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import InviteUserForm from "@/components/admin/user-form/page";
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import Loader from "@/components/ui/Loader";
 import Select from "react-select";
 import {
@@ -81,6 +81,8 @@ export default function AdminUserPage() {
   const [user, setUser] = useState<any>(null);
   const [estateName, setEstateName] = useState("Estate");
   const [open, setOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name?: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [selectedEstate, setSelectedEstate] = useState<EstateOption | null>(
     null,
   );
@@ -223,18 +225,26 @@ export default function AdminUserPage() {
 
   const handleDeleteUser = async (id?: string, name?: string) => {
     if (!id) return;
+    setItemToDelete({ id, name });
+  };
 
-    confirmDeleteToast({
-      name,
-      onConfirm: async () => {
-        await dispatch(deleteUser(id)).unwrap();
-        toast.success(`${name} deleted successfully!`);
-
-        await fetchAdminUsers(1).catch(() =>
-          toast.error("Failed to refresh users."),
-        );
-      },
-    });
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete?.id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteUser(itemToDelete.id)).unwrap();
+      toast.success(`${itemToDelete.name ?? "User"} deleted successfully!`);
+      setItemToDelete(null);
+      await fetchAdminUsers(1).catch(() =>
+        toast.error("Failed to refresh users."),
+      );
+    } catch (err: unknown) {
+      const message = (err as { message?: string })?.message;
+      toast.error(message ?? "Failed to delete user.");
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const getAllAddressKeys = (data: AdminUserData[]) => {
@@ -585,6 +595,15 @@ export default function AdminUserPage() {
           loading={suspendSubmitting}
         />
       </div>
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={itemToDelete?.name ?? "this user"}
+        title="Delete user"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

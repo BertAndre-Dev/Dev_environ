@@ -17,7 +17,6 @@ import { Input } from "@/components/ui/input";
 import Loader from "@/components/ui/Loader";
 import Table from "@/components/tables/list/page";
 import DeleteModal from "@/components/resident/delete-modal/page";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import { slugify } from "@/lib/slug";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
@@ -58,6 +57,7 @@ export default function AssetCategoryDetailPage() {
   const [deleteCategoryOpen, setDeleteCategoryOpen] = useState(false);
   const [addAssetOpen, setAddAssetOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [assetToDelete, setAssetToDelete] = useState<Asset | null>(null);
 
   const {
     categories,
@@ -221,13 +221,7 @@ export default function AssetCategoryDetailPage() {
                 e.stopPropagation();
                 const id = getId(item);
                 if (!id) return;
-                confirmDeleteToast({
-                  name: item.name ?? "this asset",
-                  onConfirm: async () => {
-                    await dispatch(deleteAsset(id)).unwrap();
-                    toast.success("Asset deleted.");
-                  },
-                });
+                setAssetToDelete(item);
               }}
             >
               <Trash2 className="w-4 h-4" />
@@ -268,6 +262,23 @@ export default function AssetCategoryDetailPage() {
       );
     }
   };
+
+  const handleConfirmDeleteAsset = async () => {
+    if (!assetToDelete) return;
+    const id = getId(assetToDelete);
+    if (!id) return;
+    try {
+      await dispatch(deleteAsset(id)).unwrap();
+      toast.success("Asset deleted.");
+      setAssetToDelete(null);
+    } catch (err: unknown) {
+      toast.error(
+        (err as { message?: string })?.message ?? "Failed to delete asset.",
+      );
+      throw err;
+    }
+  };
+
 
   const handleAddAssets = async (
     payloads: Parameters<
@@ -475,6 +486,14 @@ export default function AssetCategoryDetailPage() {
           itemName={category?.name ?? "this category"}
           loading={deleteCategoryStatus === "isLoading"}
           onConfirm={handleDeleteCategory}
+        />
+        <DeleteModal
+          visible={Boolean(assetToDelete)}
+          onClose={() => setAssetToDelete(null)}
+          title="Delete asset"
+          itemName={assetToDelete?.name ?? "this asset"}
+          loading={deleteAssetStatus === "isLoading"}
+          onConfirm={handleConfirmDeleteAsset}
         />
 
         <AssetFormModal

@@ -28,7 +28,7 @@ import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useState } from "react";
 import Modal from "@/components/modal/page";
 import EstateForm from "@/components/super-admin/estate-form/page";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import Loader from "@/components/ui/Loader";
 import { EstateStatusModal } from "./components/EstateStatusModal";
 import { EstateModulesForm } from "./components/EstateModulesForm";
@@ -67,6 +67,10 @@ export default function EstatePage() {
   const [statusItem, setStatusItem] = useState<EstateTableRow | null>(null);
   const [statusMode, setStatusMode] = useState<"suspend" | "activate">("suspend");
   const [statusSubmitting, setStatusSubmitting] = useState(false);
+  const [estateToDelete, setEstateToDelete] = useState<EstateTableRow | null>(
+    null,
+  );
+  const [deleting, setDeleting] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -193,18 +197,30 @@ export default function EstatePage() {
     }
   };
 
-  // ✅ Handle Delete Estate with toast confirmation
-  const handleDeleteEstate = async (id?: string, name?: string) => {
-    if (!id) return;
+  // ✅ Handle Delete Estate with DeleteModal confirmation
+  const handleDeleteEstate = (estate: EstateTableRow) => {
+    if (!estate.id) return;
+    setEstateToDelete(estate);
+  };
 
-    confirmDeleteToast({
-      name,
-      onConfirm: async () => {
-        await dispatch(deleteEstate(id)).unwrap();
-        toast.success(`${name} deleted successfully!`);
-        await fetchEstates(1);
-      },
-    });
+  const handleConfirmDeleteEstate = async () => {
+    if (!estateToDelete?.id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteEstate(estateToDelete.id)).unwrap();
+      toast.success(
+        `${estateToDelete.name ?? "Estate"} deleted successfully!`,
+      );
+      setEstateToDelete(null);
+      await fetchEstates(1);
+    } catch (err: unknown) {
+      toast.error(
+        (err as { message?: string })?.message || "Failed to delete estate.",
+      );
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const columns = [
@@ -309,7 +325,7 @@ export default function EstatePage() {
                 {item.isActive ? "Suspend Estate" : "Activate Estate"}
               </DropdownMenu.Item>
               <DropdownMenu.Item
-                onSelect={() => handleDeleteEstate(item.id, item.name)}
+                onSelect={() => handleDeleteEstate(item)}
                 className="cursor-pointer select-none rounded px-3 py-2 text-sm text-red-600 outline-none hover:bg-gray-100 focus:bg-gray-100"
               >
                 Delete Estate
@@ -523,6 +539,15 @@ export default function EstatePage() {
         mode={statusMode}
         loading={statusSubmitting}
         onConfirm={handleConfirmStatus}
+      />
+
+      <DeleteModal
+        visible={Boolean(estateToDelete)}
+        onClose={() => setEstateToDelete(null)}
+        itemName={estateToDelete?.name ?? "this estate"}
+        title="Delete estate"
+        loading={deleting}
+        onConfirm={handleConfirmDeleteEstate}
       />
       </div>
     </div>

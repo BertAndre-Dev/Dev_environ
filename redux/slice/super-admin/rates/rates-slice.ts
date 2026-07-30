@@ -3,6 +3,8 @@ import {
   deactivateRate,
   getEffectiveRate,
   getRates,
+  upsertRate,
+  type EffectiveRateData,
   type PlatformRate,
 } from "./rates";
 
@@ -11,8 +13,9 @@ type AsyncStatus = "idle" | "isLoading" | "succeeded" | "failed";
 export interface SuperAdminRatesState {
   rates: PlatformRate[];
   getRatesStatus: AsyncStatus;
-  effectiveRate: PlatformRate | null;
+  effectiveRate: EffectiveRateData | null;
   getEffectiveRateStatus: AsyncStatus;
+  upsertRateStatus: AsyncStatus;
   deactivateRateStatus: AsyncStatus;
   error: string | null;
 }
@@ -22,6 +25,7 @@ const initialState: SuperAdminRatesState = {
   getRatesStatus: "idle",
   effectiveRate: null,
   getEffectiveRateStatus: "idle",
+  upsertRateStatus: "idle",
   deactivateRateStatus: "idle",
   error: null,
 };
@@ -66,6 +70,20 @@ const ratesSlice = createSlice({
           action.error.message ??
           "Failed to fetch effective rate";
       })
+      .addCase(upsertRate.pending, (state) => {
+        state.upsertRateStatus = "isLoading";
+        state.error = null;
+      })
+      .addCase(upsertRate.fulfilled, (state) => {
+        state.upsertRateStatus = "succeeded";
+      })
+      .addCase(upsertRate.rejected, (state, action) => {
+        state.upsertRateStatus = "failed";
+        state.error =
+          (action.payload as { message?: string })?.message ??
+          action.error.message ??
+          "Failed to save platform rate";
+      })
       .addCase(deactivateRate.pending, (state) => {
         state.deactivateRateStatus = "isLoading";
         state.error = null;
@@ -76,12 +94,6 @@ const ratesSlice = createSlice({
         state.rates = state.rates.map((rate) =>
           rate.id === deactivatedId ? { ...rate, isActive: false } : rate,
         );
-        if (state.effectiveRate?.id === deactivatedId) {
-          state.effectiveRate = {
-            ...state.effectiveRate,
-            isActive: false,
-          };
-        }
       })
       .addCase(deactivateRate.rejected, (state, action) => {
         state.deactivateRateStatus = "failed";

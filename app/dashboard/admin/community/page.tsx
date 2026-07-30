@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import { CommunityPageHeader } from "@/components/dashboard/admin/community/CommunityPageHeader";
 import { CommunityChatSidebar } from "@/components/dashboard/admin/community/CommunityChatSidebar";
 import { CommunityChatWindow } from "@/components/dashboard/admin/community/CommunityChatWindow";
@@ -18,7 +19,6 @@ import {
 import { groupMessageToCommunity } from "@/lib/community-chat-map";
 import { displayNameFromSignedInUser } from "@/lib/user-display-name";
 import { extractUserId } from "@/lib/user-id";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
   clearGroupDetail,
@@ -59,6 +59,8 @@ export default function AdminCommunityChatPage() {
     id: string;
     text: string;
   } | null>(null);
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+  const [groupDeleteOpen, setGroupDeleteOpen] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const authUserId = useSelector((state: RootState) =>
@@ -390,16 +392,23 @@ export default function AdminCommunityChatPage() {
 
   const handleDeleteMessage = useCallback(
     (messageId: string) => {
-      confirmDeleteToast({
-        name: "this message",
-        onConfirm: async () => {
-          await dispatch(deleteGroupMessage({ messageId })).unwrap();
-          toast.success("Message deleted.");
-        },
-      });
+      setMessageToDelete(messageId);
     },
-    [dispatch],
+    [],
   );
+
+  const handleConfirmDeleteMessage = async () => {
+    if (!messageToDelete) return;
+    try {
+      await dispatch(deleteGroupMessage({ messageId: messageToDelete })).unwrap();
+      toast.success("Message deleted.");
+      setMessageToDelete(null);
+    } catch (err: unknown) {
+      const message = (err as { message?: string })?.message;
+      toast.error(message ?? "Failed to delete message.");
+      throw err;
+    }
+  };
 
   const handleCreateGroup = async (payload: {
     name: string;
@@ -455,14 +464,21 @@ export default function AdminCommunityChatPage() {
 
   const handleDeleteGroup = () => {
     if (!selectedId || !selectedGroupUi) return;
-    confirmDeleteToast({
-      name: selectedGroupUi.name,
-      onConfirm: async () => {
-        await dispatch(deleteChatGroup({ groupId: selectedId })).unwrap();
-        toast.success("Group deleted.");
-        setGroupInfoOpen(false);
-      },
-    });
+    setGroupDeleteOpen(true);
+  };
+
+  const handleConfirmDeleteGroup = async () => {
+    if (!selectedId) return;
+    try {
+      await dispatch(deleteChatGroup({ groupId: selectedId })).unwrap();
+      toast.success("Group deleted.");
+      setGroupDeleteOpen(false);
+      setGroupInfoOpen(false);
+    } catch (err: unknown) {
+      const message = (err as { message?: string })?.message;
+      toast.error(message ?? "Failed to delete group.");
+      throw err;
+    }
   };
 
   const refreshGroupMeta = async () => {
@@ -648,6 +664,22 @@ export default function AdminCommunityChatPage() {
         onSubmit={handleEditSubmit}
       />
       </div>
+    
+      <DeleteModal
+        visible={Boolean(messageToDelete)}
+        onClose={() => setMessageToDelete(null)}
+        itemName="this message"
+        title="Delete message"
+        onConfirm={handleConfirmDeleteMessage}
+      />
+
+      <DeleteModal
+        visible={groupDeleteOpen}
+        onClose={() => setGroupDeleteOpen(false)}
+        itemName={selectedGroupUi?.name ?? "this group"}
+        title="Delete group"
+        onConfirm={handleConfirmDeleteGroup}
+      />
     </div>
   );
 }

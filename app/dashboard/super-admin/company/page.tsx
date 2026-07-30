@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import { Plus, Edit, Trash2, Power, PowerOff, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import Table from "@/components/tables/list/page";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { CompanyStatsCards } from "./components/CompanyStatsCards";
 import { CompanyFormModal } from "./components/CompanyFormModal";
@@ -150,6 +150,8 @@ export default function SuperAdminCompanyPage() {
     "suspend",
   );
   const [statusSubmitting, setStatusSubmitting] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<CompanyItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
@@ -320,15 +322,27 @@ export default function SuperAdminCompanyPage() {
   const handleDelete = async (item: CompanyItem) => {
     const id = companyId(item);
     if (!id) return;
-    confirmDeleteToast({
-      name: item.name,
-      onConfirm: async () => {
-        await dispatch(deleteCompany(id)).unwrap();
-        toast.success(`${item.name ?? "Company"} deleted successfully!`);
-        setPage(1);
-        await fetchList(1);
-      },
-    });
+    setItemToDelete(item);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
+    const id = companyId(itemToDelete);
+    if (!id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteCompany(id)).unwrap();
+      toast.success(`${itemToDelete.name ?? "Company"} deleted successfully!`);
+      setItemToDelete(null);
+      setPage(1);
+      await fetchList(1);
+    } catch (err: unknown) {
+      const message = (err as { message?: string })?.message;
+      toast.error(message ?? "Failed to delete company.");
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const columns = useMemo(
@@ -555,6 +569,15 @@ export default function SuperAdminCompanyPage() {
           onConfirm={handleConfirmStatus}
         />
       </div>
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={itemToDelete?.name ?? "this company"}
+        title="Delete company"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

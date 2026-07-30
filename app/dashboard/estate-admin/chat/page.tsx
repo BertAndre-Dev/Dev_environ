@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 
 import { CommunityPageHeader } from "@/components/dashboard/admin/community/CommunityPageHeader";
 import { CommunityChatSidebar } from "@/components/dashboard/admin/community/CommunityChatSidebar";
@@ -18,7 +19,6 @@ import {
 import { groupMessageToCommunity } from "@/lib/community-chat-map";
 import { displayNameFromSignedInUser } from "@/lib/user-display-name";
 import { extractUserId } from "@/lib/user-id";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
   clearCommunityGroupError,
@@ -54,6 +54,7 @@ export default function EstateAdminCommunityChatPage() {
     id: string;
     text: string;
   } | null>(null);
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [bootstrapping, setBootstrapping] = useState(true);
@@ -352,16 +353,23 @@ export default function EstateAdminCommunityChatPage() {
 
   const handleDelete = useCallback(
     (messageId: string) => {
-      confirmDeleteToast({
-        name: "this message",
-        onConfirm: async () => {
-          await dispatch(deleteGroupMessage({ messageId })).unwrap();
-          toast.success("Message deleted.");
-        },
-      });
+      setMessageToDelete(messageId);
     },
-    [dispatch],
+    [],
   );
+
+  const handleConfirmDeleteMessage = async () => {
+    if (!messageToDelete) return;
+    try {
+      await dispatch(deleteGroupMessage({ messageId: messageToDelete })).unwrap();
+      toast.success("Message deleted.");
+      setMessageToDelete(null);
+    } catch (err: unknown) {
+      const message = (err as { message?: string })?.message;
+      toast.error(message ?? "Failed to delete message.");
+      throw err;
+    }
+  };
 
   const infoModalMembers = useMemo(
     () => (selectedGroupUi ? chatGroupMemberRowsFromApi(selectedGroupUi) : []),
@@ -477,6 +485,14 @@ export default function EstateAdminCommunityChatPage() {
         onSubmit={handleEditSubmit}
       />
       </div>
+    
+      <DeleteModal
+        visible={Boolean(messageToDelete)}
+        onClose={() => setMessageToDelete(null)}
+        itemName="this message"
+        title="Delete message"
+        onConfirm={handleConfirmDeleteMessage}
+      />
     </div>
   );
 }

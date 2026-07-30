@@ -13,12 +13,12 @@ import {
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { extractEstateIdFromUser } from "@/lib/user-id";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import { useEffect, useState } from "react";
 import Modal from "@/components/modal/page";
 import EnergyProviderEntryForm from "../forms/entry-form/page";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import { formatAddressRecordCreatedAt } from "@/lib/address";
 
 interface EntryData {
@@ -44,6 +44,8 @@ export default function EnergyProviderFieldEntry() {
   const [estateId, setEstateId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<EntryData | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name?: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [entries, setEntries] = useState<EntryData[]>([]);
   const [fields, setFields] = useState<FieldDefinition[]>([]);
   const [stats, setStats] = useState<Record<string, Record<string, unknown>>>({});
@@ -154,15 +156,24 @@ export default function EnergyProviderFieldEntry() {
       toast.error("Missing entry ID");
       return;
     }
+    setItemToDelete({ id: entryId, name: label });
+  };
 
-    confirmDeleteToast({
-      name: label || "this entry",
-      onConfirm: async () => {
-        await dispatch(deleteEnergyProviderEntry(entryId)).unwrap();
-        toast.success(`${label || "Entry"} deleted successfully!`);
-        await fetchAllData();
-      },
-    });
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete?.id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteEnergyProviderEntry(itemToDelete.id)).unwrap();
+      toast.success(`${itemToDelete.name || "Entry"} deleted successfully!`);
+      setItemToDelete(null);
+      await fetchAllData();
+    } catch (err: unknown) {
+      const message = (err as { message?: string })?.message;
+      toast.error(message ?? "Failed to delete entry.");
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const mappedEntries: EntryTableRow[] = entries.map((entry) => {
@@ -379,6 +390,15 @@ export default function EnergyProviderFieldEntry() {
           />
         </Modal>
       )}
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={itemToDelete?.name || "this entry"}
+        title="Delete entry"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

@@ -3,10 +3,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import Table from "@/components/tables/list/page";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2 } from "lucide-react";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import type { RootState, AppDispatch } from "@/redux/store";
 import {
   createAssets,
@@ -62,6 +62,7 @@ export default function AssetsTab({
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Asset | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<Asset | null>(null);
 
   const { assets, assetsPagination, categories } = useSelector(
     (state: RootState) => {
@@ -187,14 +188,7 @@ export default function AssetsTab({
                 e.stopPropagation();
                 const id = getId(item);
                 if (!id) return;
-                confirmDeleteToast({
-                  name: item.name ?? "this asset",
-                  onConfirm: async () => {
-                    await dispatch(deleteAsset(id)).unwrap();
-                    toast.success("Asset deleted.");
-                    setPage(1);
-                  },
-                });
+                setItemToDelete(item);
               }}
             >
               <Trash2 className="w-4 h-4" />
@@ -205,6 +199,23 @@ export default function AssetsTab({
     ],
     [categories, deleteStatus, dispatch, estates],
   );
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
+    const id = getId(itemToDelete);
+    if (!id) return;
+    try {
+      await dispatch(deleteAsset(id)).unwrap();
+      toast.success("Asset deleted.");
+      setItemToDelete(null);
+      setPage(1);
+    } catch (err: unknown) {
+      toast.error(
+        (err as { message?: string })?.message ?? "Failed to delete asset.",
+      );
+      throw err;
+    }
+  };
 
   const openCreate = () => {
     if (!categories.length) {
@@ -302,6 +313,15 @@ export default function AssetsTab({
         defaultEstateId={selectedEstateId || estates[0]?.id}
         loading={createStatus === "isLoading" || updateStatus === "isLoading"}
         onSubmit={handleSubmit}
+      />
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={itemToDelete?.name ?? "this asset"}
+        title="Delete asset"
+        loading={deleteStatus === "isLoading"}
+        onConfirm={handleConfirmDelete}
       />
     </div>
   );

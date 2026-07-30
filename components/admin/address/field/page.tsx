@@ -12,12 +12,12 @@ import {
 } from "@/redux/slice/admin/address-mgt/fields/fields";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
 import { useEffect, useState } from "react";
 import Modal from "@/components/modal/page";
 import FieldForm from "../forms/field-form/page";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import { formatAddressRecordCreatedAt } from "@/lib/address";
 
 interface FieldData {
@@ -36,6 +36,8 @@ export default function AddressField() {
   const [estateId, setEstateId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [selectedField, setSelectedField] = useState<FieldData | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name?: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // ✅ Get Redux state
   const { allField, pagination, loading } = useSelector((state: RootState) => {
@@ -114,17 +116,26 @@ export default function AddressField() {
 
   const handleDeleteField = async (id?: string, name?: string) => {
     if (!id) return;
+    setItemToDelete({ id, name });
+  };
 
-    confirmDeleteToast({
-      name: name || "this field",
-      onConfirm: async () => {
-        await dispatch(deleteField(id)).unwrap();
-        toast.success(`${name || "Field"} deleted successfully!`);
-        if (user?.estateId) {
-          await dispatch(getFieldByEstate(user.estateId)).unwrap();
-        }
-      },
-    });
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete?.id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteField(itemToDelete.id)).unwrap();
+      toast.success(`${itemToDelete.name || "Field"} deleted successfully!`);
+      setItemToDelete(null);
+      if (user?.estateId) {
+        await dispatch(getFieldByEstate(user.estateId)).unwrap();
+      }
+    } catch (err: unknown) {
+      const message = (err as { message?: string })?.message;
+      toast.error(message ?? "Failed to delete field.");
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // ✅ Use data directly from state
@@ -235,6 +246,15 @@ export default function AddressField() {
           />
         </Modal>
       )}
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={itemToDelete?.name || "this field"}
+        title="Delete field"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

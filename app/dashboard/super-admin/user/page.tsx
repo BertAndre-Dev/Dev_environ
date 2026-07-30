@@ -28,6 +28,7 @@ import {
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
 import { getCompanies } from "@/redux/slice/super-admin/company-mgt/company";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -35,7 +36,6 @@ import { useRouter } from "next/navigation";
 import Modal from "@/components/modal/page";
 import InviteUserForm from "@/components/super-admin/user-form/page";
 import EditUserForm from "@/app/dashboard/super-admin/user/components/EditUserForm";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import Loader from "@/components/ui/Loader";
 import { UserStatusModal } from "./components/UserStatusModal";
 import {
@@ -196,6 +196,8 @@ export default function SuperAdminUserPage() {
   );
   const [statusSubmitting, setStatusSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name?: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const estateOptions: SelectOption[] = useMemo(
     () =>
@@ -416,15 +418,24 @@ export default function SuperAdminUserPage() {
 
   const handleDeleteUser = async (id?: string, name?: string) => {
     if (!id) return;
+    setItemToDelete({ id, name });
+  };
 
-    confirmDeleteToast({
-      name,
-      onConfirm: async () => {
-        await dispatch(deleteUser(id)).unwrap();
-        toast.success(`${name} deleted successfully!`);
-        if (selectedFilterEntity?.value) await fetchUsers(1);
-      },
-    });
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete?.id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteUser(itemToDelete.id)).unwrap();
+      toast.success(`${itemToDelete.name ?? "User"} deleted successfully!`);
+      setItemToDelete(null);
+      if (selectedFilterEntity?.value) await fetchUsers(1);
+    } catch (err: unknown) {
+      const message = (err as { message?: string })?.message;
+      toast.error(message ?? "Failed to delete user.");
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const showResidentColumns = roleFilter === "resident";
@@ -813,6 +824,15 @@ export default function SuperAdminUserPage() {
           onConfirm={handleConfirmStatus}
         />
       </div>
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={itemToDelete?.name ?? "this user"}
+        title="Delete user"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

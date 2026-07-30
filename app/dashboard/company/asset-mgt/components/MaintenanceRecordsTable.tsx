@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Table from "@/components/tables/list/page";
 import { Pencil, Power, PowerOff, Trash2 } from "lucide-react";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import { formatRecurringSpan } from "@/lib/asset-maintenance-recurring";
 import type { AppDispatch } from "@/redux/store";
 import {
@@ -63,6 +63,8 @@ export default function MaintenanceRecordsTable({
   const dispatch = useDispatch<AppDispatch>();
   const [page, setPage] = useState(1);
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [itemToDelete, setItemToDelete] =
+    useState<AssetMaintenanceRecord | null>(null);
 
   const {
     records,
@@ -247,16 +249,7 @@ export default function MaintenanceRecordsTable({
                 onClick={(e) => {
                   e.stopPropagation();
                   if (!id) return;
-                  confirmDeleteToast({
-                    name: item.tag ?? "this record",
-                    onConfirm: async () => {
-                      await dispatch(deleteAssetMaintenance(id)).unwrap();
-                      toast.success("Record deleted.");
-                      setPage(1);
-                      await fetchList(estateId, 1);
-                      onRecordsChange?.();
-                    },
-                  });
+                  setItemToDelete(item);
                 }}
               >
                 <Trash2 className="h-4 w-4" />
@@ -287,28 +280,57 @@ export default function MaintenanceRecordsTable({
   const pageSize =
     Number(pagination?.pageSize ?? pagination?.limit ?? PAGE_SIZE) || PAGE_SIZE;
 
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
+    const id = getId(itemToDelete);
+    if (!id) return;
+    try {
+      await dispatch(deleteAssetMaintenance(id)).unwrap();
+      toast.success("Record deleted.");
+      setItemToDelete(null);
+      setPage(1);
+      await fetchList(estateId, 1);
+      onRecordsChange?.();
+    } catch (err: unknown) {
+      toast.error(
+        (err as { message?: string })?.message ?? "Failed to delete record.",
+      );
+      throw err;
+    }
+  };
+
   return (
-    <Card className="p-4">
-      <h2 className="mb-4 font-heading text-lg font-semibold">
-        Maintenance records
-      </h2>
-      <Table
-        columns={columns}
-        data={records}
-        emptyMessage={
-          estateId
-            ? getListStatus === "isLoading"
-              ? "Loading records..."
-              : "No maintenance records yet."
-            : "Select an estate to view records."
-        }
-        showPagination
-        paginationInfo={{ total, current, pageSize }}
-        onPageChange={(p) => setPage(p)}
-        enableExport
-        exportFileName="asset-maintenance"
-        onExportRequest={() => Promise.resolve(records)}
+    <>
+      <Card className="p-4">
+        <h2 className="mb-4 font-heading text-lg font-semibold">
+          Maintenance records
+        </h2>
+        <Table
+          columns={columns}
+          data={records}
+          emptyMessage={
+            estateId
+              ? getListStatus === "isLoading"
+                ? "Loading records..."
+                : "No maintenance records yet."
+              : "Select an estate to view records."
+          }
+          showPagination
+          paginationInfo={{ total, current, pageSize }}
+          onPageChange={(p) => setPage(p)}
+          enableExport
+          exportFileName="asset-maintenance"
+          onExportRequest={() => Promise.resolve(records)}
+        />
+      </Card>
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={itemToDelete?.tag ?? "this record"}
+        title="Delete record"
+        loading={deleteStatus === "isLoading"}
+        onConfirm={handleConfirmDelete}
       />
-    </Card>
+    </>
   );
 }

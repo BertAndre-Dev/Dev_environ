@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import {
   Plus,
   Pencil,
@@ -24,7 +25,6 @@ import {
   activateMarketplace,
   type MarketplaceItem,
 } from "@/redux/slice/super-admin/marketplace/marketplace";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import type { RootState, AppDispatch } from "@/redux/store";
 import Modal from "@/components/modal/page";
 import Tab from "@/components/tabs/page";
@@ -40,6 +40,8 @@ export default function SuperAdminMarketplacePage() {
   const dispatch = useDispatch<AppDispatch>();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MarketplaceItem | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<MarketplaceItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [suspendItem, setSuspendItem] = useState<MarketplaceItem | null>(null);
   const [suspendSubmitting, setSuspendSubmitting] = useState(false);
   const [search, setSearch] = useState("");
@@ -194,14 +196,24 @@ export default function SuperAdminMarketplacePage() {
 
   const handleDelete = (item: MarketplaceItem) => {
     if (!item.id) return;
-    confirmDeleteToast({
-      name: item.companyName ?? item.productName ?? "this listing",
-      onConfirm: async () => {
-        await dispatch(deleteMarketplace(item.id!)).unwrap();
-        toast.success("Listing deleted.");
-        setPage(1);
-      },
-    });
+    setItemToDelete(item);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete?.id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteMarketplace(itemToDelete.id)).unwrap();
+      toast.success("Listing deleted.");
+      setItemToDelete(null);
+      setPage(1);
+    } catch (err: unknown) {
+      const message = (err as { message?: string })?.message;
+      toast.error(message ?? "Failed to delete listing.");
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const tableColumns = [
@@ -531,6 +543,15 @@ export default function SuperAdminMarketplacePage() {
         loading={suspendSubmitting}
       />
       </div>
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={itemToDelete?.companyName ?? itemToDelete?.productName ?? "this listing"}
+        title="Delete listing"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

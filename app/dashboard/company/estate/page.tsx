@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import {
   Building2,
   Users,
@@ -18,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import Loader from "@/components/ui/Loader";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
@@ -50,6 +50,8 @@ export default function CompanyEstatePage() {
   const dispatch = useDispatch<AppDispatch>();
   const [companyName, setCompanyName] = useState("Company");
   const [open, setOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name?: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [modulesOpen, setModulesOpen] = useState(false);
   const [selectedEstate, setSelectedEstate] = useState<EstateTableRow | null>(null);
   const [modulesEstate, setModulesEstate] = useState<EstateTableRow | null>(null);
@@ -187,14 +189,24 @@ export default function CompanyEstatePage() {
 
   const handleDeleteEstate = (id?: string, name?: string) => {
     if (!id) return;
-    confirmDeleteToast({
-      name,
-      onConfirm: async () => {
-        await dispatch(deleteCompanyEstate(id)).unwrap();
-        toast.success(`${name ?? "Estate"} deleted successfully!`);
-        await fetchEstates(1);
-      },
-    });
+    setItemToDelete({ id, name });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete?.id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteCompanyEstate(itemToDelete.id)).unwrap();
+      toast.success(`${itemToDelete.name ?? "Estate"} deleted successfully!`);
+      setItemToDelete(null);
+      await fetchEstates(1);
+    } catch (err: unknown) {
+      const message = (err as { message?: string })?.message;
+      toast.error(message ?? "Failed to delete estate.");
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const columns = [
@@ -478,6 +490,15 @@ export default function CompanyEstatePage() {
           onConfirm={handleConfirmStatus}
         />
       </div>
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={itemToDelete?.name ?? "this estate"}
+        title="Delete estate"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

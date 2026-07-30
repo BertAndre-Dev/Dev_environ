@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/modal/page";
@@ -21,7 +22,6 @@ import {
   type RentItem,
 } from "@/redux/slice/resident/rent-mgt/rent-mgt";
 import { clearCurrentRent } from "@/redux/slice/resident/rent-mgt/rent-mgt-slice";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import PayRentModal from "@/components/resident/pay-rent-modal/page";
 import CreateRentForm from "@/components/resident/rent/create-rent-form/page";
@@ -60,6 +60,8 @@ export default function ResidentRentPage() {
   const [payRentItem, setPayRentItem] = useState<RentItem | null>(null);
   const [selectRentModalOpen, setSelectRentModalOpen] = useState(false);
   const [walletId, setWalletId] = useState<string | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<RentItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const {
     ownerRents,
@@ -201,15 +203,24 @@ export default function ResidentRentPage() {
 
   const handleDeleteRent = (item: RentItem) => {
     if (!item.id) return;
-    const tenantName = formatTenant(item);
-    confirmDeleteToast({
-      name: tenantName ? `rent for ${tenantName}` : "this rent record",
-      onConfirm: async () => {
-        await dispatch(deleteRent(item.id!)).unwrap();
-        toast.success("Rent deleted.");
-        refreshList();
-      },
-    });
+    setItemToDelete(item);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete?.id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteRent(itemToDelete.id)).unwrap();
+      toast.success("Rent deleted.");
+      setItemToDelete(null);
+      refreshList();
+    } catch (err: unknown) {
+      const message = (err as { message?: string })?.message;
+      toast.error(message ?? "Failed to delete rent.");
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleActivateRent = (item: RentItem) => {
@@ -604,6 +615,15 @@ export default function ResidentRentPage() {
           loading={payRentStatus === "isLoading"}
         />
       </div>
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={itemToDelete ? (formatTenant(itemToDelete) ? `rent for ${formatTenant(itemToDelete)}` : "this rent record") : "this rent record"}
+        title="Delete rent"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

@@ -156,7 +156,8 @@ function parseEffectiveRate(payload: unknown): EffectiveRateData | null {
 
   return {
     estate,
-    feeType: (data.feeType as string | undefined) ?? resolved?.feeType ?? null,
+    feeType:
+      (data.feeType as string | undefined) ?? resolved?.feeType ?? undefined,
     resolved,
   };
 }
@@ -178,7 +179,7 @@ export function pickEditableRate(args: {
   }
 
   const resolved = effective?.resolved;
-  if (Array.isArray(resolved?.splits) && resolved.splits.length > 0) {
+  if (resolved && Array.isArray(resolved.splits) && resolved.splits.length > 0) {
     return {
       splits: resolved.splits,
       notes: String(resolved.notes ?? ""),

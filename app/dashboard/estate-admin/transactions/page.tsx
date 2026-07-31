@@ -26,6 +26,8 @@ import {
   PaidBillDetailsModal,
   type PaidBillDetailsItem,
 } from "./components/PaidBillDetailsModal";
+import { ViewVendLimitModal } from "./components/ViewVendLimitModal";
+import { SetVendLimitModal } from "./components/SetVendLimitModal";
 import { formatDateTime } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
 import { Eye } from "lucide-react";
@@ -72,6 +74,8 @@ export default function TransactionPage() {
   const [paidBillsEndDate, setPaidBillsEndDate] = useState<string>("");
   const [viewingPaidBill, setViewingPaidBill] =
     useState<PaidBillDetailsItem | null>(null);
+  const [viewVendLimitOpen, setViewVendLimitOpen] = useState(false);
+  const [setVendLimitOpen, setSetVendLimitOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [filterType] = useState<string>("");
   const [filterStatus] = useState<string>("");
@@ -769,7 +773,12 @@ export default function TransactionPage() {
           pageLoading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
-      <TransactionsPageHeader estateName={estateName} />
+      <TransactionsPageHeader
+        estateName={estateName}
+        disabled={!estateId || bootstrapping}
+        onSeeVendLimit={() => setViewVendLimitOpen(true)}
+        onSetVendLimit={() => setSetVendLimitOpen(true)}
+      />
       <TransactionsSearchCard search={search} onSearchChange={setSearch} />
       <TransactionsTabsCard
         activeTab={activeTab}
@@ -906,6 +915,21 @@ export default function TransactionPage() {
           if (!open) setViewingPaidBill(null);
         }}
       />
+
+      {estateId ? (
+        <>
+          <ViewVendLimitModal
+            open={viewVendLimitOpen}
+            estateId={estateId}
+            onClose={() => setViewVendLimitOpen(false)}
+          />
+          <SetVendLimitModal
+            open={setVendLimitOpen}
+            estateId={estateId}
+            onClose={() => setSetVendLimitOpen(false)}
+          />
+        </>
+      ) : null}
       </div>
     </div>
   );

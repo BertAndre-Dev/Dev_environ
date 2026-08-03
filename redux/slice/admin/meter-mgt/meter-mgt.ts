@@ -105,3 +105,67 @@ export const getVendingStatsByEstate = createAsyncThunk(
   },
 );
 
+export interface EstateVendLimitsDefaults {
+  minVendAmount: number;
+  maxVendAmount: number;
+}
+
+export interface EstateVendLimitsData {
+  estateId: string;
+  estateName: string;
+  minVendAmount: number;
+  maxVendAmount: number;
+  isConfigured: boolean;
+  defaults: EstateVendLimitsDefaults;
+}
+
+export interface EstateVendLimitsResponse {
+  success: boolean;
+  message: string;
+  data: EstateVendLimitsData;
+}
+
+/** GET /api/v1/meters/estate/{estateId}/vend-limits */
+export const getEstateVendLimits = createAsyncThunk(
+  "meter-mgt/getEstateVendLimits",
+  async ({ estateId }: { estateId: string }, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.get<EstateVendLimitsResponse>(
+        `/api/v1/meters/estate/${estateId}/vend-limits`,
+      );
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: unknown } };
+      return rejectWithValue(err?.response?.data);
+    }
+  },
+);
+
+/** PUT /api/v1/meters/estate/{estateId}/vend-limits */
+export const setEstateVendLimits = createAsyncThunk(
+  "meter-mgt/setEstateVendLimits",
+  async (
+    {
+      estateId,
+      minVendAmount,
+      maxVendAmount,
+    }: {
+      estateId: string;
+      minVendAmount: number;
+      maxVendAmount: number;
+    },
+    { rejectWithValue },
+  ) => {
+    try {
+      const res = await axiosInstance.put<EstateVendLimitsResponse>(
+        `/api/v1/meters/estate/${estateId}/vend-limits`,
+        { minVendAmount, maxVendAmount },
+      );
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: unknown } };
+      return rejectWithValue(err?.response?.data);
+    }
+  },
+);
+

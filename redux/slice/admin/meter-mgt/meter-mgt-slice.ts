@@ -209,7 +209,7 @@ const adminMeterSlice = createSlice({
                 state.error =
                     (action.payload as { message?: string } | undefined)?.message ||
                     action.error.message ||
-                    "Failed to fetch estate vend limits";
+                    null;
             });
 
         // ✅ SET ESTATE VEND LIMITS
@@ -227,7 +227,7 @@ const adminMeterSlice = createSlice({
                 state.error =
                     (action.payload as { message?: string } | undefined)?.message ||
                     action.error.message ||
-                    "Failed to set estate vend limits";
+                    null;
             });
     },
 });

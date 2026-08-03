@@ -9,7 +9,8 @@ import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useState } from "react";
 import type { EstateEnergyUsageRange } from "@/lib/estate-energy-usage-chart";
 import { useDispatch, useSelector } from "react-redux";
-import { Eye, Link, Search, Zap } from "lucide-react";
+import { ChevronDown, Eye, Link, Search, Zap } from "lucide-react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { MeterEnergyUsageSection } from "@/components/charts/meter-energy-usage-section";
 import {
   getMeterUsage,
@@ -31,6 +32,8 @@ import type { EnergyConsumptionPeriod } from "@/lib/energy-consumption-chart";
 import Tab from "@/components/tabs/page";
 import { IoSpeedometerOutline } from "react-icons/io5";
 import Loader from "@/components/ui/Loader";
+import { ViewVendLimitModal } from "./components/ViewVendLimitModal";
+import { SetVendLimitModal } from "./components/SetVendLimitModal";
 
 interface VendorData {
   name: string;
@@ -85,6 +88,8 @@ export default function AdminMeterManagement() {
   const [usageMeterNumber, setUsageMeterNumber] = useState<string | null>(null);
   const [meterUsageRange, setMeterUsageRange] =
     useState<MeterUsageRange>("weekly");
+  const [viewVendLimitOpen, setViewVendLimitOpen] = useState(false);
+  const [setVendLimitOpen, setSetVendLimitOpen] = useState(false);
 
   const { allAdminMeters, pagination } = useSelector((state: RootState) => {
     const adminMeterState = state.adminMeter as any;
@@ -437,15 +442,49 @@ export default function AdminMeterManagement() {
         ].join(" ")}
       >
       {/* Header */}
-      <div>
-        <h1 className="font-heading text-3xl font-bold">Energy Management</h1>
-        <p className="text-muted-foreground mt-1">
-          Monitor energy usage and manage all meters in{" "}
-          <span className="text-[18px] font-bold underline uppercase text-black">
-            {estateName || ""}
-          </span>
-          .
-        </p>
+      <div className="flex flex-col md:flex-row gap-5 md:gap-0 items-start md:items-center justify-between">
+        <div>
+          <h1 className="font-heading text-3xl font-bold">Energy Management</h1>
+          <p className="text-muted-foreground mt-1">
+            Monitor energy usage and manage all meters in{" "}
+            <span className="text-[18px] font-bold underline uppercase text-black">
+              {estateName || ""}
+            </span>
+            .
+          </p>
+        </div>
+
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <Button
+              disabled={!estateId || bootstrapping}
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              Vend Limit
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              align="end"
+              sideOffset={8}
+              className="z-50 min-w-[200px] rounded-md border bg-white p-1 shadow-md"
+            >
+              <DropdownMenu.Item
+                onSelect={() => setViewVendLimitOpen(true)}
+                className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100"
+              >
+                See vend limit
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                onSelect={() => setSetVendLimitOpen(true)}
+                className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100"
+              >
+                Set / update vend limit
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -636,6 +675,21 @@ export default function AdminMeterManagement() {
           </div>
         </Modal>
       )}
+
+      {estateId ? (
+        <>
+          <ViewVendLimitModal
+            open={viewVendLimitOpen}
+            estateId={estateId}
+            onClose={() => setViewVendLimitOpen(false)}
+          />
+          <SetVendLimitModal
+            open={setVendLimitOpen}
+            estateId={estateId}
+            onClose={() => setSetVendLimitOpen(false)}
+          />
+        </>
+      ) : null}
       </div>
     </div>
   );

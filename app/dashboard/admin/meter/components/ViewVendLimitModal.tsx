@@ -10,7 +10,7 @@ import type { AppDispatch } from "@/redux/store";
 import {
   getEstateVendLimits,
   type EstateVendLimitsData,
-} from "@/redux/slice/estate-admin/transaction/transaction";
+} from "@/redux/slice/admin/meter-mgt/meter-mgt";
 
 type Props = Readonly<{
   open: boolean;
@@ -37,6 +37,7 @@ export function ViewVendLimitModal({ open, estateId, onClose }: Props) {
   const dispatch = useDispatch<AppDispatch>();
   const [loading, setLoading] = useState(false);
   const [limits, setLimits] = useState<EstateVendLimitsData | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !estateId) return;
@@ -46,16 +47,16 @@ export function ViewVendLimitModal({ open, estateId, onClose }: Props) {
       try {
         setLoading(true);
         setLimits(null);
+        setErrorMessage(null);
         const res = await dispatch(getEstateVendLimits({ estateId })).unwrap();
         if (!cancelled) {
           setLimits(res?.data ?? null);
         }
       } catch (err: unknown) {
         if (!cancelled) {
-          toast.error(
-            (err as { message?: string })?.message ??
-              "Failed to load vend limits.",
-          );
+          const message = (err as { message?: string })?.message ?? null;
+          setErrorMessage(message);
+          if (message) toast.error(message);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -125,7 +126,7 @@ export function ViewVendLimitModal({ open, estateId, onClose }: Props) {
 
         {!loading && !limits ? (
           <p className="text-sm text-muted-foreground py-6 text-center">
-            Unable to load vend limits.
+            {errorMessage}
           </p>
         ) : null}
 

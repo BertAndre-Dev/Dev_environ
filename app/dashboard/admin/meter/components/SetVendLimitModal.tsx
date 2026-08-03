@@ -12,7 +12,7 @@ import type { AppDispatch } from "@/redux/store";
 import {
   getEstateVendLimits,
   setEstateVendLimits,
-} from "@/redux/slice/estate-admin/transaction/transaction";
+} from "@/redux/slice/admin/meter-mgt/meter-mgt";
 
 const FALLBACK_MAX = 250000;
 
@@ -55,10 +55,8 @@ export function SetVendLimitModal({
         }
       } catch (err: unknown) {
         if (!cancelled) {
-          toast.error(
-            (err as { message?: string })?.message ??
-              "Failed to load current vend limits.",
-          );
+          const message = (err as { message?: string })?.message;
+          if (message) toast.error(message);
         }
       } finally {
         if (!cancelled) setLoadingInitial(false);
@@ -76,25 +74,6 @@ export function SetVendLimitModal({
     const min = Number(minVendAmount);
     const max = Number(maxVendAmount);
 
-    if (!Number.isFinite(min) || !Number.isFinite(max)) {
-      toast.error("Enter valid minimum and maximum amounts.");
-      return;
-    }
-    if (min < 1) {
-      toast.error("Minimum vend amount must be at least ₦1.");
-      return;
-    }
-    if (max < min) {
-      toast.error("Maximum must be greater than or equal to minimum.");
-      return;
-    }
-    if (max > defaultMax) {
-      toast.error(
-        `Maximum vend amount cannot exceed ₦${defaultMax.toLocaleString()}.`,
-      );
-      return;
-    }
-
     try {
       setSubmitting(true);
       const res = await dispatch(
@@ -104,14 +83,12 @@ export function SetVendLimitModal({
           maxVendAmount: max,
         }),
       ).unwrap();
-      toast.success(res?.message ?? "Vend limits updated successfully.");
+      if (res?.message) toast.success(res.message);
       onSuccess?.();
       onClose();
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ??
-          "Failed to update vend limits.",
-      );
+      const message = (err as { message?: string })?.message;
+      if (message) toast.error(message);
     } finally {
       setSubmitting(false);
     }

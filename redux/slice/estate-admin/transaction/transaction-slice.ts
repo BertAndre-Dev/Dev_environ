@@ -8,9 +8,6 @@ import {
   // initializePayment,
   transferFunds,
   requestEstateAdminOtp,
-  getEstateVendLimits,
-  setEstateVendLimits,
-  type EstateVendLimitsData,
 } from "./transaction";
 
 interface TransactionData {
@@ -60,13 +57,10 @@ export interface TransactionState {
   initializePaymentState: "idle" | "isLoading" | "succeeded" | "failed";
   transferFundsState: "idle" | "isLoading" | "succeeded" | "failed";
   requestOtpState: "idle" | "isLoading" | "succeeded" | "failed";
-  getEstateVendLimitsState: "idle" | "isLoading" | "succeeded" | "failed";
-  setEstateVendLimitsState: "idle" | "isLoading" | "succeeded" | "failed";
   status: "idle" | "isLoading" | "succeeded" | "failed";
   transaction: TransactionData | null;
   allTransactions: TransactionResponse | null;
   paymentData: PaymentResponse | null;
-  vendLimits: EstateVendLimitsData | null;
   error: string | null;
 }
 
@@ -79,13 +73,10 @@ const initialState: TransactionState = {
   initializePaymentState: "idle",
   transferFundsState: "idle",
   requestOtpState: "idle",
-  getEstateVendLimitsState: "idle",
-  setEstateVendLimitsState: "idle",
   status: "idle",
   transaction: null,
   allTransactions: null,
   paymentData: null,
-  vendLimits: null,
   error: null,
 };
 
@@ -274,43 +265,6 @@ const transactionSlice = createSlice({
           (action.payload as { message: string })?.message ||
           action.error.message ||
           "Failed to request OTP";
-      });
-
-    // ✅ GET ESTATE VEND LIMITS
-    builder
-      .addCase(getEstateVendLimits.pending, (state) => {
-        state.getEstateVendLimitsState = "isLoading";
-        state.error = null;
-      })
-      .addCase(getEstateVendLimits.fulfilled, (state, action) => {
-        state.getEstateVendLimitsState = "succeeded";
-        state.vendLimits = action.payload?.data ?? null;
-      })
-      .addCase(getEstateVendLimits.rejected, (state, action) => {
-        state.getEstateVendLimitsState = "failed";
-        state.vendLimits = null;
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to fetch estate vend limits";
-      });
-
-    // ✅ SET ESTATE VEND LIMITS
-    builder
-      .addCase(setEstateVendLimits.pending, (state) => {
-        state.setEstateVendLimitsState = "isLoading";
-        state.error = null;
-      })
-      .addCase(setEstateVendLimits.fulfilled, (state, action) => {
-        state.setEstateVendLimitsState = "succeeded";
-        state.vendLimits = action.payload?.data ?? state.vendLimits;
-      })
-      .addCase(setEstateVendLimits.rejected, (state, action) => {
-        state.setEstateVendLimitsState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to set estate vend limits";
       });
   },
 });

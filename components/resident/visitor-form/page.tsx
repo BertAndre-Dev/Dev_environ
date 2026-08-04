@@ -47,6 +47,9 @@ type VisitorDraft = {
   lastName: string;
   phone: string;
   purpose: string;
+  visitingType: VisitingType;
+  visitStartDate: string;
+  visitEndDate: string;
 };
 
 function createEmptyDraft(): VisitorDraft {
@@ -56,6 +59,9 @@ function createEmptyDraft(): VisitorDraft {
     lastName: "",
     phone: "",
     purpose: "",
+    visitingType: "SHORT_VISIT",
+    visitStartDate: "",
+    visitEndDate: "",
   };
 }
 
@@ -87,12 +93,8 @@ export default function VisitorForm({
   /** Stable min for edit: preserves an existing past start date without shrinking as user changes. */
   const [visitStartMinDate, setVisitStartMinDate] = useState(todayIsoString());
   const [addressLabel, setAddressLabel] = useState("");
-  const [visitingType, setVisitingType] = useState<VisitingType>("SHORT_VISIT");
-  const [visitStartDate, setVisitStartDate] = useState("");
-  const [visitEndDate, setVisitEndDate] = useState("");
   const [drafts, setDrafts] = useState<VisitorDraft[]>([createEmptyDraft()]);
 
-  // Auto-populate address from addressId prop
   useEffect(() => {
     if (addressId && typeof addressId === "object" && addressId.data) {
       const friendly = formatAddressEntryLabel(addressId.data);
@@ -123,11 +125,6 @@ export default function VisitorForm({
           const start = toDateOnlyValue(visitor.visitStartDate);
           const today = todayIsoString();
           setVisitStartMinDate(start && start < today ? start : today);
-          setVisitingType(
-            (visitor.visitingType as VisitingType) || "SHORT_VISIT",
-          );
-          setVisitStartDate(start);
-          setVisitEndDate(toDateOnlyValue(visitor.visitEndDate));
           setDrafts([
             {
               id: createEmptyDraft().id,
@@ -135,6 +132,10 @@ export default function VisitorForm({
               lastName: visitor.lastName || "",
               phone: visitor.phone || "",
               purpose: visitor.purpose || "",
+              visitingType:
+                (visitor.visitingType as VisitingType) || "SHORT_VISIT",
+              visitStartDate: start,
+              visitEndDate: toDateOnlyValue(visitor.visitEndDate),
             },
           ]);
           if (visitor.address) setAddressLabel(visitor.address);
@@ -148,13 +149,29 @@ export default function VisitorForm({
     loadVisitor();
   }, [visitorId, dispatch]);
 
-  const updateDraft = (
+  const updateDraft = <K extends keyof Omit<VisitorDraft, "id">>(
     id: string,
-    field: keyof Omit<VisitorDraft, "id">,
-    value: string,
+    field: K,
+    value: VisitorDraft[K],
   ) => {
     setDrafts((prev) =>
       prev.map((row) => (row.id === id ? { ...row, [field]: value } : row)),
+    );
+  };
+
+  const setVisitingType = (id: string, next: VisitingType) => {
+    setDrafts((prev) =>
+      prev.map((row) =>
+        row.id === id
+          ? {
+              ...row,
+              visitingType: next,
+              visitStartDate:
+                next === "SHORT_VISIT" && !isEdit ? "" : row.visitStartDate,
+              visitEndDate: next === "SHORT_VISIT" ? "" : row.visitEndDate,
+            }
+          : row,
+      ),
     );
   };
 
@@ -193,51 +210,54 @@ export default function VisitorForm({
       return;
     }
 
-    const isLongVisit = visitingType === "LONG_VISIT";
-
-    if (isLongVisit) {
-      if (!visitStartDate || !visitEndDate) {
-        toast.error("Start and end dates are required for a long visit");
-        return;
-      }
-      if (visitEndDate < visitStartDate) {
-        toast.error("End date must be on or after the start date");
-        return;
-      }
-    } else if (isEdit && !visitStartDate) {
-      toast.error("Visit start date is required for a short visit");
-      return;
-    }
-
     const today = todayIsoString();
-    if (visitStartDate && visitStartDate < visitStartMinDate) {
-      toast.error(
-        visitStartMinDate === today
-          ? "Visit start date must be today or later."
-          : "Visit start date is before the allowed range.",
-      );
-      return;
-    }
 
     for (let i = 0; i < drafts.length; i++) {
       const row = drafts[i];
+      const label = isEdit ? "visitor" : `visitor ${i + 1}`;
+
       if (!row.firstName || !row.lastName || !row.phone || !row.purpose) {
         toast.error(
           isEdit
             ? "Please fill in all required fields"
-            : `Please fill in all required fields for visitor ${i + 1}.`,
+            : `Please fill in all required fields for ${label}.`,
+        );
+        return;
+      }
+
+      if (row.visitingType === "LONG_VISIT") {
+        if (!row.visitStartDate || !row.visitEndDate) {
+          toast.error(
+            `Start and end dates are required for ${label}'s long visit`,
+          );
+          return;
+        }
+        if (row.visitEndDate < row.visitStartDate) {
+          toast.error(
+            `End date must be on or after the start date for ${label}`,
+          );
+          return;
+        }
+      } else if (isEdit && !row.visitStartDate) {
+        toast.error("Visit start date is required for a short visit");
+        return;
+      }
+
+      if (row.visitStartDate && row.visitStartDate < visitStartMinDate) {
+        toast.error(
+          visitStartMinDate === today
+            ? `Visit start date for ${label} must be today or later.`
+            : `Visit start date for ${label} is before the allowed range.`,
         );
         return;
       }
     }
 
-    const startIso = toIsoOrNull(visitStartDate);
-    const endIso = isLongVisit ? toIsoOrNull(visitEndDate, true) : undefined;
-
     setSubmitting(true);
     try {
       if (isEdit && visitorId) {
         const row = drafts[0];
+        const isLongVisit = row.visitingType === "LONG_VISIT";
         await dispatch(
           updateVisitor({
             id: visitorId,
@@ -249,26 +269,33 @@ export default function VisitorForm({
               residentId,
               estateId,
               addressId: addressIdString,
-              visitingType,
-              visitStartDate: startIso,
-              ...(isLongVisit ? { visitEndDate: endIso ?? null } : {}),
+              visitingType: row.visitingType,
+              visitStartDate: toIsoOrNull(row.visitStartDate),
+              ...(isLongVisit
+                ? { visitEndDate: toIsoOrNull(row.visitEndDate, true) }
+                : {}),
             },
           }),
         ).unwrap();
         toast.success("Visitor updated successfully");
       } else {
-        const payload: CreateVisitorData[] = drafts.map((row) => ({
-          firstName: row.firstName.trim(),
-          lastName: row.lastName.trim(),
-          phone: row.phone.trim(),
-          purpose: row.purpose.trim(),
-          residentId,
-          estateId,
-          addressId: addressIdString,
-          visitingType,
-          visitStartDate: startIso,
-          ...(isLongVisit ? { visitEndDate: endIso ?? null } : {}),
-        }));
+        const payload: CreateVisitorData[] = drafts.map((row) => {
+          const isLongVisit = row.visitingType === "LONG_VISIT";
+          return {
+            firstName: row.firstName.trim(),
+            lastName: row.lastName.trim(),
+            phone: row.phone.trim(),
+            purpose: row.purpose.trim(),
+            residentId,
+            estateId,
+            addressId: addressIdString,
+            visitingType: row.visitingType,
+            visitStartDate: toIsoOrNull(row.visitStartDate),
+            ...(isLongVisit
+              ? { visitEndDate: toIsoOrNull(row.visitEndDate, true) }
+              : {}),
+          };
+        });
         await dispatch(createVisitor(payload)).unwrap();
         toast.success(
           payload.length === 1
@@ -328,85 +355,6 @@ export default function VisitorForm({
                     visitors.
                   </p>
                 )}
-              </div>
-            )}
-
-            <div>
-              <Label htmlFor="visitingType">Visiting Type *</Label>
-              <select
-                id="visitingType"
-                name="visitingType"
-                title="Visiting Type"
-                aria-label="Visiting Type"
-                value={visitingType}
-                onChange={(e) => {
-                  const next = e.target.value as VisitingType;
-                  setVisitingType(next);
-                  if (next === "SHORT_VISIT") {
-                    if (!isEdit) setVisitStartDate("");
-                    setVisitEndDate("");
-                  }
-                }}
-                className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="SHORT_VISIT">Short Visit</option>
-                <option value="LONG_VISIT">Long Visit</option>
-              </select>
-              <p className="text-xs text-gray-500 mt-1">
-                {visitingType === "SHORT_VISIT"
-                  ? isEdit
-                    ? "Choose when the short visit should start."
-                    : "Short visits start when the visitor arrives. Applies to all visitors below."
-                  : "Long visits require a start and end date. Applies to all visitors below."}
-              </p>
-            </div>
-
-            {visitingType === "SHORT_VISIT" ? (
-              isEdit ? (
-                <div>
-                  <Label htmlFor="visitStartDate">Visit Start Date *</Label>
-                  <div className="mt-1">
-                    <IsoDatePicker
-                      id="visitStartDate"
-                      value={visitStartDate}
-                      minDate={visitStartMinDate}
-                      onChange={setVisitStartDate}
-                      placeholder="Select visit start date"
-                      ariaLabel="Visit start date"
-                    />
-                  </div>
-                </div>
-              ) : null
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="visitStartDate">Visit Start Date *</Label>
-                  <div className="mt-1">
-                    <IsoLinkedRangeStart
-                      id="visitStartDate"
-                      startDate={visitStartDate}
-                      endDate={visitEndDate}
-                      minDate={visitStartMinDate}
-                      onStartChange={setVisitStartDate}
-                      onEndChange={setVisitEndDate}
-                      placeholder="Select start date"
-                      ariaLabel="Visit start date"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="visitEndDate">Visit End Date *</Label>
-                  <div className="mt-1">
-                    <IsoLinkedRangeEnd
-                      id="visitEndDate"
-                      startDate={visitStartDate}
-                      endDate={visitEndDate}
-                      onEndChange={setVisitEndDate}
-                      placeholder="Select end date"
-                      ariaLabel="Visit end date"
-                    />
-                  </div>
-                </div>
               </div>
             )}
 
@@ -516,6 +464,95 @@ export default function VisitorForm({
                       className="mt-1 flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     />
                   </div>
+
+                  <div>
+                    <Label htmlFor={`visitingType-${row.id}`}>
+                      Visiting Type *
+                    </Label>
+                    <select
+                      id={`visitingType-${row.id}`}
+                      title="Visiting Type"
+                      aria-label={`Visiting type for visitor ${idx + 1}`}
+                      value={row.visitingType}
+                      onChange={(e) =>
+                        setVisitingType(row.id, e.target.value as VisitingType)
+                      }
+                      className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      <option value="SHORT_VISIT">Short Visit</option>
+                      <option value="LONG_VISIT">Long Visit</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {row.visitingType === "SHORT_VISIT"
+                        ? isEdit
+                          ? "Choose when the short visit should start."
+                          : "Short visits start when the visitor arrives."
+                        : "Long visits require a start and end date."}
+                    </p>
+                  </div>
+
+                  {row.visitingType === "SHORT_VISIT" ? (
+                    isEdit ? (
+                      <div>
+                        <Label htmlFor={`visitStartDate-${row.id}`}>
+                          Visit Start Date *
+                        </Label>
+                        <div className="mt-1">
+                          <IsoDatePicker
+                            id={`visitStartDate-${row.id}`}
+                            value={row.visitStartDate}
+                            minDate={visitStartMinDate}
+                            onChange={(iso) =>
+                              updateDraft(row.id, "visitStartDate", iso)
+                            }
+                            placeholder="Select visit start date"
+                            ariaLabel="Visit start date"
+                          />
+                        </div>
+                      </div>
+                    ) : null
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor={`visitStartDate-${row.id}`}>
+                          Visit Start Date *
+                        </Label>
+                        <div className="mt-1">
+                          <IsoLinkedRangeStart
+                            id={`visitStartDate-${row.id}`}
+                            startDate={row.visitStartDate}
+                            endDate={row.visitEndDate}
+                            minDate={visitStartMinDate}
+                            onStartChange={(iso) =>
+                              updateDraft(row.id, "visitStartDate", iso)
+                            }
+                            onEndChange={(iso) =>
+                              updateDraft(row.id, "visitEndDate", iso)
+                            }
+                            placeholder="Select start date"
+                            ariaLabel={`Visit start date for visitor ${idx + 1}`}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor={`visitEndDate-${row.id}`}>
+                          Visit End Date *
+                        </Label>
+                        <div className="mt-1">
+                          <IsoLinkedRangeEnd
+                            id={`visitEndDate-${row.id}`}
+                            startDate={row.visitStartDate}
+                            endDate={row.visitEndDate}
+                            onEndChange={(iso) =>
+                              updateDraft(row.id, "visitEndDate", iso)
+                            }
+                            placeholder="Select end date"
+                            ariaLabel={`Visit end date for visitor ${idx + 1}`}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

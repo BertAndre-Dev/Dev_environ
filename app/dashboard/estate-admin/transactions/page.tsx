@@ -237,7 +237,7 @@ export default function TransactionPage() {
   ]);
 
   // 🔹 Fetch paid bills when tab is paid-bills (larger limit for client-side filtering)
-  const PAID_BILLS_FETCH_LIMIT = 2000;
+  const PAID_BILLS_FETCH_LIMIT = 10;
   useEffect(() => {
     if (activeTab !== "paid-bills" || !estateId) return;
     (async () => {

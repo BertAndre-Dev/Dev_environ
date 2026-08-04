@@ -165,7 +165,7 @@ export default function SuperAdminEstateTransactionsPage() {
     vendsEndDate,
   ]);
 
-  const PAID_BILLS_FETCH_LIMIT = 2000;
+  const PAID_BILLS_FETCH_LIMIT = 10;
   useEffect(() => {
     if (activeTab !== "paid-bills" || !selectedEstateId) return;
     (async () => {

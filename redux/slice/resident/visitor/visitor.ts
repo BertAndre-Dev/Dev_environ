@@ -54,13 +54,17 @@ export const deleteVisitor = createAsyncThunk(
   },
 );
 
-// Create visitor
+// Create visitor(s) — supports bulk via visitors[]
 export const createVisitor = createAsyncThunk(
   "residentVisitor/createVisitor",
-  async (data: CreateVisitorData, { rejectWithValue }) => {
+  async (
+    data: CreateVisitorData | CreateVisitorData[],
+    { rejectWithValue },
+  ) => {
     try {
+      const visitors = Array.isArray(data) ? data : [data];
       const res = await axiosInstance.post("/api/v1/visitor-mgt", {
-        visitors: [data],
+        visitors,
       });
       return res.data;
     } catch (error: any) {

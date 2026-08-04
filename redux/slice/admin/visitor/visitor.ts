@@ -24,7 +24,7 @@ interface GetVisitorDetailsParams {
   code: string;
 }
 
-/** POST /api/v1/visitor-mgt — admin invite (supports bulk via visitors[]) */
+/** POST /api/v1/visitor-mgt — admin invite (bulk via visitors[]; addressId/residentId may be null) */
 export const createVisitor = createAsyncThunk(
   "visitor/createVisitor",
   async (

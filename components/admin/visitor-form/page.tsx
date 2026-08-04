@@ -74,12 +74,12 @@ export default function AdminVisitorForm({
     );
   };
 
-  const addDraft = () => {
-    setDrafts((prev) => [...prev, createEmptyDraft()]);
-  };
+  const addDraft = () => setDrafts((prev) => [...prev, createEmptyDraft()]);
 
   const removeDraft = (id: string) => {
-    setDrafts((prev) => (prev.length <= 1 ? prev : prev.filter((r) => r.id !== id)));
+    setDrafts((prev) =>
+      prev.length <= 1 ? prev : prev.filter((r) => r.id !== id),
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -136,8 +136,8 @@ export default function AdminVisitorForm({
       await dispatch(createVisitor(payload)).unwrap();
       toast.success(
         payload.length === 1
-          ? "Visitor added successfully."
-          : `${payload.length} visitors added successfully.`,
+          ? "Visitor invited successfully."
+          : `${payload.length} visitors invited successfully.`,
       );
       onSubmitSuccess?.();
       onClose?.();
@@ -146,11 +146,16 @@ export default function AdminVisitorForm({
       const apiMessage = Array.isArray(rawMessage)
         ? rawMessage.join(", ")
         : rawMessage;
-      toast.error(apiMessage || "Failed to add visitor.");
+      toast.error(apiMessage || "Failed to invite visitor.");
     } finally {
       setSubmitting(false);
     }
   };
+
+  const submitLabel =
+    drafts.length === 1
+      ? "Invite Visitor"
+      : `Invite ${drafts.length} Visitors`;
 
   return (
     <form onSubmit={handleSubmit}>
@@ -333,11 +338,7 @@ export default function AdminVisitorForm({
             Cancel
           </Button>
           <Button type="submit" className="flex-1" disabled={submitting}>
-            {submitting
-              ? "Inviting..."
-              : drafts.length === 1
-                ? "Invite Visitor"
-                : `Invite ${drafts.length} Visitors`}
+            {submitting ? "Inviting..." : submitLabel}
           </Button>
         </div>
       </CardContent>

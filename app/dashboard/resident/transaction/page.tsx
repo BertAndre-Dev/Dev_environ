@@ -651,10 +651,10 @@ export default function TransactionPage() {
         />
 
         {/* VA is independent of wallet — user may have both */}
-        <ResidentVirtualAccountCard
+        {/* <ResidentVirtualAccountCard
           enabled={Boolean(userId)}
           hasWallet={Boolean(wallet?.id)}
-        />
+        /> */}
 
         {/* Transactions Table */}
         <Card className="p-4">

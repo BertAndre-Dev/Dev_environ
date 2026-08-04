@@ -58,7 +58,7 @@ export function VisitorPageHeader({
               onSelect={() => onAddVisitor()}
               className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100"
             >
-              Add Visitor
+              Invite Visitors
             </DropdownMenu.Item>
             <DropdownMenu.Item
               onSelect={() => onAddOccupant()}

@@ -1,55 +1,33 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useDispatch } from "react-redux";
-import Select from "react-select";
 import { AppDispatch } from "@/redux/store";
-import { createVisitor } from "@/redux/slice/resident/visitor/visitor";
-import { getAllUsersByEstate } from "@/redux/slice/admin/user-mgt/user";
-import { getFieldByEstate } from "@/redux/slice/admin/address-mgt/fields/fields";
-import { getEntriesByField } from "@/redux/slice/admin/address-mgt/entry/entry";
+import {
+  createVisitor,
+  type VisitingType,
+} from "@/redux/slice/admin/visitor/visitor";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  IsoLinkedRangeEnd,
+  IsoLinkedRangeStart,
+  todayIsoString,
+} from "@/components/ui/iso-date-picker";
 import { toast } from "react-toastify";
-import { formatAddressEntryLabel, normalizeAddresses } from "@/lib/address";
+
+function toIsoOrNull(val: string, endOfDay = false) {
+  if (!val) return null;
+  const d = new Date(`${val}T${endOfDay ? "23:59:59" : "00:00:00"}`);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
 
 interface AdminVisitorFormProps {
   estateId: string;
   onSubmitSuccess?: () => void;
   onClose?: () => void;
-}
-
-interface SelectOption {
-  label: string;
-  value: string;
-}
-
-interface ResidentRecord {
-  id: string;
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  addressId?: string | { id?: string } | null;
-  addressIds?: Array<string | { id?: string }>;
-}
-
-function residentLabel(u: ResidentRecord): string {
-  return `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email || u.id;
-}
-
-function findResidentForAddress(
-  residents: ResidentRecord[],
-  addressId: string,
-): ResidentRecord | undefined {
-  if (!addressId) return undefined;
-  return residents.find((r) => {
-    const addresses = normalizeAddresses(
-      r as unknown as Record<string, unknown>,
-    );
-    return addresses.some((a) => a.id === addressId);
-  });
 }
 
 export default function AdminVisitorForm({
@@ -58,78 +36,26 @@ export default function AdminVisitorForm({
   onClose,
 }: AdminVisitorFormProps) {
   const dispatch = useDispatch<AppDispatch>();
-
-  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [residents, setResidents] = useState<ResidentRecord[]>([]);
-  const [addressOptions, setAddressOptions] = useState<SelectOption[]>([]);
+  const visitStartMinDate = todayIsoString();
 
   const [formData, setFormData] = useState<{
     firstName: string;
     lastName: string;
     phone: string;
     purpose: string;
-    residentId: string;
-    addressId: string;
+    visitingType: VisitingType;
+    visitStartDate: string;
+    visitEndDate: string;
   }>({
     firstName: "",
     lastName: "",
     phone: "",
     purpose: "",
-    residentId: "",
-    addressId: "",
+    visitingType: "SHORT_VISIT",
+    visitStartDate: "",
+    visitEndDate: "",
   });
-
-  useEffect(() => {
-    const load = async () => {
-      if (!estateId) return;
-      setLoading(true);
-      try {
-        const [usersRes, fieldRes] = await Promise.all([
-          dispatch(
-            getAllUsersByEstate({
-              estateId,
-              page: 1,
-              limit: 500,
-              role: "resident",
-            }),
-          ).unwrap(),
-          dispatch(getFieldByEstate(estateId)).unwrap(),
-        ]);
-
-        const users = (usersRes?.data || []) as ResidentRecord[];
-        const filteredResidents = users.filter(
-          (u: any) => (u.role || "").toLowerCase() === "resident",
-        );
-        setResidents(filteredResidents);
-
-        const fields = fieldRes?.data || [];
-        if (fields.length > 0) {
-          const entryRes = await dispatch(
-            getEntriesByField({ fieldId: fields[0].id, page: 1, limit: 500 }),
-          ).unwrap();
-          const entries = entryRes?.data || [];
-          setAddressOptions(
-            entries.map((entry: any) => {
-              const label = formatAddressEntryLabel(entry.data);
-              return { label: label || "Unnamed address", value: entry.id };
-            }),
-          );
-        }
-      } catch (err: any) {
-        toast.error(err?.message || "Failed to load residents and addresses.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    load();
-  }, [estateId, dispatch]);
-
-  const selectedResident = residents.find((r) => r.id === formData.residentId);
-  const residentDisplayName = selectedResident
-    ? residentLabel(selectedResident)
-    : "";
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -145,16 +71,32 @@ export default function AdminVisitorForm({
       !formData.firstName ||
       !formData.lastName ||
       !formData.phone ||
-      !formData.purpose ||
-      !formData.addressId
+      !formData.purpose
     ) {
       toast.error("Please fill in all required fields.");
       return;
     }
 
-    if (!formData.residentId) {
-      toast.error("No resident is linked to the selected address.");
+    if (!estateId) {
+      toast.error("Unable to identify estate. Please refresh and try again.");
       return;
+    }
+
+    const isLongVisit = formData.visitingType === "LONG_VISIT";
+
+    if (isLongVisit) {
+      if (!formData.visitStartDate || !formData.visitEndDate) {
+        toast.error("Start and end dates are required for a long visit.");
+        return;
+      }
+      if (formData.visitEndDate < formData.visitStartDate) {
+        toast.error("End date must be on or after the start date.");
+        return;
+      }
+      if (formData.visitStartDate < visitStartMinDate) {
+        toast.error("Visit start date must be today or later.");
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -165,12 +107,16 @@ export default function AdminVisitorForm({
           lastName: formData.lastName,
           phone: formData.phone,
           purpose: formData.purpose,
-          residentId: formData.residentId,
+          residentId: null,
           estateId,
-          addressId: formData.addressId,
-          visitingType: "SHORT_VISIT",
-          visitStartDate: null,
-          visitEndDate: null,
+          addressId: null,
+          visitingType: formData.visitingType,
+          visitStartDate: isLongVisit
+            ? toIsoOrNull(formData.visitStartDate)
+            : null,
+          ...(isLongVisit
+            ? { visitEndDate: toIsoOrNull(formData.visitEndDate, true) }
+            : { visitEndDate: null }),
         }),
       ).unwrap();
 
@@ -197,120 +143,139 @@ export default function AdminVisitorForm({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {loading ? (
-          <p className="text-gray-500 italic">
-            Loading residents and addresses...
+        <div>
+          <Label htmlFor="firstName">First Name *</Label>
+          <Input
+            id="firstName"
+            name="firstName"
+            type="text"
+            value={formData.firstName}
+            onChange={handleInputChange}
+            placeholder="Visitor first name"
+            required
+            className="mt-1"
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="lastName">Last Name *</Label>
+          <Input
+            id="lastName"
+            name="lastName"
+            type="text"
+            value={formData.lastName}
+            onChange={handleInputChange}
+            placeholder="Visitor last name"
+            required
+            className="mt-1"
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="phone">Phone *</Label>
+          <Input
+            id="phone"
+            name="phone"
+            type="tel"
+            value={formData.phone}
+            onChange={handleInputChange}
+            placeholder="e.g. 0810000000"
+            required
+            className="mt-1"
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="visitingType">Visiting Type *</Label>
+          <select
+            id="visitingType"
+            name="visitingType"
+            title="Visiting Type"
+            aria-label="Visiting Type"
+            value={formData.visitingType}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                visitingType: e.target.value as VisitingType,
+                visitStartDate:
+                  e.target.value === "SHORT_VISIT" ? "" : prev.visitStartDate,
+                visitEndDate:
+                  e.target.value === "SHORT_VISIT" ? "" : prev.visitEndDate,
+              }))
+            }
+            className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            <option value="SHORT_VISIT">Short Visit</option>
+            <option value="LONG_VISIT">Long Visit</option>
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            {formData.visitingType === "SHORT_VISIT"
+              ? "Short visits are valid for a maximum of 24 hours from creation."
+              : "Long visits require a start and end date."}
           </p>
-        ) : (
-          <>
-            <div>
-              <Label>Address (unit) *</Label>
-              <Select<SelectOption>
-                options={addressOptions}
-                value={
-                  addressOptions.find((o) => o.value === formData.addressId) ??
-                  null
-                }
-                onChange={(opt) => {
-                  const newAddressId = opt?.value ?? "";
-                  const matchedResident = findResidentForAddress(
-                    residents,
-                    newAddressId,
-                  );
-                  setFormData((prev) => ({
-                    ...prev,
-                    addressId: newAddressId,
-                    residentId: matchedResident?.id ?? "",
-                  }));
-                }}
-                placeholder="Select address in this estate"
-                isClearable
-                noOptionsMessage={() => "No addresses found in this estate"}
-              />
-            </div>
-            <div>
-              <Label htmlFor="resident-display">Resident *</Label>
-              <Input
-                id="resident-display"
-                type="text"
-                value={residentDisplayName}
-                readOnly
-                className="mt-1 bg-gray-50 cursor-not-allowed"
-                placeholder="Select an address to see the resident"
-              />
-            </div>
+        </div>
 
+        {formData.visitingType === "LONG_VISIT" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="firstName">First Name *</Label>
-              <Input
-                id="firstName"
-                name="firstName"
-                type="text"
-                value={formData.firstName}
-                onChange={handleInputChange}
-                placeholder="Visitor first name"
-                required
-                className="mt-1"
-              />
+              <Label htmlFor="visitStartDate">Visit Start Date *</Label>
+              <div className="mt-1">
+                <IsoLinkedRangeStart
+                  id="visitStartDate"
+                  startDate={formData.visitStartDate}
+                  endDate={formData.visitEndDate}
+                  minDate={visitStartMinDate}
+                  onStartChange={(iso) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      visitStartDate: iso,
+                    }))
+                  }
+                  onEndChange={(iso) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      visitEndDate: iso,
+                    }))
+                  }
+                  placeholder="Select start date"
+                  ariaLabel="Visit start date"
+                />
+              </div>
             </div>
-
             <div>
-              <Label htmlFor="lastName">Last Name *</Label>
-              <Input
-                id="lastName"
-                name="lastName"
-                type="text"
-                value={formData.lastName}
-                onChange={handleInputChange}
-                placeholder="Visitor last name"
-                required
-                className="mt-1"
-              />
+              <Label htmlFor="visitEndDate">Visit End Date *</Label>
+              <div className="mt-1">
+                <IsoLinkedRangeEnd
+                  id="visitEndDate"
+                  startDate={formData.visitStartDate}
+                  endDate={formData.visitEndDate}
+                  onEndChange={(iso) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      visitEndDate: iso,
+                    }))
+                  }
+                  placeholder="Select end date"
+                  ariaLabel="Visit end date"
+                />
+              </div>
             </div>
-
-            <div>
-              <Label htmlFor="phone">Phone *</Label>
-              <Input
-                id="phone"
-                name="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={handleInputChange}
-                placeholder="e.g. 0810000000"
-                required
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="visitingType">Visiting Type *</Label>
-              <Input
-                id="visitingType"
-                type="text"
-                value="Short Visit"
-                readOnly
-                className="mt-1 bg-gray-50 cursor-not-allowed"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Short visits are valid for a maximum of 24 hours from creation.
-              </p>
-            </div>
-
-            <div>
-              <Label htmlFor="purpose">Purpose of visit *</Label>
-              <textarea
-                id="purpose"
-                name="purpose"
-                value={formData.purpose}
-                onChange={handleInputChange}
-                placeholder="e.g. To make a delivery"
-                required
-                rows={3}
-                className="mt-1 flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              />
-            </div>
-          </>
+          </div>
         )}
+
+        <div>
+          <Label htmlFor="purpose">Purpose of visit *</Label>
+          <textarea
+            id="purpose"
+            name="purpose"
+            value={formData.purpose}
+            onChange={handleInputChange}
+            placeholder="e.g. To make a delivery"
+            required
+            rows={3}
+            className="mt-1 flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+        </div>
 
         <div className="pt-4 flex gap-2">
           <Button
@@ -318,15 +283,11 @@ export default function AdminVisitorForm({
             variant="outline"
             onClick={onClose}
             className="flex-1"
-            disabled={loading || submitting}
+            disabled={submitting}
           >
             Cancel
           </Button>
-          <Button
-            type="submit"
-            className="flex-1"
-            disabled={loading || submitting}
-          >
+          <Button type="submit" className="flex-1" disabled={submitting}>
             {submitting ? "Adding..." : "Add Visitor"}
           </Button>
         </div>

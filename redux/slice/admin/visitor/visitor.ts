@@ -1,14 +1,45 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 
+export type VisitingType = "SHORT_VISIT" | "LONG_VISIT";
+
+export interface CreateAdminVisitorData {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  purpose: string;
+  residentId: string | null;
+  estateId: string;
+  addressId: string | null;
+  visitingType: VisitingType;
+  visitStartDate: string | null;
+  visitEndDate?: string | null;
+}
+
 interface VisitorData {
   visitorCode: string;
-};
+}
 
 interface GetVisitorDetailsParams {
   code: string;
 }
 
+/** POST /api/v1/visitor-mgt — admin invite (addressId/residentId may be null) */
+export const createVisitor = createAsyncThunk(
+  "visitor/createVisitor",
+  async (data: CreateAdminVisitorData, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.post("/api/v1/visitor-mgt", {
+        visitors: [data],
+      });
+      return res.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data || { message: "Failed to create visitor" },
+      );
+    }
+  },
+);
 
 export const verifyVisitor = createAsyncThunk(
   "visitor/verifyVisitor",

@@ -86,6 +86,12 @@ export const superAdminNav = [
     icon: Inbox,
     path: "/dashboard/super-admin/chat",
   },
+  {
+    label: "Notifications",
+    icon: Inbox,
+    path: "/dashboard/super-admin/notifications",
+    moduleKey: "notifications",
+  },
   //   {
   //     label: "Visitors Management",
   //     icon: FiUsers,
@@ -146,6 +152,12 @@ export const energyProviderNav = [
     moduleKey: "meter",
   },
   {
+    label: "Notifications",
+    icon: Inbox,
+    path: "/dashboard/energy-provider/notifications",
+    moduleKey: "notifications",
+  },
+  {
     label: "Settings",
     icon: FiSettings,
     path: "/dashboard/settings",
@@ -174,6 +186,12 @@ export const staffNav = [
     icon: Bell,
     path: "/dashboard/staff/announcements",
     moduleKey: "announcements",
+  },
+  {
+    label: "Notifications",
+    icon: Inbox,
+    path: "/dashboard/staff/notifications",
+    moduleKey: "notifications",
   },
   {
     label: "Settings",
@@ -268,6 +286,12 @@ export const companyNav = [
   //   icon: MessagesSquare,
   //   path: "/dashboard/company/community",
   // },
+  {
+    label: "Notifications",
+    icon: Inbox,
+    path: "/dashboard/company/notifications",
+    moduleKey: "notifications",
+  },
   {
     label: "Settings",
     icon: FiSettings,
@@ -399,6 +423,12 @@ export const securityNav = [
   //   icon: FiCheckCircle,
   //   path: "/dashboard/security/verify-visitor",
   // },
+  {
+    label: "Notifications",
+    icon: Inbox,
+    path: "/dashboard/security/notifications",
+    moduleKey: "notifications",
+  },
   { label: "Settings", icon: FiSettings, path: "/dashboard/settings" },
   { label: "Logout", icon: FiLogOut },
 ];
@@ -477,6 +507,12 @@ export const residentNav = [
     path: "/dashboard/resident/community",
     moduleKey: "chat",
   },
+  {
+    label: "Notifications",
+    icon: Inbox,
+    path: "/dashboard/resident/notifications",
+    moduleKey: "notifications",
+  },
   { label: "Settings", icon: FiSettings, path: "/dashboard/settings" },
   { label: "Logout", icon: FiLogOut },
 ];
@@ -518,6 +554,12 @@ export const estateAdminNav = [
     icon: Bell,
     path: "/dashboard/estate-admin/announcements",
     moduleKey: "announcements",
+  },
+  {
+    label: "Notifications",
+    icon: Inbox,
+    path: "/dashboard/estate-admin/notifications",
+    moduleKey: "notifications",
   },
   { label: "Settings", icon: FiSettings, path: "/dashboard/settings" },
   { label: "Logout", icon: FiLogOut },

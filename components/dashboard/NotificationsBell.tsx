@@ -16,17 +16,18 @@ import {
 } from "@/redux/slice/notifications/notifications";
 import {
   formatNotificationTime,
+  getNotificationsInboxPath,
   resolveNotificationHref,
 } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
 
 const PREVIEW_LIMIT = 10;
-const ADMIN_INBOX_PATH = "/dashboard/admin/notifications";
 
 export function NotificationsBell() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const role = useSelector(selectUserRole);
+  const inboxPath = getNotificationsInboxPath(role);
   const { list, unreadCount, getStatus } = useSelector(
     (state: RootState) => state.notifications,
   );
@@ -181,7 +182,7 @@ export function NotificationsBell() {
 
           <div className="border-t px-3 py-2">
             <Link
-              href={ADMIN_INBOX_PATH}
+              href={inboxPath}
               onClick={() => setOpen(false)}
               className="block w-full rounded-md py-1.5 text-center text-sm font-medium text-primary hover:underline"
             >

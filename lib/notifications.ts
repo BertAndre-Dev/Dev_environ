@@ -8,14 +8,28 @@ const ROLE_BASE: Record<string, string> = {
   "super admin": "/dashboard/super-admin",
   resident: "/dashboard/resident",
   staff: "/dashboard/staff",
+  company: "/dashboard/company",
+  security: "/dashboard/security",
+  "energy provider": "/dashboard/energy-provider",
 };
 
+function normalizeRole(role: string): string {
+  return role.toLowerCase().trim();
+}
+
 function roleDashboardBase(role: string): string {
-  return ROLE_BASE[role.toLowerCase().trim()] ?? "/dashboard/admin";
+  return ROLE_BASE[normalizeRole(role)] ?? "/dashboard/admin";
+}
+
+/** Full inbox page path for the signed-in role. */
+export function getNotificationsInboxPath(
+  role: string | null | undefined,
+): string {
+  return `${roleDashboardBase(role || "admin")}/notifications`;
 }
 
 function complaintHref(role: string, complaintId: string): string {
-  const normalized = role.toLowerCase().trim();
+  const normalized = normalizeRole(role);
   if (normalized === "resident") {
     return `/dashboard/resident/maintenance?id=${complaintId}`;
   }

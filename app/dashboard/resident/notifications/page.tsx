@@ -2,6 +2,6 @@
 
 import { NotificationsInbox } from "@/components/dashboard/NotificationsInbox";
 
-export default function AdminNotificationsPage() {
+export default function ResidentNotificationsPage() {
   return <NotificationsInbox />;
 }

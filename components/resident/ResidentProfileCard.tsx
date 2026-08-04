@@ -337,7 +337,7 @@ export function ResidentProfileCard() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-[2fr_1fr] border-t border-border pt-6">
+          <div className="grid grid-cols-1 gap-6 border-t border-border pt-6">
             <div>
               <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
                 <MapPin className="h-4 w-4 text-primary" />

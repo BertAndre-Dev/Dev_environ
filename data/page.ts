@@ -367,6 +367,13 @@ export const adminNav = [
     path: "/dashboard/admin/community",
     moduleKey: "chat",
   },
+  // Temporarily disabled — notifications
+  // {
+  //   label: "Notifications",
+  //   icon: Inbox,
+  //   path: "/dashboard/admin/notifications",
+  //   moduleKey: "notifications",
+  // },
   { label: "Settings", icon: FiSettings, path: "/dashboard/settings" },
   { label: "Logout", icon: FiLogOut },
 ];

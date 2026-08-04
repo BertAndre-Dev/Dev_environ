@@ -47,7 +47,7 @@ import residentDashboardAnalyticsSliceReducer from "@/redux/slice/resident/dashb
 import residentInviteTenantSliceReducer from "@/redux/slice/resident/invite-tenant/invite-tenant-slice";
 import residentAddressOptionsSliceReducer from "@/redux/slice/resident/address-options/resident-address-options-slice";
 import residentPaymentMgtSliceReducer from "@/redux/slice/resident/payment-mgt/payment-mgt-slice";
-// import residentFlutterwaveVaSliceReducer from "@/redux/slice/resident/virtual-accounts/flutterwave-va-slice";
+import residentFlutterwaveVaSliceReducer from "@/redux/slice/resident/virtual-accounts/flutterwave-va-slice";
 import residentRentMgtSliceReducer from "@/redux/slice/resident/rent-mgt/rent-mgt-slice";
 import residentInvitedTenantsSliceReducer from "@/redux/slice/resident/invited-tenants/invited-tenants-slice";
 import adminAnnouncementsSliceReducer from "@/redux/slice/admin/announcements/announcements-slice";
@@ -110,6 +110,8 @@ import energyProviderEntrySliceReducer from "@/redux/slice/energy-provider/addre
 import energyProviderEstateSliceReducer from "@/redux/slice/energy-provider/estate-mgt/energy-provider-estate-slice";
 import energyProviderUserSliceReducer from "@/redux/slice/energy-provider/user-mgt/energy-provider-user-slice";
 import superAdminRatesSliceReducer from "@/redux/slice/super-admin/rates/rates-slice";
+import notificationsSliceReducer from "@/redux/slice/notifications/notifications-slice";
+import withdrawalAccountSliceReducer from "@/redux/slice/wallet-mgt/withdrawal-account-slice";
 import superAdminRevenueTrendSliceReducer from "@/redux/slice/super-admin/revenue-trend/revenue-trend-slice";
 import superAdminAveragePurchaseSliceReducer from "@/redux/slice/super-admin/average-purchase/average-purchase-slice";
 import superAdminTopEstatesEnergySliceReducer from "@/redux/slice/super-admin/top-estates-energy/top-estates-energy-slice";
@@ -332,7 +334,8 @@ export const store = configureStore({
     residentInviteTenant: residentInviteTenantSliceReducer,
     residentAddressOptions: residentAddressOptionsSliceReducer,
     residentPaymentMgt: residentPaymentMgtSliceReducer,
-    // residentFlutterwaveVa: residentFlutterwaveVaSliceReducer,
+    // Kept registered for type-safety; UI + API network calls are disabled
+    residentFlutterwaveVa: residentFlutterwaveVaSliceReducer,
     residentRentMgt: residentRentMgtSliceReducer,
     residentInvitedTenants: residentInvitedTenantsSliceReducer,
     adminAnnouncements: adminAnnouncementsSliceReducer,
@@ -391,6 +394,9 @@ export const store = configureStore({
     energyProviderEstate: energyProviderEstateSliceReducer,
     energyProviderUser: energyProviderUserSliceReducer,
     superAdminRates: superAdminRatesSliceReducer,
+    // Kept registered for type-safety; UI + API network calls are disabled
+    notifications: notificationsSliceReducer,
+    withdrawalAccount: withdrawalAccountSliceReducer,
     superAdminRevenueTrend: superAdminRevenueTrendSliceReducer,
     superAdminAveragePurchase: superAdminAveragePurchaseSliceReducer,
     superAdminTopEstatesEnergy: superAdminTopEstatesEnergySliceReducer,

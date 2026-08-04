@@ -39,6 +39,7 @@ import AssignMeterForm from "@/components/super-admin/meter-form/page";
 import { IoSpeedometerOutline } from "react-icons/io5";
 import Loader from "@/components/ui/Loader";
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
+import { getCompanies } from "@/redux/slice/super-admin/company-mgt/company";
 import axiosInstance from "@/utils/axiosInstance";
 
 /** addressId from list API can be a string or populated object with id */
@@ -121,7 +122,22 @@ function getAddressColumns(data: AdminMeterData[]) {
 type EstateOption = { label: string; value: string };
 
 const ESTATE_FILTER_FETCH_LIMIT = 500;
+const COMPANY_FILTER_FETCH_LIMIT = 500;
 const METER_TAB_TITLES = ["Meter Management", "Chart Overview"] as const;
+
+function resolveEstateOrCompanyLabel(
+  item: { estateId?: string; companyId?: string },
+  estateNameById: Record<string, string>,
+  companyNameById: Record<string, string>,
+): string | null {
+  if (item.estateId) {
+    return estateNameById[item.estateId] ?? item.estateId;
+  }
+  if (item.companyId) {
+    return companyNameById[item.companyId] ?? item.companyId;
+  }
+  return null;
+}
 
 export default function AdminMeterManagement() {
   const dispatch = useDispatch<AppDispatch>();
@@ -188,6 +204,10 @@ export default function AdminMeterManagement() {
     estatesLoading: state.estate.getAllEstatesState === "isLoading",
   }));
 
+  const allCompanies = useSelector(
+    (state: RootState) => state.superAdminCompany.list ?? [],
+  );
+
   const { meterUsage, meterUsageLoading, meterUsageMessage } = useSelector(
     (state: RootState) => ({
       meterUsage: state.residentMeter.meterUsage,
@@ -232,6 +252,16 @@ export default function AdminMeterManagement() {
     return map;
   }, [allEstates]);
 
+  const companyNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const company of allCompanies) {
+      const id = company?.id ?? company?._id;
+      const name = company?.name;
+      if (id && name) map[String(id)] = String(name);
+    }
+    return map;
+  }, [allCompanies]);
+
   const estateOptions = useMemo<EstateOption[]>(
     () =>
       Object.entries(estateNameById)
@@ -263,6 +293,11 @@ export default function AdminMeterManagement() {
       .unwrap()
       .catch(() => {
         // non-blocking: table can still render estateId if name isn't available
+      });
+    dispatch(getCompanies({ page: 1, limit: COMPANY_FILTER_FETCH_LIMIT }))
+      .unwrap()
+      .catch(() => {
+        // non-blocking: table can still render companyId if name isn't available
       });
   }, [dispatch]);
 
@@ -439,19 +474,19 @@ export default function AdminMeterManagement() {
     ...getAddressColumns(allSuperAdminMeters),
     {
       key: "estateId",
-      header: "Estate",
+      header: "Estate/Company",
       render: (item: AdminMeterData) => {
-        const id = item.estateId;
-        if (!id) return <span className="text-muted-foreground">—</span>;
-        return (
-          <span className="font-medium">{estateNameById[id] ?? id}</span>
+        const label = resolveEstateOrCompanyLabel(
+          item,
+          estateNameById,
+          companyNameById,
         );
+        if (!label) return <span className="text-muted-foreground">—</span>;
+        return <span className="font-medium">{label}</span>;
       },
-      exportValue: (item: AdminMeterData) => {
-        const id = item.estateId;
-        if (!id) return "";
-        return estateNameById[id] ?? id;
-      },
+      exportValue: (item: AdminMeterData) =>
+        resolveEstateOrCompanyLabel(item, estateNameById, companyNameById) ??
+        "",
     },
     {
       key: "isActive",
@@ -794,12 +829,13 @@ export default function AdminMeterManagement() {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Estate</dt>
+                  <dt className="text-muted-foreground">Estate/Company</dt>
                   <dd className="font-medium">
-                    {meterDetails.estateId
-                      ? estateNameById[meterDetails.estateId] ??
-                        meterDetails.estateId
-                      : "—"}
+                    {resolveEstateOrCompanyLabel(
+                      meterDetails,
+                      estateNameById,
+                      companyNameById,
+                    ) ?? "—"}
                   </dd>
                 </div>
                 <div>

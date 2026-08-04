@@ -116,16 +116,7 @@ function EmptyVirtualAccountState({
   );
 }
 
-export function ResidentVirtualAccountCard(
-  _props: Readonly<Props>,
-) {
-  // Temporarily disabled — payment virtual account UI
-  // To re-enable: return <ResidentVirtualAccountCardImpl {..._props} /> and restore API thunks.
-  return null;
-}
-
-/** Preserved implementation — re-wire via ResidentVirtualAccountCard when re-enabling. */
-export function ResidentVirtualAccountCardImpl({
+export function ResidentVirtualAccountCard({
   enabled = true,
   hasWallet = false,
 }: Readonly<Props>) {

@@ -21,16 +21,7 @@ type Props = {
 const PHONE_RE = /^0[789][01]\d{8}$/;
 const BVN_RE = /^\d{11}$/;
 
-export default function SetupVirtualAccountModal(
-  _props: Readonly<Props>,
-) {
-  // Temporarily disabled — payment virtual account UI
-  // To re-enable: return <SetupVirtualAccountModalImpl {..._props} /> and restore API thunks.
-  return null;
-}
-
-/** Preserved implementation — re-wire via SetupVirtualAccountModal when re-enabling. */
-export function SetupVirtualAccountModalImpl({
+export default function SetupVirtualAccountModal({
   visible,
   onClose,
 }: Readonly<Props>) {

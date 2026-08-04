@@ -30,8 +30,7 @@ import { disconnectSocket } from "@/lib/socket";
 import { CommunityChatSocketProvider } from "@/components/providers/CommunityChatSocketProvider";
 import { WalletRequiredAlert } from "@/components/wallet/WalletRequiredAlert";
 import { MembershipSwitcher } from "@/components/dashboard/MembershipSwitcher";
-// Temporarily disabled — notifications
-// import { NotificationsBell } from "@/components/dashboard/NotificationsBell";
+import { NotificationsBell } from "@/components/dashboard/NotificationsBell";
 import { filterNavItemsByEstateModules } from "@/lib/nav-module-filter";
 import Image from "next/image";
 import Loader from "@/components/ui/Loader";
@@ -430,8 +429,7 @@ export default function DashboardLayout({
 
             <div className="flex shrink-0 items-center gap-2 sm:gap-4">
               <MembershipSwitcher className="hidden sm:block cursor-pointer" />
-              {/* Temporarily disabled — notifications */}
-              {/* <NotificationsBell /> */}
+              <NotificationsBell />
               <MembershipSwitcher collapsed className="sm:hidden" />
               <button
                 type="button"

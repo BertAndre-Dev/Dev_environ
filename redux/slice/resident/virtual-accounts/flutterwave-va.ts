@@ -1,10 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-// Temporarily disabled — payment virtual account API
-// import axiosInstance from "@/utils/axiosInstance";
+import axiosInstance from "@/utils/axiosInstance";
 
-/** Endpoint base — kept for re-enable reference while API calls are disabled. */
-export const FLUTTERWAVE_VA_BASE =
-  "/api/v1/payment-mgt/virtual-accounts/flutterwave";
+const BASE = "/api/v1/payment-mgt/virtual-accounts/flutterwave";
 
 export const BVN_CONSENT_STORAGE_KEY = "flw_bvn_consent";
 export const BVN_CONFIRM_LOCK_KEY = "flw_bvn_confirm_lock";
@@ -53,7 +50,7 @@ export interface CreateFlutterwaveVaPayload {
   phonenumber: string;
 }
 
-export function getApiErrorMessage(error: unknown): string | undefined {
+function getApiErrorMessage(error: unknown): string | undefined {
   const err = error as {
     response?: { data?: { message?: string | string[] } };
     message?: string;
@@ -235,118 +232,98 @@ export function tryAcquireBvnConfirmLock(reference: string): boolean {
 export const getFlutterwaveBvnStatus = createAsyncThunk(
   "resident-flutterwave-va/getBvnStatus",
   async (_, { rejectWithValue }) => {
-    // Temporarily disabled — payment virtual account
-    return rejectWithValue({
-      message: "Virtual account is temporarily disabled",
-    });
-    // try {
-    //   const res = await axiosInstance.get(`${FLUTTERWAVE_VA_BASE}/bvn/status`);
-    //   return normalizeBvnStatus(res.data);
-    // } catch (error: unknown) {
-    //   return rejectWithValue({
-    //     message: getApiErrorMessage(error) || "Failed to load BVN status",
-    //   });
-    // }
+    try {
+      const res = await axiosInstance.get(`${BASE}/bvn/status`);
+      return normalizeBvnStatus(res.data);
+    } catch (error: unknown) {
+      return rejectWithValue({
+        message: getApiErrorMessage(error) || "Failed to load BVN status",
+      });
+    }
   },
 );
 
 export const initiateFlutterwaveBvn = createAsyncThunk(
   "resident-flutterwave-va/initiateBvn",
-  async (_payload: InitiateBvnPayload, { rejectWithValue }) => {
-    // Temporarily disabled — payment virtual account
-    return rejectWithValue({
-      message: "Virtual account is temporarily disabled",
-    });
-    // try {
-    //   const res = await axiosInstance.post(`${FLUTTERWAVE_VA_BASE}/bvn/initiate`, {
-    //     bvn: payload.bvn.trim(),
-    //     redirectUrl: payload.redirectUrl,
-    //   });
-    //   const normalized = normalizeInitiateBvn(res.data);
-    //   if (!normalized.consentUrl && !normalized.reference) {
-    //     const dataMsg = asRecord(res.data)?.message;
-    //     const message =
-    //       (typeof dataMsg === "string" && dataMsg.trim()) ||
-    //       "BVN consent could not be started";
-    //     return rejectWithValue({ message });
-    //   }
-    //   return normalized;
-    // } catch (error: unknown) {
-    //   return rejectWithValue({
-    //     message: getApiErrorMessage(error) || "Failed to initiate BVN consent",
-    //   });
-    // }
+  async (payload: InitiateBvnPayload, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.post(`${BASE}/bvn/initiate`, {
+        bvn: payload.bvn.trim(),
+        redirectUrl: payload.redirectUrl,
+      });
+      const normalized = normalizeInitiateBvn(res.data);
+      if (!normalized.consentUrl && !normalized.reference) {
+        const dataMsg = asRecord(res.data)?.message;
+        const message =
+          (typeof dataMsg === "string" && dataMsg.trim()) ||
+          "BVN consent could not be started";
+        return rejectWithValue({ message });
+      }
+      return normalized;
+    } catch (error: unknown) {
+      return rejectWithValue({
+        message: getApiErrorMessage(error) || "Failed to initiate BVN consent",
+      });
+    }
   },
 );
 
 export const confirmFlutterwaveBvn = createAsyncThunk(
   "resident-flutterwave-va/confirmBvn",
-  async (_payload: ConfirmBvnPayload, { rejectWithValue }) => {
-    // Temporarily disabled — payment virtual account
-    return rejectWithValue({
-      message: "Virtual account is temporarily disabled",
-    });
-    // try {
-    //   const res = await axiosInstance.post(`${FLUTTERWAVE_VA_BASE}/bvn/confirm`, {
-    //     reference: payload.reference.trim(),
-    //   });
-    //   return normalizeBvnStatus(res.data);
-    // } catch (error: unknown) {
-    //   return rejectWithValue({
-    //     message:
-    //       getApiErrorMessage(error) || "Failed to confirm BVN verification",
-    //   });
-    // }
+  async (payload: ConfirmBvnPayload, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.post(`${BASE}/bvn/confirm`, {
+        reference: payload.reference.trim(),
+      });
+      return normalizeBvnStatus(res.data);
+    } catch (error: unknown) {
+      return rejectWithValue({
+        message:
+          getApiErrorMessage(error) || "Failed to confirm BVN verification",
+      });
+    }
   },
 );
 
 export const getFlutterwaveVirtualAccount = createAsyncThunk(
   "resident-flutterwave-va/getVirtualAccount",
   async (_, { rejectWithValue }) => {
-    // Temporarily disabled — payment virtual account
-    return rejectWithValue({
-      message: "Virtual account is temporarily disabled",
-    });
-    // try {
-    //   const res = await axiosInstance.get(FLUTTERWAVE_VA_BASE);
-    //   return normalizeVirtualAccount(res.data);
-    // } catch (error: unknown) {
-    //   return rejectWithValue({
-    //     message:
-    //       getApiErrorMessage(error) || "Failed to load virtual account",
-    //   });
-    // }
+    try {
+      const res = await axiosInstance.get(BASE);
+      return normalizeVirtualAccount(res.data);
+    } catch (error: unknown) {
+      return rejectWithValue({
+        message:
+          getApiErrorMessage(error) || "Failed to load virtual account",
+      });
+    }
   },
 );
 
 export const createFlutterwaveVirtualAccount = createAsyncThunk(
   "resident-flutterwave-va/createVirtualAccount",
-  async (_payload: CreateFlutterwaveVaPayload, { rejectWithValue }) => {
-    // Temporarily disabled — payment virtual account
-    return rejectWithValue({
-      message: "Virtual account is temporarily disabled",
-    });
-    // try {
-    //   const body: Record<string, string> = {
-    //     phonenumber: payload.phonenumber.trim(),
-    //   };
-    //   if (payload.bvn?.trim()) body.bvn = payload.bvn.trim();
-    //
-    //   const res = await axiosInstance.post(FLUTTERWAVE_VA_BASE, body);
-    //   const account = normalizeVirtualAccount(res.data);
-    //   if (!account?.accountNumber) {
-    //     const dataMsg = asRecord(res.data)?.message;
-    //     const message =
-    //       (typeof dataMsg === "string" && dataMsg.trim()) ||
-    //       "Virtual account was not created";
-    //     return rejectWithValue({ message });
-    //   }
-    //   return account;
-    // } catch (error: unknown) {
-    //   return rejectWithValue({
-    //     message:
-    //       getApiErrorMessage(error) || "Failed to create virtual account",
-    //   });
-    // }
+  async (payload: CreateFlutterwaveVaPayload, { rejectWithValue }) => {
+    try {
+      const body: Record<string, string> = {
+        phonenumber: payload.phonenumber.trim(),
+      };
+      if (payload.bvn?.trim()) body.bvn = payload.bvn.trim();
+
+      const res = await axiosInstance.post(BASE, body);
+      const account = normalizeVirtualAccount(res.data);
+      if (!account?.accountNumber) {
+        const dataMsg = asRecord(res.data)?.message;
+        const message =
+          (typeof dataMsg === "string" && dataMsg.trim()) ||
+          "Virtual account was not created";
+        return rejectWithValue({ message });
+      }
+      return account;
+    } catch (error: unknown) {
+      return rejectWithValue({
+        message:
+          getApiErrorMessage(error) || "Failed to create virtual account",
+      });
+    }
   },
 );

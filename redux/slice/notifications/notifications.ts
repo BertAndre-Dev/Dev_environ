@@ -1,6 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-// Temporarily disabled — notifications API
-// import axiosInstance from "@/utils/axiosInstance";
+import axiosInstance from "@/utils/axiosInstance";
 
 export type NotificationStatus = string;
 
@@ -99,122 +98,118 @@ export function normalizeNotification(raw: unknown): NotificationItem {
   };
 }
 
-export function extractErrorMessage(error: unknown, fallback: string): string {
+function extractErrorMessage(error: unknown, fallback: string): string {
   const err = error as { response?: { data?: { message?: string } } };
   return err?.response?.data?.message ?? fallback;
 }
 
-/** GET /api/v1/notifications — temporarily disabled */
+/** GET /api/v1/notifications */
 export const getNotifications = createAsyncThunk(
   "notifications/getNotifications",
-  async (_params: GetNotificationsParams | undefined, { rejectWithValue }) => {
-    return rejectWithValue("Notifications are temporarily disabled");
-    // const opts = params ?? {};
-    // try {
-    //   const query: Record<string, string | number> = {
-    //     page: opts.page ?? 1,
-    //     limit: opts.limit ?? 20,
-    //   };
-    //   if (opts.status?.trim()) query.status = opts.status.trim();
-    //   if (opts.type?.trim()) query.type = opts.type.trim();
-    //   if (opts.priority?.trim()) query.priority = opts.priority.trim();
-    //   if (opts.sortBy?.trim()) query.sortBy = opts.sortBy.trim();
-    //   if (opts.sortOrder?.trim()) query.sortOrder = opts.sortOrder.trim();
-    //
-    //   const res = await axiosInstance.get("/api/v1/notifications", {
-    //     params: query,
-    //   });
-    //   const body = res.data as Record<string, unknown>;
-    //   const rawList = Array.isArray(body?.data) ? body.data : [];
-    //   const list = rawList.map(normalizeNotification);
-    //   const total =
-    //     typeof body.total === "number" ? body.total : list.length;
-    //   const pages =
-    //     typeof body.pages === "number"
-    //       ? body.pages
-    //       : Math.max(1, Math.ceil(total / (opts.limit ?? 20)));
-    //   const unreadCount =
-    //     typeof body.unreadCount === "number" ? body.unreadCount : 0;
-    //
-    //   return {
-    //     success: body.success as boolean | undefined,
-    //     message: body.message as string | undefined,
-    //     data: list,
-    //     total,
-    //     pages,
-    //     unreadCount,
-    //     page: opts.page ?? 1,
-    //     limit: opts.limit ?? 20,
-    //   } satisfies NotificationsListPayload;
-    // } catch (error: unknown) {
-    //   return rejectWithValue(
-    //     extractErrorMessage(error, "Failed to fetch notifications"),
-    //   );
-    // }
+  async (params: GetNotificationsParams | undefined, { rejectWithValue }) => {
+    const opts = params ?? {};
+    try {
+      const query: Record<string, string | number> = {
+        page: opts.page ?? 1,
+        limit: opts.limit ?? 20,
+      };
+      if (opts.status?.trim()) query.status = opts.status.trim();
+      if (opts.type?.trim()) query.type = opts.type.trim();
+      if (opts.priority?.trim()) query.priority = opts.priority.trim();
+      if (opts.sortBy?.trim()) query.sortBy = opts.sortBy.trim();
+      if (opts.sortOrder?.trim()) query.sortOrder = opts.sortOrder.trim();
+
+      const res = await axiosInstance.get("/api/v1/notifications", {
+        params: query,
+      });
+      const body = res.data as Record<string, unknown>;
+      const rawList = Array.isArray(body?.data) ? body.data : [];
+      const list = rawList.map(normalizeNotification);
+      const total =
+        typeof body.total === "number" ? body.total : list.length;
+      const pages =
+        typeof body.pages === "number"
+          ? body.pages
+          : Math.max(1, Math.ceil(total / (opts.limit ?? 20)));
+      const unreadCount =
+        typeof body.unreadCount === "number" ? body.unreadCount : 0;
+
+      return {
+        success: body.success as boolean | undefined,
+        message: body.message as string | undefined,
+        data: list,
+        total,
+        pages,
+        unreadCount,
+        page: opts.page ?? 1,
+        limit: opts.limit ?? 20,
+      } satisfies NotificationsListPayload;
+    } catch (error: unknown) {
+      return rejectWithValue(
+        extractErrorMessage(error, "Failed to fetch notifications"),
+      );
+    }
   },
 );
 
-/** GET /api/v1/notifications/{notificationId} — temporarily disabled */
+/** GET /api/v1/notifications/{notificationId} */
 export const getNotificationById = createAsyncThunk(
   "notifications/getNotificationById",
-  async (_notificationId: string, { rejectWithValue }) => {
-    return rejectWithValue("Notifications are temporarily disabled");
-    // try {
-    //   const res = await axiosInstance.get(
-    //     `/api/v1/notifications/${notificationId}`,
-    //   );
-    //   const body = res.data as Record<string, unknown>;
-    //   const raw = body?.data ?? body;
-    //   return normalizeNotification(raw);
-    // } catch (error: unknown) {
-    //   return rejectWithValue(
-    //     extractErrorMessage(error, "Failed to fetch notification"),
-    //   );
-    // }
+  async (notificationId: string, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.get(
+        `/api/v1/notifications/${notificationId}`,
+      );
+      const body = res.data as Record<string, unknown>;
+      const raw = body?.data ?? body;
+      return normalizeNotification(raw);
+    } catch (error: unknown) {
+      return rejectWithValue(
+        extractErrorMessage(error, "Failed to fetch notification"),
+      );
+    }
   },
 );
 
-/** PUT /api/v1/notifications/{notificationId}/read — temporarily disabled */
+/** PUT /api/v1/notifications/{notificationId}/read */
 export const markNotificationRead = createAsyncThunk(
   "notifications/markNotificationRead",
-  async (_notificationId: string, { rejectWithValue }) => {
-    return rejectWithValue("Notifications are temporarily disabled");
-    // try {
-    //   const res = await axiosInstance.put(
-    //     `/api/v1/notifications/${notificationId}/read`,
-    //   );
-    //   const body = res.data as Record<string, unknown>;
-    //   const raw = body?.data;
-    //   if (raw) {
-    //     return normalizeNotification(raw);
-    //   }
-    //   return { id: notificationId, status: "read" as const };
-    // } catch (error: unknown) {
-    //   return rejectWithValue(
-    //     extractErrorMessage(error, "Failed to mark notification as read"),
-    //   );
-    // }
+  async (notificationId: string, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.put(
+        `/api/v1/notifications/${notificationId}/read`,
+      );
+      const body = res.data as Record<string, unknown>;
+      const raw = body?.data;
+      if (raw) {
+        return normalizeNotification(raw);
+      }
+      return { id: notificationId, status: "read" as const };
+    } catch (error: unknown) {
+      return rejectWithValue(
+        extractErrorMessage(error, "Failed to mark notification as read"),
+      );
+    }
   },
 );
 
-/** PUT /api/v1/notifications/read/multiple — temporarily disabled */
+/** PUT /api/v1/notifications/read/multiple */
 export const markNotificationsReadMultiple = createAsyncThunk(
   "notifications/markNotificationsReadMultiple",
-  async (_notificationIds: string[], { rejectWithValue }) => {
-    return rejectWithValue("Notifications are temporarily disabled");
-    // try {
-    //   const ids = notificationIds.filter(Boolean);
-    //   await axiosInstance.put("/api/v1/notifications/read/multiple", {
-    //     notificationIds: ids,
-    //   });
-    //   return { notificationIds: ids };
-    // } catch (error: unknown) {
-    //   return rejectWithValue(
-    //     extractErrorMessage(
-    //       error,
-    //       "Failed to mark notifications as read",
-    //     ),
-    //   );
-    // }
+  async (notificationIds: string[], { rejectWithValue }) => {
+    try {
+      const ids = notificationIds.filter(Boolean);
+      await axiosInstance.put("/api/v1/notifications/read/multiple", {
+        notificationIds: ids,
+      });
+      return { notificationIds: ids };
+    } catch (error: unknown) {
+      return rejectWithValue(
+        extractErrorMessage(
+          error,
+          "Failed to mark notifications as read",
+        ),
+      );
+    }
   },
 );

@@ -334,7 +334,6 @@ export const store = configureStore({
     residentInviteTenant: residentInviteTenantSliceReducer,
     residentAddressOptions: residentAddressOptionsSliceReducer,
     residentPaymentMgt: residentPaymentMgtSliceReducer,
-    // Kept registered for type-safety; UI + API network calls are disabled
     residentFlutterwaveVa: residentFlutterwaveVaSliceReducer,
     residentRentMgt: residentRentMgtSliceReducer,
     residentInvitedTenants: residentInvitedTenantsSliceReducer,
@@ -394,7 +393,6 @@ export const store = configureStore({
     energyProviderEstate: energyProviderEstateSliceReducer,
     energyProviderUser: energyProviderUserSliceReducer,
     superAdminRates: superAdminRatesSliceReducer,
-    // Kept registered for type-safety; UI + API network calls are disabled
     notifications: notificationsSliceReducer,
     withdrawalAccount: withdrawalAccountSliceReducer,
     superAdminRevenueTrend: superAdminRevenueTrendSliceReducer,

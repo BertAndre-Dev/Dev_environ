@@ -24,13 +24,6 @@ const PREVIEW_LIMIT = 10;
 const ADMIN_INBOX_PATH = "/dashboard/admin/notifications";
 
 export function NotificationsBell() {
-  // Temporarily disabled — notifications UI
-  // To re-enable: return <NotificationsBellImpl /> and restore API thunks.
-  return null;
-}
-
-/** Preserved implementation — re-wire via NotificationsBell when re-enabling. */
-export function NotificationsBellImpl() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const role = useSelector(selectUserRole);

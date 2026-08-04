@@ -231,12 +231,14 @@ export function NotificationsInbox() {
                         {item.priority}
                       </span>
                     ) : null}
+                  </div>
+                  <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
                     {item.type ? (
                       <span className="text-[11px] text-muted-foreground">
                         {item.type.replace(/_/g, " ")}
                       </span>
                     ) : null}
-                  </div>
+                  </p>
                   <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
                     {item.message}
                   </p>

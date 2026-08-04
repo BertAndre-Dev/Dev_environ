@@ -234,9 +234,13 @@ export default function DashboardLayout({
       "energy provider",
     ]);
     if (rolesWithModules.has(role)) {
-      navItems = filterNavItemsByEstateModules(navItems, estateModules, {
-        role,
-      });
+      navItems = filterNavItemsByEstateModules(
+        navItems as Array<(typeof navItems)[number] & { label: string }>,
+        estateModules,
+        {
+          role,
+        },
+      );
     }
 
     const isNavPathActive = (itemPath: string) =>

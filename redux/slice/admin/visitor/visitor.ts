@@ -24,13 +24,17 @@ interface GetVisitorDetailsParams {
   code: string;
 }
 
-/** POST /api/v1/visitor-mgt — admin invite (addressId/residentId may be null) */
+/** POST /api/v1/visitor-mgt — admin invite (supports bulk via visitors[]) */
 export const createVisitor = createAsyncThunk(
   "visitor/createVisitor",
-  async (data: CreateAdminVisitorData, { rejectWithValue }) => {
+  async (
+    data: CreateAdminVisitorData | CreateAdminVisitorData[],
+    { rejectWithValue },
+  ) => {
     try {
+      const visitors = Array.isArray(data) ? data : [data];
       const res = await axiosInstance.post("/api/v1/visitor-mgt", {
-        visitors: [data],
+        visitors,
       });
       return res.data;
     } catch (error: any) {

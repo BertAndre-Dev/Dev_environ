@@ -499,7 +499,7 @@ export default function AdminVisitorManagement() {
             className="gap-2"
           >
             <UserPlus className="w-4 h-4" />
-            Add Visitor
+            Invite Visitors
           </Button>
         </div>
 

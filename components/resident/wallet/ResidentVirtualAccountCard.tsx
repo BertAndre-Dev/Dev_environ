@@ -1,18 +1,18 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CopyButton } from "@/components/ui/copy-button";
-import { useDispatch, useSelector } from "react-redux";
-import type { AppDispatch, RootState } from "@/redux/store";
-import {
-  getFlutterwaveBvnStatus,
-  getFlutterwaveVirtualAccount,
-  type FlutterwaveVirtualAccount,
-} from "@/redux/slice/resident/virtual-accounts/flutterwave-va";
+// import { CopyButton } from "@/components/ui/copy-button";
+// import { useDispatch, useSelector } from "react-redux";
+// import type { AppDispatch, RootState } from "@/redux/store";
+// import {
+//   getFlutterwaveBvnStatus,
+//   getFlutterwaveVirtualAccount,
+//   type FlutterwaveVirtualAccount,
+// } from "@/redux/slice/resident/virtual-accounts/flutterwave-va";
 import SetupVirtualAccountModal from "@/components/resident/wallet/SetupVirtualAccountModal";
-import { toast } from "react-toastify";
+// import { toast } from "react-toastify";
 
 type Props = {
   /** When false, skip fetching (e.g. user not loaded yet). */
@@ -21,74 +21,74 @@ type Props = {
   hasWallet?: boolean;
 };
 
-function ActiveVirtualAccountDetails({
-  virtualAccount,
-  bvnVerified,
-  hasWallet,
-  refreshing,
-  onRefresh,
-}: Readonly<{
-  virtualAccount: FlutterwaveVirtualAccount;
-  bvnVerified: boolean;
-  hasWallet: boolean;
-  refreshing: boolean;
-  onRefresh: () => void;
-}>) {
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <p className="text-sm text-muted-foreground">Bank name</p>
-          <p className="font-medium mt-0.5">
-            {virtualAccount.bankName || "—"}
-          </p>
-        </div>
-        <div>
-          <p className="text-sm text-muted-foreground">Account number</p>
-          <div className="flex items-center gap-2 mt-0.5">
-            <p className="font-medium tabular-nums tracking-wide">
-              {virtualAccount.accountNumber}
-            </p>
-            {virtualAccount.accountNumber ? (
-              <CopyButton
-                value={virtualAccount.accountNumber}
-                title="Copy account number"
-                copiedMessage="Account number copied"
-              />
-            ) : null}
-          </div>
-        </div>
-        <div className="md:col-span-2">
-          <p className="text-sm text-muted-foreground">Account name</p>
-          <p className="font-medium mt-0.5">
-            {virtualAccount.accountName || "—"}
-          </p>
-        </div>
-      </div>
+// function ActiveVirtualAccountDetails({
+//   virtualAccount,
+//   bvnVerified,
+//   hasWallet,
+//   refreshing,
+//   onRefresh,
+// }: Readonly<{
+//   virtualAccount: FlutterwaveVirtualAccount;
+//   bvnVerified: boolean;
+//   hasWallet: boolean;
+//   refreshing: boolean;
+//   onRefresh: () => void;
+// }>) {
+//   return (
+//     <div className="space-y-4">
+//       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//         <div>
+//           <p className="text-sm text-muted-foreground">Bank name</p>
+//           <p className="font-medium mt-0.5">
+//             {virtualAccount.bankName || "—"}
+//           </p>
+//         </div>
+//         <div>
+//           <p className="text-sm text-muted-foreground">Account number</p>
+//           <div className="flex items-center gap-2 mt-0.5">
+//             <p className="font-medium tabular-nums tracking-wide">
+//               {virtualAccount.accountNumber}
+//             </p>
+//             {virtualAccount.accountNumber ? (
+//               <CopyButton
+//                 value={virtualAccount.accountNumber}
+//                 title="Copy account number"
+//                 copiedMessage="Account number copied"
+//               />
+//             ) : null}
+//           </div>
+//         </div>
+//         <div className="md:col-span-2">
+//           <p className="text-sm text-muted-foreground">Account name</p>
+//           <p className="font-medium mt-0.5">
+//             {virtualAccount.accountName || "—"}
+//           </p>
+//         </div>
+//       </div>
 
-      <p className="text-xs text-muted-foreground">
-        Use this account for wallet funding only. Transfers reflect after bank
-        confirmation.
-        {bvnVerified ? " BVN verified." : null}
-        {!hasWallet
-          ? " Create a wallet if you have not already, so transfers can credit your balance."
-          : null}
-      </p>
+//       <p className="text-xs text-muted-foreground">
+//         Use this account for wallet funding only. Transfers reflect after bank
+//         confirmation.
+//         {bvnVerified ? " BVN verified." : null}
+//         {!hasWallet
+//           ? " Create a wallet if you have not already, so transfers can credit your balance."
+//           : null}
+//       </p>
 
-      <div className="flex justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={onRefresh}
-          disabled={refreshing}
-        >
-          {refreshing ? "Refreshing…" : "Refresh status"}
-        </Button>
-      </div>
-    </div>
-  );
-}
+//       <div className="flex justify-end">
+//         <Button
+//           type="button"
+//           variant="outline"
+//           size="sm"
+//           onClick={onRefresh}
+//           disabled={refreshing}
+//         >
+//           {refreshing ? "Refreshing…" : "Refresh status"}
+//         </Button>
+//       </div>
+//     </div>
+//   );
+// }
 
 function EmptyVirtualAccountState({
   hasWallet,
@@ -117,80 +117,81 @@ function EmptyVirtualAccountState({
 }
 
 export function ResidentVirtualAccountCard({
-  enabled = true,
+  // enabled = true,
   hasWallet = false,
 }: Readonly<Props>) {
-  const dispatch = useDispatch<AppDispatch>();
-  const { virtualAccount, getVirtualAccountState, bvnStatus } = useSelector(
-    (state: RootState) => state.residentFlutterwaveVa,
-  );
+  // const dispatch = useDispatch<AppDispatch>();
+  // const { virtualAccount, getVirtualAccountState, bvnStatus } = useSelector(
+  //   (state: RootState) => state.residentFlutterwaveVa,
+  // );
 
   const [setupOpen, setSetupOpen] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [initialLoadDone, setInitialLoadDone] = useState(false);
+  // const [refreshing, setRefreshing] = useState(false);
+  // const [initialLoadDone, setInitialLoadDone] = useState(false);
 
-  const loading = !initialLoadDone && getVirtualAccountState !== "failed";
-  const hasAccount = Boolean(virtualAccount?.accountNumber);
-  const bvnVerified = Boolean(bvnStatus?.verified);
+  // const loading = !initialLoadDone && getVirtualAccountState !== "failed";
+  // const hasAccount = Boolean(virtualAccount?.accountNumber);
+  // const bvnVerified = Boolean(bvnStatus?.verified);
 
-  useEffect(() => {
-    if (!enabled) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        await Promise.all([
-          dispatch(getFlutterwaveVirtualAccount()),
-          dispatch(getFlutterwaveBvnStatus()),
-        ]);
-      } finally {
-        if (!cancelled) setInitialLoadDone(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [dispatch, enabled]);
+  // useEffect(() => {
+  //   if (!enabled) return;
+  //   let cancelled = false;
+  //   (async () => {
+  //     try {
+  //       await Promise.all([
+  //         dispatch(getFlutterwaveVirtualAccount()),
+  //         dispatch(getFlutterwaveBvnStatus()),
+  //       ]);
+  //     } finally {
+  //       if (!cancelled) setInitialLoadDone(true);
+  //     }
+  //   })();
+  //   return () => {
+  //     cancelled = true;
+  //   };
+  // }, [dispatch, enabled]);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await Promise.all([
-        dispatch(getFlutterwaveVirtualAccount()).unwrap(),
-        dispatch(getFlutterwaveBvnStatus()).unwrap().catch(() => null),
-      ]);
-      toast.success("Status refreshed.");
-    } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message || "Failed to refresh.",
-      );
-    } finally {
-      setRefreshing(false);
-    }
-  };
+  // const handleRefresh = async () => {
+  //   setRefreshing(true);
+  //   try {
+  //     await Promise.all([
+  //       dispatch(getFlutterwaveVirtualAccount()).unwrap(),
+  //       dispatch(getFlutterwaveBvnStatus()).unwrap().catch(() => null),
+  //     ]);
+  //     toast.success("Status refreshed.");
+  //   } catch (err: unknown) {
+  //     toast.error(
+  //       (err as { message?: string })?.message || "Failed to refresh.",
+  //     );
+  //   } finally {
+  //     setRefreshing(false);
+  //   }
+  // };
 
-  let body: React.ReactNode = (
+  // UI-only: always show empty setup state (payment VA implementation commented out)
+  const body: React.ReactNode = (
     <EmptyVirtualAccountState
       hasWallet={hasWallet}
       onSetup={() => setSetupOpen(true)}
     />
   );
-  if (loading && !hasAccount) {
-    body = (
-      <p className="text-sm text-muted-foreground py-6 text-center">
-        Loading virtual account…
-      </p>
-    );
-  } else if (hasAccount && virtualAccount) {
-    body = (
-      <ActiveVirtualAccountDetails
-        virtualAccount={virtualAccount}
-        bvnVerified={bvnVerified}
-        hasWallet={hasWallet}
-        refreshing={refreshing}
-        onRefresh={handleRefresh}
-      />
-    );
-  }
+  // if (loading && !hasAccount) {
+  //   body = (
+  //     <p className="text-sm text-muted-foreground py-6 text-center">
+  //       Loading virtual account…
+  //     </p>
+  //   );
+  // } else if (hasAccount && virtualAccount) {
+  //   body = (
+  //     <ActiveVirtualAccountDetails
+  //       virtualAccount={virtualAccount}
+  //       bvnVerified={bvnVerified}
+  //       hasWallet={hasWallet}
+  //       refreshing={refreshing}
+  //       onRefresh={handleRefresh}
+  //     />
+  //   );
+  // }
 
   return (
     <>
@@ -205,11 +206,11 @@ export function ResidentVirtualAccountCard({
               checkout funding.
             </p>
           </div>
-          {hasAccount ? (
+          {/* {hasAccount ? (
             <span className="shrink-0 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
               Active
             </span>
-          ) : null}
+          ) : null} */}
         </CardHeader>
 
         <CardContent>{body}</CardContent>

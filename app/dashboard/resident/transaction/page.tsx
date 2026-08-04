@@ -23,7 +23,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
 import { getBanks as getResidentBanks, getPaymentGateways } from "@/redux/slice/resident/payment-mgt/payment-mgt";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import Table from "@/components/tables/list/page";
 import type { WalletData } from "@/redux/slice/resident/wallet-mgt/wallet-mgt-slice";
@@ -32,16 +32,17 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { ResidentWalletCard } from "@/components/resident/wallet/ResidentWalletCard";
 import { ResidentVirtualAccountCard } from "@/components/resident/wallet/ResidentVirtualAccountCard";
 import { formatDateTime } from "@/lib/format-date";
-import {
-  clearBvnConsentSession,
-  confirmFlutterwaveBvn,
-  createFlutterwaveVirtualAccount,
-  getFlutterwaveBvnStatus,
-  getFlutterwaveVirtualAccount,
-  readBvnConsentSession,
-  tryAcquireBvnConfirmLock,
-} from "@/redux/slice/resident/virtual-accounts/flutterwave-va";
-import { setPendingConsentReference } from "@/redux/slice/resident/virtual-accounts/flutterwave-va-slice";
+// Payment VA implementation commented out — UI only
+// import {
+//   clearBvnConsentSession,
+//   confirmFlutterwaveBvn,
+//   createFlutterwaveVirtualAccount,
+//   getFlutterwaveBvnStatus,
+//   getFlutterwaveVirtualAccount,
+//   readBvnConsentSession,
+//   tryAcquireBvnConfirmLock,
+// } from "@/redux/slice/resident/virtual-accounts/flutterwave-va";
+// import { setPendingConsentReference } from "@/redux/slice/resident/virtual-accounts/flutterwave-va-slice";
 
 interface TransactionData {
   walletId: string;
@@ -76,7 +77,7 @@ export default function TransactionPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [limit] = useState(10);
   const [continuingPaymentTxRef, setContinuingPaymentTxRef] = useState<string | null>(null);
-  const bvnReturnHandledRef = useRef(false);
+  // const bvnReturnHandledRef = useRef(false);
   const transactions = useSelector(
     (state: RootState) => state.residentTransaction.allTransactions?.data || [],
   );
@@ -403,87 +404,88 @@ export default function TransactionPage() {
     return () => clearTimeout(timer);
   }, [dispatch, userId, email]);
 
-  // 🔹 Complete Flutterwave BVN consent when redirected back from iGree
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tx_ref = urlParams.get("tx_ref") || urlParams.get("trx_ref");
-    // Don't clash with checkout return handling
-    if (tx_ref) return;
-
-    const isBvnReturn =
-      urlParams.get("bvn_return") === "1" ||
-      Boolean(
-        urlParams.get("bvn_ref") ||
-          urlParams.get("reference") ||
-          urlParams.get("flw_ref"),
-      );
-
-    const stored = readBvnConsentSession();
-    if (!stored?.reference || !isBvnReturn) return;
-
-    const reference =
-      urlParams.get("bvn_ref") ||
-      urlParams.get("reference") ||
-      urlParams.get("flw_ref") ||
-      stored.reference;
-
-    if (!tryAcquireBvnConfirmLock(reference)) return;
-    if (bvnReturnHandledRef.current) return;
-    bvnReturnHandledRef.current = true;
-
-    let cancelled = false;
-
-    const completeBvnFlow = async () => {
-      try {
-        toast.info("Confirming BVN…");
-        dispatch(setPendingConsentReference(reference));
-
-        await dispatch(confirmFlutterwaveBvn({ reference })).unwrap();
-        if (cancelled) return;
-
-        toast.success("BVN verified successfully.");
-
-        if (stored.bvn && stored.phonenumber) {
-          await dispatch(
-            createFlutterwaveVirtualAccount({
-              bvn: stored.bvn,
-              phonenumber: stored.phonenumber,
-            }),
-          ).unwrap();
-          if (cancelled) return;
-          toast.success("Virtual account created successfully.");
-        }
-
-        clearBvnConsentSession();
-        await Promise.all([
-          dispatch(getFlutterwaveVirtualAccount()),
-          dispatch(getFlutterwaveBvnStatus()),
-        ]);
-      } catch (err: unknown) {
-        const msg =
-          (err as { message?: string })?.message ||
-          "BVN confirmation failed. You can try setup again.";
-        toast.error(msg);
-      } finally {
-        const url = new URL(window.location.href);
-        [
-          "bvn_return",
-          "bvn_ref",
-          "reference",
-          "flw_ref",
-          "status",
-          "status_desc",
-        ].forEach((key) => url.searchParams.delete(key));
-        window.history.replaceState({}, document.title, url.toString());
-      }
-    };
-
-    const timer = setTimeout(completeBvnFlow, 600);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [dispatch]);
+  // Payment VA implementation commented out — UI only
+  // // 🔹 Complete Flutterwave BVN consent when redirected back from iGree
+  // useEffect(() => {
+  //   const urlParams = new URLSearchParams(window.location.search);
+  //   const tx_ref = urlParams.get("tx_ref") || urlParams.get("trx_ref");
+  //   // Don't clash with checkout return handling
+  //   if (tx_ref) return;
+  //
+  //   const isBvnReturn =
+  //     urlParams.get("bvn_return") === "1" ||
+  //     Boolean(
+  //       urlParams.get("bvn_ref") ||
+  //         urlParams.get("reference") ||
+  //         urlParams.get("flw_ref"),
+  //     );
+  //
+  //   const stored = readBvnConsentSession();
+  //   if (!stored?.reference || !isBvnReturn) return;
+  //
+  //   const reference =
+  //     urlParams.get("bvn_ref") ||
+  //     urlParams.get("reference") ||
+  //     urlParams.get("flw_ref") ||
+  //     stored.reference;
+  //
+  //   if (!tryAcquireBvnConfirmLock(reference)) return;
+  //   if (bvnReturnHandledRef.current) return;
+  //   bvnReturnHandledRef.current = true;
+  //
+  //   let cancelled = false;
+  //
+  //   const completeBvnFlow = async () => {
+  //     try {
+  //       toast.info("Confirming BVN…");
+  //       dispatch(setPendingConsentReference(reference));
+  //
+  //       await dispatch(confirmFlutterwaveBvn({ reference })).unwrap();
+  //       if (cancelled) return;
+  //
+  //       toast.success("BVN verified successfully.");
+  //
+  //       if (stored.bvn && stored.phonenumber) {
+  //         await dispatch(
+  //           createFlutterwaveVirtualAccount({
+  //             bvn: stored.bvn,
+  //             phonenumber: stored.phonenumber,
+  //           }),
+  //         ).unwrap();
+  //         if (cancelled) return;
+  //         toast.success("Virtual account created successfully.");
+  //       }
+  //
+  //       clearBvnConsentSession();
+  //       await Promise.all([
+  //         dispatch(getFlutterwaveVirtualAccount()),
+  //         dispatch(getFlutterwaveBvnStatus()),
+  //       ]);
+  //     } catch (err: unknown) {
+  //       const msg =
+  //         (err as { message?: string })?.message ||
+  //         "BVN confirmation failed. You can try setup again.";
+  //       toast.error(msg);
+  //     } finally {
+  //       const url = new URL(window.location.href);
+  //       [
+  //         "bvn_return",
+  //         "bvn_ref",
+  //         "reference",
+  //         "flw_ref",
+  //         "status",
+  //         "status_desc",
+  //       ].forEach((key) => url.searchParams.delete(key));
+  //       window.history.replaceState({}, document.title, url.toString());
+  //     }
+  //   };
+  //
+  //   const timer = setTimeout(completeBvnFlow, 600);
+  //   return () => {
+  //     cancelled = true;
+  //     clearTimeout(timer);
+  //   };
+  // }, [dispatch]);
 
   // Table columns for transaction history
   const truncateText = (text: string, maxChars = 48) => {

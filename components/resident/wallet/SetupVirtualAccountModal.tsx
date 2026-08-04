@@ -6,12 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
-import { useDispatch, useSelector } from "react-redux";
-import type { AppDispatch, RootState } from "@/redux/store";
-import {
-  initiateFlutterwaveBvn,
-  saveBvnConsentSession,
-} from "@/redux/slice/resident/virtual-accounts/flutterwave-va";
+// import { useDispatch, useSelector } from "react-redux";
+// import type { AppDispatch, RootState } from "@/redux/store";
+// import {
+//   initiateFlutterwaveBvn,
+//   saveBvnConsentSession,
+// } from "@/redux/slice/resident/virtual-accounts/flutterwave-va";
 
 type Props = {
   visible: boolean;
@@ -25,15 +25,16 @@ export default function SetupVirtualAccountModal({
   visible,
   onClose,
 }: Readonly<Props>) {
-  const dispatch = useDispatch<AppDispatch>();
-  const { initiateBvnState } = useSelector(
-    (state: RootState) => state.residentFlutterwaveVa,
-  );
+  // const dispatch = useDispatch<AppDispatch>();
+  // const { initiateBvnState } = useSelector(
+  //   (state: RootState) => state.residentFlutterwaveVa,
+  // );
 
   const [phonenumber, setPhonenumber] = useState("");
   const [bvn, setBvn] = useState("");
 
-  const submitting = initiateBvnState === "isLoading";
+  // const submitting = initiateBvnState === "isLoading";
+  const submitting = false;
 
   const resetForm = () => {
     setPhonenumber("");
@@ -63,44 +64,48 @@ export default function SetupVirtualAccountModal({
       return;
     }
 
-    const phone = phonenumber.trim();
+    // Payment VA implementation commented out — UI only
+    toast.info("Virtual account setup is temporarily unavailable.");
+    return;
 
-    try {
-      const redirectUrl = `${window.location.origin}/dashboard/resident/transaction?bvn_return=1`;
-      const result = await dispatch(
-        initiateFlutterwaveBvn({
-          bvn: bvn.trim(),
-          redirectUrl,
-        }),
-      ).unwrap();
-
-      const reference = result.reference;
-      if (!reference) {
-        toast.error("No consent reference received. Please try again.");
-        return;
-      }
-
-      saveBvnConsentSession({
-        reference,
-        bvn: bvn.trim(),
-        phonenumber: phone,
-      });
-
-      if (result.consentUrl) {
-        toast.info("Redirecting to complete BVN consent…");
-        window.location.assign(result.consentUrl);
-        return;
-      }
-
-      toast.warning(
-        "Consent URL was not returned. If you already completed consent, return to this page to finish setup.",
-      );
-    } catch (err: unknown) {
-      const msg =
-        (err as { message?: string })?.message ||
-        "Failed to set up virtual account.";
-      toast.error(msg);
-    }
+    // const phone = phonenumber.trim();
+    //
+    // try {
+    //   const redirectUrl = `${window.location.origin}/dashboard/resident/transaction?bvn_return=1`;
+    //   const result = await dispatch(
+    //     initiateFlutterwaveBvn({
+    //       bvn: bvn.trim(),
+    //       redirectUrl,
+    //     }),
+    //   ).unwrap();
+    //
+    //   const reference = result.reference;
+    //   if (!reference) {
+    //     toast.error("No consent reference received. Please try again.");
+    //     return;
+    //   }
+    //
+    //   saveBvnConsentSession({
+    //     reference,
+    //     bvn: bvn.trim(),
+    //     phonenumber: phone,
+    //   });
+    //
+    //   if (result.consentUrl) {
+    //     toast.info("Redirecting to complete BVN consent…");
+    //     window.location.assign(result.consentUrl);
+    //     return;
+    //   }
+    //
+    //   toast.warning(
+    //     "Consent URL was not returned. If you already completed consent, return to this page to finish setup.",
+    //   );
+    // } catch (err: unknown) {
+    //   const msg =
+    //     (err as { message?: string })?.message ||
+    //     "Failed to set up virtual account.";
+    //   toast.error(msg);
+    // }
   };
 
   return (

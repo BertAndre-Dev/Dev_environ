@@ -348,7 +348,7 @@ export function ResidentProfileCard() {
                   No addresses linked to this account.
                 </p>
               ) : (
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3">
                   {addresses.map((addr, index) => (
                     <div
                       key={addr.id || index}

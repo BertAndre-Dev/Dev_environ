@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import Modal from "@/components/modal/page";
 import WithdrawFundForm from "@/components/estate-admin/transactions/fund-wallet-form/page";
 import EstateWalletOverviewCard from "@/components/estate-admin/wallet-overview-card/page";
+import SetWithdrawalAccountModal from "@/components/wallet/SetWithdrawalAccountModal";
 import {
   createWallet,
   getWallet,
@@ -48,6 +49,8 @@ export default function EstateAdminWalletPage() {
   const dispatch = useDispatch<AppDispatch>();
   const [open, setOpen] = useState(false);
   const [createWalletModalOpen, setCreateWalletModalOpen] = useState(false);
+  const [setWithdrawalAccountModalOpen, setSetWithdrawalAccountModalOpen] =
+    useState(false);
   const [createWalletAccountNumber, setCreateWalletAccountNumber] =
     useState("");
   const [createWalletBankCode, setCreateWalletBankCode] = useState("");
@@ -408,6 +411,7 @@ export default function EstateAdminWalletPage() {
         wallet={wallet}
         onWithdraw={handleOpenModal}
         onCreateWallet={() => setCreateWalletModalOpen(true)}
+        onSetWithdrawalAccount={() => setSetWithdrawalAccountModalOpen(true)}
         walletLoading={walletLoading}
         createWalletLoading={createWalletState === "isLoading"}
         filterExportSlot={
@@ -577,6 +581,14 @@ export default function EstateAdminWalletPage() {
           </div>
         </div>
       </Modal>
+
+      <SetWithdrawalAccountModal
+        visible={setWithdrawalAccountModalOpen}
+        onClose={() => setSetWithdrawalAccountModalOpen(false)}
+        onSuccess={() => {
+          if (estateId) dispatch(getWallet(estateId));
+        }}
+      />
       </div>
     </div>
   );

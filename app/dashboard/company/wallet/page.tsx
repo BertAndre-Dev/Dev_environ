@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import Modal from "@/components/modal/page";
 import Table from "@/components/tables/list/page";
 import EstateWalletOverviewCard from "@/components/estate-admin/wallet-overview-card/page";
+import SetWithdrawalAccountModal from "@/components/wallet/SetWithdrawalAccountModal";
 import CompanyWithdrawFundForm from "@/components/company/wallet/CompanyWithdrawFundForm";
 import { formatDateTime } from "@/lib/format-date";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
@@ -56,6 +57,8 @@ export default function CompanyWalletPage() {
   const dispatch = useDispatch<AppDispatch>();
   const [open, setOpen] = useState(false);
   const [createWalletModalOpen, setCreateWalletModalOpen] = useState(false);
+  const [setWithdrawalAccountModalOpen, setSetWithdrawalAccountModalOpen] =
+    useState(false);
   const [createWalletAccountNumber, setCreateWalletAccountNumber] =
     useState("");
   const [createWalletBankCode, setCreateWalletBankCode] = useState("");
@@ -335,6 +338,7 @@ export default function CompanyWalletPage() {
         wallet={wallet}
         onWithdraw={() => setOpen((prev) => !prev)}
         onCreateWallet={() => setCreateWalletModalOpen(true)}
+        onSetWithdrawalAccount={() => setSetWithdrawalAccountModalOpen(true)}
         walletLoading={walletLoading}
         createWalletLoading={createWalletState === "isLoading"}
       />
@@ -495,6 +499,14 @@ export default function CompanyWalletPage() {
           </div>
         </div>
       </Modal>
+
+      <SetWithdrawalAccountModal
+        visible={setWithdrawalAccountModalOpen}
+        onClose={() => setSetWithdrawalAccountModalOpen(false)}
+        onSuccess={() => {
+          if (companyId) dispatch(getCompanyWallet(companyId));
+        }}
+      />
     </div>
   );
 }

@@ -24,6 +24,7 @@ interface EstateWalletOverviewCardProps {
   billStats?: WalletOverviewBillStats | null;
   onWithdraw: () => void;
   onCreateWallet?: () => void;
+  onSetWithdrawalAccount?: () => void;
   /** True while wallet fetch has not finished — avoid flashing Create Wallet. */
   walletLoading?: boolean;
   createWalletLoading?: boolean;
@@ -36,10 +37,13 @@ export default function EstateWalletOverviewCard({
   wallet,
   onWithdraw,
   onCreateWallet,
+  onSetWithdrawalAccount,
   walletLoading = false,
   createWalletLoading = false,
   filterExportSlot,
 }: EstateWalletOverviewCardProps) {
+  const hasWithdrawalAccount = Boolean(wallet?.accountNumber?.trim());
+
   return (
     <div className="space-y-4">
       <Card className="p-4 md:p-6 shadow-md">
@@ -73,13 +77,23 @@ export default function EstateWalletOverviewCard({
               </div>
 
               <div className="bg-[#D0DFF233] rounded-lg p-4 flex justify-center items-center">
-                <Button
-                  onClick={onWithdraw}
-                  size="lg"
-                  className="px-8 w-full max-w-md"
-                >
-                  Withdraw Funds
-                </Button>
+                {hasWithdrawalAccount ? (
+                  <Button
+                    onClick={onWithdraw}
+                    size="lg"
+                    className="px-8 w-full max-w-md"
+                  >
+                    Withdraw Funds
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={onSetWithdrawalAccount}
+                    size="lg"
+                    className="px-8 w-full max-w-md"
+                  >
+                    Set Withdrawal Account
+                  </Button>
+                )}
               </div>
             </>
           ) : walletLoading ? (

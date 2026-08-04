@@ -236,7 +236,9 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
     <Card className="max-w-lg mx-auto mt-6">
       <CardHeader>
         <CardTitle className="text-lg font-semibold">
-          Invite admins to Estate
+          {inviteScope === "company"
+            ? "Invite admin to Company"
+            : "Invite admins to Estate"}
         </CardTitle>
       </CardHeader>
 

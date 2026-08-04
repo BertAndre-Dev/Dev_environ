@@ -12,7 +12,7 @@ export type SettingsState = {
 };
 
 export type SettingsTab = {
-  id: "general" | "billing" | "notifications" | "change-password";
+  id: "my-profile" | "general" | "billing" | "notifications" | "change-password";
   label: string;
   icon?: string;
 };

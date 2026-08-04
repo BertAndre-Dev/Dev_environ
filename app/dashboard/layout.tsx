@@ -34,7 +34,6 @@ import { NotificationsBell } from "@/components/dashboard/NotificationsBell";
 import { filterNavItemsByEstateModules } from "@/lib/nav-module-filter";
 import Image from "next/image";
 import Loader from "@/components/ui/Loader";
-import { ResidentProfileModal } from "@/components/resident/ResidentProfileModal";
 
 export default function DashboardLayout({
   children,
@@ -55,7 +54,6 @@ export default function DashboardLayout({
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   // 🔹 Handle sidebar state based on screen size (collapsed on mobile, expanded on desktop)
   useEffect(() => {
@@ -357,7 +355,7 @@ export default function DashboardLayout({
                   .toString()
                   .toLowerCase();
                 if (role === "resident") {
-                  setProfileModalOpen(true);
+                  router.push("/dashboard/settings?tab=my-profile");
                 }
               }}
               title={
@@ -394,11 +392,6 @@ export default function DashboardLayout({
           </div>
         </div>
       </aside>
-
-      <ResidentProfileModal
-        open={profileModalOpen}
-        onClose={() => setProfileModalOpen(false)}
-      />
 
       {/* Main */}
       <main

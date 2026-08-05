@@ -28,6 +28,28 @@ export function getNotificationsInboxPath(
   return `${roleDashboardBase(role || "admin")}/notifications`;
 }
 
+/** Backend actionUrl path segments → real App Router segments. */
+const ACTION_PATH_ALIASES: Record<string, string> = {
+  meters: "meter",
+  meter: "meter",
+  bills: "bills",
+  bill: "bills",
+  visitors: "visitor",
+  visitor: "visitor",
+  complaints: "maintenance",
+  complaint: "maintenance",
+  maintenance: "maintenance",
+  wallet: "transaction",
+  transactions: "transaction",
+  transaction: "transaction",
+  announcements: "announcements",
+  marketplace: "marketplace",
+  notifications: "notifications",
+  rent: "rent",
+  "pay-bills": "pay-bills",
+  community: "community",
+};
+
 function complaintHref(role: string, complaintId: string): string {
   const normalized = normalizeRole(role);
   if (normalized === "resident") {
@@ -37,6 +59,15 @@ function complaintHref(role: string, complaintId: string): string {
     return `/dashboard/staff/maintenance?id=${complaintId}`;
   }
   return `${roleDashboardBase(role)}/maintenance?id=${complaintId}`;
+}
+
+function mapActionPath(pathname: string): string {
+  const clean = pathname.replace(/^\/+/, "").replace(/\/+$/, "");
+  if (!clean) return "";
+
+  const [first, ...rest] = clean.split("/");
+  const mappedFirst = ACTION_PATH_ALIASES[first.toLowerCase()] ?? first;
+  return [mappedFirst, ...rest].filter(Boolean).join("/");
 }
 
 export function resolveNotificationHref(
@@ -54,9 +85,15 @@ export function resolveNotificationHref(
     return complaintHref(role, complaintMatch[1]);
   }
 
+  const qIndex = url.indexOf("?");
+  const pathPart = qIndex >= 0 ? url.slice(0, qIndex) : url;
+  const queryPart = qIndex >= 0 ? url.slice(qIndex) : "";
+
+  const mapped = mapActionPath(
+    pathPart.startsWith("/") ? pathPart : `/${pathPart}`,
+  );
   const base = roleDashboardBase(role);
-  if (url.startsWith("/")) return `${base}${url}`;
-  return `${base}/${url}`;
+  return `${base}/${mapped}${queryPart}`;
 }
 
 export function formatNotificationTime(iso?: string): string {

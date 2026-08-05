@@ -444,7 +444,7 @@ export const residentNav = [
   {
     label: "Energy Management",
     icon: IoSpeedometerOutline,
-    path: "/dashboard/resident/meters",
+    path: "/dashboard/resident/meter",
     moduleKey: "meter",
   },
   {

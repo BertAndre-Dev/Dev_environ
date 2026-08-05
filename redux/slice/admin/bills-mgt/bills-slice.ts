@@ -30,6 +30,8 @@ export interface AssignedBillData {
   userId?: string;
   billName?: string;
   frequency?: string;
+  amount?: number;
+  amountDue?: number;
   amountPaid?: number;
   startDate?: string;
   nextDueDate?: string;

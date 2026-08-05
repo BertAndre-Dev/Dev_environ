@@ -274,7 +274,7 @@ export default function BillPage() {
       billId: item.billId,
       addressId: assignedAddressId || undefined,
       name: item.billName,
-      amount: item.amountPaid,
+      amount: item.amountDue ?? item.amount ?? item.amountPaid,
       frequency: item.frequency,
     });
     setAssignModalOpen(true);
@@ -565,9 +565,12 @@ export default function BillPage() {
       render: (item) => formatFrequencyLabel(item.frequency),
     },
     {
-      key: "amountPaid",
-      header: "Amount (₦)",
-      render: (item) => formatAmountDisplay(Number(item.amountPaid ?? 0)),
+      key: "amountDue",
+      header: "Amount Due (₦)",
+      render: (item) =>
+        formatAmountDisplay(
+          Number(item.amountDue ?? item.amount ?? item.amountPaid ?? 0),
+        ),
     },
     {
       key: "status",

@@ -196,7 +196,8 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
           description: fetchData.description || prev.description,
           amount: formatAmountInput(
             String(
-              fetchData.amount ??
+              fetchData.amountDue ??
+                fetchData.amount ??
                 fetchData.amountPaid ??
                 fetchData.yearlyAmount ??
                 initialData?.amount ??

@@ -85,7 +85,7 @@ function assignedBillName(bill: AssignedBillData): string {
 }
 
 function assignedBillAmount(bill: AssignedBillData): number {
-  return Number(bill.amountPaid ?? bill.amount ?? bill.yearlyAmount ?? 0);
+  return Number(bill.amountDue ?? bill.amount ?? bill.yearlyAmount ?? 0);
 }
 
 function assignedBillPayId(bill: AssignedBillData): string | null {

@@ -7,7 +7,6 @@ import {
 } from "@/redux/slice/super-admin/super-admin-estate-transactions/super-admin-estate-transactions";
 import {
   selectSuperAdminEstateTransactions,
-  selectSuperAdminEstateTransactionsLoading,
   selectSuperAdminEstateTransactionsPagination,
 } from "@/redux/slice/super-admin/super-admin-estate-transactions/super-admin-estate-transactions-slice";
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
@@ -28,6 +27,7 @@ import { VendsTab } from "@/app/dashboard/estate-admin/transactions/components/V
 import { PaidBillsTab } from "@/app/dashboard/estate-admin/transactions/components/PaidBillsTab";
 import { formatDateTime } from "@/lib/format-date";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 
 const ESTATE_FILTER_FETCH_LIMIT = 500;
 
@@ -49,7 +49,7 @@ export default function SuperAdminEstateTransactionsPage() {
     pages: number;
   } | null>(null);
   const [vendsPage, setVendsPage] = useState(1);
-  const [loadingVends, setLoadingVends] = useState(false);
+  const [loadingVends, setLoadingVends] = useState(true);
   const [vendsStartDate, setVendsStartDate] = useState<string>("");
   const [vendsEndDate, setVendsEndDate] = useState<string>("");
   const [paidBillsData, setPaidBillsData] = useState<any[]>([]);
@@ -67,14 +67,17 @@ export default function SuperAdminEstateTransactionsPage() {
 
   const transactions = useSelector(selectSuperAdminEstateTransactions);
   const pagination = useSelector(selectSuperAdminEstateTransactionsPagination);
-  const loading = useSelector(selectSuperAdminEstateTransactionsLoading);
+  const historyStatus = useSelector(
+    (state: RootState) =>
+      state.superAdminEstateTransactions.getTransactionHistoryState,
+  );
 
-  const { allEstates, estateLoading } = useSelector((state: RootState) => {
+  const { allEstates, estatesStatus } = useSelector((state: RootState) => {
     const estateState = state.estate;
     const data = estateState.allEstates?.data || [];
     return {
       allEstates: Array.isArray(data) ? data : [],
-      estateLoading: estateState.getAllEstatesState === "isLoading",
+      estatesStatus: estateState.getAllEstatesState as string,
     };
   });
 
@@ -545,10 +548,10 @@ export default function SuperAdminEstateTransactionsPage() {
   ];
 
   const pageLoading =
-    (estateLoading && estateOptions.length === 0) ||
+    (isPending(estatesStatus) && estateOptions.length === 0) ||
     (Boolean(selectedEstateId) &&
-      ((activeTab === "history" && loading && transactions.length === 0) ||
-        (activeTab === "vends" && loadingVends && vendsData.length === 0) ||
+      ((activeTab === "history" && isPending(historyStatus)) ||
+        (activeTab === "vends" && loadingVends) ||
         (activeTab === "paid-bills" &&
           loadingPaidBills &&
           paidBillsData.length === 0)));
@@ -582,7 +585,7 @@ export default function SuperAdminEstateTransactionsPage() {
             value={selectedEstate}
             onChange={(option) => setSelectedEstate(option)}
             isSearchable
-            isDisabled={!estateOptions.length || estateLoading}
+            isDisabled={!estateOptions.length || isPending(estatesStatus)}
             styles={{
               control: (base) => ({ ...base, cursor: "pointer" }),
               option: (base) => ({ ...base, cursor: "pointer" }),
@@ -604,7 +607,7 @@ export default function SuperAdminEstateTransactionsPage() {
             emptyMessage={
               !estateOptions.length
                 ? "No estates available."
-                : loading
+                : isPending(historyStatus)
                   ? "Loading transactions..."
                   : "No transactions found."
             }

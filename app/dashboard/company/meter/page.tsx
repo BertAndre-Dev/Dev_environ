@@ -40,6 +40,7 @@ import CompanyAssignMeterForm from "@/components/company/meter-form/page";
 import CompanyAssignMeterToEstateForm from "@/components/company/assign-meter-to-estate-form/page";
 import { IoSpeedometerOutline } from "react-icons/io5";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { parseCompanyFromUser } from "../lib/company";
@@ -174,7 +175,7 @@ export default function CompanyMeterManagement() {
       meters: (companyMeter?.meterList?.data || []) as CompanyMeterRow[],
       pagination: (companyMeter?.meterList?.pagination ??
         null) as Pagination | null,
-      loading: companyMeter?.getMetersState === "isLoading",
+      loading: isPending(companyMeter?.getMetersState),
       meterDetails: companyMeter?.meterDetails ?? null,
       detailsLoading: companyMeter?.getMeterByAddressIdState === "isLoading",
       selectedEstateId: filters.selectedEstateId || ALL_METERS_ESTATE_ID,

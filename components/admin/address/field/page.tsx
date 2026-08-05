@@ -19,6 +19,7 @@ import { useEffect, useState } from "react";
 import Modal from "@/components/modal/page";
 import FieldForm from "../forms/field-form/page";
 import { formatAddressRecordCreatedAt } from "@/lib/address";
+import { isBusy, isPending } from "@/lib/async-status";
 
 interface FieldData {
   estateId: string;
@@ -34,24 +35,31 @@ export default function AddressField() {
   const dispatch = useDispatch<AppDispatch>();
   const [user, setUser] = useState<any>(null);
   const [estateId, setEstateId] = useState<string | null>(null);
+  const [bootstrapping, setBootstrapping] = useState(true);
   const [open, setOpen] = useState(false);
   const [selectedField, setSelectedField] = useState<FieldData | null>(null);
   const [itemToDelete, setItemToDelete] = useState<{ id: string; name?: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   // ✅ Get Redux state
-  const { allField, pagination, loading } = useSelector((state: RootState) => {
-    const fieldState = state.adminField as any;
-    return {
-      allField: fieldState.allField,
-      pagination: fieldState.allField?.pagination || {},
-      loading:
-        fieldState.getFieldByEstateState === "isLoading" ||
-        fieldState.createFieldState === "isLoading" ||
-        fieldState.updateFieldState === "isLoading" ||
-        fieldState.deleteFieldState === "isLoading",
-    };
-  });
+  const { allField, pagination, listStatus, mutationBusy } = useSelector(
+    (state: RootState) => {
+      const fieldState = state.adminField as any;
+      return {
+        allField: fieldState.allField,
+        pagination: fieldState.allField?.pagination || {},
+        listStatus: fieldState.getFieldByEstateState as string | undefined,
+        mutationBusy:
+          isBusy(fieldState.createFieldState) ||
+          isBusy(fieldState.updateFieldState) ||
+          isBusy(fieldState.deleteFieldState),
+      };
+    },
+  );
+  const loading =
+    bootstrapping ||
+    (Boolean(estateId) && isPending(listStatus)) ||
+    mutationBusy;
 
   // ✅ Fetch user & fields
   useEffect(() => {
@@ -79,6 +87,8 @@ export default function AddressField() {
         }
       } catch {
         toast.error("Failed to fetch user or estate fields.");
+      } finally {
+        setBootstrapping(false);
       }
     })();
   }, [dispatch]);

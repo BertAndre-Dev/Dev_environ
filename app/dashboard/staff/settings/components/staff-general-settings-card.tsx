@@ -15,6 +15,7 @@ import {
   getStaffUserProfile,
   updateStaffUserProfile,
 } from "@/redux/slice/staff/user-profile/staff-user-profile";
+import { isBusy, isPending } from "@/lib/async-status";
 
 type StaffFormState = {
   firstName: string;
@@ -83,7 +84,7 @@ export function StaffGeneralSettingsCard() {
   }, [user]);
 
   const isLoading = useMemo(
-    () => getStatus === "isLoading" || updateStatus === "isLoading",
+    () => isPending(getStatus) || isBusy(updateStatus),
     [getStatus, updateStatus],
   );
 

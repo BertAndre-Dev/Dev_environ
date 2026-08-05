@@ -37,6 +37,7 @@ import Modal from "@/components/modal/page";
 import InviteUserForm from "@/components/super-admin/user-form/page";
 import EditUserForm from "@/app/dashboard/super-admin/user/components/EditUserForm";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 import { UserStatusModal } from "./components/UserStatusModal";
 import {
   DEFAULT_ESTATE_USER_ROLE,
@@ -139,27 +140,29 @@ export default function SuperAdminUserPage() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
 
-  const { allSuperAdminUsers, userPagination, loading } = useSelector(
-    (state: RootState) => {
-      const userState = state.superAdminUser as any;
-      const data = userState.allSuperAdminUsers?.data || [];
-      const userPagination = userState.allSuperAdminUsers?.pagination || {};
-      return {
-        allSuperAdminUsers: Array.isArray(data) ? data : [],
-        userPagination,
-        loading:
-          userState.getAllUsersByEstateState === "isLoading" ||
-          userState.getAllUsersByCompanyState === "isLoading",
-      };
-    },
-  );
+  const {
+    allSuperAdminUsers,
+    userPagination,
+    getAllUsersByEstateState,
+    getAllUsersByCompanyState,
+  } = useSelector((state: RootState) => {
+    const userState = state.superAdminUser as any;
+    const data = userState.allSuperAdminUsers?.data || [];
+    const userPagination = userState.allSuperAdminUsers?.pagination || {};
+    return {
+      allSuperAdminUsers: Array.isArray(data) ? data : [],
+      userPagination,
+      getAllUsersByEstateState: userState.getAllUsersByEstateState as string,
+      getAllUsersByCompanyState: userState.getAllUsersByCompanyState as string,
+    };
+  });
 
   const { allEstates, estateLoading } = useSelector((state: RootState) => {
     const estateState = state.estate as any;
     const data = estateState.allEstates?.data || [];
     return {
       allEstates: Array.isArray(data) ? data : [],
-      estateLoading: Boolean(estateState.loading),
+      estateLoading: isPending(estateState.getAllEstatesState),
     };
   });
 
@@ -168,11 +171,9 @@ export default function SuperAdminUserPage() {
     const data = companyState.list || [];
     return {
       allCompanies: Array.isArray(data) ? data : [],
-      companyLoading: companyState.getListStatus === "isLoading",
+      companyLoading: isPending(companyState.getListStatus),
     };
   });
-
-  const pageLoading = estateLoading || companyLoading || loading;
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [filterScope, setFilterScope] = useState<FilterScope>("estate");
@@ -198,6 +199,16 @@ export default function SuperAdminUserPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemToDelete, setItemToDelete] = useState<{ id: string; name?: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // User list is only fetched after an estate/company is selected — gate idle.
+  const usersLoading =
+    filterScope === "company"
+      ? Boolean(selectedCompany?.value) &&
+        isPending(getAllUsersByCompanyState)
+      : Boolean(selectedEstate?.value) &&
+        isPending(getAllUsersByEstateState);
+
+  const pageLoading = estateLoading || companyLoading || usersLoading;
 
   const estateOptions: SelectOption[] = useMemo(
     () =>

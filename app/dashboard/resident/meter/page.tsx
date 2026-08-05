@@ -34,6 +34,7 @@ import Tab from "@/components/tabs/page";
 import type { EnergyListItem } from "@/redux/slice/resident/meter-mgt/meter-mgt-slice";
 import Loader from "@/components/ui/Loader";
 import { CopyButton } from "@/components/ui/copy-button";
+import { isPending } from "@/lib/async-status";
 
 const METER_TAB_TITLES = ["Chart Overview", "Vend"] as const;
 
@@ -88,14 +89,14 @@ export default function ResidentMeter() {
   const meterUsageMessage = useSelector(
     (state: RootState) => state.residentMeter.meterUsageMessage,
   );
-  const meterUsageLoading =
-    useSelector(
-      (state: RootState) => state.residentMeter.getMeterUsageState,
-    ) === "isLoading";
-  const meterLoading =
-    useSelector(
-      (state: RootState) => state.residentMeter.getMeterByAddressState,
-    ) === "isLoading";
+  const getMeterUsageState = useSelector(
+    (state: RootState) => state.residentMeter.getMeterUsageState,
+  );
+  const getMeterByAddressState = useSelector(
+    (state: RootState) => state.residentMeter.getMeterByAddressState,
+  );
+  const meterUsageLoading = isPending(getMeterUsageState);
+  const meterLoading = isPending(getMeterByAddressState);
   // const vendingStats = useSelector(
   //   (state: RootState) => state.residentMeter.vendingStatsByAddress,
   // );
@@ -107,23 +108,23 @@ export default function ResidentMeter() {
   const energyConsumptionChart = useSelector(
     (state: RootState) => state.residentMeter.energyConsumptionChart,
   );
-  const energyChartLoading =
-    useSelector(
-      (state: RootState) => state.residentMeter.getEnergyConsumptionChartState,
-    ) === "isLoading";
+  const getEnergyConsumptionChartState = useSelector(
+    (state: RootState) => state.residentMeter.getEnergyConsumptionChartState,
+  );
+  const energyChartLoading = isPending(getEnergyConsumptionChartState);
 
   const {
     realtimeBalance,
-    realtimeBalanceLoading,
+    realtimeBalanceStatus,
     realtimeBalanceMessage,
     realtimeBalanceError,
   } = useSelector((state: RootState) => ({
     realtimeBalance: state.residentMeterRealtimeBalance.balance,
-    realtimeBalanceLoading:
-      state.residentMeterRealtimeBalance.status === "isLoading",
+    realtimeBalanceStatus: state.residentMeterRealtimeBalance.status,
     realtimeBalanceMessage: state.residentMeterRealtimeBalance.message,
     realtimeBalanceError: state.residentMeterRealtimeBalance.error,
   }));
+  const realtimeBalanceLoading = isPending(realtimeBalanceStatus);
 
   // Load user and normalize addresses (addressIds for owners, addressId for tenants)
   useEffect(() => {

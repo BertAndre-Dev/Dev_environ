@@ -19,6 +19,7 @@ import {
   getNotificationsInboxPath,
   resolveNotificationHref,
 } from "@/lib/notifications";
+import { isPending, isSettled } from "@/lib/async-status";
 import { cn } from "@/lib/utils";
 
 const PREVIEW_LIMIT = 10;
@@ -89,7 +90,7 @@ export function NotificationsBell() {
     router.push(href);
   };
 
-  const loading = getStatus === "isLoading" && list.length === 0;
+  const loading = isPending(getStatus) && list.length === 0;
 
   let listBody: ReactNode;
   if (loading) {
@@ -98,7 +99,7 @@ export function NotificationsBell() {
         Loading…
       </p>
     );
-  } else if (list.length === 0) {
+  } else if (isSettled(getStatus) && list.length === 0) {
     listBody = (
       <p className="px-3 py-6 text-center text-sm text-muted-foreground">
         No notifications yet

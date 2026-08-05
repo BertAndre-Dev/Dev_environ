@@ -34,6 +34,7 @@ import type { AddBusinessFormPayload } from "@/components/super-admin/add-busine
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import { MarketplaceListingCard } from "@/components/super-admin/marketplace-listing-card";
 import Loader from "@/components/ui/Loader";
+import { isBusy, isPending } from "@/lib/async-status";
 import Pagination from "@/components/pagination/page";
 
 export default function SuperAdminMarketplacePage() {
@@ -311,8 +312,7 @@ export default function SuperAdminMarketplacePage() {
     },
   ];
 
-  const formLoading =
-    createStatus === "isLoading" || updateStatus === "isLoading";
+  const formLoading = isBusy(createStatus) || isBusy(updateStatus);
 
   const paginationInfo = {
     total: pagination?.total ?? filteredListings.length,
@@ -320,9 +320,8 @@ export default function SuperAdminMarketplacePage() {
     pageSize: pagination?.limit ?? limit,
   };
 
-  const listLoading = getListStatus === "isLoading";
-  const pageLoading =
-    bootstrapping || (listLoading && listings.length === 0);
+  const listLoading = isPending(getListStatus);
+  const pageLoading = bootstrapping || listLoading;
 
   return (
     <div className="relative">

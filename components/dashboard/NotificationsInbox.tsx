@@ -4,9 +4,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { CheckCheck, ChevronLeft, ChevronRight } from "lucide-react";
+import { CheckCheck, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import type { AppDispatch, RootState } from "@/redux/store";
 import {
+  clearAllNotifications,
   getNotifications,
   markNotificationRead,
   markNotificationsReadMultiple,
@@ -17,10 +18,12 @@ import {
   formatNotificationTime,
   resolveNotificationHref,
 } from "@/lib/notifications";
+import { isBusy, isPending, isSettled } from "@/lib/async-status";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import Loader from "@/components/ui/Loader";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
@@ -43,13 +46,20 @@ export function NotificationsInbox() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const role = useSelector(selectUserRole);
-  const { list, pagination, unreadCount, getStatus, markMultipleStatus } =
-    useSelector((state: RootState) => state.notifications);
+  const {
+    list,
+    pagination,
+    unreadCount,
+    getStatus,
+    markMultipleStatus,
+    clearAllStatus,
+  } = useSelector((state: RootState) => state.notifications);
 
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState("");
   const [type, setType] = useState("");
+  const [clearAllOpen, setClearAllOpen] = useState(false);
 
   useEffect(() => {
     setPage(1);
@@ -74,13 +84,15 @@ export function NotificationsInbox() {
     );
   }, [dispatch, page, status, priority, type]);
 
-  const loading = getStatus === "isLoading";
+  const loading = isPending(getStatus);
+  const clearingAll = isBusy(clearAllStatus);
   const total = pagination?.total ?? 0;
   const totalPages = Math.max(1, pagination?.pages ?? 1);
   const canPrev = page > 1;
   const canNext = page < totalPages;
   const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
   const rangeEnd = Math.min(page * PAGE_SIZE, total);
+  const hasNotifications = total > 0 || list.length > 0;
 
   const unreadOnPage = useMemo(
     () =>
@@ -133,6 +145,19 @@ export function NotificationsInbox() {
     }
   };
 
+  const handleClearAll = async () => {
+    try {
+      const res = await dispatch(clearAllNotifications()).unwrap();
+      toast.success(res.message || "All notifications cleared");
+      setPage(1);
+    } catch (err: unknown) {
+      toast.error(
+        typeof err === "string" ? err : "Failed to clear notifications",
+      );
+      throw err;
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -144,18 +169,30 @@ export function NotificationsInbox() {
               : "You are all caught up"}
           </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={
-            unreadOnPage.length === 0 || markMultipleStatus === "isLoading"
-          }
-          onClick={() => void handleMarkPageRead()}
-          className="shrink-0 gap-2"
-        >
-          <CheckCheck className="h-4 w-4" />
-          Mark page as read
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={
+              unreadOnPage.length === 0 || isBusy(markMultipleStatus)
+            }
+            onClick={() => void handleMarkPageRead()}
+            className="gap-2"
+          >
+            <CheckCheck className="h-4 w-4" />
+            Mark page as read
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!hasNotifications || clearingAll || loading}
+            onClick={() => setClearAllOpen(true)}
+            className="gap-2 text-destructive hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+            Clear all
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
@@ -185,7 +222,7 @@ export function NotificationsInbox() {
 
       {loading && list.length === 0 ? (
         <Loader label="Loading notifications…" />
-      ) : list.length === 0 ? (
+      ) : isSettled(getStatus) && list.length === 0 ? (
         <Card className="p-10 text-center text-sm text-muted-foreground">
           No notifications found
         </Card>
@@ -295,6 +332,23 @@ export function NotificationsInbox() {
           </div>
         </div>
       ) : null}
+
+      <DeleteModal
+        visible={clearAllOpen}
+        onClose={() => setClearAllOpen(false)}
+        itemName="all notifications"
+        title="Clear all notifications"
+        message={
+          <p className="text-sm text-muted-foreground mb-4">
+            Are you sure you want to delete all notifications? This action
+            cannot be undone.
+          </p>
+        }
+        confirmLabel="Clear all"
+        loadingLabel="Clearing…"
+        loading={clearingAll}
+        onConfirm={handleClearAll}
+      />
     </div>
   );
 }

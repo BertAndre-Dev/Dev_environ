@@ -14,6 +14,7 @@ import EstateWalletOverviewCard from "@/components/estate-admin/wallet-overview-
 import SetWithdrawalAccountModal from "@/components/wallet/SetWithdrawalAccountModal";
 import CompanyWithdrawFundForm from "@/components/company/wallet/CompanyWithdrawFundForm";
 import { formatDateTime } from "@/lib/format-date";
+import { isPending } from "@/lib/async-status";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
   getBanks,
@@ -36,6 +37,7 @@ import {
 import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
 import type { AppDispatch, RootState } from "@/redux/store";
 import type { CompanyCreditItem } from "@/redux/slice/company/wallet-mgt/company-wallet-mgt-slice";
+import Loader from "@/components/ui/Loader";
 
 const LIMIT = 10;
 
@@ -77,8 +79,8 @@ export default function CompanyWalletPage() {
   const createWalletState = useSelector(
     (state: RootState) => state.companyWallet?.createWalletState ?? "idle",
   );
-  const walletLoading =
-    getWalletState === "idle" || getWalletState === "isLoading";
+  const walletLoading = isPending(getWalletState);
+  const pageLoading = walletLoading || (!!companyId && creditsLoading);
   const {
     banks,
     getBanksState,
@@ -322,7 +324,14 @@ export default function CompanyWalletPage() {
     typeof pag?.limit === "number" ? pag.limit : Number(pag?.limit) || LIMIT;
 
   return (
-    <div className="space-y-6">
+    <div className="relative">
+      {pageLoading && <Loader fullScreen label="Loading wallet..." />}
+      <div
+        className={[
+          "space-y-6",
+          pageLoading ? "pointer-events-none select-none" : "",
+        ].join(" ")}
+      >
       <div>
         <h1 className="font-heading text-3xl font-bold">Wallet Management</h1>
         <p className="text-muted-foreground mt-1">
@@ -507,6 +516,7 @@ export default function CompanyWalletPage() {
           if (companyId) dispatch(getCompanyWallet(companyId));
         }}
       />
+      </div>
     </div>
   );
 }

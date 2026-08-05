@@ -27,7 +27,6 @@ import {
 import {
   selectCompanyRevenueHeads,
   selectCompanyRevenueHeadsError,
-  selectCompanyRevenueHeadsLoading,
   selectCompanyRevenueHeadsPagination,
   setCompanyRevenueHeadEstate,
 } from "@/redux/slice/company/revenue-head/company-revenue-head-slice";
@@ -41,6 +40,7 @@ import {
 import { Card } from "@/components/ui/card";
 import Loader from "@/components/ui/Loader";
 import Pagination from "@/components/pagination/page";
+import { isBusy, isPending, isSettled } from "@/lib/async-status";
 
 const PAGE_SIZE = 12;
 
@@ -61,8 +61,9 @@ export default function CompanyRevenueHeadsPage() {
   const dispatch = useDispatch<AppDispatch>();
 
   const items = useSelector((s: RootState) => selectCompanyRevenueHeads(s));
-  const loading = useSelector((s: RootState) =>
-    selectCompanyRevenueHeadsLoading(s),
+  const listState = useSelector(
+    (s: RootState) =>
+      (s.companyRevenueHead as { listState?: string } | undefined)?.listState,
   );
   const error = useSelector((s: RootState) => selectCompanyRevenueHeadsError(s));
   const pagination = useSelector((s: RootState) =>
@@ -96,6 +97,8 @@ export default function CompanyRevenueHeadsPage() {
 
   const estateId = selectedEstate?.value ?? "";
   const estateName = selectedEstate?.label ?? "Estate";
+  const listPending = Boolean(estateId) && isPending(listState);
+  const listBusy = isBusy(listState);
 
   useEffect(() => {
     (async () => {
@@ -277,7 +280,7 @@ export default function CompanyRevenueHeadsPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const pageLoading = estatesLoading || loading;
+  const pageLoading = estatesLoading || listPending;
 
   const content = useMemo(() => {
     if (!estateId) {
@@ -286,6 +289,9 @@ export default function CompanyRevenueHeadsPage() {
           Select an estate to view revenue heads.
         </p>
       );
+    }
+    if (!isSettled(listState)) {
+      return null;
     }
     if (filtered.length === 0) {
       return (
@@ -305,7 +311,7 @@ export default function CompanyRevenueHeadsPage() {
         estateId={estateId}
       />
     ));
-  }, [filtered, estateId, handleDelete, handleView]);
+  }, [filtered, estateId, handleDelete, handleView, listState]);
 
   return (
     <div className="relative">
@@ -387,7 +393,7 @@ export default function CompanyRevenueHeadsPage() {
             <Pagination
               paginationInfo={paginationInfo}
               onPageChange={handlePageChange}
-              disabled={loading}
+              disabled={listBusy}
               itemLabel="revenue heads"
             />
           </>

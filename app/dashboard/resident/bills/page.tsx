@@ -30,6 +30,7 @@ import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
 import Loader from "@/components/ui/Loader";
+import { isPending, isSettled } from "@/lib/async-status";
 
 type BillsTab = "estate" | "assigned";
 
@@ -113,9 +114,9 @@ export default function BillPage() {
     assignedBills,
     paidBills,
     paidPagination,
-    loadingEstate,
-    loadingAssigned,
-    loadingPaid,
+    getBillsByEstateState,
+    getBillsForAddressState,
+    getResidentBillsState,
     paying,
   } = useSelector((state: RootState) => {
     const s = state.residentBill as any;
@@ -124,12 +125,16 @@ export default function BillPage() {
       assignedBills: (s?.assignedBills?.data || []) as AssignedBillData[],
       paidBills: (s?.paidBills?.data || []) as PaidBillData[],
       paidPagination: s?.paidBills?.pagination || {},
-      loadingEstate: s?.getBillsByEstateState === "isLoading",
-      loadingAssigned: s?.getBillsForAddressState === "isLoading",
-      loadingPaid: s?.getResidentBillsState === "isLoading",
+      getBillsByEstateState: s?.getBillsByEstateState as string,
+      getBillsForAddressState: s?.getBillsForAddressState as string,
+      getResidentBillsState: s?.getResidentBillsState as string,
       paying: s?.payBillState === "isLoading",
     };
   });
+
+  const loadingEstate = isPending(getBillsByEstateState);
+  const loadingAssigned = isPending(getBillsForAddressState);
+  const loadingPaid = isPending(getResidentBillsState);
 
   // Bootstrap user / addresses / estate bills
   useEffect(() => {
@@ -353,8 +358,10 @@ export default function BillPage() {
 
   const showLoader =
     bootstrapping ||
-    loadingEstate ||
-    (activeTab === "assigned" && loadingAssigned) ||
+    (activeTab === "estate" && Boolean(estateId) && loadingEstate) ||
+    (activeTab === "assigned" &&
+      Boolean(selectedAddressId) &&
+      loadingAssigned) ||
     paying;
 
   return (
@@ -415,7 +422,9 @@ export default function BillPage() {
 
         {activeTab === "estate" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {!loadingEstate && estateBills.length === 0 ? (
+            {!bootstrapping &&
+            isSettled(getBillsByEstateState) &&
+            estateBills.length === 0 ? (
               <p className="text-muted-foreground">
                 No payable bills for this estate.
               </p>
@@ -444,7 +453,9 @@ export default function BillPage() {
               <p className="text-muted-foreground">
                 Select an address to view assigned bills.
               </p>
-            ) : !loadingAssigned && assignedBills.length === 0 ? (
+            ) : !bootstrapping &&
+              isSettled(getBillsForAddressState) &&
+              assignedBills.length === 0 ? (
               <p className="text-muted-foreground">
                 No bills assigned to this address.
               </p>
@@ -492,7 +503,11 @@ export default function BillPage() {
           <Table
             columns={columns}
             data={paidBills}
-            emptyMessage="You haven't paid any bills yet."
+            emptyMessage={
+              isSettled(getResidentBillsState)
+                ? "You haven't paid any bills yet."
+                : " "
+            }
             enableDateRangeFilter
             defaultDateRangeDays={0}
             startDate={paidStartDate}

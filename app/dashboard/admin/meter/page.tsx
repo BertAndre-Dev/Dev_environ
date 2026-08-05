@@ -32,6 +32,7 @@ import type { EnergyConsumptionPeriod } from "@/lib/energy-consumption-chart";
 import Tab from "@/components/tabs/page";
 import { IoSpeedometerOutline } from "react-icons/io5";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 import { ViewVendLimitModal } from "./components/ViewVendLimitModal";
 import { SetVendLimitModal } from "./components/SetVendLimitModal";
 
@@ -79,7 +80,6 @@ export default function AdminMeterManagement() {
   const [searchInput, setSearchInput] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [bootstrapping, setBootstrapping] = useState(true);
-  const [initialMetersLoading, setInitialMetersLoading] = useState(false);
   const [usageRange, setUsageRange] = useState<EstateEnergyUsageRange>("weekly");
   const [usageRefreshing, setUsageRefreshing] = useState(false);
   const [energyPeriod, setEnergyPeriod] =
@@ -91,15 +91,20 @@ export default function AdminMeterManagement() {
   const [viewVendLimitOpen, setViewVendLimitOpen] = useState(false);
   const [setVendLimitOpen, setSetVendLimitOpen] = useState(false);
 
-  const { allAdminMeters, pagination } = useSelector((state: RootState) => {
-    const adminMeterState = state.adminMeter as any;
-    return {
-      allAdminMeters: adminMeterState?.allAdminMeters?.data || [],
-      pagination: adminMeterState?.allAdminMeters?.pagination || {},
-    };
-  });
+  const { allAdminMeters, pagination, getAllEstateMeterState } = useSelector(
+    (state: RootState) => {
+      const adminMeterState = state.adminMeter as any;
+      return {
+        allAdminMeters: adminMeterState?.allAdminMeters?.data || [],
+        pagination: adminMeterState?.allAdminMeters?.pagination || {},
+        getAllEstateMeterState:
+          adminMeterState?.getAllEstateMeterState ?? "idle",
+      };
+    },
+  );
 
-  const pageLoading = bootstrapping || initialMetersLoading;
+  const pageLoading =
+    bootstrapping || (!!estateId && isPending(getAllEstateMeterState));
   
   const { energyConsumptionChart, energyChartLoading } = useSelector(
     (state: RootState) => ({
@@ -225,7 +230,6 @@ export default function AdminMeterManagement() {
     if (!estateId) return;
     setSearchInput("");
     setAppliedSearch("");
-    setInitialMetersLoading(true);
     dispatch(
       getAllEstateMeter({
         estateId,
@@ -234,8 +238,7 @@ export default function AdminMeterManagement() {
       }),
     )
       .unwrap()
-      .catch((error: { message?: string }) => toast.error(error?.message))
-      .finally(() => setInitialMetersLoading(false));
+      .catch((error: { message?: string }) => toast.error(error?.message));
   }, [estateId, dispatch]);
 
   useEffect(() => {

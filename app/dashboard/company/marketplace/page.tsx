@@ -26,6 +26,7 @@ import type { AddBusinessFormPayload } from "@/components/super-admin/add-busine
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import { MarketplaceListingCard } from "@/components/super-admin/marketplace-listing-card";
 import Loader from "@/components/ui/Loader";
+import { isBusy, isPending } from "@/lib/async-status";
 
 export default function CompanyMarketplacePage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -294,8 +295,8 @@ export default function CompanyMarketplacePage() {
     },
   ];
 
-  const formLoading = createStatus === "isLoading" || updateStatus === "isLoading";
-  const pageLoading = bootstrapping || getListStatus === "isLoading";
+  const formLoading = isBusy(createStatus) || isBusy(updateStatus);
+  const pageLoading = bootstrapping || isPending(getListStatus);
   let emptyMessage = 'No businesses yet. Click "Add business" to create one.';
   if (search.trim()) emptyMessage = "No businesses match your search.";
 

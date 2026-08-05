@@ -8,6 +8,7 @@ import {
   type RevenueEntry,
 } from "./revenue-entry";
 import type { RootState } from "@/redux/store";
+import { isPending } from "@/lib/async-status";
 
 type AsyncState = "idle" | "isLoading" | "succeeded" | "failed";
 
@@ -176,7 +177,7 @@ export default revenueEntrySlice.reducer;
 export const selectRevenueEntries = (state: RootState) =>
   (state.adminRevenueEntry as RevenueEntryState)?.items ?? [];
 export const selectRevenueEntriesLoading = (state: RootState) =>
-  (state.adminRevenueEntry as RevenueEntryState)?.listState === "isLoading";
+  isPending((state.adminRevenueEntry as RevenueEntryState)?.listState);
 export const selectRevenueEntriesError = (state: RootState) =>
   (state.adminRevenueEntry as RevenueEntryState)?.error ?? null;
 export const selectRevenueEntriesPagination = (state: RootState) =>

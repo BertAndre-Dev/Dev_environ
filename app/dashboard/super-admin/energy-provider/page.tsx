@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
 import {
@@ -38,23 +39,22 @@ export default function SuperAdminEnergyProviderPage() {
   const [configOpen, setConfigOpen] = useState(false);
   const [estateOptions, setEstateOptions] = useState<EstateOption[]>([]);
   const [selectedEstate, setSelectedEstate] = useState<EstateOption | null>(null);
-  const [loadingEstates, setLoadingEstates] = useState(false);
+  const [loadingEstates, setLoadingEstates] = useState(true);
   const [vendsPage, setVendsPage] = useState(1);
   const [vendsStartDate, setVendsStartDate] = useState("");
   const [vendsEndDate, setVendsEndDate] = useState("");
 
-  const { list, pagination, loadingConfigs } = useSelector((state: RootState) => ({
+  const { list, pagination, configsStatus } = useSelector((state: RootState) => ({
     list: state.superAdminEnergyProviderConfig.list,
     pagination: state.superAdminEnergyProviderConfig.pagination,
-    loadingConfigs:
-      state.superAdminEnergyProviderConfig.getListStatus === "isLoading",
+    configsStatus: state.superAdminEnergyProviderConfig.getListStatus as string,
   }));
 
-  const { vends, vendsPagination, loadingVends } = useSelector(
+  const { vends, vendsPagination, vendsStatus } = useSelector(
     (state: RootState) => ({
       vends: state.energyProviderVends.list,
       vendsPagination: state.energyProviderVends.pagination,
-      loadingVends: state.energyProviderVends.status === "isLoading",
+      vendsStatus: state.energyProviderVends.status as string,
     }),
   );
 
@@ -207,8 +207,9 @@ export default function SuperAdminEnergyProviderPage() {
 
   const tabLoading =
     loadingEstates ||
-    (activeTab === "configurations" && loadingConfigs) ||
-    (activeTab === "vend-history" && loadingVends);
+    (Boolean(selectedEstate?.value) &&
+      ((activeTab === "configurations" && isPending(configsStatus)) ||
+        (activeTab === "vend-history" && isPending(vendsStatus))));
 
   return (
     <div className="relative space-y-6">

@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Loader from "@/components/ui/Loader";
+import { isPending, isSettled } from "@/lib/async-status";
 
 const PAGE_SIZE = 10;
 
@@ -44,7 +45,7 @@ export default function AdminMaintenancePage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [bootstrapping, setBootstrapping] = useState(true);
 
-  const { complaints, loading, pagination } = useSelector(
+  const { complaints, getComplaintsByEstateStatus, pagination } = useSelector(
     (state: RootState) => {
       const c = state.complaints as {
         complaintsByEstate?: {
@@ -60,11 +61,13 @@ export default function AdminMaintenancePage() {
       };
       return {
         complaints: c?.complaintsByEstate?.data ?? [],
-        loading: c?.getComplaintsByEstateStatus === "isLoading",
+        getComplaintsByEstateStatus: c?.getComplaintsByEstateStatus ?? "idle",
         pagination: c?.complaintsByEstate?.pagination ?? null,
       };
     },
   );
+
+  const loading = isPending(getComplaintsByEstateStatus);
 
   const list = useMemo(
     () => (Array.isArray(complaints) ? complaints : []),
@@ -198,7 +201,7 @@ export default function AdminMaintenancePage() {
       />
 
       <div className="space-y-4">
-        {filtered.length === 0 ? (
+        {isSettled(getComplaintsByEstateStatus) && filtered.length === 0 ? (
           <p className="text-muted-foreground py-8 text-center rounded-lg border border-border bg-muted/20">
             No maintenance requests found.
           </p>

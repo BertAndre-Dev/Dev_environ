@@ -8,6 +8,7 @@ import {
   type ExpenseHead,
 } from "./expense-head";
 import type { RootState } from "@/redux/store";
+import { isPending } from "@/lib/async-status";
 
 export interface ExpenseHeadPagination {
   total: number;
@@ -177,7 +178,7 @@ export default expenseHeadSlice.reducer;
 export const selectExpenseHeads = (state: RootState) =>
   (state.adminExpenseHead as ExpenseHeadState)?.items ?? [];
 export const selectExpenseHeadsLoading = (state: RootState) =>
-  (state.adminExpenseHead as ExpenseHeadState)?.listState === "isLoading";
+  isPending((state.adminExpenseHead as ExpenseHeadState)?.listState);
 export const selectExpenseHeadsError = (state: RootState) =>
   (state.adminExpenseHead as ExpenseHeadState)?.error ?? null;
 export const selectExpenseHeadsPagination = (state: RootState) =>

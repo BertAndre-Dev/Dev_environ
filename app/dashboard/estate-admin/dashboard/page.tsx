@@ -25,6 +25,7 @@ import { getEstateAdminTransactionSummary } from "@/redux/slice/estate-admin/tra
 import { extractEstateIdFromUser, extractEstateNameFromUser } from "@/lib/user-id";
 import type { AppDispatch, RootState } from "@/redux/store";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 
 const formatNaira = (n: number) => `${n.toLocaleString()}`;
 
@@ -40,36 +41,36 @@ export default function DummyDashboard() {
   const [usageRange, setUsageRange] = useState<EstateEnergyUsageRange>("weekly");
   const [usageRefreshing, setUsageRefreshing] = useState(false);
 
-  const { transactionSummary, transactionSummaryLoading } = useSelector(
+  const { transactionSummary, transactionSummaryStatus } = useSelector(
     (state: RootState) => ({
       transactionSummary: state.estateAdminTransactionSummary.summary,
-      transactionSummaryLoading:
-        state.estateAdminTransactionSummary.status === "isLoading",
+      transactionSummaryStatus: state.estateAdminTransactionSummary.status,
     }),
   );
+  const transactionSummaryLoading = isPending(transactionSummaryStatus);
 
-  const { energyConsumptionChart, energyChartLoading } = useSelector(
+  const { energyConsumptionChart, energyChartStatus } = useSelector(
     (state: RootState) => ({
       energyConsumptionChart: state.estateAdminEnergyConsumption.chart,
-      energyChartLoading:
-        state.estateAdminEnergyConsumption.chartStatus === "isLoading",
+      energyChartStatus: state.estateAdminEnergyConsumption.chartStatus,
     }),
   );
+  const energyChartLoading = isPending(energyChartStatus);
 
   const {
     estateEnergyUsage,
-    estateEnergyUsageLoading,
+    estateEnergyUsageStatus,
     estateEnergyUsageProgress,
     estateEnergyUsageMessage,
     estateEnergyUsageError,
   } = useSelector((state: RootState) => ({
     estateEnergyUsage: state.estateAdminEstateEnergyUsage.usage,
-    estateEnergyUsageLoading:
-      state.estateAdminEstateEnergyUsage.status === "isLoading",
+    estateEnergyUsageStatus: state.estateAdminEstateEnergyUsage.status,
     estateEnergyUsageProgress: state.estateAdminEstateEnergyUsage.progress,
     estateEnergyUsageMessage: state.estateAdminEstateEnergyUsage.message,
     estateEnergyUsageError: state.estateAdminEstateEnergyUsage.error,
   }));
+  const estateEnergyUsageLoading = isPending(estateEnergyUsageStatus);
 
   useEffect(() => {
     (async () => {
@@ -211,9 +212,7 @@ export default function DummyDashboard() {
 
   const pageLoading =
     bootstrapping ||
-    (!!estateId &&
-      ((estateEnergyUsageLoading && !estateEnergyUsage) ||
-        (energyChartLoading && !energyConsumptionChart)));
+    (!!estateId && (estateEnergyUsageLoading || energyChartLoading));
 
   return (
     <div className="relative">

@@ -40,6 +40,7 @@ import { BillPaymentHistoryCard } from "@/components/resident/pay-bills/BillPaym
 import { BillPaymentResultModal } from "@/components/resident/pay-bills/BillPaymentResultModal";
 import type { ResidentBillsPaymentState } from "@/redux/slice/resident/bills-payment/bills-payment-slice";
 import Loader from "@/components/ui/Loader";
+import { isBusy, isPending } from "@/lib/async-status";
 
 function pickPaymentReference(payload: unknown): string | undefined {
   if (payload == null || typeof payload !== "object") return undefined;
@@ -113,8 +114,7 @@ export default function PayBillsPage() {
   const createWalletState = useSelector(
     (state: RootState) => state.wallet.createWalletState,
   );
-  const walletLoading =
-    getWalletState === "idle" || getWalletState === "isLoading";
+  const walletLoading = isPending(getWalletState);
 
   const billsPayment = useSelector(
     (state: RootState) => state.residentBillsPayment,
@@ -122,12 +122,12 @@ export default function PayBillsPage() {
 
   const pageLoading =
     walletLoading ||
-    String(createWalletState) === "isLoading" ||
-    billsPayment?.getCategoriesStatus === "isLoading" ||
-    billsPayment?.getBillersStatus === "isLoading" ||
-    billsPayment?.getItemsStatus === "isLoading" ||
-    billsPayment?.payStatus === "isLoading" ||
-    billsPayment?.historyStatus === "isLoading";
+    isBusy(createWalletState) ||
+    isPending(billsPayment?.getCategoriesStatus) ||
+    isBusy(billsPayment?.getBillersStatus) ||
+    isBusy(billsPayment?.getItemsStatus) ||
+    isBusy(billsPayment?.payStatus) ||
+    isPending(billsPayment?.historyStatus);
 
   const isOwner = residentType === "owner";
   const formatNaira = (value: number) => `₦${(value ?? 0).toLocaleString()}`;

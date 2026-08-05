@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import type { RootState, AppDispatch } from "@/redux/store";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 
 const PAGE_SIZE = 10;
 
@@ -99,13 +100,13 @@ export default function ResidentRentPage() {
       };
     },
   );
-  const tenantListLoading = tenantListStatus === "isLoading";
+  const tenantListLoading = isPending(tenantListStatus);
 
   const isOwner = residentType === "owner";
   const list = isOwner ? (ownerRents ?? []) : (tenantRents ?? []);
   const loading = isOwner
-    ? getOwnerRentsStatus === "isLoading"
-    : getTenantRentsStatus === "isLoading";
+    ? isPending(getOwnerRentsStatus)
+    : isPending(getTenantRentsStatus);
 
   useEffect(() => {
     (async () => {

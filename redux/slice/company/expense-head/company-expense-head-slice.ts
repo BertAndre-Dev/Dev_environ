@@ -8,6 +8,7 @@ import {
   type CompanyExpenseHead,
 } from "./company-expense-head";
 import type { RootState } from "@/redux/store";
+import { isPending } from "@/lib/async-status";
 
 export interface CompanyExpenseHeadPagination {
   total: number;
@@ -188,8 +189,7 @@ export default companyExpenseHeadSlice.reducer;
 export const selectCompanyExpenseHeads = (state: RootState) =>
   (state.companyExpenseHead as CompanyExpenseHeadState)?.items ?? [];
 export const selectCompanyExpenseHeadsLoading = (state: RootState) =>
-  (state.companyExpenseHead as CompanyExpenseHeadState)?.listState ===
-  "isLoading";
+  isPending((state.companyExpenseHead as CompanyExpenseHeadState)?.listState);
 export const selectCompanyExpenseHeadsError = (state: RootState) =>
   (state.companyExpenseHead as CompanyExpenseHeadState)?.error ?? null;
 export const selectCompanyExpenseHeadsPagination = (state: RootState) =>

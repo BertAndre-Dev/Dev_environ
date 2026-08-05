@@ -30,6 +30,7 @@ import { formatDateTime } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
 import { Eye } from "lucide-react";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 
 interface TransactionData {
   walletId: string;
@@ -62,7 +63,7 @@ export default function TransactionPage() {
     pages: number;
   } | null>(null);
   const [vendsPage, setVendsPage] = useState(1);
-  const [loadingVends, setLoadingVends] = useState(false);
+  const [loadingVends, setLoadingVends] = useState(true);
   const [vendsStartDate, setVendsStartDate] = useState<string>("");
   const [vendsEndDate, setVendsEndDate] = useState<string>("");
   const [paidBillsData, setPaidBillsData] = useState<any[]>([]);
@@ -86,16 +87,17 @@ export default function TransactionPage() {
     (state: RootState) =>
       (state as any).estateAdminTransaction?.allTransactions?.pagination,
   );
-  const loading =
-    useSelector(
-      (state: RootState) =>
-        (state as any).estateAdminTransaction?.getEstateTransactionHistoryState,
-    ) === "isLoading";
+  const historyStatus = useSelector(
+    (state: RootState) =>
+      (state as any).estateAdminTransaction?.getEstateTransactionHistoryState as
+        | string
+        | undefined,
+  );
 
   const pageLoading =
     bootstrapping ||
-    (activeTab === "history" && loading && transactions.length === 0) ||
-    (activeTab === "vends" && loadingVends && vendsData.length === 0) ||
+    (activeTab === "history" && isPending(historyStatus)) ||
+    (activeTab === "vends" && loadingVends) ||
     (activeTab === "paid-bills" &&
       loadingPaidBills &&
       paidBillsData.length === 0);
@@ -779,7 +781,9 @@ export default function TransactionPage() {
             columns={columns}
             data={transactions}
             emptyMessage={
-              loading ? "Loading transactions..." : "No transactions found."
+              isPending(historyStatus)
+                ? "Loading transactions..."
+                : "No transactions found."
             }
             showPagination
             paginationInfo={{

@@ -37,6 +37,7 @@ import {
   type EstateUserRoleFilter,
 } from "@/lib/estate-user-roles";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
+import { isPending } from "@/lib/async-status";
 /** Admin user management: exclude company, estate admin, and admin from role filter. */
 const ADMIN_USER_ROLE_FILTER_OPTIONS = ESTATE_USER_ROLE_FILTER_OPTIONS.filter(
   (o) =>
@@ -99,8 +100,9 @@ export default function AdminUserPage() {
   const [roleFilter, setRoleFilter] = useState<EstateUserRoleFilter>(
     DEFAULT_ESTATE_USER_ROLE,
   );
+  const [bootstrapping, setBootstrapping] = useState(true);
 
-  const { allAdminUsers, pagination, loading } = useSelector(
+  const { allAdminUsers, pagination, listPending } = useSelector(
     (state: RootState) => {
       const userState = state.adminUser as any;
       const response = userState.allAdminUsers;
@@ -108,10 +110,13 @@ export default function AdminUserPage() {
       return {
         allAdminUsers: Array.isArray(response?.data) ? response.data : [],
         pagination: response?.pagination ?? {},
-        loading: userState.getAllUsersByEstateState === "isLoading",
+        listPending: isPending(userState.getAllUsersByEstateState),
       };
     },
   );
+  const loading =
+    bootstrapping ||
+    (Boolean(selectedEstate?.value) && listPending);
 
   const fetchAdminUsers = useCallback(
     async (page = 1) => {
@@ -168,6 +173,8 @@ export default function AdminUserPage() {
         }
       } catch {
         toast.error("Failed to fetch user or estate users.");
+      } finally {
+        setBootstrapping(false);
       }
     })();
   }, [dispatch]);

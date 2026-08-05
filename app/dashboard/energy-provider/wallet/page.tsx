@@ -33,12 +33,13 @@ import {
 } from "@/redux/slice/energy-provider/wallet-mgt/energy-provider-wallet-mgt";
 import {
   selectEnergyProviderCredits,
-  selectEnergyProviderCreditsLoading,
   selectEnergyProviderCreditsPagination,
   selectEnergyProviderWallet,
 } from "@/redux/slice/energy-provider/wallet-mgt/energy-provider-wallet-mgt-slice";
 import type { EnergyProviderCreditItem } from "@/redux/slice/energy-provider/wallet-mgt/energy-provider-wallet-mgt-slice";
 import type { AppDispatch, RootState } from "@/redux/store";
+import { isPending } from "@/lib/async-status";
+import Loader from "@/components/ui/Loader";
 
 const LIMIT = 10;
 
@@ -73,11 +74,21 @@ export default function EnergyProviderWalletPage() {
   const wallet = useSelector(selectEnergyProviderWallet);
   const creditsData = useSelector(selectEnergyProviderCredits);
   const creditsPagination = useSelector(selectEnergyProviderCreditsPagination);
-  const creditsLoading = useSelector(selectEnergyProviderCreditsLoading);
+  const getWalletState = useSelector(
+    (state: RootState) =>
+      state.energyProviderWallet?.getWalletState ?? "idle",
+  );
+  const getCreditsState = useSelector(
+    (state: RootState) =>
+      state.energyProviderWallet?.getCreditsState ?? "idle",
+  );
+  const walletLoading = isPending(getWalletState);
+  const creditsLoading = isPending(getCreditsState);
   const createWalletState = useSelector(
     (state: RootState) =>
       state.energyProviderWallet?.createWalletState ?? "idle",
   );
+  const pageLoading = walletLoading || (!!userId && creditsLoading);
 
   const {
     banks,
@@ -285,7 +296,15 @@ export default function EnergyProviderWalletPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6">
+      {pageLoading && <Loader fullScreen label="Loading wallet..." />}
+
+      <div
+        className={[
+          "space-y-6",
+          pageLoading ? "pointer-events-none select-none" : "",
+        ].join(" ")}
+      >
       <div>
         <h1 className="font-heading text-3xl font-bold">Wallet Management</h1>
         <p className="text-muted-foreground mt-1">
@@ -511,6 +530,7 @@ export default function EnergyProviderWalletPage() {
           if (userId) dispatch(getEnergyProviderWallet(userId));
         }}
       />
+      </div>
     </div>
   );
 }

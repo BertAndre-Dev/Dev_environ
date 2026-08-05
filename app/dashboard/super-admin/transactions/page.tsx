@@ -14,6 +14,7 @@ import { TransactionsFilterBar } from "@/components/super-admin/transactions-fil
 import { TransactionsSearchCard } from "./components/TransactionsSearchCard";
 import { TransactionsTableCard } from "./components/TransactionsTableCard";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 import { formatDateTime } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,7 +55,7 @@ export default function SuperAdminTransactionsPage() {
         data: [],
         pagination: { total: 0, page: 1, limit: PAGE_SIZE, pages: 1 },
       },
-      loading: s?.getAllTransactionHistoryState === "isLoading",
+      loading: isPending(s?.getAllTransactionHistoryState),
     };
   });
 

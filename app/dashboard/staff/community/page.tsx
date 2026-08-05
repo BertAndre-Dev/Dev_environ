@@ -37,6 +37,7 @@ import type { ChatGroup, GroupMessageType } from "@/types/community-group";
 import type { CommunityReplyTarget } from "@/types/community-chat-ui";
 import type { RootState, AppDispatch } from "@/redux/store";
 import Loader from "@/components/ui/Loader";
+import { isBusy, isPending, isSettled } from "@/lib/async-status";
 import { useStaffCommunityChatGroupRoom } from "@/hooks/useStaffCommunityChatGroupRoom";
 
 export default function StaffCommunityChatPage() {
@@ -370,7 +371,7 @@ export default function StaffCommunityChatPage() {
   );
 
   const closeEditModal = useCallback(() => {
-    if (editMessageLoading === "isLoading") return;
+    if (isBusy(editMessageLoading)) return;
     setEditingMessage(null);
     setEditError(null);
   }, [editMessageLoading]);
@@ -396,16 +397,16 @@ export default function StaffCommunityChatPage() {
   };
 
   const emptySidebar =
-    listLoading !== "isLoading" &&
+    isSettled(listLoading) &&
     displayGroups.length === 0 &&
     !debouncedSearch.trim();
 
   let emptyPanelTitle = "No group selected.";
-  if (listLoading === "isLoading") emptyPanelTitle = "Loading groups…";
+  if (isPending(listLoading)) emptyPanelTitle = "Loading groups…";
   else if (emptySidebar)
     emptyPanelTitle = "You are not in any community groups yet.";
 
-  const pageLoading = listLoading === "isLoading";
+  const pageLoading = isPending(listLoading);
 
   return (
     <div className="relative mx-auto max-w-[1400px] space-y-6">
@@ -435,7 +436,7 @@ export default function StaffCommunityChatPage() {
             <CommunityChatWindow
               group={selectedGroupUi}
               messages={messages}
-              messagesLoading={messagesLoading === "isLoading"}
+              messagesLoading={isBusy(messagesLoading)}
               draft={draft}
               onDraftChange={(v) =>
                 selectedId &&
@@ -443,8 +444,8 @@ export default function StaffCommunityChatPage() {
               }
               onSend={handleSend}
               onOpenGroupInfo={() => setGroupInfoOpen(true)}
-              sendDisabled={sendMessageLoading === "isLoading"}
-              sending={sendMessageLoading === "isLoading"}
+              sendDisabled={isBusy(sendMessageLoading)}
+              sending={isBusy(sendMessageLoading)}
               currentUserId={effectiveUserId}
               onEditMessage={handleEditMessage}
               onDeleteMessage={handleDeleteMessage}
@@ -452,8 +453,7 @@ export default function StaffCommunityChatPage() {
               replyingTo={replyingTo}
               onCancelReply={() => setReplyingTo(null)}
               messageActionsDisabled={
-                editMessageLoading === "isLoading" ||
-                deleteMessageLoading === "isLoading"
+                isBusy(editMessageLoading) || isBusy(deleteMessageLoading)
               }
             />
           ) : (
@@ -478,7 +478,7 @@ export default function StaffCommunityChatPage() {
             members={infoModalMembers}
             memberTotal={selectedGroupUi.memberCount}
             estateDisplayName={estateName}
-            detailLoading={detailLoading === "isLoading"}
+            detailLoading={isBusy(detailLoading)}
             showMemberAdminTools={false}
             canUpdateGroupProfile={false}
             canDeleteGroup={false}
@@ -488,7 +488,7 @@ export default function StaffCommunityChatPage() {
         <CommunityEditMessageModal
           visible={Boolean(editingMessage)}
           initialContent={editingMessage?.text ?? ""}
-          loading={editMessageLoading === "isLoading"}
+          loading={isBusy(editMessageLoading)}
           error={editError}
           onClose={closeEditModal}
           onSubmit={handleEditSubmit}

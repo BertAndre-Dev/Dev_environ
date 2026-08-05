@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import { Card } from "@/components/ui/card";
 import Tab from "@/components/tabs/page";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { parseResidentEstate } from "./lib/estate";
@@ -17,22 +18,25 @@ export default function ResidentAssetPage() {
   const dispatch = useDispatch<AppDispatch>();
   const [estateName, setEstateName] = useState("Estate");
   const [estateId, setEstateId] = useState("");
+  const [bootstrapping, setBootstrapping] = useState(true);
   const [activeAssetTab, setActiveAssetTab] = useState("Assets");
 
-  const { assetsLoading, categoriesLoading } = useSelector(
+  const { assetsStatus, categoriesStatus } = useSelector(
     (state: RootState) => {
       const s = state.residentAsset;
       return {
-        assetsLoading: s?.getAssetsStatus === "isLoading",
-        categoriesLoading: s?.getCategoriesStatus === "isLoading",
+        assetsStatus: s?.getAssetsStatus as string | undefined,
+        categoriesStatus: s?.getCategoriesStatus as string | undefined,
       };
     },
   );
 
   const pageLoading =
-    activeAssetTab === "Assets"
-      ? Boolean(assetsLoading || categoriesLoading)
-      : Boolean(categoriesLoading);
+    bootstrapping ||
+    (Boolean(estateId) &&
+      (activeAssetTab === "Assets"
+        ? isPending(assetsStatus) || isPending(categoriesStatus)
+        : isPending(categoriesStatus)));
 
   useEffect(() => {
     (async () => {
@@ -48,9 +52,19 @@ export default function ResidentAssetPage() {
         setEstateName(estate.name);
       } catch {
         toast.error("Failed to load estate information.");
+      } finally {
+        setBootstrapping(false);
       }
     })();
   }, [dispatch]);
+
+  if (bootstrapping) {
+    return (
+      <div className="relative">
+        <Loader fullScreen label="Loading assets..." />
+      </div>
+    );
+  }
 
   if (!estateId) {
     return (
@@ -68,17 +82,14 @@ export default function ResidentAssetPage() {
   return (
     <div className="relative">
       {pageLoading && (
-
         <Loader
-
           fullScreen
-
-          label={activeAssetTab === "Assets"
-          ? "Loading assets..."
-          : "Loading categories..."}
-
+          label={
+            activeAssetTab === "Assets"
+              ? "Loading assets..."
+              : "Loading categories..."
+          }
         />
-
       )}
 
       <div

@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
@@ -67,7 +68,7 @@ export default function CompanyEstatePage() {
     return {
       allEstates: (s?.allEstates?.data as EstateTableRow[]) ?? [],
       pagination: s?.allEstates?.pagination ?? null,
-      loading: s?.getAllEstatesStatus === "isLoading",
+      loading: isPending(s?.getAllEstatesStatus),
     };
   });
 

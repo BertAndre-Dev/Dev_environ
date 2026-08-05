@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 import {
   extractEstateIdFromUser,
   extractEstateNameFromUser,
@@ -33,8 +34,8 @@ import {
 } from "@/redux/slice/energy-provider/user-mgt/energy-provider-user";
 import type { EnergyProviderUserDetails } from "@/redux/slice/energy-provider/user-mgt/energy-provider-user-slice";
 import {
+  selectEnergyProviderUserState,
   selectEnergyProviderUsersList,
-  selectEnergyProviderUsersLoading,
   selectEnergyProviderUsersPagination,
 } from "@/redux/slice/energy-provider/user-mgt/energy-provider-user-slice";
 import EnergyProviderInviteUserForm from "./components/EnergyProviderInviteUserForm";
@@ -144,11 +145,13 @@ export default function EnergyProviderUserPage() {
   const pagination = useSelector((state: RootState) =>
     selectEnergyProviderUsersPagination(state),
   );
-  const usersLoading = useSelector((state: RootState) =>
-    selectEnergyProviderUsersLoading(state),
+  const usersStatus = useSelector(
+    (state: RootState) => selectEnergyProviderUserState(state).getUsersStatus,
   );
 
-  const pageLoading = estatesLoading || usersLoading;
+  const pageLoading =
+    estatesLoading ||
+    (Boolean(selectedEstate?.value) && isPending(usersStatus));
   const pageSize =
     Number(pagination?.pageSize ?? (pagination as { limit?: number })?.limit) ||
     10;

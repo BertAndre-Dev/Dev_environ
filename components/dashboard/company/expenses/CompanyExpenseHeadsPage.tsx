@@ -27,7 +27,6 @@ import {
 import {
   selectCompanyExpenseHeads,
   selectCompanyExpenseHeadsError,
-  selectCompanyExpenseHeadsLoading,
   selectCompanyExpenseHeadsPagination,
   setCompanyExpenseHeadEstate,
 } from "@/redux/slice/company/expense-head/company-expense-head-slice";
@@ -41,6 +40,7 @@ import {
 import { Card } from "@/components/ui/card";
 import Loader from "@/components/ui/Loader";
 import Pagination from "@/components/pagination/page";
+import { isBusy, isPending, isSettled } from "@/lib/async-status";
 
 const PAGE_SIZE = 12;
 
@@ -61,8 +61,9 @@ export default function CompanyExpenseHeadsPage() {
   const dispatch = useDispatch<AppDispatch>();
 
   const items = useSelector((s: RootState) => selectCompanyExpenseHeads(s));
-  const loading = useSelector((s: RootState) =>
-    selectCompanyExpenseHeadsLoading(s),
+  const listState = useSelector(
+    (s: RootState) =>
+      (s.companyExpenseHead as { listState?: string } | undefined)?.listState,
   );
   const error = useSelector((s: RootState) => selectCompanyExpenseHeadsError(s));
   const pagination = useSelector((s: RootState) =>
@@ -96,6 +97,8 @@ export default function CompanyExpenseHeadsPage() {
 
   const estateId = selectedEstate?.value ?? "";
   const estateName = selectedEstate?.label ?? "Estate";
+  const listPending = Boolean(estateId) && isPending(listState);
+  const listBusy = isBusy(listState);
 
   useEffect(() => {
     (async () => {
@@ -277,7 +280,7 @@ export default function CompanyExpenseHeadsPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const pageLoading = estatesLoading || loading;
+  const pageLoading = estatesLoading || listPending;
 
   const content = useMemo(() => {
     if (!estateId) {
@@ -286,6 +289,9 @@ export default function CompanyExpenseHeadsPage() {
           Select an estate to view expense heads.
         </p>
       );
+    }
+    if (!isSettled(listState)) {
+      return null;
     }
     if (filtered.length === 0) {
       return (
@@ -305,7 +311,7 @@ export default function CompanyExpenseHeadsPage() {
         estateId={estateId}
       />
     ));
-  }, [filtered, estateId, handleDelete, handleView]);
+  }, [filtered, estateId, handleDelete, handleView, listState]);
 
   return (
     <div className="relative">
@@ -386,7 +392,7 @@ export default function CompanyExpenseHeadsPage() {
             <Pagination
               paginationInfo={paginationInfo}
               onPageChange={handlePageChange}
-              disabled={loading}
+              disabled={listBusy}
               itemLabel="expense heads"
             />
           </>

@@ -39,6 +39,7 @@ import {
   getVerificationFlags,
   resolveVisitorVerificationMode,
 } from "@/lib/visitor-verification-mode";
+import { isPending } from "@/lib/async-status";
 
 const PAGE_LIMIT = 10;
 const DATE_RANGE_PLACEHOLDERS = getDateRangePlaceholders();
@@ -63,28 +64,32 @@ export default function AdminVisitorManagement() {
   const [qrCodeVisitor, setQrCodeVisitor] = useState<QrCodeVisitor | null>(
     null,
   );
+  const [bootstrapping, setBootstrapping] = useState(true);
 
   const verificationFlags = useMemo(
     () => getVerificationFlags(visitorVerificationMode),
     [visitorVerificationMode],
   );
 
-  const { visitors, pagination, loading } = useSelector((state: RootState) => {
-    const visitorState = state.visitor;
+  const { visitors, pagination, listPending } = useSelector(
+    (state: RootState) => {
+      const visitorState = state.visitor;
 
-    const defaultPagination = {
-      total: 0,
-      page: 1,
-      limit: 10,
-      pages: 1,
-    };
+      const defaultPagination = {
+        total: 0,
+        page: 1,
+        limit: 10,
+        pages: 1,
+      };
 
-    return {
-      visitors: visitorState?.allVisitors?.data || [],
-      pagination: visitorState?.allVisitors?.pagination || defaultPagination,
-      loading: visitorState.getVisitorsByEstateState === "isLoading",
-    };
-  });
+      return {
+        visitors: visitorState?.allVisitors?.data || [],
+        pagination: visitorState?.allVisitors?.pagination || defaultPagination,
+        listPending: isPending(visitorState.getVisitorsByEstateState),
+      };
+    },
+  );
+  const loading = bootstrapping || (Boolean(estateId) && listPending);
   const authUser = useSelector((state: RootState) => state.auth.user);
 
   // ✅ Client-side filtered visitors
@@ -175,6 +180,8 @@ export default function AdminVisitorManagement() {
         setEstateId(foundEstateId);
       } catch (error: any) {
         toast.error(error?.message);
+      } finally {
+        setBootstrapping(false);
       }
     })();
     // Intentionally run once on mount; prior auth user is read for membership fallback.

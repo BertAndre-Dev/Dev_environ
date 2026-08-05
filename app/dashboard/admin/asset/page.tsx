@@ -8,6 +8,7 @@ import Select from "react-select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
@@ -33,6 +34,7 @@ export default function AdminAssetPage() {
   const dispatch = useDispatch<AppDispatch>();
   const [estateName, setEstateName] = useState("Estate");
   const [estateId, setEstateId] = useState("");
+  const [bootstrapping, setBootstrapping] = useState(true);
   const [activeTab, setActiveTab] = useState<string>(ALL_TAB);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -40,8 +42,8 @@ export default function AdminAssetPage() {
   const {
     categories,
     categoriesPagination,
-    categoriesLoading,
-    assetsLoading,
+    categoriesStatus,
+    assetsStatus,
     totalAssets,
     assets,
   } = useSelector((state: RootState) => {
@@ -49,8 +51,8 @@ export default function AdminAssetPage() {
     return {
       categories: s?.categories ?? [],
       categoriesPagination: s?.categoriesPagination ?? null,
-      categoriesLoading: s?.getCategoriesStatus === "isLoading",
-      assetsLoading: s?.getAssetsStatus === "isLoading",
+      categoriesStatus: s?.getCategoriesStatus as string | undefined,
+      assetsStatus: s?.getAssetsStatus as string | undefined,
       totalAssets:
         Number(s?.assetsPagination?.total ?? s?.assets?.length ?? 0) || 0,
       assets: s?.assets ?? [],
@@ -71,6 +73,8 @@ export default function AdminAssetPage() {
         setEstateName(estate.name);
       } catch {
         toast.error("Failed to load estate information.");
+      } finally {
+        setBootstrapping(false);
       }
     })();
   }, [dispatch]);
@@ -186,7 +190,10 @@ export default function AdminAssetPage() {
     }
   };
 
-  const pageLoading = categoriesLoading || assetsLoading;
+  const pageLoading =
+    bootstrapping ||
+    (Boolean(estateId) &&
+      (isPending(categoriesStatus) || isPending(assetsStatus)));
 
   return (
     <div className="relative">

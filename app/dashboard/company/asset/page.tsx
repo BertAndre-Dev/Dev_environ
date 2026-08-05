@@ -7,6 +7,7 @@ import Select from "react-select";
 import { Card } from "@/components/ui/card";
 import Tab from "@/components/tabs/page";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
@@ -38,22 +39,23 @@ export default function CompanyAssetPage() {
     [estates],
   );
 
-  const { assetsLoading, categoriesLoading } = useSelector(
+  const { assetsStatus, categoriesStatus } = useSelector(
     (state: RootState) => {
       const s = (state as unknown as { companyAsset?: Record<string, unknown> })
         .companyAsset;
       return {
-        assetsLoading: s?.getAssetsStatus === "isLoading",
-        categoriesLoading: s?.getCategoriesStatus === "isLoading",
+        assetsStatus: s?.getAssetsStatus as string | undefined,
+        categoriesStatus: s?.getCategoriesStatus as string | undefined,
       };
     },
   );
 
   const pageLoading =
     estatesLoading ||
-    (activeAssetTab === "Assets"
-      ? Boolean(assetsLoading || categoriesLoading)
-      : Boolean(categoriesLoading));
+    (Boolean(selectedEstateId) &&
+      (activeAssetTab === "Assets"
+        ? isPending(assetsStatus) || isPending(categoriesStatus)
+        : isPending(categoriesStatus)));
 
   useEffect(() => {
     (async () => {

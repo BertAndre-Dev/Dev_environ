@@ -36,6 +36,8 @@ import {
 import type { ChatGroup, GroupMessageType } from "@/types/community-group";
 import type { CommunityReplyTarget } from "@/types/community-chat-ui";
 import type { RootState, AppDispatch } from "@/redux/store";
+import Loader from "@/components/ui/Loader";
+import { isBusy, isPending, isSettled } from "@/lib/async-status";
 import { useCommunityChatGroupRoom } from "@/hooks/useCommunityChatGroupRoom";
 
 export default function ResidentCommunityChatPage() {
@@ -369,7 +371,7 @@ export default function ResidentCommunityChatPage() {
   );
 
   const closeEditModal = useCallback(() => {
-    if (editMessageLoading === "isLoading") return;
+    if (isBusy(editMessageLoading)) return;
     setEditingMessage(null);
     setEditError(null);
   }, [editMessageLoading]);
@@ -395,15 +397,27 @@ export default function ResidentCommunityChatPage() {
   };
 
   const emptySidebar =
-    !listLoading && displayGroups.length === 0 && !debouncedSearch.trim();
+    isSettled(listLoading) &&
+    displayGroups.length === 0 &&
+    !debouncedSearch.trim();
 
   let emptyPanelTitle = "No group selected.";
-  if (listLoading) emptyPanelTitle = "Loading groups…";
+  if (isPending(listLoading)) emptyPanelTitle = "Loading groups…";
   else if (emptySidebar)
     emptyPanelTitle = "You are not in any community groups yet.";
 
+  const pageLoading = isPending(listLoading);
+
   return (
-    <div className="mx-auto max-w-[1400px] space-y-6">
+    <div className="relative mx-auto max-w-[1400px] space-y-6">
+      {pageLoading && <Loader fullScreen label="Loading community..." />}
+
+      <div
+        className={[
+          "space-y-6",
+          pageLoading ? "pointer-events-none select-none" : "",
+        ].join(" ")}
+      >
       <CommunityPageHeader estateName={estateName} showCreateGroup={false} />
 
       <div className="grid min-h-[560px] grid-cols-1 gap-4 lg:grid-cols-[minmax(260px,340px)_1fr] lg:gap-6">
@@ -418,7 +432,7 @@ export default function ResidentCommunityChatPage() {
           <CommunityChatWindow
             group={selectedGroupUi}
             messages={messages}
-            messagesLoading={messagesLoading === "isLoading"}
+            messagesLoading={isBusy(messagesLoading)}
             draft={draft}
             onDraftChange={(v) =>
               selectedId &&
@@ -426,8 +440,8 @@ export default function ResidentCommunityChatPage() {
             }
             onSend={handleSend}
             onOpenGroupInfo={() => setGroupInfoOpen(true)}
-            sendDisabled={sendMessageLoading === "isLoading"}
-            sending={sendMessageLoading === "isLoading"}
+            sendDisabled={isBusy(sendMessageLoading)}
+            sending={isBusy(sendMessageLoading)}
             currentUserId={effectiveUserId}
             onEditMessage={handleEditMessage}
             onDeleteMessage={handleDeleteMessage}
@@ -435,8 +449,7 @@ export default function ResidentCommunityChatPage() {
             replyingTo={replyingTo}
             onCancelReply={() => setReplyingTo(null)}
             messageActionsDisabled={
-              editMessageLoading === "isLoading" ||
-              deleteMessageLoading === "isLoading"
+              isBusy(editMessageLoading) || isBusy(deleteMessageLoading)
             }
           />
         ) : (
@@ -444,7 +457,7 @@ export default function ResidentCommunityChatPage() {
             <p className="text-sm font-medium text-foreground">
               {emptyPanelTitle}
             </p>
-            {!listLoading && emptySidebar ? (
+            {!pageLoading && emptySidebar ? (
               <p className="mt-2 max-w-sm text-sm text-muted-foreground">
                 When an estate admin adds you to a group, it will appear here.
               </p>
@@ -461,7 +474,7 @@ export default function ResidentCommunityChatPage() {
           members={infoModalMembers}
           memberTotal={selectedGroupUi.memberCount}
           estateDisplayName={estateName}
-          detailLoading={detailLoading === "isLoading"}
+          detailLoading={isBusy(detailLoading)}
           showMemberAdminTools={false}
           canUpdateGroupProfile={false}
           canDeleteGroup={false}
@@ -471,12 +484,12 @@ export default function ResidentCommunityChatPage() {
       <CommunityEditMessageModal
         visible={Boolean(editingMessage)}
         initialContent={editingMessage?.text ?? ""}
-        loading={editMessageLoading === "isLoading"}
+        loading={isBusy(editMessageLoading)}
         error={editError}
         onClose={closeEditModal}
         onSubmit={handleEditSubmit}
       />
-    
+
       <DeleteModal
         visible={Boolean(messageToDelete)}
         onClose={() => setMessageToDelete(null)}
@@ -484,6 +497,7 @@ export default function ResidentCommunityChatPage() {
         title="Delete message"
         onConfirm={handleConfirmDeleteMessage}
       />
+      </div>
     </div>
   );
 }

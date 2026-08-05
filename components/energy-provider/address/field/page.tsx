@@ -20,6 +20,7 @@ import { useEffect, useState } from "react";
 import Modal from "@/components/modal/page";
 import EnergyProviderFieldForm from "../forms/field-form/page";
 import { formatAddressRecordCreatedAt } from "@/lib/address";
+import { isBusy, isPending } from "@/lib/async-status";
 import type { Pagination } from "@/redux/slice/energy-provider/address-mgt/fields/energy-provider-fields-slice";
 
 interface FieldData {
@@ -42,23 +43,30 @@ const DEFAULT_PAGINATION: Pagination = {
 export default function EnergyProviderAddressField() {
   const dispatch = useDispatch<AppDispatch>();
   const [estateId, setEstateId] = useState<string | null>(null);
+  const [bootstrapping, setBootstrapping] = useState(true);
   const [open, setOpen] = useState(false);
   const [selectedField, setSelectedField] = useState<FieldData | null>(null);
   const [itemToDelete, setItemToDelete] = useState<{ id: string; name?: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const { allField, pagination, loading } = useSelector((state: RootState) => {
-    const fieldState = state.energyProviderField;
-    return {
-      allField: fieldState.allField,
-      pagination: fieldState.allField?.pagination ?? DEFAULT_PAGINATION,
-      loading:
-        fieldState.getFieldByEstateState === "isLoading" ||
-        fieldState.createFieldState === "isLoading" ||
-        fieldState.updateFieldState === "isLoading" ||
-        fieldState.deleteFieldState === "isLoading",
-    };
-  });
+  const { allField, pagination, listStatus, mutationBusy } = useSelector(
+    (state: RootState) => {
+      const fieldState = state.energyProviderField;
+      return {
+        allField: fieldState.allField,
+        pagination: fieldState.allField?.pagination ?? DEFAULT_PAGINATION,
+        listStatus: fieldState.getFieldByEstateState as string | undefined,
+        mutationBusy:
+          isBusy(fieldState.createFieldState) ||
+          isBusy(fieldState.updateFieldState) ||
+          isBusy(fieldState.deleteFieldState),
+      };
+    },
+  );
+  const loading =
+    bootstrapping ||
+    (Boolean(estateId) && isPending(listStatus)) ||
+    mutationBusy;
 
   useEffect(() => {
     (async () => {
@@ -76,6 +84,8 @@ export default function EnergyProviderAddressField() {
         }
       } catch {
         toast.error("Failed to fetch user or estate fields.");
+      } finally {
+        setBootstrapping(false);
       }
     })();
   }, [dispatch]);

@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { isPending } from "@/lib/async-status";
 import {
   createCompanyWallet,
   getCompanyWallet,
@@ -228,7 +229,7 @@ export const selectCompanyCredits = (state: {
 
 export const selectCompanyCreditsLoading = (state: {
   companyWallet: CompanyWalletState;
-}) => state.companyWallet.getCompanyCreditsState === "isLoading";
+}) => isPending(state.companyWallet.getCompanyCreditsState);
 
 export const selectCompanyCreditsPagination = (state: {
   companyWallet: CompanyWalletState;

@@ -13,6 +13,7 @@ import type { AppDispatch, RootState } from "@/redux/store";
 import { resetUserProfileState } from "@/redux/slice/resident/user-profile/user-profile-slice";
 import { getUserProfile } from "@/redux/slice/resident/user-profile/user-profile";
 import { updateUserProfile } from "@/redux/slice/settings/user-profile";
+import { isBusy, isPending } from "@/lib/async-status";
 
 type UserFormState = {
   firstName: string;
@@ -89,9 +90,10 @@ export function GeneralSettingsCard() {
   }, [user]);
 
   const isLoading = useMemo(
-    () => getStatus === "isLoading" || updateStatus === "isLoading",
+    () => isPending(getStatus) || isBusy(updateStatus),
     [getStatus, updateStatus],
   );
+  const isSaving = isBusy(updateStatus);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -255,7 +257,7 @@ export function GeneralSettingsCard() {
             disabled={isLoading}
           >
             <Save className="w-4 h-4 mr-2" />
-            {isLoading ? "Saving..." : "Save Changes"}
+            {isSaving ? "Saving..." : "Save Changes"}
           </Button>
         </form>
       </Card>

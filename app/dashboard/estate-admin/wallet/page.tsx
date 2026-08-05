@@ -28,6 +28,7 @@ import type { EstateCreditItem } from "@/redux/slice/estate-admin/wallet-mgt/wal
 import { formatDateTime } from "@/lib/format-date";
 import { TransactionsFilterBar } from "@/components/super-admin/transactions-filter-bar";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 
 const LIMIT = 10;
 
@@ -74,17 +75,15 @@ export default function EstateAdminWalletPage() {
   const createWalletState = useSelector(
     (state: RootState) => state.estateAdminWallet?.createWalletState ?? "idle",
   );
-  const walletLoading =
-    getWalletState === "idle" || getWalletState === "isLoading";
+  const walletLoading = isPending(getWalletState);
   const pageLoading = bootstrapping || (!!estateId && walletLoading);
   const estateCredits = useSelector(
     (state: RootState) => state.estateAdminWallet?.estateCredits ?? null,
   );
-  const creditsLoading =
-    useSelector(
-      (state: RootState) =>
-        state.estateAdminWallet?.getEstateCreditsState === "isLoading",
-    ) ?? false;
+  const getEstateCreditsState = useSelector(
+    (state: RootState) => state.estateAdminWallet?.getEstateCreditsState,
+  );
+  const creditsLoading = isPending(getEstateCreditsState);
 
   const creditsData = estateCredits?.data ?? [];
   const creditsPagination = estateCredits?.pagination ?? null;

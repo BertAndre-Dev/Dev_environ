@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
@@ -29,8 +30,8 @@ import {
 } from "@/redux/slice/company/user-mgt/company-user";
 import type { CompanyUserDetails } from "@/redux/slice/company/user-mgt/company-user-slice";
 import {
+  selectCompanyUserState,
   selectCompanyUsersList,
-  selectCompanyUsersLoading,
   selectCompanyUsersPagination,
 } from "@/redux/slice/company/user-mgt/company-user-slice";
 import { parseCompanyFromUser } from "../lib/company";
@@ -107,11 +108,13 @@ export default function CompanyUsersPage() {
   const pagination = useSelector((state: RootState) =>
     selectCompanyUsersPagination(state),
   );
-  const usersLoading = useSelector((state: RootState) =>
-    selectCompanyUsersLoading(state),
+  const usersStatus = useSelector(
+    (state: RootState) => selectCompanyUserState(state).getUsersStatus,
   );
 
-  const pageLoading = estatesLoading || usersLoading;
+  const pageLoading =
+    estatesLoading ||
+    (Boolean(selectedEstate?.value) && isPending(usersStatus));
   const pageSize =
     Number(pagination?.pageSize ?? (pagination as { limit?: number })?.limit) ||
     10;

@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import Loader from "@/components/ui/Loader";
 import Table from "@/components/tables/list/page";
 import DeleteModal from "@/components/resident/delete-modal/page";
+import { isBusy, isPending, isSettled } from "@/lib/async-status";
 import { slugify } from "@/lib/slug";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
@@ -50,6 +51,7 @@ export default function AssetCategoryDetailPage() {
 
   const [estateId, setEstateId] = useState("");
   const [estateName, setEstateName] = useState("Estate");
+  const [bootstrapping, setBootstrapping] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
@@ -61,10 +63,10 @@ export default function AssetCategoryDetailPage() {
 
   const {
     categories,
-    categoriesLoading,
+    categoriesStatus,
     assets,
     assetsPagination,
-    assetsLoading,
+    assetsStatus,
     updateCategoryStatus,
     deleteCategoryStatus,
     createAssetsStatus,
@@ -74,10 +76,10 @@ export default function AssetCategoryDetailPage() {
     const s = state.adminAsset;
     return {
       categories: s?.categories ?? [],
-      categoriesLoading: s?.getCategoriesStatus === "isLoading",
+      categoriesStatus: s?.getCategoriesStatus as string | undefined,
       assets: s?.assets ?? [],
       assetsPagination: s?.assetsPagination ?? null,
-      assetsLoading: s?.getAssetsStatus === "isLoading",
+      assetsStatus: s?.getAssetsStatus as string | undefined,
       updateCategoryStatus: s?.updateCategoryStatus ?? "idle",
       deleteCategoryStatus: s?.deleteCategoryStatus ?? "idle",
       createAssetsStatus: s?.createAssetsStatus ?? "idle",
@@ -100,6 +102,8 @@ export default function AssetCategoryDetailPage() {
         setEstateName(estate.name);
       } catch {
         toast.error("Failed to load estate information.");
+      } finally {
+        setBootstrapping(false);
       }
     })();
   }, [dispatch]);
@@ -216,7 +220,7 @@ export default function AssetCategoryDetailPage() {
               variant="ghost"
               size="sm"
               className="h-8 text-destructive"
-              disabled={deleteAssetStatus === "isLoading"}
+              disabled={isBusy(deleteAssetStatus)}
               onClick={(e) => {
                 e.stopPropagation();
                 const id = getId(item);
@@ -333,8 +337,13 @@ export default function AssetCategoryDetailPage() {
     assetsPagination?.total ?? visibleAssets.length ?? 0,
   );
 
-  const pageLoading = categoriesLoading || assetsLoading;
-  const categoryMissing = !categoriesLoading && categories.length > 0 && !category;
+  const pageLoading =
+    bootstrapping ||
+    (Boolean(estateId) &&
+      (isPending(categoriesStatus) ||
+        (Boolean(categoryId) && isPending(assetsStatus))));
+  const categoryMissing =
+    isSettled(categoriesStatus) && categories.length > 0 && !category;
 
   return (
     <div className="relative">
@@ -474,7 +483,7 @@ export default function AssetCategoryDetailPage() {
         <AssetCategoryFormModal
           visible={editCategoryOpen}
           onClose={() => setEditCategoryOpen(false)}
-          loading={updateCategoryStatus === "isLoading"}
+          loading={isBusy(updateCategoryStatus)}
           initial={category}
           onSubmit={handleEditCategory}
         />
@@ -484,7 +493,7 @@ export default function AssetCategoryDetailPage() {
           onClose={() => setDeleteCategoryOpen(false)}
           title="Delete category"
           itemName={category?.name ?? "this category"}
-          loading={deleteCategoryStatus === "isLoading"}
+          loading={isBusy(deleteCategoryStatus)}
           onConfirm={handleDeleteCategory}
         />
         <DeleteModal
@@ -492,14 +501,14 @@ export default function AssetCategoryDetailPage() {
           onClose={() => setAssetToDelete(null)}
           title="Delete asset"
           itemName={assetToDelete?.name ?? "this asset"}
-          loading={deleteAssetStatus === "isLoading"}
+          loading={isBusy(deleteAssetStatus)}
           onConfirm={handleConfirmDeleteAsset}
         />
 
         <AssetFormModal
           visible={addAssetOpen}
           onClose={() => setAddAssetOpen(false)}
-          loading={createAssetsStatus === "isLoading"}
+          loading={isBusy(createAssetsStatus)}
           category={category}
           estateId={estateId}
           onSubmit={handleAddAssets}
@@ -508,7 +517,7 @@ export default function AssetCategoryDetailPage() {
         <AssetEditModal
           visible={!!editingAsset}
           onClose={() => setEditingAsset(null)}
-          loading={updateAssetStatus === "isLoading"}
+          loading={isBusy(updateAssetStatus)}
           category={category}
           asset={editingAsset}
           onSubmit={handleEditAssetSubmit}

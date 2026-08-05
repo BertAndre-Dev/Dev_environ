@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { isPending } from "@/lib/async-status";
 import {
   createEnergyProviderWallet,
   getEnergyProviderWallet,
@@ -180,7 +181,7 @@ export const selectEnergyProviderCredits = (state: {
 
 export const selectEnergyProviderCreditsLoading = (state: {
   energyProviderWallet: EnergyProviderWalletState;
-}) => state.energyProviderWallet.getCreditsState === "isLoading";
+}) => isPending(state.energyProviderWallet.getCreditsState);
 
 export const selectEnergyProviderCreditsPagination = (state: {
   energyProviderWallet: EnergyProviderWalletState;

@@ -30,6 +30,7 @@ import Modal from "@/components/modal/page";
 import EstateForm from "@/components/super-admin/estate-form/page";
 import DeleteModal from "@/components/resident/delete-modal/page";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 import { EstateStatusModal } from "./components/EstateStatusModal";
 import { EstateModulesForm } from "./components/EstateModulesForm";
 import { EstateViewModal } from "./components/EstateViewModal";
@@ -54,7 +55,7 @@ export default function EstatePage() {
       return {
         allEstates: Array.isArray(data) ? data : [],
         pagination,
-        loading: estateState.getAllEstatesState === "isLoading",
+        loading: isPending(estateState.getAllEstatesState),
       };
     },
   );

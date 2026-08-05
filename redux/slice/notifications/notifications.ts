@@ -213,3 +213,27 @@ export const markNotificationsReadMultiple = createAsyncThunk(
     }
   },
 );
+
+/** DELETE /api/v1/notifications/clear/all */
+export const clearAllNotifications = createAsyncThunk(
+  "notifications/clearAllNotifications",
+  async (_: void, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.delete(
+        "/api/v1/notifications/clear/all",
+      );
+      const body = (res.data ?? {}) as Record<string, unknown>;
+      return {
+        success: body.success as boolean | undefined,
+        message:
+          typeof body.message === "string"
+            ? body.message
+            : "All notifications cleared",
+      };
+    } catch (error: unknown) {
+      return rejectWithValue(
+        extractErrorMessage(error, "Failed to clear notifications"),
+      );
+    }
+  },
+);

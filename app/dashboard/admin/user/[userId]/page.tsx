@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import type { AppDispatch, RootState } from "@/redux/store";
+import { isPending } from "@/lib/async-status";
 import {
   activateUser,
   deleteUser,
@@ -27,7 +28,7 @@ export default function AdminUserDetailPage() {
 
   const { user, loading } = useSelector((state: RootState) => ({
     user: state.adminUser.user,
-    loading: state.adminUser.getUserState === "isLoading",
+    loading: isPending(state.adminUser.getUserState),
   }));
 
   const fetchUser = useCallback(async () => {

@@ -8,6 +8,7 @@ import {
   type CompanyRevenueHead,
 } from "./company-revenue-head";
 import type { RootState } from "@/redux/store";
+import { isPending } from "@/lib/async-status";
 
 export interface CompanyRevenueHeadPagination {
   total: number;
@@ -188,8 +189,7 @@ export default companyRevenueHeadSlice.reducer;
 export const selectCompanyRevenueHeads = (state: RootState) =>
   (state.companyRevenueHead as CompanyRevenueHeadState)?.items ?? [];
 export const selectCompanyRevenueHeadsLoading = (state: RootState) =>
-  (state.companyRevenueHead as CompanyRevenueHeadState)?.listState ===
-  "isLoading";
+  isPending((state.companyRevenueHead as CompanyRevenueHeadState)?.listState);
 export const selectCompanyRevenueHeadsError = (state: RootState) =>
   (state.companyRevenueHead as CompanyRevenueHeadState)?.error ?? null;
 export const selectCompanyRevenueHeadsPagination = (state: RootState) =>

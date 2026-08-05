@@ -15,6 +15,7 @@ import { CompanyStatsCards } from "./components/CompanyStatsCards";
 import { CompanyFormModal } from "./components/CompanyFormModal";
 import { CompanyStatusModal } from "./components/CompanyStatusModal";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 import {
   activateCompany,
   createCompany,
@@ -134,7 +135,7 @@ export default function SuperAdminCompanyPage() {
       return {
         list: (s?.list ?? []) as CompanyItem[],
         pagination: s?.pagination ?? null,
-        loading: s?.getListStatus === "isLoading",
+        loading: isPending(s?.getListStatus),
         modules: (s?.modules ?? []) as CompanyModuleKey[],
         modulesLoading: s?.getModulesStatus === "isLoading",
       };

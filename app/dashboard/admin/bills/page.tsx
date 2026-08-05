@@ -38,6 +38,7 @@ import { useCallback, useEffect, useState } from "react";
 import DeleteModal from "@/components/resident/delete-modal/page";
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import Loader from "@/components/ui/Loader";
+import { isBusy, isPending } from "@/lib/async-status";
 import { formatAmountDisplay } from "@/lib/format-number";
 
 interface BillData {
@@ -100,24 +101,42 @@ export default function BillPage() {
   const [assignedStartDate, setAssignedStartDate] = useState("");
   const [assignedEndDate, setAssignedEndDate] = useState("");
   const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(true);
 
-  const { allBills, pagination, assignedBills, assignedPagination, loading } =
-    useSelector((state: RootState) => {
-      const billState = state.adminBill as any;
-      return {
-        allBills: billState?.allBills?.data || [],
-        pagination: billState?.allBills?.pagination || {},
-        assignedBills: (billState?.assignedBills?.data ||
-          []) as AssignedBillData[],
-        assignedPagination: billState?.assignedBills?.pagination || {},
-        loading:
-          billState.getBillsByEstateState === "isLoading" ||
-          billState.getBillsForAddressState === "isLoading" ||
-          billState.createBillState === "isLoading" ||
-          billState.updateBillState === "isLoading" ||
-          billState.deleteBillState === "isLoading",
-      };
-    });
+  const {
+    allBills,
+    pagination,
+    assignedBills,
+    assignedPagination,
+    getBillsByEstateState,
+    getBillsForAddressState,
+    mutationLoading,
+  } = useSelector((state: RootState) => {
+    const billState = state.adminBill as any;
+    return {
+      allBills: billState?.allBills?.data || [],
+      pagination: billState?.allBills?.pagination || {},
+      assignedBills: (billState?.assignedBills?.data ||
+        []) as AssignedBillData[],
+      assignedPagination: billState?.assignedBills?.pagination || {},
+      getBillsByEstateState: billState.getBillsByEstateState as string,
+      getBillsForAddressState: billState.getBillsForAddressState as string,
+      mutationLoading:
+        isBusy(billState.createBillState) ||
+        isBusy(billState.updateBillState) ||
+        isBusy(billState.deleteBillState) ||
+        isBusy(billState.createBillForAddressState) ||
+        isBusy(billState.activateBillState) ||
+        isBusy(billState.suspendBillState),
+    };
+  });
+
+  const loading =
+    bootstrapping ||
+    mutationLoading ||
+    (activeTab === "bills"
+      ? Boolean(estateId) && isPending(getBillsByEstateState)
+      : Boolean(assignedAddressId) && isPending(getBillsForAddressState));
 
   const fetchAssignedBills = useCallback(
     async (
@@ -180,6 +199,8 @@ export default function BillPage() {
         ).unwrap();
       } catch {
         toast.error("Failed to fetch bills.");
+      } finally {
+        setBootstrapping(false);
       }
     })();
   }, [dispatch]);

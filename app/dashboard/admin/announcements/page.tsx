@@ -29,6 +29,7 @@ import { buildAdminAnnouncementStatsCards } from "@/lib/announcement-stats";
 import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
 import Loader from "@/components/ui/Loader";
+import { isBusy, isPending } from "@/lib/async-status";
 
 function formatAnnouncementDate(dateStr?: string) {
   if (!dateStr) return "—";
@@ -130,9 +131,11 @@ export default function AdminAnnouncementsPage() {
   }, [estateId, page, bootstrapping]);
 
   const announcements = list ?? [];
-  const listLoading = getStatus === "isLoading";
+  const listLoading = Boolean(estateId) && isPending(getStatus);
   const fullPageLoading =
-    bootstrapping || (listLoading && !list) || getStatsStatus === "isLoading";
+    bootstrapping ||
+    listLoading ||
+    (Boolean(estateId) && isPending(getStatsStatus));
   const statsCards = buildAdminAnnouncementStatsCards(
     stats,
     pagination?.total ?? announcements.length,
@@ -267,7 +270,7 @@ export default function AdminAnnouncementsPage() {
           onSubmit={handleCreate}
           submitLabel="Send"
           title="Add Announcement"
-          loading={createStatus === "isLoading"}
+          loading={isBusy(createStatus)}
         />
 
         <AnnouncementFormModal
@@ -277,7 +280,7 @@ export default function AdminAnnouncementsPage() {
           onSubmit={handleUpdate}
           submitLabel="Update"
           title="Edit Announcement"
-          loading={updateStatus === "isLoading"}
+          loading={isBusy(updateStatus)}
         />
 
         <DeleteModal
@@ -286,7 +289,7 @@ export default function AdminAnnouncementsPage() {
           itemName={deletingItem?.title ?? "this announcement"}
           title="Delete announcement"
           onConfirm={handleConfirmDelete}
-          loading={deleteStatus === "isLoading"}
+          loading={isBusy(deleteStatus)}
         />
 
         <Modal visible={!!viewingItem} onClose={() => setViewingItem(null)}>

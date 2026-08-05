@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Loader from "@/components/ui/Loader";
+import { isPending, isSettled } from "@/lib/async-status";
 import { Bell, Megaphone, FileText, Paperclip } from "lucide-react";
 import Modal from "@/components/modal/page";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
@@ -162,8 +163,8 @@ export default function StaffAnnouncementsPage() {
     });
   }, [dispatch, estateId, page, bootstrapping]);
 
-  const listLoading = getListStatus === "isLoading";
-  const fullPageLoading = bootstrapping || (listLoading && !list);
+  const listLoading = isPending(getListStatus);
+  const fullPageLoading = bootstrapping || listLoading;
   const statsCards = buildReadOnlyAnnouncementStatsCards(
     pagination?.total ?? announcements.length,
   );
@@ -206,7 +207,7 @@ export default function StaffAnnouncementsPage() {
 
         <AnnouncementsStatsGrid stats={statsCards} />
 
-        {announcements.length === 0 && !listLoading ? (
+        {announcements.length === 0 && isSettled(getListStatus) ? (
           <Card className="p-12 text-center">
             <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">

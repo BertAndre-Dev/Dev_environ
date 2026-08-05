@@ -379,7 +379,7 @@ export default function UserDetailView({
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<DetailTab>("bills");
-  const [relatedLoading, setRelatedLoading] = useState(false);
+  const [relatedLoading, setRelatedLoading] = useState(true);
   const [bills, setBills] = useState<UserBillRow[]>([]);
   const [complaints, setComplaints] = useState<ResidentComplaintItem[]>([]);
   const [transactions, setTransactions] = useState<UserTransactionRow[]>([]);
@@ -788,7 +788,7 @@ export default function UserDetailView({
 
   const pageLoading =
     userLoading ||
-    relatedLoading ||
+    (Boolean(user) && relatedLoading) ||
     (showTransactionsTab &&
       transactionsLoading &&
       activeTab === "transactions");

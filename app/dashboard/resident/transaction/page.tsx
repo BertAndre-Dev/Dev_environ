@@ -32,6 +32,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { ResidentWalletCard } from "@/components/resident/wallet/ResidentWalletCard";
 import { ResidentVirtualAccountCard } from "@/components/resident/wallet/ResidentVirtualAccountCard";
 import { formatDateTime } from "@/lib/format-date";
+import { isPending } from "@/lib/async-status";
 // Payment VA implementation commented out — UI only
 // import {
 //   clearBvnConsentSession,
@@ -94,13 +95,13 @@ export default function TransactionPage() {
   const residentBanks = useSelector(
     (state: RootState) => state.residentPaymentMgt.banks,
   );
-  const walletLoading =
-    getWalletState === "idle" || getWalletState === "isLoading";
+  const getTransactionHistoryState = useSelector(
+    (state: RootState) =>
+      state.residentTransaction.getTransactionHistoryState,
+  );
+  const walletLoading = isPending(getWalletState);
   const loading =
-    useSelector(
-      (state: RootState) =>
-        state.residentTransaction.getTransactionHistoryState,
-    ) === "isLoading" || walletLoading;
+    isPending(getTransactionHistoryState) || walletLoading;
 
   // 🔹 Fetch signed-in user and wallet on mount
   useEffect(() => {

@@ -25,13 +25,13 @@ import {
 import {
   selectRevenueHeads,
   selectRevenueHeadsError,
-  selectRevenueHeadsLoading,
   selectRevenueHeadsPagination,
 } from "@/redux/slice/admin/revenue-head/revenue-head-slice";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { Card } from "@/components/ui/card";
 import Loader from "@/components/ui/Loader";
 import Pagination from "@/components/pagination/page";
+import { isPending, isSettled } from "@/lib/async-status";
 
 const PAGE_SIZE = 12;
 
@@ -71,7 +71,10 @@ export default function RevenueHeadsPage() {
   const dispatch = useDispatch<AppDispatch>();
 
   const items = useSelector((s: RootState) => selectRevenueHeads(s));
-  const loading = useSelector((s: RootState) => selectRevenueHeadsLoading(s));
+  const listState = useSelector(
+    (s: RootState) => s.adminRevenueHead?.listState ?? "idle",
+  );
+  const loading = isPending(listState);
   const error = useSelector((s: RootState) => selectRevenueHeadsError(s));
   const pagination = useSelector((s: RootState) =>
     selectRevenueHeadsPagination(s),
@@ -248,7 +251,7 @@ export default function RevenueHeadsPage() {
   };
 
   const content = useMemo(() => {
-    if (filtered.length === 0) {
+    if (isSettled(listState) && filtered.length === 0) {
       return (
         <p className="text-muted-foreground py-10 text-center md:col-span-2 xl:col-span-3 rounded-lg border border-border bg-muted/20">
           No revenue heads found.
@@ -264,7 +267,7 @@ export default function RevenueHeadsPage() {
         onDelete={handleDelete}
       />
     ));
-  }, [filtered, handleDelete, handleView]);
+  }, [filtered, handleDelete, handleView, listState]);
 
   return (
     <div className="relative">

@@ -4,6 +4,7 @@ import {
   getNotificationById,
   markNotificationRead,
   markNotificationsReadMultiple,
+  clearAllNotifications,
   type NotificationItem,
 } from "./notifications";
 
@@ -25,6 +26,7 @@ interface NotificationsState {
   getByIdStatus: AsyncStatus;
   markReadStatus: AsyncStatus;
   markMultipleStatus: AsyncStatus;
+  clearAllStatus: AsyncStatus;
   error: string | null;
 }
 
@@ -37,6 +39,7 @@ const initialState: NotificationsState = {
   getByIdStatus: "idle",
   markReadStatus: "idle",
   markMultipleStatus: "idle",
+  clearAllStatus: "idle",
   error: null,
 };
 
@@ -151,6 +154,29 @@ const notificationsSlice = createSlice({
         state.error =
           (action.payload as string) ??
           "Failed to mark notifications as read";
+      })
+
+      .addCase(clearAllNotifications.pending, (state) => {
+        state.clearAllStatus = "isLoading";
+        state.error = null;
+      })
+      .addCase(clearAllNotifications.fulfilled, (state) => {
+        state.clearAllStatus = "succeeded";
+        state.list = [];
+        state.unreadCount = 0;
+        state.current = null;
+        state.pagination = {
+          total: 0,
+          page: 1,
+          limit: state.pagination?.limit ?? 20,
+          pages: 1,
+        };
+        state.getStatus = "succeeded";
+      })
+      .addCase(clearAllNotifications.rejected, (state, action) => {
+        state.clearAllStatus = "failed";
+        state.error =
+          (action.payload as string) ?? "Failed to clear notifications";
       });
   },
 });

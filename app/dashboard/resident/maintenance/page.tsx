@@ -19,6 +19,7 @@ import type { RootState, AppDispatch } from "@/redux/store";
 import { normalizeAddresses, formatAddressLabel, type AddressOption } from "@/lib/address";
 import SwitchAddress from "@/components/resident/switch-address/page";
 import Loader from "@/components/ui/Loader";
+import { isBusy, isPending, isSettled } from "@/lib/async-status";
 
 export default function ResidentMaintenancePage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -30,7 +31,7 @@ export default function ResidentMaintenancePage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [bootstrapping, setBootstrapping] = useState(true);
 
-  const { list, loading, createComplaintStatus } = useSelector((state: RootState) => {
+  const { list, getComplaintsByAddressStatus, createComplaintStatus } = useSelector((state: RootState) => {
     const s = state.residentComplaints as {
       list: unknown[];
       getComplaintsByAddressStatus?: string;
@@ -38,10 +39,11 @@ export default function ResidentMaintenancePage() {
     };
     return {
       list: s?.list ?? [],
-      loading: s?.getComplaintsByAddressStatus === "isLoading",
+      getComplaintsByAddressStatus: s?.getComplaintsByAddressStatus ?? "idle",
       createComplaintStatus: s?.createComplaintStatus ?? "idle",
     };
   });
+  const loading = Boolean(selectedAddressId) && isPending(getComplaintsByAddressStatus);
 
   useEffect(() => {
     (async () => {
@@ -153,7 +155,7 @@ export default function ResidentMaintenancePage() {
             <div className="py-12">
               <Loader label="Loading maintenance requests..." />
             </div>
-          ) : expandableList.length === 0 ? (
+          ) : isSettled(getComplaintsByAddressStatus) && expandableList.length === 0 ? (
             <div className="py-12 rounded-lg border border-border bg-muted/20 text-center space-y-2">
               <Wrench className="w-12 h-12 mx-auto text-muted-foreground" />
               <p className="text-muted-foreground">No maintenance requests yet.</p>
@@ -193,7 +195,7 @@ export default function ResidentMaintenancePage() {
               residentId={residentId}
               onSubmit={handleCreateSubmit}
               onCancel={() => setCreateOpen(false)}
-              loading={createComplaintStatus === "isLoading"}
+              loading={isBusy(createComplaintStatus)}
             />
           </div>
         </Modal>

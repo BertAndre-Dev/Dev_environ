@@ -38,6 +38,7 @@ import {
 import AssignMeterForm from "@/components/super-admin/meter-form/page";
 import { IoSpeedometerOutline } from "react-icons/io5";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
 import { getCompanies } from "@/redux/slice/super-admin/company-mgt/company";
 import axiosInstance from "@/utils/axiosInstance";
@@ -187,7 +188,7 @@ export default function AdminMeterManagement() {
         totalPages: 1,
         pageSize: 10,
       },
-      loading: superAdminMeter?.getAllMetersState === "isLoading",
+      loading: isPending(superAdminMeter?.getAllMetersState),
       meterDetails: superAdminMeter?.superAdminMeter ?? null,
       detailsLoading: superAdminMeter?.getMeterByAddressIdState === "isLoading",
       selectedEstateId:

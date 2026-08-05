@@ -17,6 +17,7 @@ import {
 } from "@/lib/memberships";
 import { reconnectSocket } from "@/lib/socket";
 import { cn } from "@/lib/utils";
+import { isBusy, isPending } from "@/lib/async-status";
 
 type Props = {
   collapsed?: boolean;
@@ -33,8 +34,8 @@ export function MembershipSwitcher({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  const switching = switchMembershipStatus === "isLoading";
-  const loading = getMembershipsStatus === "isLoading";
+  const switching = isBusy(switchMembershipStatus);
+  const loading = Boolean(token) && isPending(getMembershipsStatus);
 
   const items = useMemo(
     () => normalizeMemberships({ data: memberships }),

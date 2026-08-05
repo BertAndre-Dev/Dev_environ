@@ -39,6 +39,7 @@ import type { CommunityReplyTarget } from "@/types/community-chat-ui";
 import type { RootState, AppDispatch } from "@/redux/store";
 import { useCommunityChatGroupRoom } from "@/hooks/useCommunityChatGroupRoom";
 import Loader from "@/components/ui/Loader";
+import { isBusy, isPending } from "@/lib/async-status";
 
 export default function EstateAdminCommunityChatPage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -400,10 +401,9 @@ export default function EstateAdminCommunityChatPage() {
     setEditError(null);
   }, [editMessageLoading]);
 
-  const anyLoading = listLoading === "isLoading" || detailLoading === "isLoading";
+  const anyLoading = isBusy(listLoading) || isBusy(detailLoading);
   const sendDisabled = !selectedId || anyLoading;
-  const pageLoading =
-    bootstrapping || (listLoading === "isLoading" && groups.length === 0);
+  const pageLoading = bootstrapping || isPending(listLoading);
 
   return (
     <div className="relative">

@@ -1,5 +1,6 @@
 import { createSelector } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
+import { isPending } from "@/lib/async-status";
 import {
   getAddressDisplay,
   getResidentName,
@@ -57,7 +58,7 @@ export const selectStaffMaintenanceStats = createSelector(
 
 export const selectStaffMaintenanceLoading = createSelector(
   selectStaffMaintenanceState,
-  (s) => s.getComplaintsByStaffStatus === "isLoading",
+  (s) => isPending(s.getComplaintsByStaffStatus),
 );
 
 export const selectStaffMaintenanceUpdatingStatus = createSelector(

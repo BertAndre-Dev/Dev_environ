@@ -23,6 +23,10 @@ import { cn } from "@/lib/utils";
 
 const PREVIEW_LIMIT = 10;
 
+function isSuperAdminRole(role: string | null | undefined): boolean {
+  return (role || "").toLowerCase().trim() === "super admin";
+}
+
 export function NotificationsBell() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
@@ -33,28 +37,35 @@ export function NotificationsBell() {
   );
   const [open, setOpen] = useState(false);
   const fetchedOnce = useRef(false);
+  const enabled = !isSuperAdminRole(role);
 
   const fetchPreview = useCallback(() => {
+    if (!enabled) return;
     dispatch(getNotifications({ page: 1, limit: PREVIEW_LIMIT })).catch(
       () => undefined,
     );
-  }, [dispatch]);
+  }, [dispatch, enabled]);
 
   useEffect(() => {
+    if (!enabled) return;
     if (fetchedOnce.current) return;
     fetchedOnce.current = true;
     fetchPreview();
-  }, [fetchPreview]);
+  }, [enabled, fetchPreview]);
 
   useEffect(() => {
+    if (!enabled) return;
     const onFocus = () => fetchPreview();
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [fetchPreview]);
+  }, [enabled, fetchPreview]);
 
   useEffect(() => {
+    if (!enabled) return;
     if (open) fetchPreview();
-  }, [open, fetchPreview]);
+  }, [enabled, open, fetchPreview]);
+
+  if (!enabled) return null;
 
   const handleItemClick = async (item: NotificationItem) => {
     setOpen(false);

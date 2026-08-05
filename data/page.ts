@@ -86,12 +86,6 @@ export const superAdminNav = [
     icon: Inbox,
     path: "/dashboard/super-admin/chat",
   },
-  {
-    label: "Notifications",
-    icon: Inbox,
-    path: "/dashboard/super-admin/notifications",
-    moduleKey: "notifications",
-  },
   //   {
   //     label: "Visitors Management",
   //     icon: FiUsers,

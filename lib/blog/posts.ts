@@ -16,6 +16,30 @@ export type BlogPostMeta = {
 
 export const blogPosts: BlogPostMeta[] = [
   {
+    slug: "digital-efficiency-why-it-matters-more-than-ever-in-property-management",
+    title:
+      "Digital Efficiency: Why It Matters More Than Ever in Property Management",
+    excerpt:
+      "As portfolios grow and resident expectations rise, manual processes fall short. Here's why digital efficiency is reshaping property management — from operations and resident experience to sustainability and ESG.",
+    hook: "Digital efficiency is changing the way modern properties are managed.",
+    publishedAt: "2026-08-05",
+    readTimeMinutes: 5,
+    wordCount: 780,
+    category: "Estate Management",
+    author: "Bertahub Team",
+    featuredImage: "/assets/blog/blog-7.jpeg",
+    featuredImageAlt:
+      "Digital Efficiency: The Foundation of Smarter Property Management — property management dashboard on laptop and smartphone with modern residential buildings",
+    keywords: [
+      "digital efficiency property management",
+      "digital property management",
+      "PropTech estate management",
+      "digital estate management Nigeria",
+      "facility management technology",
+      "sustainable property management ESG",
+    ],
+  },
+  {
     slug: "how-sustainability-is-redefining-estate-management-in-nigeria",
     title: "How Sustainability Is Redefining Estate Management in Nigeria",
     excerpt:

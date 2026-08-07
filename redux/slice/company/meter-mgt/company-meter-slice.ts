@@ -223,19 +223,34 @@ const companyMeterSlice = createSlice({
       .addCase(assignCompanyMeterToEstate.fulfilled, (state, action) => {
         state.assignMeterToEstateState = "succeeded";
         const updated = action.payload?.data as CompanyMeterData | undefined;
-        if (updated && state.meterList?.data) {
-          state.meterList.data = state.meterList.data.map((meter) =>
-            meter.id === updated.id ||
-            meter.meterNumber === updated.meterNumber
-              ? { ...meter, ...updated }
-              : meter,
-          );
-        }
+        const meterNumber =
+          updated?.meterNumber ?? action.meta.arg.meterNumber;
+        if (!meterNumber || !state.meterList?.data) return;
+
+        const unassign = action.meta.arg.unassign === true;
+        state.meterList.data = state.meterList.data.map((meter) => {
+          if (
+            meter.meterNumber !== meterNumber &&
+            meter.id !== updated?.id
+          ) {
+            return meter;
+          }
+          return {
+            ...meter,
+            ...(updated && typeof updated === "object" ? updated : {}),
+            isAssigned: unassign
+              ? false
+              : (updated?.isAssigned ?? true),
+            ...(unassign ? { addressId: undefined } : {}),
+          };
+        });
       })
       .addCase(assignCompanyMeterToEstate.rejected, (state, action) => {
         state.assignMeterToEstateState = "failed";
         state.error =
-          (action.payload as { message?: string } | undefined)?.message ?? null;
+          (action.payload as { message?: string } | undefined)?.message ??
+          action.error.message ??
+          "Failed to assign or unassign meter";
       });
 
     builder

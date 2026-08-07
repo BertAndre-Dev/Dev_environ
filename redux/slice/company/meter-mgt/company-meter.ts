@@ -6,6 +6,15 @@ interface CompanyMeterEstatePayload {
   estateId: string;
 }
 
+/** Payload for POST /api/v1/meters/assign-meter-to-address — estate pool, address, or unassign */
+export interface AssignCompanyMeterPayload {
+  meterNumber: string;
+  estateId: string;
+  addressId?: string;
+  unassign?: boolean;
+  companyId?: string;
+}
+
 /** Payload for POST /api/v1/meters/add-meter — company pool, estate, or both */
 export interface CompanyAddMeterPayload {
   meterNumber: string;
@@ -45,10 +54,14 @@ export const removeCompanyEstateMeter = createAsyncThunk(
   },
 );
 
-/** POST /api/v1/meters/assign-meter-to-address — assign company meter to an estate */
+/**
+ * POST /api/v1/meters/assign-meter-to-address
+ * Assign: estateId alone (estate pool) or + addressId (bind address).
+ * Unassign: unassign=true clears address; meter stays on estate.
+ */
 export const assignCompanyMeterToEstate = createAsyncThunk(
   "company-meter/assignMeterToEstate",
-  async (data: CompanyMeterEstatePayload, { rejectWithValue }) => {
+  async (data: AssignCompanyMeterPayload, { rejectWithValue }) => {
     try {
       const res = await axiosInstance.post(
         "/api/v1/meters/assign-meter-to-address",
@@ -56,8 +69,12 @@ export const assignCompanyMeterToEstate = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: unknown } };
-      return rejectWithValue(err.response?.data);
+      const err = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ||
+          "Failed to assign or unassign meter.",
+      });
     }
   },
 );

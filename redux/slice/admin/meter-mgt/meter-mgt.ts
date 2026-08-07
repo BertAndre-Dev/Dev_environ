@@ -2,22 +2,25 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 
 
-interface AdminMeterData {
+export interface AssignMeterPayload {
     meterNumber: string;
     estateId: string;
-    addressId: string;
-};
-
+    addressId?: string;
+    unassign?: boolean;
+}
 
 export const assignMeterToAddress = createAsyncThunk(
     "meter/assignMeterToAddress",
-    async (data: AdminMeterData, { rejectWithValue }) => {
+    async (data: AssignMeterPayload, { rejectWithValue }) => {
         try {
             const res = await axiosInstance.post("/api/v1/meters/assign-meter-to-address", data);
             return res.data;
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
             return rejectWithValue({
-                message: error.res?.data?.message
+                message:
+                    err?.response?.data?.message ||
+                    "Failed to assign or unassign meter.",
             });
         }
     }

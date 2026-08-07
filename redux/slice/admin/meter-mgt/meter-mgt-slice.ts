@@ -103,30 +103,33 @@ const adminMeterSlice = createSlice({
             })
             .addCase(assignMeterToAddress.fulfilled, (state, action) => {
                 state.assignMeterToAddressState = "succeeded";
-                const newMeter = action.payload?.data;
-                if (newMeter) {
-                    if (state.allAdminMeters?.data) {
-                        state.allAdminMeters.data.push(newMeter);
-                        state.allAdminMeters.pagination.total += 1;
-                    } else {
-                        state.allAdminMeters = {
-                            success: true,
-                            message: "Meter assigned successfully",
-                            data: [newMeter],
-                            pagination: {
-                                total: 1,
-                                currentPage: 1,
-                                totalPages: 1,
-                                pageSize: 10,
-                            },
-                        };
-                    }
-                }
+                const updated = action.payload?.data;
+                const meterNumber =
+                    updated?.meterNumber ?? action.meta.arg.meterNumber;
+                if (!meterNumber || !state.allAdminMeters?.data) return;
+
+                const idx = state.allAdminMeters.data.findIndex(
+                    (m) => m.meterNumber === meterNumber,
+                );
+                if (idx === -1) return;
+
+                const unassign = action.meta.arg.unassign === true;
+                const existing = state.allAdminMeters.data[idx];
+                state.allAdminMeters.data[idx] = {
+                    ...existing,
+                    ...(updated && typeof updated === "object" ? updated : {}),
+                    isAssigned: unassign
+                        ? false
+                        : (updated?.isAssigned ?? true),
+                    ...(unassign ? { addressId: "" } : {}),
+                };
             })
             .addCase(assignMeterToAddress.rejected, (state, action) => {
                 state.assignMeterToAddressState = "failed";
                 state.error =
-                    action.error.message || "Failed to assign meter";
+                    (action.payload as { message?: string } | undefined)?.message ||
+                    action.error.message ||
+                    "Failed to assign or unassign meter";
             });
 
 

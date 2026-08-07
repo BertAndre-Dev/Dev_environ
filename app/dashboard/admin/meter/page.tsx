@@ -9,7 +9,7 @@ import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useState } from "react";
 import type { EstateEnergyUsageRange } from "@/lib/estate-energy-usage-chart";
 import { useDispatch, useSelector } from "react-redux";
-import { ChevronDown, Eye, Link, Search, Zap } from "lucide-react";
+import { ChevronDown, Eye, Link, Search, Unlink, Zap } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { MeterEnergyUsageSection } from "@/components/charts/meter-energy-usage-section";
 import {
@@ -17,6 +17,7 @@ import {
   type MeterUsageRange,
 } from "@/redux/slice/resident/meter-mgt/meter-mgt";
 import {
+  assignMeterToAddress,
   getAllEstateMeter,
   getVendingStatsByEstate,
 } from "@/redux/slice/admin/meter-mgt/meter-mgt";
@@ -26,6 +27,7 @@ import { getEstateRealtimeReadings } from "@/redux/slice/admin/estate-realtime-r
 import { formatRealtimeEnergyKwh } from "@/lib/estate-realtime-readings";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import AssignMeterForm from "@/components/admin/meter-form/page";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
 import { EstatePowerUsageSection } from "@/components/charts/estate-power-usage-section";
 import type { EnergyConsumptionPeriod } from "@/lib/energy-consumption-chart";
@@ -90,6 +92,10 @@ export default function AdminMeterManagement() {
     useState<MeterUsageRange>("weekly");
   const [viewVendLimitOpen, setViewVendLimitOpen] = useState(false);
   const [setVendLimitOpen, setSetVendLimitOpen] = useState(false);
+  const [meterToUnassign, setMeterToUnassign] = useState<AdminMeterData | null>(
+    null,
+  );
+  const [unassignSubmitting, setUnassignSubmitting] = useState(false);
 
   const { allAdminMeters, pagination, getAllEstateMeterState } = useSelector(
     (state: RootState) => {
@@ -323,6 +329,35 @@ export default function AdminMeterManagement() {
     setOpen(false);
   };
 
+  const openUnassignConfirm = (meter: AdminMeterData) => {
+    setMeterToUnassign(meter);
+  };
+
+  const handleConfirmUnassign = async () => {
+    if (!meterToUnassign || !estateId) {
+      toast.error("Missing estate or meter for unassign.");
+      return;
+    }
+    setUnassignSubmitting(true);
+    try {
+      const res = await dispatch(
+        assignMeterToAddress({
+          meterNumber: meterToUnassign.meterNumber,
+          estateId,
+          unassign: true,
+        }),
+      ).unwrap();
+      toast.success(res?.message || "Meter unassigned successfully.");
+      setMeterToUnassign(null);
+      await handleRefresh();
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to unassign meter.");
+      throw error;
+    } finally {
+      setUnassignSubmitting(false);
+    }
+  };
+
   const handleOpenUsageModal = (meter: AdminMeterData) => {
     setUsageMeterNumber(meter.meterNumber);
     setMeterUsageRange("weekly");
@@ -402,9 +437,20 @@ export default function AdminMeterManagement() {
     },
     {
       key: "actions",
-      header: "Assign Meter",
+      header: "Assign / Unassign",
       exportable: false,
-      render: (item: AdminMeterData) => (
+      render: (item: AdminMeterData) =>
+        item.isAssigned ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => openUnassignConfirm(item)}
+            className="hover:bg-amber-100"
+            title="Unassign meter"
+          >
+            <Unlink className="w-4 h-4 text-amber-600" />
+          </Button>
+        ) : (
           <Button
             variant="ghost"
             size="sm"
@@ -414,7 +460,7 @@ export default function AdminMeterManagement() {
           >
             <Link className="w-4 h-4 text-blue-600" />
           </Button>
-      ),
+        ),
     },
     {
       key: "energyUsage",
@@ -693,6 +739,24 @@ export default function AdminMeterManagement() {
           />
         </>
       ) : null}
+
+      <DeleteModal
+        visible={!!meterToUnassign}
+        onClose={() => setMeterToUnassign(null)}
+        itemName={meterToUnassign?.meterNumber ?? "this meter"}
+        title="Unassign meter"
+        confirmLabel="Unassign"
+        loading={unassignSubmitting}
+        loadingLabel="Unassigning..."
+        message={
+          <p className="text-sm text-muted-foreground mb-4">
+            Unassign meter{" "}
+            <strong>{meterToUnassign?.meterNumber ?? "this meter"}</strong> from
+            its address? The meter will stay on the estate pool.
+          </p>
+        }
+        onConfirm={handleConfirmUnassign}
+      />
       </div>
     </div>
   );

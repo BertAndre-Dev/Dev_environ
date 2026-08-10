@@ -20,9 +20,9 @@ import {
   Phone,
   Power,
   PowerOff,
-  Receipt,
   Trash2,
   User,
+  Users,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,15 +41,9 @@ import { getMeterByAddress } from "@/redux/slice/resident/meter-mgt/meter-mgt";
 import type { ResidentMeterData } from "@/redux/slice/resident/meter-mgt/meter-mgt-slice";
 import { getComplaintsByAddress } from "@/redux/slice/resident/maintenance/resident-complaints";
 import type { ResidentComplaintItem } from "@/redux/slice/resident/maintenance/resident-complaints";
-import { TransactionDetailsDialog } from "@/components/super-admin/transaction-modal/page";
-import {
-  getTransactionById,
-  getUserTransactionHistory,
-  verifyTransaction,
-} from "@/redux/slice/super-admin/super-admin-transactions-mgt/super-admin-transactions";
-import { formatDateTime as formatUtcDateTime } from "@/lib/format-date";
+import { getVisitorsByResident } from "@/redux/slice/resident/visitor/visitor";
 
-type DetailTab = "bills" | "complaints" | "transactions";
+type DetailTab = "bills" | "complaints" | "visitors";
 
 interface UserBillRow {
   id: string;
@@ -62,20 +56,23 @@ interface UserBillRow {
   lastPaymentDate?: string | null;
 }
 
-interface UserTransactionRow {
+interface UserVisitorRow {
   id: string;
-  type?: string;
-  amount?: number;
-  paymentStatus?: string;
-  description?: string;
-  tx_ref?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  purpose?: string;
+  visitingType?: string;
+  visitorCode?: string;
+  checkinTime?: string | null;
+  checkoutTime?: string | null;
   createdAt?: string;
-  estateId?: { name?: string };
 }
 
 const BASE_TABS: { id: DetailTab; label: string }[] = [
   { id: "bills", label: "Bills" },
   { id: "complaints", label: "Complaints" },
+  { id: "visitors", label: "Visitors" },
 ];
 
 function getUserId(user: DashboardUserDetails | null | undefined) {
@@ -269,6 +266,11 @@ function UserProfileDetails({
           <DetailField label="First name" value={user.firstName || "—"} />
           <DetailField label="Last name" value={user.lastName || "—"} />
           <DetailField label="Gender" value={formatLabel(user.gender)} />
+          <DetailField
+            label="Email"
+            value={user.email || "—"}
+            copyValue={user.email || undefined}
+          />
           {user.role?.toLowerCase() === "resident" ? (
             <DetailField
               label="Resident type"
@@ -283,17 +285,22 @@ function UserProfileDetails({
             Contact & account
           </h2>
           <DetailField
-            label="Email"
-            value={user.email || "—"}
-            copyValue={user.email || undefined}
-          />
-          <DetailField
             label="Phone"
             value={phoneDisplay}
             copyValue={phoneDisplay !== "—" ? phoneDisplay : undefined}
           />
           {user.address ? (
             <DetailField label="Address" value={user.address} />
+          ) : null}
+          <DetailField
+            label="Invitation"
+            value={formatLabel(user.invitationStatus) || "—"}
+          />
+          {user.serviceCharge != null ? (
+            <DetailField
+              label="Service charge"
+              value={user.serviceCharge ? "Yes" : "No"}
+            />
           ) : null}
           <DetailField
             label="Member since"
@@ -312,7 +319,7 @@ function UserProfileDetails({
             <MapPin className="h-4 w-4 text-primary" />
             Addresses linked to this user
           </h2>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="grid grid-cols-1">
             {userAddresses.map((addr, index) => (
               <div key={addr.id || index} className="rounded-lg border p-4">
                 <p className="mb-2 text-xs font-medium text-muted-foreground">
@@ -363,7 +370,6 @@ export interface UserDetailViewProps {
   userLoading: boolean;
   listPath: string;
   actions: UserMgtActions;
-  showTransactionsTab?: boolean;
 }
 
 export default function UserDetailView({
@@ -372,7 +378,6 @@ export default function UserDetailView({
   userLoading,
   listPath,
   actions,
-  showTransactionsTab = false,
 }: UserDetailViewProps) {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
@@ -382,23 +387,11 @@ export default function UserDetailView({
   const [relatedLoading, setRelatedLoading] = useState(true);
   const [bills, setBills] = useState<UserBillRow[]>([]);
   const [complaints, setComplaints] = useState<ResidentComplaintItem[]>([]);
-  const [transactions, setTransactions] = useState<UserTransactionRow[]>([]);
-  const [transactionsLoading, setTransactionsLoading] = useState(false);
-  const [transactionsPage, setTransactionsPage] = useState(1);
-  const [transactionsTotal, setTransactionsTotal] = useState(0);
-  const [transactionsPageSize, setTransactionsPageSize] = useState(10);
-  const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState<Record<
-    string,
-    unknown
-  > | null>(null);
-  const [transactionDialogLoading, setTransactionDialogLoading] =
-    useState(false);
-  const [verifyTransactionLoading, setVerifyTransactionLoading] =
-    useState(false);
   const [meterByAddressId, setMeterByAddressId] = useState<
     Record<string, string | null>
   >({});
+  const [visitors, setVisitors] = useState<UserVisitorRow[]>([]);
+  const [visitorsTotal, setVisitorsTotal] = useState(0);
 
   const [suspendOpen, setSuspendOpen] = useState(false);
   const [suspendSubmitting, setSuspendSubmitting] = useState(false);
@@ -462,11 +455,25 @@ export default function UserDetailView({
         }
       });
 
-      const [billsRes, complaintGroups, meterEntries] = await Promise.all([
-        billPromise,
-        Promise.all(complaintPromises),
-        Promise.all(meterPromises),
-      ]);
+      const visitorPromise = uid
+        ? dispatch(
+            getVisitorsByResident({
+              residentId: uid,
+              page: 1,
+              limit: 100,
+            }),
+          )
+            .unwrap()
+            .catch(() => ({ data: [], pagination: { total: 0 } }))
+        : Promise.resolve({ data: [], pagination: { total: 0 } });
+
+      const [billsRes, complaintGroups, meterEntries, visitorRes] =
+        await Promise.all([
+          billPromise,
+          Promise.all(complaintPromises),
+          Promise.all(meterPromises),
+          visitorPromise,
+        ]);
 
       setBills(
         (billsRes?.data ?? []).map(
@@ -493,8 +500,36 @@ export default function UserDetailView({
         return true;
       });
       setComplaints(merged);
+
+      const visitorRows = (
+        (visitorRes?.data ?? []) as Record<string, unknown>[]
+      ).map((v, index) => ({
+        id: String(v.id ?? v._id ?? index),
+        firstName: v.firstName as string | undefined,
+        lastName: v.lastName as string | undefined,
+        phone: v.phone as string | undefined,
+        purpose: v.purpose as string | undefined,
+        visitingType: v.visitingType as string | undefined,
+        visitorCode: (v.visitorCode ?? v.code) as string | undefined,
+        checkinTime: (v.checkinTime ?? v.checkInTime) as
+          | string
+          | null
+          | undefined,
+        checkoutTime: (v.checkoutTime ?? v.checkOutTime) as
+          | string
+          | null
+          | undefined,
+        createdAt: v.createdAt as string | undefined,
+      }));
+      setVisitors(visitorRows);
+      setVisitorsTotal(
+        Number(
+          (visitorRes as { pagination?: { total?: number } })?.pagination
+            ?.total ?? visitorRows.length,
+        ),
+      );
     } catch {
-      toast.error("Failed to load bills or complaints.");
+      toast.error("Failed to load user activity data.");
     } finally {
       setRelatedLoading(false);
     }
@@ -504,60 +539,7 @@ export default function UserDetailView({
     fetchRelatedData().catch(() => {});
   }, [fetchRelatedData]);
 
-  const fetchTransactions = useCallback(
-    async (page = 1) => {
-      const uid = getUserId(user);
-      if (!uid || !showTransactionsTab) return;
-
-      setTransactionsLoading(true);
-      try {
-        const res = await dispatch(
-          getUserTransactionHistory({ userId: uid, page, limit: 10 }),
-        ).unwrap();
-
-        const pagination = (res?.pagination ?? {}) as Record<string, unknown>;
-        setTransactions(
-          (res?.data ?? []).map(
-            (transaction: Record<string, unknown>, index: number) => ({
-              id: String(transaction.id ?? transaction._id ?? index),
-              type: transaction.type as string | undefined,
-              amount: transaction.amount as number | undefined,
-              paymentStatus: transaction.paymentStatus as string | undefined,
-              description: transaction.description as string | undefined,
-              tx_ref: transaction.tx_ref as string | undefined,
-              createdAt: transaction.createdAt as string | undefined,
-              estateId: transaction.estateId as { name?: string } | undefined,
-            }),
-          ),
-        );
-        setTransactionsPage(
-          Number(pagination.page ?? pagination.currentPage ?? page),
-        );
-        setTransactionsPageSize(
-          Number(pagination.limit ?? pagination.pageSize ?? 10),
-        );
-        setTransactionsTotal(Number(pagination.total ?? 0));
-      } catch {
-        toast.error("Failed to load transaction history.");
-      } finally {
-        setTransactionsLoading(false);
-      }
-    },
-    [dispatch, showTransactionsTab, user],
-  );
-
-  useEffect(() => {
-    if (!showTransactionsTab || !user) return;
-    fetchTransactions(1).catch(() => {});
-  }, [fetchTransactions, showTransactionsTab, user]);
-
-  const tabs = useMemo(
-    () =>
-      showTransactionsTab
-        ? [...BASE_TABS, { id: "transactions" as const, label: "Transactions" }]
-        : BASE_TABS,
-    [showTransactionsTab],
-  );
+  const tabs = BASE_TABS;
 
   const displayName = useMemo(() => {
     if (!user) return "User";
@@ -632,47 +614,6 @@ export default function UserDetailView({
     }
   };
 
-  const handleViewTransaction = async (transactionId: string) => {
-    if (!transactionId) return;
-    setTransactionDialogOpen(true);
-    setTransactionDialogLoading(true);
-    setSelectedTransaction(null);
-    try {
-      const res = await dispatch(getTransactionById(transactionId)).unwrap();
-      setSelectedTransaction((res?.data ?? res) as Record<string, unknown>);
-    } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ??
-          "Failed to load transaction details.",
-      );
-      setTransactionDialogOpen(false);
-    } finally {
-      setTransactionDialogLoading(false);
-    }
-  };
-
-  const handleVerifyTransaction = async (tx_ref: string) => {
-    if (!tx_ref) return;
-    setVerifyTransactionLoading(true);
-    try {
-      await dispatch(verifyTransaction(tx_ref)).unwrap();
-      toast.success("Transaction verified successfully.");
-      const id = selectedTransaction?.id || selectedTransaction?._id;
-      if (typeof id === "string") {
-        const res = await dispatch(getTransactionById(id)).unwrap();
-        setSelectedTransaction((res?.data ?? res) as Record<string, unknown>);
-      }
-      await fetchTransactions(transactionsPage);
-    } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ??
-          "Failed to verify transaction.",
-      );
-    } finally {
-      setVerifyTransactionLoading(false);
-    }
-  };
-
   const billColumns = [
     { key: "billName", header: "Bill Name" },
     {
@@ -718,80 +659,55 @@ export default function UserDetailView({
     },
   ];
 
-  const transactionColumns = [
+  const visitorColumns = [
     {
       key: "createdAt",
-      header: "Date",
-      render: (item: UserTransactionRow) =>
-        formatUtcDateTime(item.createdAt, "—"),
+      header: "Created",
+      render: (item: UserVisitorRow) => formatDateTime(item.createdAt),
     },
     {
-      key: "type",
+      key: "name",
+      header: "Visitor",
+      render: (item: UserVisitorRow) =>
+        `${item.firstName ?? ""} ${item.lastName ?? ""}`.trim() || "—",
+    },
+    {
+      key: "phone",
+      header: "Phone",
+      render: (item: UserVisitorRow) => item.phone || "—",
+    },
+    {
+      key: "purpose",
+      header: "Purpose",
+      render: (item: UserVisitorRow) => item.purpose || "—",
+    },
+    {
+      key: "visitingType",
       header: "Type",
-      render: (item: UserTransactionRow) => formatLabel(item.type),
+      render: (item: UserVisitorRow) => formatLabel(item.visitingType),
     },
     {
-      key: "amount",
-      header: "Amount",
-      render: (item: UserTransactionRow) =>
-        new Intl.NumberFormat("en-NG", {
-          style: "currency",
-          currency: "NGN",
-        }).format(item.amount ?? 0),
-    },
-    {
-      key: "paymentStatus",
-      header: "Status",
-      render: (item: UserTransactionRow) => {
-        const status = (item.paymentStatus ?? "").toLowerCase();
-        const paid =
-          status === "paid" ||
-          status === "successful" ||
-          status === "completed";
-        return (
-          <StatusPill tone={paid ? "green" : "amber"}>
-            {formatLabel(item.paymentStatus) || "Pending"}
-          </StatusPill>
-        );
-      },
-    },
-    {
-      key: "description",
-      header: "Description",
-      render: (item: UserTransactionRow) => (
-        <span className="max-w-[220px] break-words whitespace-normal">
-          {item.description || "—"}
-        </span>
+      key: "visitorCode",
+      header: "Code",
+      render: (item: UserVisitorRow) => (
+        <span className="font-mono text-xs">{item.visitorCode || "—"}</span>
       ),
     },
     {
-      key: "tx_ref",
-      header: "Reference",
-      render: (item: UserTransactionRow) => (
-        <span className="font-mono text-xs">{item.tx_ref || "—"}</span>
-      ),
+      key: "checkinTime",
+      header: "Check-in",
+      render: (item: UserVisitorRow) =>
+        formatDateTime(item.checkinTime ?? undefined),
     },
     {
-      key: "actions",
-      header: "Action",
-      render: (item: UserTransactionRow) => (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handleViewTransaction(item.id)}
-        >
-          View details
-        </Button>
-      ),
+      key: "checkoutTime",
+      header: "Check-out",
+      render: (item: UserVisitorRow) =>
+        formatDateTime(item.checkoutTime ?? undefined),
     },
   ];
 
-  const pageLoading =
-    userLoading ||
-    (Boolean(user) && relatedLoading) ||
-    (showTransactionsTab &&
-      transactionsLoading &&
-      activeTab === "transactions");
+  const pageLoading = userLoading || (Boolean(user) && relatedLoading);
 
   return (
     <div className="relative space-y-6">
@@ -941,12 +857,7 @@ export default function UserDetailView({
         {user ? (
           <>
             {/* Quick stats */}
-            <div
-              className={cn(
-                "grid grid-cols-1 gap-3 pt-8 sm:grid-cols-2",
-                showTransactionsTab && "lg:grid-cols-3",
-              )}
-            >
+            <div className="grid grid-cols-1 gap-3 pt-8 sm:grid-cols-3">
               <SummaryCard
                 label="Bills"
                 value={bills.length}
@@ -961,15 +872,13 @@ export default function UserDetailView({
                 active={activeTab === "complaints"}
                 onClick={() => setActiveTab("complaints")}
               />
-              {showTransactionsTab ? (
-                <SummaryCard
-                  label="Transactions"
-                  value={transactionsTotal || transactions.length}
-                  icon={Receipt}
-                  active={activeTab === "transactions"}
-                  onClick={() => setActiveTab("transactions")}
-                />
-              ) : null}
+              <SummaryCard
+                label="Visitors"
+                value={visitorsTotal || visitors.length}
+                icon={Users}
+                active={activeTab === "visitors"}
+                onClick={() => setActiveTab("visitors")}
+              />
             </div>
 
             {/* Tabs */}
@@ -993,8 +902,9 @@ export default function UserDetailView({
                   {tab.id === "complaints" && complaints.length > 0
                     ? ` (${complaints.length})`
                     : ""}
-                  {tab.id === "transactions" && transactionsTotal > 0
-                    ? ` (${transactionsTotal})`
+                  {tab.id === "visitors" &&
+                  (visitorsTotal || visitors.length) > 0
+                    ? ` (${visitorsTotal || visitors.length})`
                     : ""}
                 </button>
               ))}
@@ -1037,36 +947,18 @@ export default function UserDetailView({
               </div>
             ) : null}
 
-            {activeTab === "transactions" && showTransactionsTab ? (
+            {activeTab === "visitors" ? (
               <Card className="p-4">
                 <Table
-                  columns={transactionColumns}
-                  data={transactions}
-                  emptyMessage="No transactions found for this user."
-                  showPagination
-                  paginationInfo={{
-                    total: transactionsTotal,
-                    current: transactionsPage,
-                    pageSize: transactionsPageSize,
-                  }}
-                  onPageChange={(page) => {
-                    fetchTransactions(page).catch(() => {});
-                  }}
+                  columns={visitorColumns}
+                  data={visitors}
+                  emptyMessage="No visitors found for this user."
                 />
               </Card>
             ) : null}
           </>
         ) : null}
       </div>
-
-      <TransactionDetailsDialog
-        open={transactionDialogOpen}
-        onOpenChange={setTransactionDialogOpen}
-        transaction={selectedTransaction}
-        loading={transactionDialogLoading}
-        onVerify={showTransactionsTab ? handleVerifyTransaction : undefined}
-        verifyLoading={verifyTransactionLoading}
-      />
 
       <SuspendRentModal
         visible={suspendOpen}
@@ -1077,7 +969,7 @@ export default function UserDetailView({
         onConfirm={handleSuspendConfirm}
         loading={suspendSubmitting}
       />
-    
+
       <DeleteModal
         visible={deleteOpen}
         onClose={() => setDeleteOpen(false)}

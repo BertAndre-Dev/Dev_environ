@@ -354,17 +354,20 @@ export default function AdminUserPage() {
       exportable: false,
       render: (item: AdminUserData) => (
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              if (item.id) router.push(`/dashboard/admin/user/${item.id}`);
-            }}
-            title="View user details"
-            disabled={!item.id}
-          >
-            <Eye className="w-4 h-4 text-[#0150AC]" />
-          </Button>
+          {item.role?.toLowerCase() === "resident" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (item.id) router.push(`/dashboard/admin/user/${item.id}`);
+              }}
+              title="View user details"
+              disabled={!item.id}
+              className="text-[#0150AC] hover:bg-blue-50 hover:text-[#60A5FA]"
+            >
+              <Eye className="w-4 h-4" />
+            </Button>
+          )}
 
           {item.isActive ? (
             <Button

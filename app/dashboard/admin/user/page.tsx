@@ -317,7 +317,7 @@ export default function AdminUserPage() {
     { key: "lastName", header: "Last Name" },
     { key: "email", header: "Email" },
     ...getAddressColumns(allAdminUsers),
-    { key: "role", header: "Role" },
+    // { key: "role", header: "Role" },
     ...(showResidentColumns
       ? [
           {

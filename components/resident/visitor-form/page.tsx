@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/iso-date-picker";
 import { toast } from "react-toastify";
 import { formatAddressEntryLabel } from "@/lib/address";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 /** Normalize API / datetime values to YYYY-MM-DD for IsoDatePicker. */
 function toDateOnlyValue(val?: string | null) {
@@ -140,8 +141,9 @@ export default function VisitorForm({
           ]);
           if (visitor.address) setAddressLabel(visitor.address);
         }
-      } catch (err: any) {
-        toast.error(err?.message || "Failed to load visitor details");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setLoading(false);
       }
@@ -306,13 +308,9 @@ export default function VisitorForm({
 
       onSubmitSuccess?.();
       onClose?.();
-    } catch (err: any) {
-      const apiMessage = Array.isArray(err?.message)
-        ? err.message.join(", ")
-        : err?.message;
-      toast.error(
-        apiMessage || `Failed to ${isEdit ? "update" : "create"} visitor`,
-      );
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSubmitting(false);
     }

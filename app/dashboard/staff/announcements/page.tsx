@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Loader from "@/components/ui/Loader";
 import { isPending, isSettled } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { Bell, Megaphone, FileText, Paperclip } from "lucide-react";
 import Modal from "@/components/modal/page";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
@@ -155,12 +156,12 @@ export default function StaffAnnouncementsPage() {
 
   useEffect(() => {
     if (!estateId || bootstrapping) return;
-    dispatch(
-      getStaffAnnouncements({ estateId, page, limit: PAGE_SIZE }),
-    ).catch((err: unknown) => {
-      const e = err as { message?: string };
-      toast.error(e?.message ?? "Failed to load announcements.");
-    });
+    dispatch(getStaffAnnouncements({ estateId, page, limit: PAGE_SIZE }))
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId, page, bootstrapping]);
 
   const listLoading = isPending(getListStatus);

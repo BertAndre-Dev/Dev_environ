@@ -30,9 +30,10 @@ import type { WalletData } from "@/redux/slice/resident/wallet-mgt/wallet-mgt-sl
 import Loader from "@/components/ui/Loader";
 import { CopyButton } from "@/components/ui/copy-button";
 import { ResidentWalletCard } from "@/components/resident/wallet/ResidentWalletCard";
-import { ResidentVirtualAccountCard } from "@/components/resident/wallet/ResidentVirtualAccountCard";
+// import { ResidentVirtualAccountCard } from "@/components/resident/wallet/ResidentVirtualAccountCard";
 import { formatDateTime } from "@/lib/format-date";
 import { isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 // Payment VA implementation commented out — UI only
 // import {
 //   clearBvnConsentSession,
@@ -141,9 +142,9 @@ export default function TransactionPage() {
 
         if (!walletRes?.data?.id)
           toast.warning("No wallet found for this user.");
-      } catch (err) {
-        // console.error("❌ Initialization error:", err);
-        toast.error("Failed to load data.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     })();
   }, [dispatch, limit]);
@@ -174,8 +175,8 @@ export default function TransactionPage() {
       toast.success("Wallet created successfully.");
       dispatch(getWallet(userId));
     } catch (error: unknown) {
-      const msg = (error as { message?: string })?.message || "Failed to create wallet.";
-      toast.error(msg);
+      const message = getApiErrorMessage(error);
+      if (message) toast.error(message);
     }
   };
   const handleCreateWalletSuccess = () => {
@@ -233,12 +234,9 @@ export default function TransactionPage() {
       toast.success("Funds transferred to main balance.");
       await dispatch(getWallet(userId));
       handleCloseTransferToBalanceModal();
-    } catch (err: any) {
-      toast.error(
-        err?.message ??
-          err?.payload?.message ??
-          "Failed to transfer funds to main balance.",
-      );
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       setTransferToBalanceLoading(false);
     }
   };
@@ -291,8 +289,9 @@ export default function TransactionPage() {
       if (!paymentUrl) throw new Error("Payment URL not received");
       window.location.assign(paymentUrl);
       setContinuingPaymentTxRef(null);
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to continue payment.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       setContinuingPaymentTxRef(null);
     }
   };
@@ -345,8 +344,9 @@ export default function TransactionPage() {
       if (!paymentUrl) throw new Error("Payment URL not received");
 
       window.location.assign(paymentUrl);
-    } catch (err: any) {
-      toast.error(err?.message);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -392,11 +392,10 @@ export default function TransactionPage() {
           url.searchParams.delete(key),
         );
         window.history.replaceState({}, document.title, url.toString());
-      } catch (err: any) {
+      } catch (err: unknown) {
         // console.error("❌ Verification failed:", err);
-        const errorMessage =
-          err?.message || err?.payload?.message || "Verification failed";
-        toast.error(errorMessage);
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     };
 

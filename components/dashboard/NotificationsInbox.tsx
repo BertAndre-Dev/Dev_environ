@@ -19,6 +19,7 @@ import {
   resolveNotificationHref,
 } from "@/lib/notifications";
 import { isBusy, isPending, isSettled } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
@@ -76,12 +77,12 @@ export function NotificationsInbox() {
         sortBy: "createdAt",
         sortOrder: "desc",
       }),
-    ).catch((err: unknown) =>
-      toast.error(
-        (err as { message?: string })?.message ??
-          "Failed to load notifications.",
-      ),
-    );
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, page, status, priority, type]);
 
   const loading = isPending(getStatus);
@@ -108,9 +109,8 @@ export function NotificationsInbox() {
       try {
         await dispatch(markNotificationRead(item.id)).unwrap();
       } catch (err: unknown) {
-        toast.error(
-          typeof err === "string" ? err : "Failed to mark as read",
-        );
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     }
 
@@ -129,7 +129,8 @@ export function NotificationsInbox() {
       await dispatch(markNotificationRead(id)).unwrap();
       toast.success("Marked as read");
     } catch (err: unknown) {
-      toast.error(typeof err === "string" ? err : "Failed to mark as read");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -139,9 +140,8 @@ export function NotificationsInbox() {
       await dispatch(markNotificationsReadMultiple(unreadOnPage)).unwrap();
       toast.success("Marked page as read");
     } catch (err: unknown) {
-      toast.error(
-        typeof err === "string" ? err : "Failed to mark notifications as read",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -151,9 +151,8 @@ export function NotificationsInbox() {
       toast.success(res.message || "All notifications cleared");
       setPage(1);
     } catch (err: unknown) {
-      toast.error(
-        typeof err === "string" ? err : "Failed to clear notifications",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     }
   };

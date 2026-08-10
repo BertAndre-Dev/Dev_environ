@@ -14,6 +14,7 @@ import {
 import type { RootState, AppDispatch } from "@/redux/store";
 import Loader from "@/components/ui/Loader";
 import { isPending, isSettled } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 import Pagination from "@/components/pagination/page";
 
 const PAGE_SIZE = 10;
@@ -81,7 +82,11 @@ export default function ResidentMarketplacePage() {
         category: categoryFilter !== "All" ? categoryFilter : undefined,
       }),
     )
-      .catch(() => toast.error("Failed to load marketplace."))
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      })
       .finally(() => setBootstrapping(false));
   }, [dispatch, page, categoryFilter]);
 

@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { forgotPassword, resetPassword } from "@/redux/slice/auth-mgt/auth-mgt";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch, RootState } from "@/redux/store";
 
 type ResetFormState = {
@@ -67,13 +68,12 @@ export function ChangePasswordCard() {
       ).unwrap();
       toast.success(res?.message || "Reset code sent to your email");
       setCodeSent(true); // Show reset password section
-    } catch (err: any) {
-      const message =
-        err?.message ||
-        err?.payload ||
-        "Failed to send reset code. Please try again.";
-      setForgotError(message);
-      toast.error(message);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) {
+        setForgotError(message);
+        toast.error(message);
+      }
     } finally {
       setForgotLoading(false);
     }
@@ -118,13 +118,12 @@ export function ChangePasswordCard() {
         confirmPassword: "",
       });
       setCodeSent(false); // Hide reset section after successful reset
-    } catch (err: any) {
-      const message =
-        err?.message ||
-        err?.payload ||
-        "Failed to reset password. Please try again.";
-      setResetError(message);
-      toast.error(message);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) {
+        setResetError(message);
+        toast.error(message);
+      }
     } finally {
       setResetLoading(false);
     }

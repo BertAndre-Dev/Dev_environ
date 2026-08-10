@@ -20,6 +20,7 @@ import { normalizeAddresses, formatAddressLabel, type AddressOption } from "@/li
 import SwitchAddress from "@/components/resident/switch-address/page";
 import Loader from "@/components/ui/Loader";
 import { isBusy, isPending, isSettled } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export default function ResidentMaintenancePage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -70,7 +71,8 @@ export default function ResidentMaintenancePage() {
         setAddressOptions(addresses);
         setSelectedAddressId((prev) => prev ?? firstId);
       } catch (err: unknown) {
-        toast.error((err as { message?: string })?.message ?? "Failed to load user.");
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setBootstrapping(false);
       }
@@ -79,10 +81,12 @@ export default function ResidentMaintenancePage() {
 
   useEffect(() => {
     if (!selectedAddressId) return;
-    dispatch(getComplaintsByAddress({ addressId: selectedAddressId, page: 1, limit: 50 })).catch(
-      (err: unknown) =>
-        toast.error((err as { message?: string })?.message ?? "Failed to load requests.")
-    );
+    dispatch(getComplaintsByAddress({ addressId: selectedAddressId, page: 1, limit: 50 }))
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [selectedAddressId, dispatch]);
 
   useEffect(() => {

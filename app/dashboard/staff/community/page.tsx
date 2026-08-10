@@ -19,6 +19,7 @@ import {
 import { groupMessageToCommunity } from "@/lib/community-chat-map";
 import { displayNameFromSignedInUser } from "@/lib/user-display-name";
 import { extractUserId } from "@/lib/user-id";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
   clearStaffGroupDetail,
@@ -146,14 +147,8 @@ export default function StaffCommunityChatPage() {
         dispatch(clearStaffCommunityError());
       } catch (e: unknown) {
         if (cancelled) return;
-        const msg =
-          e &&
-          typeof e === "object" &&
-          "message" in e &&
-          typeof (e as { message?: string }).message === "string"
-            ? (e as { message: string }).message
-            : "Failed to load groups.";
-        toast.error(msg);
+        const message = getApiErrorMessage(e);
+        if (message) toast.error(message);
       }
     })();
     return () => {
@@ -183,14 +178,8 @@ export default function StaffCommunityChatPage() {
         await dispatch(getStaffChatGroupById({ groupId: selectedId })).unwrap();
       } catch (e: unknown) {
         if (cancelled) return;
-        const msg =
-          e &&
-          typeof e === "object" &&
-          "message" in e &&
-          typeof (e as { message?: string }).message === "string"
-            ? (e as { message: string }).message
-            : "Failed to load group details.";
-        toast.error(msg);
+        const message = getApiErrorMessage(e);
+        if (message) toast.error(message);
       }
     })();
     return () => {
@@ -212,14 +201,8 @@ export default function StaffCommunityChatPage() {
         ).unwrap();
       } catch (e: unknown) {
         if (cancelled) return;
-        const msg =
-          e &&
-          typeof e === "object" &&
-          "message" in e &&
-          typeof (e as { message?: string }).message === "string"
-            ? (e as { message: string }).message
-            : "Failed to load messages.";
-        toast.error(msg);
+        const message = getApiErrorMessage(e);
+        if (message) toast.error(message);
       }
     })();
     return () => {
@@ -319,14 +302,8 @@ export default function StaffCommunityChatPage() {
         }
         setDraftByGroup((prev) => ({ ...prev, [selectedId]: "" }));
       } catch (e: unknown) {
-        const msg =
-          e &&
-          typeof e === "object" &&
-          "message" in e &&
-          typeof (e as { message?: string }).message === "string"
-            ? (e as { message: string }).message
-            : "Could not send message.";
-        toast.error(msg);
+        const message = getApiErrorMessage(e);
+        if (message) toast.error(message);
         throw e;
       }
     },
@@ -397,8 +374,8 @@ export default function StaffCommunityChatPage() {
       toast.success("Message deleted.");
       setMessageToDelete(null);
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to delete message.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     }
   };

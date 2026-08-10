@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-toastify";
 import { formatAddressEntryLabel } from "@/lib/address";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 interface OccupantFormProps {
   addressId: string | { id: string; data: { block: string; unit: string } };
@@ -88,11 +89,9 @@ export default function OccupantForm({
       toast.success("Occupant added successfully");
       await onSubmitSuccess?.();
       onClose?.();
-    } catch (err: any) {
-      const apiMessage = Array.isArray(err?.message)
-        ? err.message.join(", ")
-        : err?.message;
-      toast.error(apiMessage || "Failed to add occupant");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSubmitting(false);
     }

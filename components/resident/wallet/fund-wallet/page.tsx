@@ -9,6 +9,7 @@ import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getPaymentGateways } from "@/redux/slice/resident/payment-mgt/payment-mgt";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 const countries = [
   { code: "NG", currency: "NGN", name: "Nigeria" },
@@ -135,8 +136,9 @@ export default function FundWalletForm({
       });
 
       onClose?.();
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to fund wallet.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSubmitting(false);
     }

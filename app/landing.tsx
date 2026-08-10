@@ -4,6 +4,7 @@ import Navbar from "@/components/landing-page/navbar";
 import HeroSection from "@/components/landing-page/heroSection";
 import CallToActionSection from "@/components/landing-page/callToActionSection";
 import FAQSection from "@/components/landing-page/faqSection";
+import BlogSection from "@/components/landing-page/blogSection";
 import FeaturesShowcaseSection from "@/components/landing-page/featuresShowcaseSection";
 import BertaShowcaseSection from "@/components/landing-page/bertaShowcaseSection";
 import FeaturesSection from "@/components/landing-page/featuresSection";
@@ -21,7 +22,8 @@ export default function Home() {
         <FeaturesSection />
         <BertaShowcaseSection />
         <FAQSection />
-        <CallToActionSection />
+        <BlogSection />
+        {/* <CallToActionSection /> */}
       </main>
       <Footer />
     </div>

@@ -398,27 +398,29 @@ export default function PayBillsPage() {
           pageLoading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
-        <h1 className="text-2xl font-bold">Pay Bills</h1>
-        <p className="text-sm text-muted-foreground">
-          Pay your bills securely and conveniently.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ResidentWalletCard
-            wallet={wallet}
-            isOwner={isOwner}
-            formatNaira={formatNaira}
-            variant="fundOnly"
-            walletLoading={walletLoading}
-            createWalletState={String(createWalletState)}
-            createWalletModalOpen={createWalletModalOpen}
-            onFundWalletClick={handleOpenModal}
-            onWithdrawClick={() => {}}
-            onTransferToBalanceClick={() => {}}
-            onCreateWalletClick={handleCreateWalletClick}
-          />
-
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Pay Bills</h1>
+            <p className="text-sm text-muted-foreground">
+              Pay your bills securely and conveniently.
+            </p>
+          </div>
           <UpdatePinCard onSubmitPin={handleUpdateBillPin} />
         </div>
+
+        <ResidentWalletCard
+          wallet={wallet}
+          isOwner={isOwner}
+          formatNaira={formatNaira}
+          variant="fundOnly"
+          walletLoading={walletLoading}
+          createWalletState={String(createWalletState)}
+          createWalletModalOpen={createWalletModalOpen}
+          onFundWalletClick={handleOpenModal}
+          onWithdrawClick={() => {}}
+          onTransferToBalanceClick={() => {}}
+          onCreateWalletClick={handleCreateWalletClick}
+        />
 
         <BillPaymentFormCard
           billsPayment={billsPayment}

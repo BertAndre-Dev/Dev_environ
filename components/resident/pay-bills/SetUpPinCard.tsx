@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -224,10 +225,9 @@ export function SetUpPinCard({
       setPin(EMPTY_PIN());
       setConfirmPin(EMPTY_PIN());
       setMismatch(false);
-    } catch (err: any) {
-      toast.error(
-        err?.message ?? err?.payload?.message ?? "Failed to set PIN.",
-      );
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSubmitting(false);
     }

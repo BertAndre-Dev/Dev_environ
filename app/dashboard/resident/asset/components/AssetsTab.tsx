@@ -18,6 +18,7 @@ import {
   type AssetCategory,
   type CreateAssetItemPayload,
 } from "@/redux/slice/resident/asset-mgt/resident-asset";
+import { getApiErrorMessage } from "@/lib/api-error";
 import AssetFormModal from "./AssetFormModal";
 
 const PAGE_SIZE = 10;
@@ -84,7 +85,10 @@ export default function AssetsTab({ estateId, estateName }: Readonly<Props>) {
     if (!estateId) return;
     dispatch(getAssets({ estateId, page, limit: PAGE_SIZE, search }))
       .unwrap()
-      .catch(() => toast.error("Failed to load assets."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId, page, search]);
 
   const columns = useMemo(
@@ -184,9 +188,8 @@ export default function AssetsTab({ estateId, estateName }: Readonly<Props>) {
       setItemToDelete(null);
       setPage(1);
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to delete asset.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     }
   };
@@ -215,9 +218,8 @@ export default function AssetsTab({ estateId, estateName }: Readonly<Props>) {
       setEditing(null);
       setPage(1);
     } catch (err: unknown) {
-      const message =
-        (err as { message?: string })?.message ?? "Failed to save asset.";
-      toast.error(message);
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 

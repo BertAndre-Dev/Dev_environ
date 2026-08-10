@@ -17,6 +17,7 @@ import {
 import AnnouncementsStatsGrid from "@/components/admin/announcements/announcements-stats-grid/page";
 import Pagination from "@/components/pagination/page";
 import { buildReadOnlyAnnouncementStatsCards } from "@/lib/announcement-stats";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { RootState, AppDispatch } from "@/redux/store";
 
 const PAGE_SIZE = 10;
@@ -156,10 +157,12 @@ export default function ResidentAnnouncementsPage() {
     if (!estateId || bootstrapping) return;
     dispatch(
       getResidentAnnouncements({ estateId, page, limit: PAGE_SIZE }),
-    ).catch((err: unknown) => {
-      const e = err as { message?: string };
-      toast.error(e?.message ?? "Failed to load announcements.");
-    });
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId, page, bootstrapping]);
 
   const listLoading = isPending(getListStatus);

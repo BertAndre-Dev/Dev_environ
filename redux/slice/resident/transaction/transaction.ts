@@ -51,9 +51,11 @@ export const createTransaction = createAsyncThunk(
             const res = await axiosInstance.post("/api/v1/transaction-mgt", data);
             return res.data; 
         } catch (error: any) {
-            return rejectWithValue({
-                message: error.res?.data?.message || "Transaction created successfully."
-            })
+            return rejectWithValue(
+                error?.response?.data || {
+                    message: "Failed to create transaction.",
+                },
+            );
         }
     }
 );
@@ -120,9 +122,11 @@ export const getTransaction = createAsyncThunk(
       const res = await axiosInstance.get(`/api/v1/transaction-mgt/history/${transId}?transId=${transId}`);
       return res.data;
     } catch (error: any) {
-      return rejectWithValue({
-        message: error.res?.data?.message || "Failed to fetch transactions",
-      });
+      return rejectWithValue(
+        error?.response?.data || {
+          message: "Failed to fetch transactions",
+        },
+      );
     }
   }
 );

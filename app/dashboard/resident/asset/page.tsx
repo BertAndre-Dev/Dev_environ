@@ -10,6 +10,7 @@ import { isPending } from "@/lib/async-status";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { parseResidentEstate } from "./lib/estate";
+import { getApiErrorMessage } from "@/lib/api-error";
 import AssetCategoriesTab from "./components/AssetCategoriesTab";
 import AssetsTab from "./components/AssetsTab";
 import AssetStatsCards from "./components/AssetStatsCards";
@@ -50,8 +51,9 @@ export default function ResidentAssetPage() {
         }
         setEstateId(estate.id);
         setEstateName(estate.name);
-      } catch {
-        toast.error("Failed to load estate information.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setBootstrapping(false);
       }

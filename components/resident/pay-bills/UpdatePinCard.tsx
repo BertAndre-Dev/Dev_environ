@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/modal/page";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -252,10 +253,9 @@ export function UpdatePinCard({
       setSubmitting(true);
       await onSubmitPin({ currentPin: currentValue, newPin: newValue });
       resetForm();
-    } catch (err: any) {
-      toast.error(
-        err?.message ?? err?.payload?.message ?? "Failed to update PIN.",
-      );
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSubmitting(false);
     }

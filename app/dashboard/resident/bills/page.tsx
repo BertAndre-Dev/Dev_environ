@@ -31,6 +31,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
 import Loader from "@/components/ui/Loader";
 import { isPending, isSettled } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 type BillsTab = "estate" | "assigned";
 
@@ -179,8 +180,9 @@ export default function BillPage() {
             getBillsByEstate({ estateId: eId, page: 1, limit: 50 }),
           ).unwrap();
         }
-      } catch (err: any) {
-        toast.error(err?.message || "Failed to fetch bills or user info");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setBootstrapping(false);
       }
@@ -200,7 +202,12 @@ export default function BillPage() {
         startDate: shouldApplyDate ? paidStartDate : undefined,
         endDate: shouldApplyDate ? paidEndDate : undefined,
       }),
-    ).catch(() => toast.error("Failed to fetch paid bills"));
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, userId, paidStartDate, paidEndDate]);
 
   // Assigned bills for selected address
@@ -217,7 +224,12 @@ export default function BillPage() {
         page: 1,
         limit: 50,
       }),
-    ).catch(() => toast.error("Failed to fetch assigned bills"));
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, selectedAddressId, estateId]);
 
   const refreshAfterPay = async () => {
@@ -288,10 +300,9 @@ export default function BillPage() {
       ).unwrap();
       toast.success("Bill payment successful");
       await refreshAfterPay();
-    } catch (err: any) {
-      toast.error(
-        err?.message || err?.payload?.message || "Failed to pay bill",
-      );
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -539,7 +550,12 @@ export default function BillPage() {
                   startDate: shouldApplyDate ? paidStartDate : undefined,
                   endDate: shouldApplyDate ? paidEndDate : undefined,
                 }),
-              ).catch(() => toast.error("Failed to change page"));
+              )
+                .unwrap()
+                .catch((err: unknown) => {
+                  const message = getApiErrorMessage(err);
+                  if (message) toast.error(message);
+                });
             }}
             enableExport
             exportFileName="paid-bills"

@@ -104,13 +104,13 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
 
   return (
     <form onSubmit={handleSubmit}>
-      <CardHeader>
+      <CardHeader className="px-0">
         <CardTitle className="text-lg pb-4 pt-8 font-semibold">
           {initialData?.id ? "Update Estate Bill" : "Create Estate Bill"}
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 px-0">
         {loading ? (
           <p className="text-gray-500 italic">Loading...</p>
         ) : (

@@ -20,6 +20,7 @@ interface BillFormState {
   name: string;
   description: string;
   yearlyAmount: number | string;
+  compulsory: boolean;
   id?: string;
 }
 
@@ -29,6 +30,7 @@ export interface BillSubmitData {
   name: string;
   description: string;
   yearlyAmount: number;
+  compulsory?: boolean;
   id?: string;
 }
 
@@ -44,6 +46,7 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
     name: "",
     description: "",
     yearlyAmount: "",
+    compulsory: false,
   });
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
@@ -67,6 +70,7 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
             yearlyAmount: fetchData.yearlyAmount
               ? formatAmountInput(String(fetchData.yearlyAmount))
               : "",
+            compulsory: Boolean(fetchData.compulsory),
           });
         }
       } catch (error: any) {
@@ -79,7 +83,10 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
     fetchExistingBill();
   }, [dispatch, estateId, initialData]);
 
-  const handleChange = (field: keyof BillFormState, value: string | number) => {
+  const handleChange = (
+    field: keyof BillFormState,
+    value: string | number | boolean,
+  ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -90,6 +97,7 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       name: formData.name,
       description: formData.description,
       yearlyAmount: parseFormattedNumber(formData.yearlyAmount),
+      compulsory: formData.compulsory,
     };
     onSubmit(payload);
   };
@@ -139,6 +147,24 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
                 placeholder="1,200,000"
                 required
               />
+            </div>
+
+            <div className="flex items-start gap-3 p-3">
+              <input
+                id="estate-bill-compulsory"
+                type="checkbox"
+                checked={formData.compulsory}
+                onChange={(e) => handleChange("compulsory", e.target.checked)}
+                className="mt-1 rounded border-input"
+              />
+              <div>
+                <Label
+                  htmlFor="estate-bill-compulsory"
+                  className="cursor-pointer font-medium"
+                >
+                  Compulsory bill
+                </Label>
+              </div>
             </div>
           </div>
         )}

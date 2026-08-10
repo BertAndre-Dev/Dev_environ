@@ -27,6 +27,7 @@ export interface BillForAddressFormData {
   amount: number;
   frequency: BillForAddressFrequency;
   isServiceCharge: boolean;
+  compulsory: boolean;
 }
 
 export interface BillForAddressInitialData {
@@ -37,6 +38,7 @@ export interface BillForAddressInitialData {
   description?: string;
   amount?: number;
   frequency?: string;
+  compulsory?: boolean;
 }
 
 interface ResidentRecord {
@@ -96,6 +98,7 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
       initialData?.amount != null
         ? formatAmountInput(String(initialData.amount))
         : "",
+    compulsory: Boolean(initialData?.compulsory),
   });
 
   const attachedResidentName = useMemo(() => {
@@ -204,6 +207,9 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
                 0,
             ),
           ),
+          compulsory: Boolean(
+            fetchData.compulsory ?? initialData?.compulsory ?? prev.compulsory,
+          ),
         }));
       } catch (error: any) {
         toast.error(error?.message || "Failed to load bill");
@@ -215,7 +221,10 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
     loadBill();
   }, [dispatch, initialData]);
 
-  const handleChange = (field: keyof typeof form, value: string) => {
+  const handleChange = (
+    field: keyof typeof form,
+    value: string | boolean,
+  ) => {
     setForm((prev) => ({
       ...prev,
       [field]: value,
@@ -251,6 +260,7 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
         amount,
         frequency: "oneOff",
         isServiceCharge: false,
+        compulsory: form.compulsory,
       });
     } finally {
       setSubmitting(false);
@@ -349,6 +359,24 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
                 }
                 placeholder="25,000"
               />
+            </div>
+
+            <div className="flex items-start gap-2 p-3">
+              <input
+                id="address-bill-compulsory"
+                type="checkbox"
+                checked={form.compulsory}
+                onChange={(e) => handleChange("compulsory", e.target.checked)}
+                className="mt-1 rounded border-input"
+              />
+              <div>
+                <Label
+                  htmlFor="address-bill-compulsory"
+                  className="cursor-pointer font-medium"
+                >
+                  Compulsory bill
+                </Label>
+              </div>
             </div>
           </>
         )}

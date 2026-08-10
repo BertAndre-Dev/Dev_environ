@@ -4,7 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Edit2, Trash2, ScrollText, Power, PowerOff } from "lucide-react";
+import { Plus, Edit2, Trash2, ScrollText, Power, PowerOff, ChevronDown } from "lucide-react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import BillsForm, {
@@ -49,6 +50,7 @@ interface BillData {
   description: string;
   yearlyAmount: number;
   isActive?: boolean;
+  compulsory?: boolean;
 }
 
 type BillsTab = "bills" | "assigned";
@@ -297,6 +299,7 @@ export default function BillPage() {
       name: item.billName,
       amount: item.amountDue ?? item.amount ?? item.amountPaid,
       frequency: item.frequency,
+      compulsory: item.compulsory,
     });
     setAssignModalOpen(true);
   };
@@ -435,6 +438,7 @@ export default function BillPage() {
               description: data.description,
               amount: data.amount,
               isServiceCharge: data.isServiceCharge,
+              compulsory: data.compulsory,
             },
           }),
         ).unwrap();
@@ -449,6 +453,7 @@ export default function BillPage() {
             amount: data.amount,
             frequency: data.frequency,
             isServiceCharge: data.isServiceCharge,
+            compulsory: data.compulsory,
           }),
         ).unwrap();
         toast.success("Bill created for address successfully.");
@@ -495,6 +500,21 @@ export default function BillPage() {
       key: "yearlyAmount",
       header: "Amount (₦)",
       render: (item: BillData) => formatAmountDisplay(item.yearlyAmount),
+    },
+    {
+      key: "compulsory",
+      header: "Compulsory",
+      render: (item: BillData) => (
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+            item.compulsory
+              ? "bg-amber-100 text-amber-800"
+              : "bg-slate-100 text-slate-600"
+          }`}
+        >
+          {item.compulsory ? "Yes" : "No"}
+        </span>
+      ),
     },
     {
       key: "isActive",
@@ -594,6 +614,21 @@ export default function BillPage() {
         ),
     },
     {
+      key: "compulsory",
+      header: "Compulsory",
+      render: (item) => (
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+            item.compulsory
+              ? "bg-amber-100 text-amber-800"
+              : "bg-slate-100 text-slate-600"
+          }`}
+        >
+          {item.compulsory ? "Yes" : "No"}
+        </span>
+      ),
+    },
+    {
       key: "status",
       header: "Status",
       render: (item) => {
@@ -677,23 +712,37 @@ export default function BillPage() {
               .
             </p>
           </div>
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <Button
-              onClick={() => handleOpenModal()}
-              className="flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Create Bill
-            </Button>
-            <Button
-              variant="outline"
-              className="flex items-center gap-2"
-              onClick={openAssignModal}
-            >
-              <ScrollText className="w-4 h-4" />
-              Assign Bill
-            </Button>
-          </div>
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild>
+              <Button className="flex items-center gap-2 cursor-pointer">
+                <Plus className="w-4 h-4" />
+                Add Bill
+                <ChevronDown className="w-4 h-4" />
+              </Button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content
+                align="end"
+                sideOffset={8}
+                className="z-50 min-w-[180px] rounded-md border bg-white p-1 shadow-md"
+              >
+                <DropdownMenu.Item
+                  onSelect={() => handleOpenModal()}
+                  className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100 flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Bill
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  onSelect={() => openAssignModal()}
+                  className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100 flex items-center gap-2"
+                >
+                  <ScrollText className="w-4 h-4" />
+                  Assign Bill
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
         </div>
 
         <div className="grid grid-cols-1 gap-4 max-w-sm">

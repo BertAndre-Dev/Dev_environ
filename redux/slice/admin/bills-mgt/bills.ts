@@ -6,6 +6,7 @@ interface BillData {
   name: string;
   description: string;
   yearlyAmount: number;
+  compulsory?: boolean;
 }
 
 export interface CreateBillForAddressPayload {
@@ -16,6 +17,7 @@ export interface CreateBillForAddressPayload {
   amount: number;
   frequency: "quarterly" | "yearly" | "oneOff";
   isServiceCharge: boolean;
+  compulsory?: boolean;
 }
 
 export interface UpdateBillPayload {
@@ -23,6 +25,7 @@ export interface UpdateBillPayload {
   name: string;
   description: string;
   yearlyAmount: number;
+  compulsory?: boolean;
 }
 
 export interface UpdateBillForAddressPayload {
@@ -30,6 +33,7 @@ export interface UpdateBillForAddressPayload {
   description: string;
   amount: number;
   isServiceCharge: boolean;
+  compulsory?: boolean;
 }
 
 // Create estate bill
@@ -86,6 +90,7 @@ export const updateBillForAddress = createAsyncThunk(
           description: data.description,
           amount: data.amount,
           isServiceCharge: data.isServiceCharge,
+          compulsory: data.compulsory ?? false,
         },
       );
       return res.data;

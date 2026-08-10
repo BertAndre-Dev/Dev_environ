@@ -72,8 +72,10 @@ export default function ResidentUserPage() {
           return;
         }
         await dispatch(getInvitedTenants({ page: 1, limit: PAGE_SIZE })).unwrap();
-      } catch {
-        toast.error("Failed to load tenants.");
+      } catch (err: unknown) {
+        toast.error(
+          (err as { message?: string })?.message ?? "Failed to load tenants.",
+        );
       }
     })();
   }, [dispatch, router]);
@@ -88,7 +90,11 @@ export default function ResidentUserPage() {
         startDate: shouldApplyDate ? startDate : undefined,
         endDate: shouldApplyDate ? endDate : undefined,
       }),
-    ).catch(() => toast.error("Failed to load tenants."));
+    )
+      .unwrap()
+      .catch((err: { message?: string }) =>
+        toast.error(err?.message ?? "Failed to load tenants."),
+      );
   }, [dispatch, startDate, endDate]);
 
   const handlePageChange = (newPage: number) => {
@@ -99,8 +105,12 @@ export default function ResidentUserPage() {
         limit: PAGE_SIZE,
         startDate: startDate && endDate ? startDate : undefined,
         endDate: startDate && endDate ? endDate : undefined,
-      })
-    ).catch(() => toast.error("Failed to load tenants."));
+      }),
+    )
+      .unwrap()
+      .catch((err: { message?: string }) =>
+        toast.error(err?.message ?? "Failed to load tenants."),
+      );
   };
 
   const handleOpenModal = () => setOpen(true);
@@ -121,18 +131,24 @@ export default function ResidentUserPage() {
     if (!tenantToDelete) return;
     const userId = tenantToDelete.id || (tenantToDelete as { _id?: string })._id;
     if (!userId) return;
-    await dispatch(deleteUser(userId)).unwrap();
-    toast.success("Tenant deleted successfully.");
-    setTenantToDelete(null);
-    const shouldApplyDate = Boolean(startDate && endDate);
-    await dispatch(
-      getInvitedTenants({
-        page: currentPage,
-        limit: PAGE_SIZE,
-        startDate: shouldApplyDate ? startDate : undefined,
-        endDate: shouldApplyDate ? endDate : undefined,
-      }),
-    ).unwrap();
+    try {
+      await dispatch(deleteUser(userId)).unwrap();
+      toast.success("Tenant deleted successfully.");
+      setTenantToDelete(null);
+      const shouldApplyDate = Boolean(startDate && endDate);
+      await dispatch(
+        getInvitedTenants({
+          page: currentPage,
+          limit: PAGE_SIZE,
+          startDate: shouldApplyDate ? startDate : undefined,
+          endDate: shouldApplyDate ? endDate : undefined,
+        }),
+      ).unwrap();
+    } catch (err: unknown) {
+      const message = (err as { message?: string })?.message;
+      toast.error(message ?? "Failed to delete tenant.");
+      throw err;
+    }
   };
 
   const columns = [

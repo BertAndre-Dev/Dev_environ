@@ -269,12 +269,12 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <CardHeader>
-        <CardTitle className="text-lg pb-4 pt-8 font-semibold">
+      <CardHeader className="px-0 md:px-0">
+        <CardTitle className="text-lg pb-2 pt-2 font-semibold">
           {isEditing ? "Update bill for an address" : "Create bill for an address"}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4 px-0 md:px-0">
         {loadingBill ? (
           <p className="text-gray-500 italic">Loading bill...</p>
         ) : (
@@ -361,7 +361,7 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
               />
             </div>
 
-            <div className="flex items-start gap-2 p-3">
+            <div className="flex items-start gap-2">
               <input
                 id="address-bill-compulsory"
                 type="checkbox"

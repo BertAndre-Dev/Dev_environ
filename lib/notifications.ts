@@ -61,6 +61,27 @@ function complaintHref(role: string, complaintId: string): string {
   return `${roleDashboardBase(role)}/maintenance?id=${complaintId}`;
 }
 
+/** Backend `/chat/{groupId}` → role community inbox (group chat). */
+function communityChatHref(role: string, groupId?: string): string {
+  const normalized = normalizeRole(role);
+  const base = roleDashboardBase(role);
+  const rolesWithCommunity = new Set(["admin", "resident", "staff"]);
+
+  if (rolesWithCommunity.has(normalized)) {
+    if (groupId?.trim()) {
+      return `${base}/community?groupId=${encodeURIComponent(groupId.trim())}`;
+    }
+    return `${base}/community`;
+  }
+
+  // Estate-admin has support chat, not community groups.
+  if (normalized === "estate admin") {
+    return `${base}/chat`;
+  }
+
+  return getNotificationsInboxPath(role);
+}
+
 function mapActionPath(pathname: string): string {
   const clean = pathname.replace(/^\/+/, "").replace(/\/+$/, "");
   if (!clean) return "";
@@ -83,6 +104,11 @@ export function resolveNotificationHref(
   const complaintMatch = /^\/complaints\/([^/?#]+)/i.exec(url);
   if (complaintMatch?.[1]) {
     return complaintHref(role, complaintMatch[1]);
+  }
+
+  const chatMatch = /^\/chat(?:\/([^/?#]+))?\/?(?:[?#].*)?$/i.exec(url);
+  if (chatMatch) {
+    return communityChatHref(role, chatMatch[1]);
   }
 
   const qIndex = url.indexOf("?");

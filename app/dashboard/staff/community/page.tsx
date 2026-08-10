@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import DeleteModal from "@/components/resident/delete-modal/page";
@@ -42,7 +43,13 @@ import { useStaffCommunityChatGroupRoom } from "@/hooks/useStaffCommunityChatGro
 
 export default function StaffCommunityChatPage() {
   const dispatch = useDispatch<AppDispatch>();
+  const searchParams = useSearchParams();
+  const groupIdFromUrl = searchParams.get("groupId")?.trim() || "";
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (groupIdFromUrl) setSelectedId(groupIdFromUrl);
+  }, [groupIdFromUrl]);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [draftByGroup, setDraftByGroup] = useState<Record<string, string>>({});

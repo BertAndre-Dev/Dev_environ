@@ -353,8 +353,11 @@ export default function InviteTenantForm({ close }: InviteTenantFormProps) {
         await dispatch(
           getOwnerAddressesByEstate({ estateId, page: 1, limit: 200 }),
         ).unwrap();
-      } catch {
-        toast.error("Failed to load address options.");
+      } catch (err: unknown) {
+        toast.error(
+          (err as { message?: string })?.message ??
+            "Failed to load address options.",
+        );
       }
     };
     load();

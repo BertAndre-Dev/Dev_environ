@@ -7,10 +7,10 @@ import Table from "@/components/tables/list/page";
 import { toast } from "react-toastify";
 import DeleteModal from "@/components/resident/delete-modal/page";
 import { RootState, AppDispatch } from "@/redux/store";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Select from "react-select";
-import { Plus, Search, Trash, Eye } from "lucide-react";
+import { Plus, Search, Trash, Eye, X } from "lucide-react";
 import { MeterEnergyUsageSection } from "@/components/charts/meter-energy-usage-section";
 import { EstatePowerUsageSection } from "@/components/charts/estate-power-usage-section";
 import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
@@ -157,6 +157,7 @@ export default function AdminMeterManagement() {
   const [meterUsageRange, setMeterUsageRange] =
     useState<MeterUsageRange>("weekly");
   const [usageRefreshing, setUsageRefreshing] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const {
     allSuperAdminMeters,
@@ -699,8 +700,9 @@ export default function AdminMeterManagement() {
                     <Card className="p-4">
                       <div className="relative w-full max-w-sm flex items-center gap-2">
                         <div className="relative flex-1">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground cursor-pointer" />
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                           <input
+                            ref={searchInputRef}
                             placeholder="Search by meter number."
                             value={searchInput}
                             onChange={(e) =>
@@ -709,15 +711,30 @@ export default function AdminMeterManagement() {
                               )
                             }
                             onKeyDown={(e) => {
-                              if (e.key === "Enter") {
+                              const hasValue = searchInput.trim().length > 0;
+                              if (e.key === "Enter" && hasValue) {
                                 dispatch(applySuperAdminMeterSearch());
                               }
                               if (e.key === "Escape") {
                                 dispatch(clearSuperAdminMeterSearch());
+                                searchInputRef.current?.focus();
                               }
                             }}
-                            className="w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="w-full pl-9 pr-8 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                           />
+                          {searchInput.trim().length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                dispatch(clearSuperAdminMeterSearch());
+                                searchInputRef.current?.focus();
+                              }}
+                              aria-label="Clear search"
+                              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
 
                         {searchInput.trim().length > 0 && (

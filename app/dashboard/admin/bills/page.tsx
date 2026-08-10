@@ -705,7 +705,7 @@ export default function BillPage() {
               Bills Management
             </h1>
             <p className="text-muted-foreground mt-1">
-              Create, track, and manage estate bills and payments in{" "}
+              Create, track, and manage estate bills in{" "}
               <span className="text-[18px] font-bold underline uppercase text-black">
                 {estateName}
               </span>

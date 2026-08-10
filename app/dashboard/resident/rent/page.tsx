@@ -125,8 +125,11 @@ export default function ResidentRentPage() {
             getTenantRents({ page: 1, limit: PAGE_SIZE }),
           ).unwrap();
         }
-      } catch {
-        toast.error("Failed to load user or rents.");
+      } catch (err: unknown) {
+        toast.error(
+          (err as { message?: string })?.message ??
+            "Failed to load user or rents.",
+        );
       }
     })();
   }, [dispatch]);
@@ -143,7 +146,11 @@ export default function ResidentRentPage() {
           startDate: shouldApplyDate ? startDate : undefined,
           endDate: shouldApplyDate ? endDate : undefined,
         }),
-      ).catch(() => toast.error("Failed to load rents."));
+      )
+        .unwrap()
+        .catch((err: { message?: string }) =>
+          toast.error(err?.message ?? "Failed to load rents."),
+        );
     } else {
       dispatch(
         getTenantRents({
@@ -152,7 +159,11 @@ export default function ResidentRentPage() {
           startDate: shouldApplyDate ? startDate : undefined,
           endDate: shouldApplyDate ? endDate : undefined,
         }),
-      ).catch(() => toast.error("Failed to load rents."));
+      )
+        .unwrap()
+        .catch((err: { message?: string }) =>
+          toast.error(err?.message ?? "Failed to load rents."),
+        );
     }
   }, [dispatch, residentType, startDate, endDate]);
 
@@ -161,8 +172,11 @@ export default function ResidentRentPage() {
       (async () => {
         try {
           await dispatch(getInvitedTenants({ page: 1, limit: 200 })).unwrap();
-        } catch {
-          toast.error("Failed to load tenants.");
+        } catch (err: unknown) {
+          toast.error(
+            (err as { message?: string })?.message ??
+              "Failed to load tenants.",
+          );
         }
       })();
     }
@@ -179,14 +193,20 @@ export default function ResidentRentPage() {
         startDate: shouldApplyDate ? startDate : undefined,
         endDate: shouldApplyDate ? endDate : undefined,
       } as any),
-    ).catch(() => toast.error("Failed to load rents."));
+    )
+      .unwrap()
+      .catch((err: { message?: string }) =>
+        toast.error(err?.message ?? "Failed to load rents."),
+      );
   };
 
   const handleViewRent = (id: string) => {
     setViewRentId(id);
-    dispatch(getRentById(id)).catch(() =>
-      toast.error("Failed to load rent details."),
-    );
+    dispatch(getRentById(id))
+      .unwrap()
+      .catch((err: { message?: string }) =>
+        toast.error(err?.message ?? "Failed to load rent details."),
+      );
   };
 
   const refreshList = () => {
@@ -199,7 +219,11 @@ export default function ResidentRentPage() {
         startDate: shouldApplyDate ? startDate : undefined,
         endDate: shouldApplyDate ? endDate : undefined,
       } as any),
-    ).catch(() => toast.error("Failed to refresh rents."));
+    )
+      .unwrap()
+      .catch((err: { message?: string }) =>
+        toast.error(err?.message ?? "Failed to refresh rents."),
+      );
   };
 
   const handleDeleteRent = (item: RentItem) => {

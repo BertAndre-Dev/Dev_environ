@@ -104,19 +104,19 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
 
   return (
     <form onSubmit={handleSubmit}>
-      <CardHeader className="px-0">
-        <CardTitle className="text-lg pb-4 pt-8 font-semibold">
+      <CardHeader className="px-0 md:px-0">
+        <CardTitle className="text-lg pb-2 pt-2 font-semibold">
           {initialData?.id ? "Update Estate Bill" : "Create Estate Bill"}
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="space-y-6 px-0">
+      <CardContent className="space-y-4 px-0 md:px-0">
         {loading ? (
           <p className="text-gray-500 italic">Loading...</p>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div>
-              <Label className="text-[20px] font-regular">Name</Label>
+              <Label>Name</Label>
               <Input
                 type="text"
                 value={formData.name}
@@ -126,7 +126,7 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
             </div>
 
             <div>
-              <Label className="text-[20px] font-regular">Description</Label>
+              <Label>Description</Label>
               <Input
                 type="text"
                 value={formData.description}
@@ -149,7 +149,7 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
               />
             </div>
 
-            <div className="flex items-start gap-3 p-3">
+            <div className="flex items-start gap-3">
               <input
                 id="estate-bill-compulsory"
                 type="checkbox"
@@ -169,7 +169,7 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
           </div>
         )}
 
-        <div className="pt-6">
+        <div className="pt-4">
           <Button type="submit" className="w-full" disabled={!formData.name.trim()}>
             {initialData?.id ? "Update Bill" : "Create Bill"}
           </Button>

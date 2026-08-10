@@ -9,6 +9,20 @@ export function getApiErrorMessage(error: unknown): string | undefined {
 
   if (typeof error !== "object") return undefined;
 
+  // Prefer HTTP response body over Axios/Error.message ("Request failed with status code 403")
+  const responseData = (error as { response?: { data?: unknown } }).response
+    ?.data;
+  if (responseData && responseData !== error) {
+    const fromResponse = getApiErrorMessage(responseData);
+    if (fromResponse) return fromResponse;
+  }
+
+  const nestedData = (error as { data?: unknown }).data;
+  if (nestedData && nestedData !== error && typeof nestedData === "object") {
+    const fromData = getApiErrorMessage(nestedData);
+    if (fromData) return fromData;
+  }
+
   const message = (error as { message?: unknown }).message;
   if (typeof message === "string") {
     const trimmed = message.trim();
@@ -19,12 +33,6 @@ export function getApiErrorMessage(error: unknown): string | undefined {
       .filter((item): item is string => typeof item === "string" && Boolean(item.trim()))
       .join(", ");
     return joined || undefined;
-  }
-
-  const responseData = (error as { response?: { data?: unknown } }).response
-    ?.data;
-  if (responseData && responseData !== error) {
-    return getApiErrorMessage(responseData);
   }
 
   return undefined;

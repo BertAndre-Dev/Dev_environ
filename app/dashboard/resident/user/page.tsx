@@ -17,6 +17,7 @@ import { deleteUser } from "@/redux/slice/admin/user-mgt/user";
 import type { RootState, AppDispatch } from "@/redux/store";
 import { toast } from "react-toastify";
 import Loader from "@/components/ui/Loader";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 const PAGE_SIZE = 10;
 
@@ -73,9 +74,8 @@ export default function ResidentUserPage() {
         }
         await dispatch(getInvitedTenants({ page: 1, limit: PAGE_SIZE })).unwrap();
       } catch (err: unknown) {
-        toast.error(
-          (err as { message?: string })?.message ?? "Failed to load tenants.",
-        );
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     })();
   }, [dispatch, router]);
@@ -92,9 +92,10 @@ export default function ResidentUserPage() {
       }),
     )
       .unwrap()
-      .catch((err: { message?: string }) =>
-        toast.error(err?.message ?? "Failed to load tenants."),
-      );
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, startDate, endDate]);
 
   const handlePageChange = (newPage: number) => {
@@ -108,9 +109,10 @@ export default function ResidentUserPage() {
       }),
     )
       .unwrap()
-      .catch((err: { message?: string }) =>
-        toast.error(err?.message ?? "Failed to load tenants."),
-      );
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   };
 
   const handleOpenModal = () => setOpen(true);
@@ -145,8 +147,8 @@ export default function ResidentUserPage() {
         }),
       ).unwrap();
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to delete tenant.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     }
   };

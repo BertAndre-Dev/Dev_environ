@@ -44,6 +44,7 @@ import {
 import type { RootState, AppDispatch } from "@/redux/store";
 import Loader from "@/components/ui/Loader";
 import { isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 const PAGE_SIZE = 10;
 
@@ -126,10 +127,8 @@ export default function ResidentRentPage() {
           ).unwrap();
         }
       } catch (err: unknown) {
-        toast.error(
-          (err as { message?: string })?.message ??
-            "Failed to load user or rents.",
-        );
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     })();
   }, [dispatch]);
@@ -148,9 +147,10 @@ export default function ResidentRentPage() {
         }),
       )
         .unwrap()
-        .catch((err: { message?: string }) =>
-          toast.error(err?.message ?? "Failed to load rents."),
-        );
+        .catch((err: unknown) => {
+          const message = getApiErrorMessage(err);
+          if (message) toast.error(message);
+        });
     } else {
       dispatch(
         getTenantRents({
@@ -161,9 +161,10 @@ export default function ResidentRentPage() {
         }),
       )
         .unwrap()
-        .catch((err: { message?: string }) =>
-          toast.error(err?.message ?? "Failed to load rents."),
-        );
+        .catch((err: unknown) => {
+          const message = getApiErrorMessage(err);
+          if (message) toast.error(message);
+        });
     }
   }, [dispatch, residentType, startDate, endDate]);
 
@@ -173,10 +174,8 @@ export default function ResidentRentPage() {
         try {
           await dispatch(getInvitedTenants({ page: 1, limit: 200 })).unwrap();
         } catch (err: unknown) {
-          toast.error(
-            (err as { message?: string })?.message ??
-              "Failed to load tenants.",
-          );
+          const message = getApiErrorMessage(err);
+          if (message) toast.error(message);
         }
       })();
     }
@@ -195,18 +194,20 @@ export default function ResidentRentPage() {
       } as any),
     )
       .unwrap()
-      .catch((err: { message?: string }) =>
-        toast.error(err?.message ?? "Failed to load rents."),
-      );
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   };
 
   const handleViewRent = (id: string) => {
     setViewRentId(id);
     dispatch(getRentById(id))
       .unwrap()
-      .catch((err: { message?: string }) =>
-        toast.error(err?.message ?? "Failed to load rent details."),
-      );
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   };
 
   const refreshList = () => {
@@ -221,9 +222,10 @@ export default function ResidentRentPage() {
       } as any),
     )
       .unwrap()
-      .catch((err: { message?: string }) =>
-        toast.error(err?.message ?? "Failed to refresh rents."),
-      );
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   };
 
   const handleDeleteRent = (item: RentItem) => {
@@ -240,8 +242,8 @@ export default function ResidentRentPage() {
       setItemToDelete(null);
       refreshList();
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to delete rent.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     } finally {
       setDeleting(false);
@@ -256,9 +258,10 @@ export default function ResidentRentPage() {
         toast.success("Rent activated.");
         refreshList();
       })
-      .catch((err: { message?: string }) =>
-        toast.error(err?.message ?? "Failed to activate rent."),
-      );
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   };
 
   const handleSuspendRent = (item: RentItem) => {
@@ -277,9 +280,8 @@ export default function ResidentRentPage() {
       setSuspendRentItem(null);
       refreshList();
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to suspend rent.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSuspendSubmitting(false);
     }
@@ -320,9 +322,8 @@ export default function ResidentRentPage() {
       setPayRentItem(null);
       refreshList();
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to pay rent.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 

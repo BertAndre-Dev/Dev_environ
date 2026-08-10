@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { toast } from "react-toastify";
 import { createRent } from "@/redux/slice/resident/rent-mgt/rent-mgt";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { CreateRentPayload } from "@/redux/slice/resident/rent-mgt/rent-mgt";
 import type { InvitedTenantItem } from "@/redux/slice/resident/invited-tenants/invited-tenants";
 import type { AppDispatch } from "@/redux/store";
@@ -93,9 +94,8 @@ export default function CreateRentForm({
       toast.success("Rent created successfully.");
       onSuccess();
     } catch (err: unknown) {
-      const msg =
-        (err as { message?: string })?.message ?? "Failed to create rent.";
-      toast.error(msg);
+      const msg = getApiErrorMessage(err);
+      if (msg) toast.error(msg);
     }
   };
 

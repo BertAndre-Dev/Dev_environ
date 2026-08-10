@@ -263,6 +263,7 @@ import { getOwnerAddressesByEstate } from "@/redux/slice/resident/address-option
 import { inviteTenant } from "@/redux/slice/resident/invite-tenant/invite-tenant";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { useDispatch, useSelector } from "react-redux";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 type IdLike = string | { id?: string; _id?: string } | null | undefined;
 
@@ -354,10 +355,8 @@ export default function InviteTenantForm({ close }: InviteTenantFormProps) {
           getOwnerAddressesByEstate({ estateId, page: 1, limit: 200 }),
         ).unwrap();
       } catch (err: unknown) {
-        toast.error(
-          (err as { message?: string })?.message ??
-            "Failed to load address options.",
-        );
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     };
     load();
@@ -389,8 +388,8 @@ export default function InviteTenantForm({ close }: InviteTenantFormProps) {
       toast.success((res as { message?: string })?.message ?? "Tenant invited successfully.");
       close();
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message ?? "Failed to invite tenant.";
-      toast.error(message);
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSubmitLoading(false);
     }

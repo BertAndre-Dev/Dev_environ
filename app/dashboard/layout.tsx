@@ -25,6 +25,7 @@ import {
   selectUserRole,
 } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 import { getSignedInUser, signOut } from "@/redux/slice/auth-mgt/auth-mgt";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { clearCsrfToken, ensureCsrfToken } from "@/utils/csrf";
 import { disconnectSocket } from "@/lib/socket";
 import { CommunityChatSocketProvider } from "@/components/providers/CommunityChatSocketProvider";
@@ -146,10 +147,21 @@ export default function DashboardLayout({
       hasFetchedUser.current = true;
       dispatch(getSignedInUser())
         .unwrap()
-        .catch(() => {
-          toast.error("Session expired. Please sign in again.");
-          dispatch(logoutLocally());
-          router.push("/auth/login");
+        .catch((err: unknown) => {
+          const message = getApiErrorMessage(err);
+          const statusCode = (err as { statusCode?: number })?.statusCode;
+          const isUnauthorized =
+            statusCode === 401 ||
+            /unauthorized|session|token|expired/i.test(message ?? "");
+
+          if (message) toast.error(message);
+          else toast.error("Session expired. Please sign in again.");
+
+          // Compulsory-bill and other 403s should not force logout.
+          if (isUnauthorized || statusCode == null) {
+            dispatch(logoutLocally());
+            router.push("/auth/login");
+          }
         });
     }
   }, [dispatch, router, token]);

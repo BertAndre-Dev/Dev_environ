@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 /**
  * Payload for resident (owner) inviting a tenant.
@@ -39,11 +40,10 @@ export const inviteTenant = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
       return rejectWithValue({
-        message:
-          err?.response?.data?.message ||
-          "Failed to invite tenant.",
+        message: getApiErrorMessage(error) || "Failed to invite tenant.",
       });
     }
   }

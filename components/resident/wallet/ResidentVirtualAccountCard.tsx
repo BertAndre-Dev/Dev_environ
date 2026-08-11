@@ -14,7 +14,6 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/redux/store";
 import {
-  getFlutterwaveBvnStatus,
   getFlutterwaveVirtualAccount,
   type FlutterwaveVirtualAccount,
 } from "@/redux/slice/resident/virtual-accounts/flutterwave-va";
@@ -112,6 +111,10 @@ function ActiveVirtualAccountDetails({
         <p className="max-w-md text-xs leading-relaxed text-muted-foreground">
           Transfer here to fund your wallet. Credits appear after bank
           confirmation.
+          {typeof virtualAccount.serviceFee === "number" &&
+          virtualAccount.serviceFee > 0
+            ? ` A ₦${virtualAccount.serviceFee.toLocaleString()} service fee applies per funding.`
+            : null}
           {!hasWallet
             ? " Create a wallet if you haven’t already, so transfers can credit your balance."
             : null}
@@ -163,8 +166,8 @@ function EmptyVirtualAccountState({
         Get a permanent funding account
       </h3>
       <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
-        Verify once with BVN or NIN, then receive NGN transfers into your
-        wallet anytime—checkout funding stays the same.
+        Verify once with your NIN, then receive NGN transfers into your wallet
+        anytime—checkout funding stays the same.
       </p>
 
       {!hasWallet ? (
@@ -218,10 +221,7 @@ export function ResidentVirtualAccountCard({
     let cancelled = false;
     (async () => {
       try {
-        await Promise.all([
-          dispatch(getFlutterwaveVirtualAccount()),
-          dispatch(getFlutterwaveBvnStatus()),
-        ]);
+        await dispatch(getFlutterwaveVirtualAccount());
       } finally {
         if (!cancelled) setInitialLoadDone(true);
       }
@@ -234,10 +234,7 @@ export function ResidentVirtualAccountCard({
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await Promise.all([
-        dispatch(getFlutterwaveVirtualAccount()).unwrap(),
-        dispatch(getFlutterwaveBvnStatus()).unwrap().catch(() => null),
-      ]);
+      await dispatch(getFlutterwaveVirtualAccount()).unwrap();
       toast.success("Status refreshed.");
     } catch (err: unknown) {
       toast.error(

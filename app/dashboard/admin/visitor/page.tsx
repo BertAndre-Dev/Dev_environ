@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -178,8 +179,9 @@ export default function AdminVisitorManagement() {
         }
 
         setEstateId(foundEstateId);
-      } catch (error: any) {
-        toast.error(error?.message);
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setBootstrapping(false);
       }
@@ -191,14 +193,18 @@ export default function AdminVisitorManagement() {
   // Single fetch when estate or date range changes.
   useEffect(() => {
     if (!estateId) return;
-    fetchVisitors(1).catch(() => toast.error("Failed to fetch visitors"));
+    fetchVisitors(1).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
   }, [estateId, fetchVisitors]);
 
   const handlePageChange = async (page: number) => {
     try {
       await fetchVisitors(page);
-    } catch {
-      toast.error("Failed to change page");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -227,9 +233,10 @@ export default function AdminVisitorManagement() {
   // };
 
   const refreshVisitors = () => {
-    fetchVisitors(pagination.page).catch(() =>
-      toast.error("Failed to fetch visitors"),
-    );
+    fetchVisitors(pagination.page).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
   };
 
   // const handleOpenDeleteModal = (visitor: any, e?: React.MouseEvent) => {

@@ -8,6 +8,7 @@ import Select from "react-select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Loader from "@/components/ui/Loader";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { isPending } from "@/lib/async-status";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
@@ -71,8 +72,9 @@ export default function AdminAssetPage() {
         }
         setEstateId(estate.id);
         setEstateName(estate.name);
-      } catch {
-        toast.error("Failed to load estate information.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setBootstrapping(false);
       }
@@ -89,7 +91,10 @@ export default function AdminAssetPage() {
       }),
     )
       .unwrap()
-      .catch(() => toast.error("Failed to load asset categories."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId]);
 
   useEffect(() => {
@@ -182,9 +187,8 @@ export default function AdminAssetPage() {
       toast.success("Asset category created.");
       setModalOpen(false);
     } catch (err: unknown) {
-      const message =
-        (err as { message?: string })?.message ?? "Failed to create category.";
-      toast.error(message);
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSaving(false);
     }

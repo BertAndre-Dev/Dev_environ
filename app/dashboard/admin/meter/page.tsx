@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import Modal from "@/components/modal/page";
 import Table from "@/components/tables/list/page";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useState } from "react";
 import type { EstateEnergyUsageRange } from "@/lib/estate-energy-usage-chart";
@@ -173,9 +174,10 @@ export default function AdminMeterManagement() {
   const handleSearchSubmit = () => {
     const term = searchInput.trim();
     setAppliedSearch(term);
-    fetchMeters(1, term).catch((error: { message?: string }) =>
-      toast.error(error?.message ?? "Failed to search meters."),
-    );
+    fetchMeters(1, term).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
   };
 
   const handleClearSearch = () => {
@@ -188,9 +190,12 @@ export default function AdminMeterManagement() {
         page: 1,
         limit: PAGE_LIMIT,
       }),
-    ).catch((error: { message?: string }) =>
-      toast.error(error?.message ?? "Failed to clear search."),
-    );
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   };
 
   // Bootstrap signed-in user and estate only (no meter fetch here).
@@ -223,8 +228,9 @@ export default function AdminMeterManagement() {
         }
 
         setEstateId(estateIdValue);
-      } catch (error: any) {
-        toast.error(error?.message);
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setBootstrapping(false);
       }
@@ -244,34 +250,40 @@ export default function AdminMeterManagement() {
       }),
     )
       .unwrap()
-      .catch((error: { message?: string }) => toast.error(error?.message));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [estateId, dispatch]);
 
   useEffect(() => {
     if (!estateId) return;
-    dispatch(getVendingStatsByEstate({ estateId })).catch((error: any) =>
-      toast.error(error?.message ?? "Failed to load vending statistics."),
-    );
+    dispatch(getVendingStatsByEstate({ estateId }))
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId]);
 
   useEffect(() => {
     if (!estateId) return;
-    dispatch(getEstateRealtimeReadings({ estateId })).catch(
-      (error: { message?: string }) => {
-        toast.error(
-          error?.message ?? "Failed to load estate realtime usage.",
-        );
-      },
-    );
+    dispatch(getEstateRealtimeReadings({ estateId }))
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId]);
 
   useEffect(() => {
     if (!estateId) return;
-    dispatch(getEstateEnergyUsage({ estateId, range: usageRange })).catch(
-      (error: { message?: string }) => {
-        toast.error(error?.message ?? "Failed to load estate energy usage.");
-      },
-    );
+    dispatch(getEstateEnergyUsage({ estateId, range: usageRange }))
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId, usageRange]);
 
   useEffect(() => {
@@ -281,11 +293,12 @@ export default function AdminMeterManagement() {
         estateId,
         period: energyPeriod,
       }),
-    ).catch((error: { message?: string }) => {
-      toast.error(
-        error?.message ?? "Failed to load energy consumption chart.",
-      );
-    });
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId, energyPeriod]);
 
   const handleRefreshUsage = async () => {
@@ -299,8 +312,9 @@ export default function AdminMeterManagement() {
           refresh: true,
         }),
       ).unwrap();
-    } catch (error: any) {
-      toast.error(error?.message ?? "Failed to refresh estate energy usage.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setUsageRefreshing(false);
     }
@@ -314,8 +328,9 @@ export default function AdminMeterManagement() {
           ? dispatch(getVendingStatsByEstate({ estateId })).unwrap()
           : Promise.resolve(),
       ]);
-    } catch (error: any) {
-      toast.error(error?.message);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -350,9 +365,10 @@ export default function AdminMeterManagement() {
       toast.success(res?.message || "Meter unassigned successfully.");
       setMeterToUnassign(null);
       await handleRefresh();
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to unassign meter.");
-      throw error;
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
     } finally {
       setUnassignSubmitting(false);
     }
@@ -373,9 +389,12 @@ export default function AdminMeterManagement() {
     if (!usageModalOpen || !usageMeterNumber) return;
     dispatch(
       getMeterUsage({ meterNumber: usageMeterNumber, range: meterUsageRange }),
-    ).catch((error: { message?: string }) => {
-      toast.error(error?.message ?? "Failed to load meter energy usage.");
-    });
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, usageModalOpen, usageMeterNumber, meterUsageRange]);
 
   const getAllAddressKeys = (data: AdminMeterData[]) => {
@@ -653,9 +672,10 @@ export default function AdminMeterManagement() {
                         pageSize: Number(pagination?.pageSize) || 10,
                       }}
                       onPageChange={(page) => {
-                        fetchMeters(page).catch(() =>
-                          toast.error("Failed to change page"),
-                        );
+                        fetchMeters(page).catch((err: unknown) => {
+                          const message = getApiErrorMessage(err);
+                          if (message) toast.error(message);
+                        });
                       }}
                       enableExport
                       exportFileName="meters"

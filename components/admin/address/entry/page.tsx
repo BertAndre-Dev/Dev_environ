@@ -19,6 +19,7 @@ import { useEffect, useState } from "react";
 import Modal from "@/components/modal/page";
 import EntryForm from "../forms/entry-form/page";
 import { formatAddressRecordCreatedAt } from "@/lib/address";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 interface EntryData {
   estateId: string;
@@ -116,9 +117,10 @@ export default function EntryPage() {
 
       const statsRes = await dispatch(getEntryStats(fieldId)).unwrap();
       setStats({ [fieldId]: statsRes?.data || {} });
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
-      toast.error("Failed to fetch entries or stats.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -149,7 +151,10 @@ export default function EntryPage() {
         setEntries(res?.data || []);
         setPagination(res?.pagination || {});
       })
-      .catch(() => toast.error("Failed to fetch entries."))
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      })
       .finally(() => setLoading(false));
   }, [dispatch, startDate, endDate, fields]);
 
@@ -181,8 +186,8 @@ export default function EntryPage() {
       setItemToDelete(null);
       await fetchAllData();
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to delete entry.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     } finally {
       setDeleting(false);
@@ -431,7 +436,10 @@ export default function EntryPage() {
                 setEntries(res?.data || []);
                 setPagination(res?.pagination || {});
               })
-              .catch(() => toast.error("Failed to change page"));
+              .catch((err: unknown) => {
+                const message = getApiErrorMessage(err);
+                if (message) toast.error(message);
+              });
           }}
           enableExport
           exportFileName="address-entries"

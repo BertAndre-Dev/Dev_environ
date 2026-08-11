@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Loader from "@/components/ui/Loader";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { isPending, isSettled } from "@/lib/async-status";
 
 const PAGE_SIZE = 10;
@@ -111,9 +112,8 @@ export default function AdminMaintenancePage() {
         setEstateId(estate.id);
         setEstateName(estate.name ?? "Estate");
       } catch (err: unknown) {
-        toast.error(
-          (err as { message?: string })?.message ?? "Failed to load user.",
-        );
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setBootstrapping(false);
       }
@@ -135,11 +135,12 @@ export default function AdminMaintenancePage() {
         limit: PAGE_SIZE,
         search: searchDebounced.trim() || undefined,
       }),
-    ).catch((err: unknown) =>
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to load complaints.",
-      ),
-    );
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [estateId, dispatch, page, searchDebounced]);
 
   const total = pagination?.total ?? 0;

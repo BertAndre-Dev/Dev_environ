@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 import DeleteModal from "@/components/resident/delete-modal/page";
 
 import type { AppDispatch, RootState } from "@/redux/store";
@@ -138,8 +139,9 @@ export default function ExpenseHeadDetailPage() {
         const { estateId, estateName } = normalizeEstate(user);
         setEstateId(estateId);
         setEstateName(estateName);
-      } catch (err: any) {
-        toast.error(err?.message ?? "Failed to load user.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     })();
   }, [dispatch]);
@@ -148,7 +150,10 @@ export default function ExpenseHeadDetailPage() {
     if (!estateId) return;
     dispatch(fetchExpenseHeads({ estateId, page: 1, limit: 500 }))
       .unwrap()
-      .catch(() => toast.error("Failed to load expense heads."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId]);
 
   useEffect(() => {
@@ -167,7 +172,10 @@ export default function ExpenseHeadDetailPage() {
       }),
     )
       .unwrap()
-      .catch(() => toast.error("Failed to fetch expense entries."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, headId, page, startDate, endDate]);
 
   const filteredEntries = useMemo(() => {
@@ -266,8 +274,9 @@ export default function ExpenseHeadDetailPage() {
           endDate: toIsoIfPresent(endDate),
         }),
       ).unwrap();
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to create entries.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       setSaving(false);
     }
   };
@@ -311,8 +320,9 @@ export default function ExpenseHeadDetailPage() {
       ).unwrap();
       toast.success("Expense entry updated.");
       closeEdit();
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to update entry.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       setSaving(false);
     }
   };
@@ -333,8 +343,8 @@ export default function ExpenseHeadDetailPage() {
       toast.success("Expense entry deleted.");
       setItemToDelete(null);
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to delete.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     } finally {
       setDeleting(false);

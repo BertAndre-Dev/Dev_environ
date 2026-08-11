@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch } from "@/redux/store";
 import { getAssetCategories, getAssets, type AssetCategory } from "@/redux/slice/admin/asset-mgt/admin-asset";
 import {
@@ -70,7 +71,7 @@ export default function AssetMaintenanceTab({
         setScheduleRecords(res?.data ?? []);
       } catch (err: unknown) {
         setScheduleRecords([]);
-        const message = (err as { message?: string })?.message;
+        const message = getApiErrorMessage(err);
         if (message) toast.error(message);
       } finally {
         setScheduleLoading(false);
@@ -200,7 +201,7 @@ export default function AssetMaintenanceTab({
             setModalOpen(false);
             bumpRecordsRefresh();
           } catch (err: unknown) {
-            const message = (err as { message?: string })?.message;
+            const message = getApiErrorMessage(err);
             if (message) toast.error(message);
           }
         }}
@@ -226,7 +227,7 @@ export default function AssetMaintenanceTab({
             setEditing(null);
             bumpRecordsRefresh();
           } catch (err: unknown) {
-            const message = (err as { message?: string })?.message;
+            const message = getApiErrorMessage(err);
             if (message) toast.error(message);
           }
         }}

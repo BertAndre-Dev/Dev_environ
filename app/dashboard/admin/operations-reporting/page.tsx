@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import Loader from "@/components/ui/Loader";
 import { Button } from "@/components/ui/button";
 import DeleteModal from "@/components/resident/delete-modal/page";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { parseAdminEstate } from "../asset/lib/estate";
@@ -72,8 +73,9 @@ export default function AdminOperationsReportingPage() {
         }
         setEstateId(estate.id);
         setEstateName(estate.name);
-      } catch {
-        toast.error("Failed to load estate information.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setEstateLoading(false);
       }
@@ -135,10 +137,8 @@ export default function AdminOperationsReportingPage() {
         setEditingType(null);
         await refreshLists();
       } catch (err: unknown) {
-        toast.error(
-          (err as { message?: string })?.message ??
-            "Failed to save reporting type.",
-        );
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
       return;
     }
@@ -166,10 +166,8 @@ export default function AdminOperationsReportingPage() {
       setTypeModalOpen(false);
       setConfigureModalOpen(true);
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ??
-          "Failed to create reporting type.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -198,10 +196,8 @@ export default function AdminOperationsReportingPage() {
       closeCreateFlow();
       await refreshLists();
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ??
-          "Failed to save report fields.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 

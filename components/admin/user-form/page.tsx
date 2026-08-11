@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { getFieldByEstate } from "@/redux/slice/admin/address-mgt/fields/fields";
 import { getEntriesByField } from "@/redux/slice/admin/address-mgt/entry/entry";
 import { iniviteUser, getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
@@ -119,8 +120,9 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
         });
 
         setEntryOptions(options);
-      } catch {
-        toast.error("Failed to load estate address entries.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setLoading(false);
       }
@@ -174,8 +176,9 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
       toast.success(res?.message || "User invited successfully");
       close();
       refresh();
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to invite user");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setLoading(false);
     }

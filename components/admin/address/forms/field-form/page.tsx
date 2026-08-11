@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 interface FieldFormData {
   estateId: string;
@@ -64,8 +65,9 @@ export default function FieldForm({
             key: fetchedData.key || toCamelCase(fetchedData.label || ""),
           });
         }
-      } catch (error: any) {
-        toast.error(error.res?.data?.message)
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setLoading(false);
       }

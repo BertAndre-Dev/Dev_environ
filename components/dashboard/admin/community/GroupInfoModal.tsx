@@ -21,7 +21,7 @@ import { getGroupMembers } from "@/redux/slice/community-group/community-group-t
 import type { AppDispatch } from "@/redux/store";
 import { chatGroupRoleToApiRole } from "@/lib/estate-user-roles";
 import DeleteModal from "@/components/resident/delete-modal/page";
-import { getCommunityActionError } from "@/components/dashboard/admin/community/CommunityEditMessageModal";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 const OBJECT_ID_RE = /^[a-f\d]{24}$/i;
 
@@ -203,7 +203,8 @@ export function GroupInfoModal({
         setListMembersTotalPages(pages);
         setListMembersFetched(true);
       } catch (e: unknown) {
-        toast.error(getCommunityActionError(e, "Could not load group members."));
+        const message = getApiErrorMessage(e);
+        if (message) toast.error(message);
         if (!append) {
           setListMembers([]);
           setListMembersFetched(false);
@@ -272,7 +273,8 @@ export function GroupInfoModal({
         setEstateUsersTotalPages(totalPages);
         setEstateUsersPage(page);
       } catch (e: unknown) {
-        toast.error(getCommunityActionError(e, "Could not load estate users."));
+        const message = getApiErrorMessage(e);
+        if (message) toast.error(message);
         if (!append) setEstateUsers([]);
       } finally {
         setEstateUsersLoading(false);

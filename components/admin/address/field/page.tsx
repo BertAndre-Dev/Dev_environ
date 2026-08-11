@@ -20,6 +20,7 @@ import Modal from "@/components/modal/page";
 import FieldForm from "../forms/field-form/page";
 import { formatAddressRecordCreatedAt } from "@/lib/address";
 import { isBusy, isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 interface FieldData {
   estateId: string;
@@ -85,8 +86,9 @@ export default function AddressField() {
         } else {
           toast.warning("No estate found for this user.");
         }
-      } catch {
-        toast.error("Failed to fetch user or estate fields.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setBootstrapping(false);
       }
@@ -119,8 +121,9 @@ export default function AddressField() {
       if (estateId) {
         await dispatch(getFieldByEstate(estateId)).unwrap();
       }
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to save field.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -140,8 +143,8 @@ export default function AddressField() {
         await dispatch(getFieldByEstate(user.estateId)).unwrap();
       }
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to delete field.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     } finally {
       setDeleting(false);
@@ -240,7 +243,10 @@ export default function AddressField() {
             if (!estateId) return;
             dispatch(getFieldByEstate(estateId))
               .unwrap()
-              .catch(() => toast.error("Failed to change page"));
+              .catch((err: unknown) => {
+                const message = getApiErrorMessage(err);
+                if (message) toast.error(message);
+              });
           }}
           enableExport
           exportFileName="address-fields"

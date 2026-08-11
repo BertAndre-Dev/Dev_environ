@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 interface BillData {
   estateId: string;
@@ -43,9 +44,11 @@ export const createBill = createAsyncThunk(
     try {
       const res = await axiosInstance.post("/api/v1/bills-mgt", data);
       return res.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
       return rejectWithValue({
-        message: error.res?.data?.message,
+        message: getApiErrorMessage(error) ?? "Failed to create bill",
       });
     }
   },
@@ -61,12 +64,11 @@ export const updateBill = createAsyncThunk(
     try {
       const res = await axiosInstance.put(`/api/v1/bills-mgt/${billId}`, data);
       return res.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
       return rejectWithValue({
-        message:
-          error?.response?.data?.message ||
-          error.res?.data?.message ||
-          "Failed to update bill",
+        message: getApiErrorMessage(error) ?? "Failed to update bill",
       });
     }
   },
@@ -94,12 +96,11 @@ export const updateBillForAddress = createAsyncThunk(
         },
       );
       return res.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
       return rejectWithValue({
-        message:
-          error?.response?.data?.message ||
-          error.res?.data?.message ||
-          "Failed to update assigned bill",
+        message: getApiErrorMessage(error) ?? "Failed to update assigned bill",
       });
     }
   },
@@ -112,9 +113,11 @@ export const deleteBill = createAsyncThunk(
     try {
       const res = await axiosInstance.delete(`/api/v1/bills-mgt/${billId}`);
       return res.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
       return rejectWithValue({
-        message: error.res?.data?.message,
+        message: getApiErrorMessage(error) ?? "Failed to delete bill",
       });
     }
   },
@@ -129,9 +132,11 @@ export const suspendBill = createAsyncThunk(
         `/api/v1/bills-mgt/${id}/suspend-bill`,
       );
       return res.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
       return rejectWithValue({
-        message: error.res?.data?.message,
+        message: getApiErrorMessage(error) ?? "Failed to suspend bill",
       });
     }
   },
@@ -146,9 +151,11 @@ export const activateBill = createAsyncThunk(
         `/api/v1/bills-mgt/${id}/activate-bill`,
       );
       return res.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
       return rejectWithValue({
-        message: error.res?.data?.message,
+        message: getApiErrorMessage(error) ?? "Failed to activate bill",
       });
     }
   },
@@ -161,9 +168,11 @@ export const getBill = createAsyncThunk(
     try {
       const res = await axiosInstance.get(`/api/v1/bills-mgt/${billId}`);
       return res.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
       return rejectWithValue({
-        message: error.res?.data?.message,
+        message: getApiErrorMessage(error) ?? "Failed to fetch bill",
       });
     }
   },
@@ -194,9 +203,11 @@ export const getBillsByEstate = createAsyncThunk(
         `/api/v1/bills-mgt/bills/${estateId}` + suffix,
       );
       return res.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
       return rejectWithValue({
-        message: error?.response?.data?.message || "Failed to fetch bills",
+        message: getApiErrorMessage(error) ?? "Failed to fetch bills",
       });
     }
   },
@@ -237,11 +248,12 @@ export const getBillsForAddress = createAsyncThunk(
         `/api/v1/bills-mgt/for-address?${params.toString()}`,
       );
       return res.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
       return rejectWithValue({
         message:
-          error?.response?.data?.message ||
-          "Failed to fetch bills for address",
+          getApiErrorMessage(error) ?? "Failed to fetch bills for address",
       });
     }
   },
@@ -257,12 +269,12 @@ export const createBillForAddress = createAsyncThunk(
         data,
       );
       return res.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
       return rejectWithValue({
         message:
-          error?.response?.data?.message ??
-          error.res?.data?.message ??
-          "Failed to create bill for address",
+          getApiErrorMessage(error) ?? "Failed to create bill for address",
       });
     }
   },

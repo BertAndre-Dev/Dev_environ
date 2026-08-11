@@ -10,14 +10,13 @@ import { CommunityChatSidebar } from "@/components/dashboard/admin/community/Com
 import { CommunityChatWindow } from "@/components/dashboard/admin/community/CommunityChatWindow";
 import { CreateGroupChatModal } from "@/components/dashboard/admin/community/CreateGroupChatModal";
 import { GroupInfoModal } from "@/components/dashboard/admin/community/GroupInfoModal";
-import CommunityEditMessageModal, {
-  getCommunityActionError,
-} from "@/components/dashboard/admin/community/CommunityEditMessageModal";
+import CommunityEditMessageModal from "@/components/dashboard/admin/community/CommunityEditMessageModal";
 import {
   chatGroupToCommunity,
   chatGroupMemberRowsFromApi,
 } from "@/lib/community-chat-ui";
 import { groupMessageToCommunity } from "@/lib/community-chat-map";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { displayNameFromSignedInUser } from "@/lib/user-display-name";
 import { extractUserId } from "@/lib/user-id";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
@@ -161,14 +160,8 @@ export default function AdminCommunityChatPage() {
         dispatch(clearCommunityGroupError());
       } catch (e: unknown) {
         if (cancelled) return;
-        const msg =
-          e &&
-          typeof e === "object" &&
-          "message" in e &&
-          typeof (e as { message?: string }).message === "string"
-            ? (e as { message: string }).message
-            : "Failed to load groups.";
-        toast.error(msg);
+        const message = getApiErrorMessage(e);
+        if (message) toast.error(message);
       }
     })();
     return () => {
@@ -198,14 +191,8 @@ export default function AdminCommunityChatPage() {
         await dispatch(getChatGroupById({ groupId: selectedId })).unwrap();
       } catch (e: unknown) {
         if (cancelled) return;
-        const msg =
-          e &&
-          typeof e === "object" &&
-          "message" in e &&
-          typeof (e as { message?: string }).message === "string"
-            ? (e as { message: string }).message
-            : "Failed to load group details.";
-        toast.error(msg);
+        const message = getApiErrorMessage(e);
+        if (message) toast.error(message);
       }
     })();
     return () => {
@@ -227,14 +214,8 @@ export default function AdminCommunityChatPage() {
         ).unwrap();
       } catch (e: unknown) {
         if (cancelled) return;
-        const msg =
-          e &&
-          typeof e === "object" &&
-          "message" in e &&
-          typeof (e as { message?: string }).message === "string"
-            ? (e as { message: string }).message
-            : "Failed to load messages.";
-        toast.error(msg);
+        const message = getApiErrorMessage(e);
+        if (message) toast.error(message);
       }
     })();
     return () => {
@@ -334,14 +315,8 @@ export default function AdminCommunityChatPage() {
         }
         setDraftByGroup((prev) => ({ ...prev, [selectedId]: "" }));
       } catch (e: unknown) {
-        const msg =
-          e &&
-          typeof e === "object" &&
-          "message" in e &&
-          typeof (e as { message?: string }).message === "string"
-            ? (e as { message: string }).message
-            : "Could not send message.";
-        toast.error(msg);
+        const message = getApiErrorMessage(e);
+        if (message) toast.error(message);
         throw e;
       }
     },
@@ -386,7 +361,8 @@ export default function AdminCommunityChatPage() {
         setEditingMessage(null);
         setEditError(null);
       } catch (e: unknown) {
-        setEditError(getCommunityActionError(e, "Could not update message."));
+        const message = getApiErrorMessage(e);
+        setEditError(message ?? null);
       }
     },
     [dispatch, editingMessage],
@@ -412,8 +388,8 @@ export default function AdminCommunityChatPage() {
       toast.success("Message deleted.");
       setMessageToDelete(null);
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to delete message.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     }
   };
@@ -435,14 +411,8 @@ export default function AdminCommunityChatPage() {
       setCreateOpen(false);
       if (res.data?._id) setSelectedId(res.data._id);
     } catch (e: unknown) {
-      const msg =
-        e &&
-        typeof e === "object" &&
-        "message" in e &&
-        typeof (e as { message?: string }).message === "string"
-          ? (e as { message: string }).message
-          : "Could not create group.";
-      toast.error(msg);
+      const message = getApiErrorMessage(e);
+      if (message) toast.error(message);
     }
   };
 
@@ -458,14 +428,8 @@ export default function AdminCommunityChatPage() {
       ).unwrap();
       toast.success("Group updated.");
     } catch (e: unknown) {
-      const msg =
-        e &&
-        typeof e === "object" &&
-        "message" in e &&
-        typeof (e as { message?: string }).message === "string"
-          ? (e as { message: string }).message
-          : "Could not update group.";
-      toast.error(msg);
+      const message = getApiErrorMessage(e);
+      if (message) toast.error(message);
       throw e;
     }
   };
@@ -483,8 +447,8 @@ export default function AdminCommunityChatPage() {
       setGroupDeleteOpen(false);
       setGroupInfoOpen(false);
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to delete group.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     }
   };
@@ -508,7 +472,8 @@ export default function AdminCommunityChatPage() {
       toast.success("Members added.");
       await refreshGroupMeta();
     } catch (e: unknown) {
-      toast.error(getCommunityActionError(e, "Failed to add members."));
+      const message = getApiErrorMessage(e);
+      if (message) toast.error(message);
       throw e;
     }
   };
@@ -526,7 +491,8 @@ export default function AdminCommunityChatPage() {
       toast.success("Members added.");
       await refreshGroupMeta();
     } catch (e: unknown) {
-      toast.error(getCommunityActionError(e, "Failed to add members."));
+      const message = getApiErrorMessage(e);
+      if (message) toast.error(message);
       throw e;
     }
   };
@@ -540,7 +506,8 @@ export default function AdminCommunityChatPage() {
       toast.success("Members removed.");
       await refreshGroupMeta();
     } catch (e: unknown) {
-      toast.error(getCommunityActionError(e, "Failed to remove members."));
+      const message = getApiErrorMessage(e);
+      if (message) toast.error(message);
       throw e;
     }
   };

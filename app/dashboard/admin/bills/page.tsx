@@ -36,6 +36,7 @@ import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useState } from "react";
+import { getApiErrorMessage } from "@/lib/api-error";
 import DeleteModal from "@/components/resident/delete-modal/page";
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import Loader from "@/components/ui/Loader";
@@ -199,8 +200,9 @@ export default function BillPage() {
         await dispatch(
           getBillsByEstate({ estateId: foundEstateId, page: 1, limit: 10 }),
         ).unwrap();
-      } catch {
-        toast.error("Failed to fetch bills.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setBootstrapping(false);
       }
@@ -234,8 +236,9 @@ export default function BillPage() {
         if (options.length === 1) {
           setAssignedAddressId((prev) => prev || options[0].value);
         }
-      } catch {
-        toast.error("Failed to load addresses.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setLoadingAddresses(false);
       }
@@ -255,7 +258,10 @@ export default function BillPage() {
       }),
     )
       .unwrap()
-      .catch(() => toast.error("Failed to fetch bills."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId, billsStartDate, billsEndDate, activeTab]);
 
   useEffect(() => {
@@ -264,8 +270,9 @@ export default function BillPage() {
     fetchAssignedBills(assignedAddressId, estateId, {
       startDate: assignedStartDate,
       endDate: assignedEndDate,
-    }).catch((err: any) => {
-      toast.error(err?.message || "Failed to fetch assigned bills.");
+    }).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     });
   }, [
     activeTab,
@@ -349,8 +356,9 @@ export default function BillPage() {
       toast.info(`${suspendBillItem.name} suspended.`);
       setSuspendBillItem(null);
       await refreshCurrentBillsList();
-    } catch (err: any) {
-      toast.error(err?.message);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSuspendSubmitting(false);
     }
@@ -362,8 +370,9 @@ export default function BillPage() {
       await dispatch(activateBill(bill.id)).unwrap();
       toast.success(`${bill.name} activated.`);
       await refreshCurrentBillsList();
-    } catch (err: any) {
-      toast.error(err?.message);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -380,8 +389,9 @@ export default function BillPage() {
       toast.success(`${billToDelete.name} deleted successfully.`);
       setBillToDelete(null);
       await refreshCurrentBillsList();
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to delete bill.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     } finally {
       setDeleteSubmitting(false);
@@ -417,8 +427,9 @@ export default function BillPage() {
           endDate: billsStartDate && billsEndDate ? billsEndDate : undefined,
         }),
       ).unwrap();
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to save bill.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -467,12 +478,9 @@ export default function BillPage() {
         startDate: assignedStartDate,
         endDate: assignedEndDate,
       });
-    } catch (err: any) {
-      toast.error(
-        err?.message ??
-          err?.payload?.message ??
-          "Failed to save bill for address.",
-      );
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -822,7 +830,10 @@ export default function BillPage() {
                   }),
                 )
                   .unwrap()
-                  .catch(() => toast.error("Failed to change page"));
+                  .catch((err: unknown) => {
+                    const message = getApiErrorMessage(err);
+                    if (message) toast.error(message);
+                  });
               }}
               enableExport
               exportFileName="bills"
@@ -912,7 +923,10 @@ export default function BillPage() {
                     page,
                     startDate: assignedStartDate,
                     endDate: assignedEndDate,
-                  }).catch(() => toast.error("Failed to change page"));
+                  }).catch((err: unknown) => {
+                    const message = getApiErrorMessage(err);
+                    if (message) toast.error(message);
+                  });
                 }}
                 enableExport
                 exportFileName="assigned-bills"

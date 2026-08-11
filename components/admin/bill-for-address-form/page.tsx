@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   formatAmountInput,
   parseFormattedNumber,
@@ -169,8 +170,9 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
             prev.addressId ? prev : { ...prev, addressId: options[0].value },
           );
         }
-      } catch {
-        toast.error("Failed to load addresses.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setLoadingAddresses(false);
       }
@@ -211,8 +213,9 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
             fetchData.compulsory ?? initialData?.compulsory ?? prev.compulsory,
           ),
         }));
-      } catch (error: any) {
-        toast.error(error?.message || "Failed to load bill");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setLoadingBill(false);
       }

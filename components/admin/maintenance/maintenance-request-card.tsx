@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { MapPin, MessageCircle } from "lucide-react";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { cn } from "@/lib/utils";
 import type {
   ComplaintItem,
@@ -120,7 +121,9 @@ export function MaintenanceRequestCard({
   useEffect(() => {
     dispatch(
       getCommentsByComplaint({ complaintId: complaint.id, page: 1, limit: 50 }),
-    ).catch(() => {});
+    )
+      .unwrap()
+      .catch(() => {});
   }, [complaint.id, dispatch]);
 
   const handleStatusChange = (newStatus: string) => {
@@ -128,11 +131,10 @@ export function MaintenanceRequestCard({
     dispatch(updateComplaintStatus({ id: complaint.id, status: newStatus }))
       .unwrap()
       .then(() => toast.success("Status updated"))
-      .catch((err: unknown) =>
-        toast.error(
-          (err as { message?: string })?.message ?? "Failed to update status",
-        ),
-      );
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   };
 
   const handleSubmitComment = (e: React.FormEvent) => {
@@ -155,11 +157,10 @@ export function MaintenanceRequestCard({
         setCommentText("");
         toast.success("Comment added");
       })
-      .catch((err: unknown) =>
-        toast.error(
-          (err as { message?: string })?.message ?? "Failed to add comment",
-        ),
-      )
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      })
       .finally(() => setSubmittingComment(false));
   };
 

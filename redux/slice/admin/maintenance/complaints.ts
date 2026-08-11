@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export interface ComplaintResident {
   id?: string;
@@ -73,10 +74,11 @@ export const getComplaintsByEstate = createAsyncThunk(
       });
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue(
-        err?.response?.data?.message ?? "Failed to fetch complaints"
-      );
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({
+        message: getApiErrorMessage(error) ?? "Failed to fetch complaints",
+      });
     }
   }
 );
@@ -89,10 +91,11 @@ export const getComplaintById = createAsyncThunk(
       const res = await axiosInstance.get(`/api/v1/complaints/${id}`);
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue(
-        err?.response?.data?.message ?? "Failed to fetch complaint"
-      );
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({
+        message: getApiErrorMessage(error) ?? "Failed to fetch complaint",
+      });
     }
   }
 );
@@ -111,10 +114,11 @@ export const updateComplaintStatus = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue(
-        err?.response?.data?.message ?? "Failed to update status"
-      );
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({
+        message: getApiErrorMessage(error) ?? "Failed to update status",
+      });
     }
   }
 );
@@ -132,10 +136,12 @@ export const assignComplaintToStaff = createAsyncThunk(
       });
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue(
-        err?.response?.data?.message ?? "Failed to assign complaint to staff",
-      );
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({
+        message:
+          getApiErrorMessage(error) ?? "Failed to assign complaint to staff",
+      });
     }
   },
 );
@@ -158,10 +164,11 @@ export const getCommentsByComplaint = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue(
-        err?.response?.data?.message ?? "Failed to fetch comments"
-      );
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({
+        message: getApiErrorMessage(error) ?? "Failed to fetch comments",
+      });
     }
   }
 );
@@ -192,10 +199,11 @@ export const createComment = createAsyncThunk(
       });
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue(
-        err?.response?.data?.message ?? "Failed to add comment"
-      );
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({
+        message: getApiErrorMessage(error) ?? "Failed to add comment",
+      });
     }
   }
 );

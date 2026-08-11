@@ -31,6 +31,7 @@ import Table from "@/components/tables/list/page";
 import { CopyButton } from "@/components/ui/copy-button";
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import { MaintenanceRequestCard } from "@/components/admin/maintenance/maintenance-request-card";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { cn } from "@/lib/utils";
 import { normalizeAddresses, type AddressOption } from "@/lib/address";
 import type { AsyncThunk } from "@reduxjs/toolkit";
@@ -407,10 +408,8 @@ export default function UserDetailView({
     try {
       await dispatch(actions.getUser(userId)).unwrap();
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ??
-          "Failed to load user details.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   }, [actions, dispatch, userId]);
 
@@ -528,8 +527,9 @@ export default function UserDetailView({
             ?.total ?? visitorRows.length,
         ),
       );
-    } catch {
-      toast.error("Failed to load user activity data.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setRelatedLoading(false);
     }
@@ -564,9 +564,8 @@ export default function UserDetailView({
       toast.success(`${displayName} has been activated.`);
       await fetchUser();
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to activate user.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setActionLoading(false);
     }
@@ -582,9 +581,8 @@ export default function UserDetailView({
       setSuspendOpen(false);
       await fetchUser();
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to suspend user.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSuspendSubmitting(false);
     }
@@ -606,8 +604,8 @@ export default function UserDetailView({
       setDeleteOpen(false);
       router.push(listPath);
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to delete user.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     } finally {
       setDeleting(false);

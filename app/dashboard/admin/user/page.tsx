@@ -37,6 +37,7 @@ import {
   type EstateUserRoleFilter,
 } from "@/lib/estate-user-roles";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { isPending } from "@/lib/async-status";
 /** Admin user management: exclude company, estate admin, and admin from role filter. */
 const ADMIN_USER_ROLE_FILTER_OPTIONS = ESTATE_USER_ROLE_FILTER_OPTIONS.filter(
@@ -171,8 +172,9 @@ export default function AdminUserPage() {
         } else {
           toast.warning("No estate found for this user.");
         }
-      } catch {
-        toast.error("Failed to fetch user or estate users.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setBootstrapping(false);
       }
@@ -182,7 +184,10 @@ export default function AdminUserPage() {
   // Single fetch when estate, search, or date range changes.
   useEffect(() => {
     if (!selectedEstate?.value) return;
-    fetchAdminUsers(1).catch(() => toast.error("Failed to fetch users."));
+    fetchAdminUsers(1).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
   }, [selectedEstate?.value, fetchAdminUsers]);
 
   const handleEstateModal = (user?: AdminUserData) => {
@@ -207,11 +212,13 @@ export default function AdminUserPage() {
       await dispatch(suspendUser(suspendUserItem.id)).unwrap();
       toast.info(`${suspendUserItem.firstName} has been suspended.`);
       setSuspendUserItem(null);
-      await fetchAdminUsers(1).catch(() =>
-        toast.error("Failed to refresh users."),
-      );
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to suspend user.");
+      await fetchAdminUsers(1).catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSuspendSubmitting(false);
     }
@@ -222,11 +229,13 @@ export default function AdminUserPage() {
     try {
       await dispatch(activateUser(user.id)).unwrap();
       toast.success(`${user.firstName} has been activated.`);
-      await fetchAdminUsers(1).catch(() =>
-        toast.error("Failed to refresh users."),
-      );
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to activate user.");
+      await fetchAdminUsers(1).catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -242,12 +251,13 @@ export default function AdminUserPage() {
       await dispatch(deleteUser(itemToDelete.id)).unwrap();
       toast.success(`${itemToDelete.name ?? "User"} deleted successfully!`);
       setItemToDelete(null);
-      await fetchAdminUsers(1).catch(() =>
-        toast.error("Failed to refresh users."),
-      );
+      await fetchAdminUsers(1).catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to delete user.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     } finally {
       setDeleting(false);
@@ -548,9 +558,10 @@ export default function AdminUserPage() {
               pageSize: Number(pagination?.pageSize) || 10,
             }}
             onPageChange={(page) => {
-              fetchAdminUsers(page).catch(() =>
-                toast.error("Failed to change page"),
-              );
+              fetchAdminUsers(page).catch((err: unknown) => {
+                const message = getApiErrorMessage(err);
+                if (message) toast.error(message);
+              });
             }}
             enableExport
             exportFileName="users"
@@ -582,9 +593,10 @@ export default function AdminUserPage() {
             <InviteUserForm
               close={handleCloseModal}
               refresh={() =>
-                fetchAdminUsers(1).catch(() =>
-                  toast.error("Failed to refresh users."),
-                )
+                fetchAdminUsers(1).catch((err: unknown) => {
+                  const message = getApiErrorMessage(err);
+                  if (message) toast.error(message);
+                })
               }
             />
           </Modal>

@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import Loader from "@/components/ui/Loader";
 import Table from "@/components/tables/list/page";
 import DeleteModal from "@/components/resident/delete-modal/page";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { isBusy, isPending, isSettled } from "@/lib/async-status";
 import { slugify } from "@/lib/slug";
 import type { AppDispatch, RootState } from "@/redux/store";
@@ -100,8 +101,9 @@ export default function AssetCategoryDetailPage() {
         }
         setEstateId(estate.id);
         setEstateName(estate.name);
-      } catch {
-        toast.error("Failed to load estate information.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setBootstrapping(false);
       }
@@ -136,7 +138,12 @@ export default function AssetCategoryDetailPage() {
         search,
         assetCategoryId: categoryId,
       }),
-    ).catch(() => toast.error("Failed to load assets."));
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId, categoryId, page, search]);
 
   const visibleAssets = useMemo(() => {
@@ -246,9 +253,8 @@ export default function AssetCategoryDetailPage() {
       toast.success("Category updated.");
       setEditCategoryOpen(false);
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to update category.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -261,9 +267,8 @@ export default function AssetCategoryDetailPage() {
       toast.success("Category deleted.");
       router.push("/dashboard/admin/asset");
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to delete category.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -276,9 +281,8 @@ export default function AssetCategoryDetailPage() {
       toast.success("Asset deleted.");
       setAssetToDelete(null);
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to delete asset.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     }
   };
@@ -309,9 +313,8 @@ export default function AssetCategoryDetailPage() {
         ).catch(() => {});
       }
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to add asset(s).",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -327,9 +330,8 @@ export default function AssetCategoryDetailPage() {
       toast.success("Asset updated.");
       setEditingAsset(null);
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to update asset.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 

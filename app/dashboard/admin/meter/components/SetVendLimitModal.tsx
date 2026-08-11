@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Loader from "@/components/ui/Loader";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch } from "@/redux/store";
 import {
   getEstateVendLimits,
@@ -55,7 +56,7 @@ export function SetVendLimitModal({
         }
       } catch (err: unknown) {
         if (!cancelled) {
-          const message = (err as { message?: string })?.message;
+          const message = getApiErrorMessage(err);
           if (message) toast.error(message);
         }
       } finally {
@@ -87,7 +88,7 @@ export function SetVendLimitModal({
       onSuccess?.();
       onClose();
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
+      const message = getApiErrorMessage(err);
       if (message) toast.error(message);
     } finally {
       setSubmitting(false);

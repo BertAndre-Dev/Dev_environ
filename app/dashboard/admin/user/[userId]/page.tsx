@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import type { AppDispatch, RootState } from "@/redux/store";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { isPending } from "@/lib/async-status";
 import {
   activateUser,
@@ -36,9 +37,8 @@ export default function AdminUserDetailPage() {
     try {
       await dispatch(getUser(userId)).unwrap();
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to load user details.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   }, [dispatch, userId]);
 

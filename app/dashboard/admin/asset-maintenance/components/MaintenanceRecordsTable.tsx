@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import Table from "@/components/tables/list/page";
 import { Pencil, Power, PowerOff, Trash2 } from "lucide-react";
 import DeleteModal from "@/components/resident/delete-modal/page";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { formatRecurringSpan } from "@/lib/asset-maintenance-recurring";
 import type { AppDispatch } from "@/redux/store";
 import {
@@ -94,7 +95,7 @@ export default function MaintenanceRecordsTable({
   useEffect(() => {
     if (!estateId) return;
     fetchList(estateId, page).catch((err: unknown) => {
-      const message = (err as { message?: string })?.message;
+      const message = getApiErrorMessage(err);
       if (message) toast.error(message);
     });
   }, [estateId, page, fetchList, refreshKey]);
@@ -221,7 +222,7 @@ export default function MaintenanceRecordsTable({
                     await fetchList(estateId, page);
                     onRecordsChange?.();
                   } catch (err: unknown) {
-                    const message = (err as { message?: string })?.message;
+                    const message = getApiErrorMessage(err);
                     if (message) toast.error(message);
                   }
                 }}
@@ -283,9 +284,8 @@ export default function MaintenanceRecordsTable({
       await fetchList(estateId, 1);
       onRecordsChange?.();
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to delete record.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     }
   };

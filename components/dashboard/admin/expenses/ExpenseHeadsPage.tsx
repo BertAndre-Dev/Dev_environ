@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 import DeleteModal from "@/components/resident/delete-modal/page";
 
 import { ExpensesHeader } from "@/components/dashboard/admin/expenses/ExpensesHeader";
@@ -110,8 +111,9 @@ export default function ExpenseHeadsPage() {
         const { estateId, estateName } = normalizeEstate(user);
         setEstateId(estateId);
         setEstateName(estateName);
-      } catch (err: any) {
-        toast.error(err?.message ?? "Failed to load user.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     })();
   }, [dispatch]);
@@ -132,7 +134,10 @@ export default function ExpenseHeadsPage() {
       }),
     )
       .unwrap()
-      .catch(() => toast.error("Failed to fetch expense heads."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId, startDate, endDate, page]);
 
   useEffect(() => {
@@ -180,8 +185,8 @@ export default function ExpenseHeadsPage() {
       toast.success("Expense head deleted.");
       setItemToDelete(null);
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to delete.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     } finally {
       setDeleting(false);
@@ -197,8 +202,9 @@ export default function ExpenseHeadsPage() {
     try {
       const payload: any = await dispatch(fetchExpenseHeadById(id)).unwrap();
       setViewItem(payload?.data ?? payload ?? null);
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to load expense head.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       setViewOpen(false);
     } finally {
       setViewLoading(false);
@@ -230,8 +236,9 @@ export default function ExpenseHeadsPage() {
       setModalOpen(false);
       setEditing(null);
       setModalValues({ name: "", description: "" });
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to save expense head.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSaving(false);
     }

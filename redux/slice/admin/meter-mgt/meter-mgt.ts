@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 
 export interface AssignMeterPayload {
@@ -64,9 +65,11 @@ export const getMeter = createAsyncThunk(
         try {
             const res = await axiosInstance.get(`/api/v1/meters/${meterId}`);
             return res.data;
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const data = (error as { response?: { data?: unknown } })?.response?.data;
+            if (data && typeof data === "object") return rejectWithValue(data);
             return rejectWithValue({
-                message: error.res?.data?.message
+                message: getApiErrorMessage(error) ?? "Failed to fetch meter",
             });
         }
     }

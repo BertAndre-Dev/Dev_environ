@@ -19,6 +19,7 @@ import {
   todayIsoString,
 } from "@/components/ui/iso-date-picker";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 function toIsoOrNull(val: string, endOfDay = false) {
   if (!val) return null;
@@ -164,12 +165,9 @@ export default function AdminVisitorForm({
       );
       onSubmitSuccess?.();
       onClose?.();
-    } catch (err: any) {
-      const rawMessage = err?.message ?? err?.response?.data?.message;
-      const apiMessage = Array.isArray(rawMessage)
-        ? rawMessage.join(", ")
-        : rawMessage;
-      toast.error(apiMessage || "Failed to invite visitor.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSubmitting(false);
     }

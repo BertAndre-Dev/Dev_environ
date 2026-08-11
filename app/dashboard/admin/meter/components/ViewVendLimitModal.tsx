@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
 import Loader from "@/components/ui/Loader";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch } from "@/redux/store";
 import {
   getEstateVendLimits,
@@ -54,7 +55,7 @@ export function ViewVendLimitModal({ open, estateId, onClose }: Props) {
         }
       } catch (err: unknown) {
         if (!cancelled) {
-          const message = (err as { message?: string })?.message ?? null;
+          const message = getApiErrorMessage(err) ?? null;
           setErrorMessage(message);
           if (message) toast.error(message);
         }

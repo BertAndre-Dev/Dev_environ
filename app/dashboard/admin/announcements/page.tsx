@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { Pencil, FileText } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
   getAnnouncements,
@@ -119,10 +120,12 @@ export default function AdminAnnouncementsPage() {
     if (!estateId) return;
     dispatch(
       getAnnouncements({ estateId, page: targetPage, limit: PAGE_SIZE }),
-    ).catch((err: unknown) => {
-      const e = err as { message?: string };
-      toast.error(e?.message ?? "Failed to load announcements.");
-    });
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   };
 
   useEffect(() => {
@@ -223,8 +226,8 @@ export default function AdminAnnouncementsPage() {
       if (nextPage !== page) setPage(nextPage);
       refreshAfterMutation(nextPage);
     } catch (err: unknown) {
-      const e = err as { message?: string };
-      toast.error(e?.message ?? "Failed to delete announcement.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     }
   };

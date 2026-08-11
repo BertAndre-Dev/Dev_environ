@@ -46,7 +46,7 @@ function FeatureCard({ title, description }: FeatureItem) {
 
   return (
     <motion.article
-      className="flex flex-col gap-4 rounded-[24px] bg-[#F5F7FA] p-7 sm:p-8 shadow-[0_1px_2px_rgba(16,24,40,0.04)] will-change-transform"
+      className="flex flex-col gap-4 rounded-[24px] bg-[#FFFFFF14] p-7 sm:p-8 shadow-[0_1px_2px_rgba(16,24,40,0.04)] will-change-transform"
       whileHover={
         reduceMotion
           ? undefined
@@ -96,8 +96,8 @@ export default function EverythingYouNeedSection() {
     >
       <div className="container mx-auto px-6 md:px-8 lg:px-10 xl:px-16 max-w-[1320px] xl:max-w-[1440px]">
         <div className="mx-auto max-w-3xl text-center">
-          <h2 className="text-[32px] sm:text-[36px] font-bold leading-tight tracking-[-0.02em] text-black">
-            Everything You Need. Nothing You Don&apos;t.
+          <h2 className="text-[32px] sm:text-[36px] font-medium leading-tight tracking-[-0.02em] text-black">
+            Everything You Need. <br /> Nothing You Don&apos;t.
           </h2>
           <p className="mt-4 text-base sm:text-lg text-[#4C4C4C] leading-relaxed">
             Manage your property and energy operations, payments, and residents

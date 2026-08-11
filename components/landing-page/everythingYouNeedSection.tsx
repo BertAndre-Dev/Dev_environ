@@ -73,9 +73,7 @@ function FeatureCard({
         "flex flex-col gap-4 rounded-3xl bg-[#F5F7FA] p-7 sm:p-8",
         "shadow-[0_1px_2px_rgba(16,24,40,0.04)]",
         interactiveMotionClassName,
-        revealed
-          ? "opacity-100"
-          : "opacity-0 motion-reduce:opacity-100",
+        revealed ? "opacity-100" : "opacity-0 motion-reduce:opacity-100",
         revealed ? "" : "translate-y-3 motion-reduce:translate-y-0",
       ]
         .filter(Boolean)
@@ -108,9 +106,7 @@ function PhoneCard({
       className={[
         "relative w-full overflow-hidden aspect-420/380 rounded-3xl",
         interactiveMotionClassName,
-        revealed
-          ? "opacity-100"
-          : "opacity-0 motion-reduce:opacity-100",
+        revealed ? "opacity-100" : "opacity-0 motion-reduce:opacity-100",
         revealed ? "" : "translate-y-3 motion-reduce:translate-y-0",
       ]
         .filter(Boolean)

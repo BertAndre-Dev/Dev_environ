@@ -45,10 +45,10 @@ export interface ConfirmBvnPayload {
   reference: string;
 }
 
-export interface CreateFlutterwaveVaPayload {
-  bvn?: string;
-  phonenumber: string;
-}
+/** Exactly one of BVN or NIN — never both. */
+export type CreateFlutterwaveVaPayload =
+  | { phonenumber: string; bvn: string; nin?: never }
+  | { phonenumber: string; nin: string; bvn?: never };
 
 function getApiErrorMessage(error: unknown): string | undefined {
   const err = error as {
@@ -307,7 +307,15 @@ export const createFlutterwaveVirtualAccount = createAsyncThunk(
       const body: Record<string, string> = {
         phonenumber: payload.phonenumber.trim(),
       };
-      if (payload.bvn?.trim()) body.bvn = payload.bvn.trim();
+      if ("nin" in payload && payload.nin?.trim()) {
+        body.nin = payload.nin.trim();
+      } else if ("bvn" in payload && payload.bvn?.trim()) {
+        body.bvn = payload.bvn.trim();
+      } else {
+        return rejectWithValue({
+          message: "Provide either BVN or NIN (not both).",
+        });
+      }
 
       const res = await axiosInstance.post(BASE, body);
       const account = normalizeVirtualAccount(res.data);

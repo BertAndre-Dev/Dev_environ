@@ -10,9 +10,12 @@ import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/redux/store";
 import {
+  createFlutterwaveVirtualAccount,
+  getFlutterwaveVirtualAccount,
   initiateFlutterwaveBvn,
   saveBvnConsentSession,
 } from "@/redux/slice/resident/virtual-accounts/flutterwave-va";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -20,26 +23,38 @@ type Props = {
   onClose: () => void;
 };
 
+type IdTab = "bvn" | "nin";
+
 const PHONE_RE = /^0[789][01]\d{8}$/;
-const BVN_RE = /^\d{11}$/;
+const ID_RE = /^\d{11}$/;
 
 export default function SetupVirtualAccountModal({
   visible,
   onClose,
 }: Readonly<Props>) {
   const dispatch = useDispatch<AppDispatch>();
-  const { initiateBvnState } = useSelector(
+  const { initiateBvnState, createVirtualAccountState } = useSelector(
     (state: RootState) => state.residentFlutterwaveVa,
   );
 
+  const [idTab, setIdTab] = useState<IdTab>("bvn");
   const [phonenumber, setPhonenumber] = useState("");
-  const [bvn, setBvn] = useState("");
+  const [identityNumber, setIdentityNumber] = useState("");
 
-  const submitting = initiateBvnState === "isLoading";
+  const submitting =
+    initiateBvnState === "isLoading" ||
+    createVirtualAccountState === "isLoading";
+
+  const selectTab = (tab: IdTab) => {
+    if (tab === idTab || submitting) return;
+    setIdTab(tab);
+    setIdentityNumber("");
+  };
 
   const resetForm = () => {
     setPhonenumber("");
-    setBvn("");
+    setIdentityNumber("");
+    setIdTab("bvn");
   };
 
   const handleClose = () => {
@@ -52,10 +67,59 @@ export default function SetupVirtualAccountModal({
     if (!PHONE_RE.test(phonenumber.trim())) {
       return "Enter a valid Nigerian phone number (e.g. 08100000000).";
     }
-    if (!BVN_RE.test(bvn.trim())) {
-      return "BVN must be exactly 11 digits.";
+    if (!ID_RE.test(identityNumber.trim())) {
+      return idTab === "bvn"
+        ? "BVN must be exactly 11 digits."
+        : "NIN must be exactly 11 digits.";
     }
     return null;
+  };
+
+  const handleContinueWithBvn = async (phone: string) => {
+    const bvn = identityNumber.trim();
+    const redirectUrl = `${window.location.origin}/dashboard/resident/transaction?bvn_return=1`;
+    const result = await dispatch(
+      initiateFlutterwaveBvn({
+        bvn,
+        redirectUrl,
+      }),
+    ).unwrap();
+
+    const reference = result.reference;
+    if (!reference) {
+      toast.error("No consent reference received. Please try again.");
+      return;
+    }
+
+    saveBvnConsentSession({
+      reference,
+      bvn,
+      phonenumber: phone,
+    });
+
+    if (result.consentUrl) {
+      toast.info("Redirecting to complete BVN consent…");
+      window.location.assign(result.consentUrl);
+      return;
+    }
+
+    toast.warning(
+      "Consent URL was not returned. If you already completed consent, return to this page to finish setup.",
+    );
+  };
+
+  const handleContinueWithNin = async (phone: string) => {
+    await dispatch(
+      createFlutterwaveVirtualAccount({
+        nin: identityNumber.trim(),
+        phonenumber: phone,
+      }),
+    ).unwrap();
+
+    await dispatch(getFlutterwaveVirtualAccount());
+    toast.success("Virtual account created successfully.");
+    resetForm();
+    onClose();
   };
 
   const handleContinue = async () => {
@@ -68,47 +132,21 @@ export default function SetupVirtualAccountModal({
     const phone = phonenumber.trim();
 
     try {
-      const redirectUrl = `${window.location.origin}/dashboard/resident/transaction?bvn_return=1`;
-      const result = await dispatch(
-        initiateFlutterwaveBvn({
-          bvn: bvn.trim(),
-          redirectUrl,
-        }),
-      ).unwrap();
-
-      const reference = result.reference;
-      if (!reference) {
-        toast.error("No consent reference received. Please try again.");
+      if (idTab === "bvn") {
+        await handleContinueWithBvn(phone);
         return;
       }
-
-      saveBvnConsentSession({
-        reference,
-        bvn: bvn.trim(),
-        phonenumber: phone,
-      });
-
-      if (result.consentUrl) {
-        toast.info("Redirecting to complete BVN consent…");
-        window.location.assign(result.consentUrl);
-        return;
-      }
-
-      toast.warning(
-        "Consent URL was not returned. If you already completed consent, return to this page to finish setup.",
-      );
+      await handleContinueWithNin(phone);
     } catch (err: unknown) {
-      const msg =
-        (err as { message?: string })?.message ||
-        "Failed to set up virtual account.";
-      toast.error(msg);
+      const message = getApiErrorMessage(err);
+      toast.error(message || "Failed to set up virtual account.");
     }
   };
 
   const phoneLen = phonenumber.length;
-  const bvnLen = bvn.length;
+  const idLen = identityNumber.length;
   const phoneReady = PHONE_RE.test(phonenumber.trim());
-  const bvnReady = BVN_RE.test(bvn.trim());
+  const idReady = ID_RE.test(identityNumber.trim());
 
   return (
     <Modal visible={visible} onClose={handleClose} contentClassName="max-w-md">
@@ -121,9 +159,46 @@ export default function SetupVirtualAccountModal({
             Set up virtual account
           </h2>
           <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-            Verify your BVN once. You’ll get a permanent NGN account for wallet
-            funding.
+            Choose either BVN or NIN (not both). You’ll get a permanent NGN
+            account for wallet funding.
           </p>
+        </div>
+
+        <div
+          role="tablist"
+          aria-label="Verify with BVN or NIN"
+          className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100/90 p-1"
+        >
+          {(
+            [
+              { key: "bvn", label: "BVN" },
+              { key: "nin", label: "NIN" },
+            ] as const
+          ).map((tab) => {
+            const active = idTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                role="tab"
+                id={`va-tab-${tab.key}`}
+                aria-controls="va-panel-identity"
+                aria-selected={active}
+                tabIndex={active ? 0 : -1}
+                disabled={submitting}
+                onClick={() => selectTab(tab.key)}
+                className={cn(
+                  "rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
+                  "active:scale-[0.98]",
+                  active
+                    ? "bg-white text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
         <div className="space-y-4">
@@ -160,26 +235,34 @@ export default function SetupVirtualAccountModal({
             />
           </div>
 
-          <div className="space-y-1.5">
+          <div
+            className="space-y-1.5"
+            role="tabpanel"
+            id="va-panel-identity"
+            aria-labelledby={`va-tab-${idTab}`}
+          >
             <div className="flex items-baseline justify-between gap-2">
-              <Label htmlFor="va-bvn" className="text-sm font-medium">
-                BVN
+              <Label htmlFor="va-identity" className="text-sm font-medium">
+                {idTab === "bvn" ? "BVN" : "NIN"}
               </Label>
               <span
                 className={cn(
                   "tabular-nums text-[11px]",
-                  bvnReady ? "text-emerald-600" : "text-muted-foreground",
+                  idReady ? "text-emerald-600" : "text-muted-foreground",
                 )}
                 aria-hidden
               >
-                {bvnLen}/11
+                {idLen}/11
               </span>
             </div>
             <Input
-              id="va-bvn"
+              id="va-identity"
+              key={idTab}
               inputMode="numeric"
-              placeholder="11-digit BVN"
-              value={bvn}
+              placeholder={
+                idTab === "bvn" ? "11-digit BVN" : "11-digit NIN"
+              }
+              value={identityNumber}
               disabled={submitting}
               maxLength={11}
               className={cn(
@@ -187,7 +270,9 @@ export default function SetupVirtualAccountModal({
                 "transition-[box-shadow,border-color] duration-150",
               )}
               onChange={(e) =>
-                setBvn(e.target.value.replace(/\D/g, "").slice(0, 11))
+                setIdentityNumber(
+                  e.target.value.replace(/\D/g, "").slice(0, 11),
+                )
               }
             />
           </div>
@@ -203,8 +288,9 @@ export default function SetupVirtualAccountModal({
               aria-hidden
             />
             <p>
-              Next you’ll complete NIBSS iGree consent securely. Your BVN isn’t
-              stored in this form after you continue.
+              {idTab === "bvn"
+                ? "Next you’ll complete NIBSS iGree consent securely. Only your BVN is used for this path."
+                : "Only your NIN is used for this path. It isn’t stored in this form after you continue."}
             </p>
           </div>
         </div>
@@ -225,7 +311,11 @@ export default function SetupVirtualAccountModal({
             disabled={submitting}
             className="rounded-full px-5 transition-transform duration-100 ease-out active:scale-[0.97]"
           >
-            {submitting ? "Please wait…" : "Continue"}
+            {submitting
+              ? "Please wait…"
+              : idTab === "nin"
+                ? "Create account"
+                : "Continue"}
           </Button>
         </div>
       </div>

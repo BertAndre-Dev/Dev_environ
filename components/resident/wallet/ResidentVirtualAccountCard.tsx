@@ -35,13 +35,11 @@ function formatAccountNumber(value: string) {
 
 function ActiveVirtualAccountDetails({
   virtualAccount,
-  bvnVerified,
   hasWallet,
   refreshing,
   onRefresh,
 }: Readonly<{
   virtualAccount: FlutterwaveVirtualAccount;
-  bvnVerified: boolean;
   hasWallet: boolean;
   refreshing: boolean;
   onRefresh: () => void;
@@ -63,12 +61,10 @@ function ActiveVirtualAccountDetails({
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
             Account number
           </p>
-          {bvnVerified ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
-              <ShieldCheck className="size-3" aria-hidden />
-              BVN verified
-            </span>
-          ) : null}
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+            <ShieldCheck className="size-3" aria-hidden />
+            Identity verified
+          </span>
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -167,8 +163,8 @@ function EmptyVirtualAccountState({
         Get a permanent funding account
       </h3>
       <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
-        Receive NGN bank transfers into your wallet anytime—checkout funding
-        stays the same.
+        Verify once with BVN or NIN, then receive NGN transfers into your
+        wallet anytime—checkout funding stays the same.
       </p>
 
       {!hasWallet ? (
@@ -206,7 +202,7 @@ export function ResidentVirtualAccountCard({
 }: Readonly<Props>) {
   const dispatch = useDispatch<AppDispatch>();
   const reduceMotion = useReducedMotion();
-  const { virtualAccount, getVirtualAccountState, bvnStatus } = useSelector(
+  const { virtualAccount, getVirtualAccountState } = useSelector(
     (state: RootState) => state.residentFlutterwaveVa,
   );
 
@@ -216,7 +212,6 @@ export function ResidentVirtualAccountCard({
 
   const loading = !initialLoadDone && getVirtualAccountState !== "failed";
   const hasAccount = Boolean(virtualAccount?.accountNumber);
-  const bvnVerified = Boolean(bvnStatus?.verified);
 
   useEffect(() => {
     if (!enabled) return;
@@ -268,7 +263,6 @@ export function ResidentVirtualAccountCard({
     body = (
       <ActiveVirtualAccountDetails
         virtualAccount={virtualAccount}
-        bvnVerified={bvnVerified}
         hasWallet={hasWallet}
         refreshing={refreshing}
         onRefresh={handleRefresh}

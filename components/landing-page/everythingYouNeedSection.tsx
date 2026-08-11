@@ -28,40 +28,16 @@ const CENTER_FEATURE: FeatureItem = {
 
 const spring = { type: "spring" as const, bounce: 0, duration: 0.4 };
 
-function LeafIcon() {
+function FeatureIcon() {
   return (
-    <span
-      className="inline-flex size-10 items-center justify-center rounded-full bg-[#E8F1FB]"
+    <Image
+      src="/assets/energy.svg"
+      alt=""
+      width={40}
+      height={40}
+      className="size-10"
       aria-hidden="true"
-    >
-      <svg
-        width="18"
-        height="18"
-        viewBox="0 0 18 18"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M9 15.5C9 15.5 4.5 12.2 4.5 8.1C4.5 5.6 6.4 3.5 9 3.5C11.6 3.5 13.5 5.6 13.5 8.1C13.5 12.2 9 15.5 9 15.5Z"
-          stroke="#0150AC"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M9 15.5V8"
-          stroke="#0150AC"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-        />
-        <path
-          d="M9 9.5C10.2 8.8 11.2 7.6 11.6 6.3"
-          stroke="#0150AC"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-        />
-      </svg>
-    </span>
+    />
   );
 }
 
@@ -79,7 +55,7 @@ function FeatureCard({ title, description }: FeatureItem) {
       whileTap={reduceMotion ? undefined : { scale: 0.97 }}
       transition={spring}
     >
-      <LeafIcon />
+      <FeatureIcon />
       <h3 className="text-lg sm:text-xl font-bold text-black tracking-[-0.01em] leading-snug">
         {title}
       </h3>
@@ -95,7 +71,7 @@ function PhoneCard() {
 
   return (
     <motion.div
-      className="relative w-full overflow-hidden rounded-[24px] bg-[#0150AC] aspect-[420/380] will-change-transform"
+      className="relative w-full overflow-hidden aspect-[420/380] will-change-transform"
       whileHover={reduceMotion ? undefined : { y: -4, scale: 1.01 }}
       whileTap={reduceMotion ? undefined : { scale: 0.985 }}
       transition={spring}

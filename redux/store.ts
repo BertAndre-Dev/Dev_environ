@@ -84,6 +84,7 @@ import companyTransactionSummarySliceReducer from "@/redux/slice/company/transac
 import companyEnergyConsumptionSliceReducer from "@/redux/slice/company/energy-consumption/company-energy-consumption-slice";
 import companyEstateEnergyUsageSliceReducer from "@/redux/slice/company/estate-energy-usage/company-estate-energy-usage-slice";
 import companyMeterSliceReducer from "@/redux/slice/company/meter-mgt/company-meter-slice";
+import reassignMeterSliceReducer from "@/redux/slice/meter/reassign-meter/reassign-meter-slice";
 import companyWalletSliceReducer from "@/redux/slice/company/wallet-mgt/company-wallet-mgt-slice";
 import chatSliceReducer from "@/redux/slice/chat/chat-slice";
 import communityGroupSliceReducer from "@/redux/slice/community-group/community-group-slice";
@@ -362,6 +363,7 @@ export const store = configureStore({
     companyEnergyConsumption: companyEnergyConsumptionSliceReducer,
     companyEstateEnergyUsage: companyEstateEnergyUsageSliceReducer,
     companyMeter: companyMeterSliceReducer,
+    reassignMeter: reassignMeterSliceReducer,
     companyWallet: companyWalletSliceReducer,
     residentMarketplace: residentMarketplaceSliceReducer,
     residentAnnouncements: residentAnnouncementsSliceReducer,

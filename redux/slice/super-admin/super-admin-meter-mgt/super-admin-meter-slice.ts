@@ -4,7 +4,6 @@ import type { EstateEnergyUsageRange } from "@/lib/estate-energy-usage-chart";
 import {
     assignMeterToEstate,
     getAllMeters,
-    reAssignMeter,
     removeEstateMeter,
     getMeter,
     getMeterByAddressId,
@@ -66,7 +65,6 @@ export interface SuperAdminMeterFilters {
 export interface SuperAdminMeterState {
     assignMeterToEstateState: "idle" | "isLoading" | "succeeded" | "failed";
     getAllMetersState: "idle" | "isLoading" | "succeeded" | "failed";
-    reAssignMeterState: "idle" | "isLoading" | "succeeded" | "failed";
     removeEstateMeterState: "idle" | "isLoading" | "succeeded" | "failed";
     getMeterState: "idle" | "isLoading" | "succeeded" | "failed";
     getMeterByAddressIdState: "idle" | "isLoading" | "succeeded" | "failed";
@@ -82,7 +80,6 @@ export interface SuperAdminMeterState {
 const initialState: SuperAdminMeterState = {
     assignMeterToEstateState: "idle",
     getAllMetersState: "idle",
-    reAssignMeterState: "idle",
     removeEstateMeterState: "idle",
     getMeterState: "idle",
     getMeterByAddressIdState: "idle",
@@ -232,27 +229,6 @@ const superAdminMeterSlice = createSlice({
                 state.removeEstateMeterState = "failed";
                 state.error =
                     action.error.message || "Failed to remove meter";
-            });
-
-
-        // ✅ REASSIGN METER
-        builder
-            .addCase(reAssignMeter.pending, (state) => {
-                state.reAssignMeterState = "isLoading";
-            })
-            .addCase(reAssignMeter.fulfilled, (state, action) => {
-                state.reAssignMeterState = "succeeded";
-                const reassign = action.payload?.data;
-                if (reassign && state.allSuperAdminMeter?.data) {
-                    state.allSuperAdminMeter.data = state.allSuperAdminMeter.data.map((meter) =>
-                    meter.id === reassign.id ? reassign : meter
-                    );
-                }
-            })
-            .addCase(reAssignMeter.rejected, (state, action) => {
-                state.reAssignMeterState = "failed";
-                state.error =
-                    action.error.message || "Failed to reassign meter";
             });
 
 

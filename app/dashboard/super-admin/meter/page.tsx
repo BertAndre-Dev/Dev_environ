@@ -10,11 +10,13 @@ import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Select from "react-select";
-import { Plus, Search, Trash, Eye, X } from "lucide-react";
+import { Plus, Search, Trash, Eye, X, KeyRound, ArrowRightLeft } from "lucide-react";
 import { MeterEnergyUsageSection } from "@/components/charts/meter-energy-usage-section";
 import { EstatePowerUsageSection } from "@/components/charts/estate-power-usage-section";
 import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
 import Tab from "@/components/tabs/page";
+import { ClearTamperTokenModal } from "@/components/meter/ClearTamperTokenModal";
+import ReassignMeterForm from "@/components/meter/ReassignMeterForm";
 import {
   getMeterUsage,
   type MeterUsageRange,
@@ -22,7 +24,9 @@ import {
 import { getSuperAdminEnergyConsumptionChart } from "@/redux/slice/super-admin/energy-consumption/super-admin-energy-consumption";
 import { getSuperAdminEstateEnergyUsage } from "@/redux/slice/super-admin/estate-energy-usage/super-admin-estate-energy-usage";
 import {
+  clearTamperToken,
   deleteMeter,
+  extractClearTamperToken,
   getAllMeters,
   getMeterByAddressId,
   removeEstateMeter,
@@ -42,6 +46,7 @@ import { isPending } from "@/lib/async-status";
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
 import { getCompanies } from "@/redux/slice/super-admin/company-mgt/company";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 /** addressId from list API can be a string or populated object with id */
 type AddressIdInput = string | { id: string; data?: Record<string, unknown> };
@@ -157,6 +162,18 @@ export default function AdminMeterManagement() {
   const [meterUsageRange, setMeterUsageRange] =
     useState<MeterUsageRange>("weekly");
   const [usageRefreshing, setUsageRefreshing] = useState(false);
+  const [clearTamperOpen, setClearTamperOpen] = useState(false);
+  const [clearTamperMeterNumber, setClearTamperMeterNumber] = useState<
+    string | null
+  >(null);
+  const [clearTamperTokenValue, setClearTamperTokenValue] = useState<
+    string | null
+  >(null);
+  const [clearTamperLoadingMeter, setClearTamperLoadingMeter] = useState<
+    string | null
+  >(null);
+  const [reassignMeterRow, setReassignMeterRow] =
+    useState<AdminMeterData | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -394,6 +411,14 @@ export default function AdminMeterManagement() {
     setAssignMeter((prev) => !prev);
   };
 
+  const handleOpenReassignMeter = (meter: AdminMeterData) => {
+    setReassignMeterRow(meter);
+  };
+
+  const handleCloseReassignMeter = () => {
+    setReassignMeterRow(null);
+  };
+
   const handleRemoveMeter = async () => {
     if (!selectedMeter) return;
 
@@ -428,6 +453,42 @@ export default function AdminMeterManagement() {
     dispatch(getMeterByAddressId(addressIdStr)).catch((err: any) => {
       toast.error(err?.message ?? "Failed to load meter details");
     });
+  };
+
+  const handleCloseClearTamper = () => {
+    setClearTamperOpen(false);
+    setClearTamperMeterNumber(null);
+    setClearTamperTokenValue(null);
+  };
+
+  const handleClearTamper = async (meter: AdminMeterData) => {
+    if (!meter.meterNumber) {
+      toast.warning("Meter number is missing.");
+      return;
+    }
+
+    setClearTamperLoadingMeter(meter.meterNumber);
+    try {
+      const res = await dispatch(
+        clearTamperToken({ meterNumber: meter.meterNumber }),
+      ).unwrap();
+      const token = extractClearTamperToken(res);
+      if (!token) {
+        toast.error("No clear-tamper token was returned.");
+        return;
+      }
+      setClearTamperMeterNumber(meter.meterNumber);
+      setClearTamperTokenValue(token);
+      setClearTamperOpen(true);
+      toast.success(
+        "Clear-tamper token generated. Enter it on the meter keypad.",
+      );
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error);
+      if (message) toast.error(message);
+    } finally {
+      setClearTamperLoadingMeter(null);
+    }
   };
 
   const handleCloseDetailsModal = () => {
@@ -534,6 +595,36 @@ export default function AdminMeterManagement() {
             disabled={!toAddressIdString(item.addressId)}
           >
             <Eye className="w-4 h-4" />
+          </Button>
+          {(item.estateId || item.companyId) && (
+            <div className="relative group/reassign">
+              <Button
+                variant="outline"
+                size="sm"
+                className="cursor-pointer gap-1"
+                onClick={() => handleOpenReassignMeter(item)}
+                title="Reassign to estate"
+                aria-label="Reassign to estate"
+              >
+                <ArrowRightLeft className="w-4 h-4 text-indigo-600" />
+              </Button>
+              <span
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 -translate-x-1/2 whitespace-nowrap rounded bg-foreground px-2 py-1 text-xs text-background opacity-0 shadow transition-opacity group-hover/reassign:opacity-100"
+              >
+                Reassign to estate
+              </span>
+            </div>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="cursor-pointer gap-1"
+            onClick={() => handleClearTamper(item)}
+            title="Generate clear-tamper token"
+            disabled={clearTamperLoadingMeter === item.meterNumber}
+          >
+            <KeyRound className="w-4 h-4 text-orange-600" />
           </Button>
           <Button
             variant="destructive"
@@ -826,6 +917,28 @@ export default function AdminMeterManagement() {
           </Modal>
         )}
 
+        {reassignMeterRow && (
+          <Modal
+            visible={Boolean(reassignMeterRow)}
+            onClose={handleCloseReassignMeter}
+          >
+            <ReassignMeterForm
+              meterNumber={reassignMeterRow.meterNumber}
+              estateId={reassignMeterRow.estateId}
+              companyId={reassignMeterRow.companyId}
+              estateOptions={estateOptions}
+              estatesLoading={estatesLoading}
+              close={handleCloseReassignMeter}
+              refresh={handleRefresh}
+              title={
+                reassignMeterRow.estateId
+                  ? "Reassign to estate"
+                  : "Assign to estate"
+              }
+            />
+          </Modal>
+        )}
+
         {/* View details modal */}
         <Modal
           visible={detailsModalOpen}
@@ -954,6 +1067,13 @@ export default function AdminMeterManagement() {
         title="Delete meter"
         loading={deleting}
         onConfirm={handleConfirmDelete}
+      />
+
+      <ClearTamperTokenModal
+        visible={clearTamperOpen}
+        meterNumber={clearTamperMeterNumber}
+        token={clearTamperTokenValue}
+        onClose={handleCloseClearTamper}
       />
     </div>
   );

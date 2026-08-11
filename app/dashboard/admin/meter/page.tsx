@@ -10,15 +10,18 @@ import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useState } from "react";
 import type { EstateEnergyUsageRange } from "@/lib/estate-energy-usage-chart";
 import { useDispatch, useSelector } from "react-redux";
-import { ChevronDown, Eye, Link, Search, Unlink, Zap } from "lucide-react";
+import { ChevronDown, Eye, KeyRound, Link, Search, Unlink, Zap } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { MeterEnergyUsageSection } from "@/components/charts/meter-energy-usage-section";
+import { ClearTamperTokenModal } from "@/components/meter/ClearTamperTokenModal";
 import {
   getMeterUsage,
   type MeterUsageRange,
 } from "@/redux/slice/resident/meter-mgt/meter-mgt";
 import {
   assignMeterToAddress,
+  clearTamperToken,
+  extractClearTamperToken,
   getAllEstateMeter,
   getVendingStatsByEstate,
 } from "@/redux/slice/admin/meter-mgt/meter-mgt";
@@ -97,6 +100,16 @@ export default function AdminMeterManagement() {
     null,
   );
   const [unassignSubmitting, setUnassignSubmitting] = useState(false);
+  const [clearTamperOpen, setClearTamperOpen] = useState(false);
+  const [clearTamperMeterNumber, setClearTamperMeterNumber] = useState<
+    string | null
+  >(null);
+  const [clearTamperTokenValue, setClearTamperTokenValue] = useState<
+    string | null
+  >(null);
+  const [clearTamperLoadingMeter, setClearTamperLoadingMeter] = useState<
+    string | null
+  >(null);
 
   const { allAdminMeters, pagination, getAllEstateMeterState } = useSelector(
     (state: RootState) => {
@@ -385,6 +398,42 @@ export default function AdminMeterManagement() {
     setUsageMeterNumber(null);
   };
 
+  const handleCloseClearTamper = () => {
+    setClearTamperOpen(false);
+    setClearTamperMeterNumber(null);
+    setClearTamperTokenValue(null);
+  };
+
+  const handleClearTamper = async (meter: AdminMeterData) => {
+    if (!meter.meterNumber) {
+      toast.warning("Meter number is missing.");
+      return;
+    }
+
+    setClearTamperLoadingMeter(meter.meterNumber);
+    try {
+      const res = await dispatch(
+        clearTamperToken({ meterNumber: meter.meterNumber }),
+      ).unwrap();
+      const token = extractClearTamperToken(res);
+      if (!token) {
+        toast.error("No clear-tamper token was returned.");
+        return;
+      }
+      setClearTamperMeterNumber(meter.meterNumber);
+      setClearTamperTokenValue(token);
+      setClearTamperOpen(true);
+      toast.success(
+        "Clear-tamper token generated. Enter it on the meter keypad.",
+      );
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error);
+      if (message) toast.error(message);
+    } finally {
+      setClearTamperLoadingMeter(null);
+    }
+  };
+
   useEffect(() => {
     if (!usageModalOpen || !usageMeterNumber) return;
     dispatch(
@@ -496,7 +545,24 @@ export default function AdminMeterManagement() {
           <Eye className="w-4 h-4 text-emerald-600" />
         </Button>
       ),
-    }
+    },
+    {
+      key: "clearTamper",
+      header: "Clear Tamper",
+      exportable: false,
+      render: (item: AdminMeterData) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleClearTamper(item)}
+          className="cursor-pointer hover:bg-orange-100"
+          title="Generate clear-tamper token"
+          disabled={clearTamperLoadingMeter === item.meterNumber}
+        >
+          <KeyRound className="w-4 h-4 text-orange-600" />
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -776,6 +842,13 @@ export default function AdminMeterManagement() {
           </p>
         }
         onConfirm={handleConfirmUnassign}
+      />
+
+      <ClearTamperTokenModal
+        visible={clearTamperOpen}
+        meterNumber={clearTamperMeterNumber}
+        token={clearTamperTokenValue}
+        onClose={handleCloseClearTamper}
       />
       </div>
     </div>

@@ -1,6 +1,13 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import { getApiErrorMessage } from "@/lib/api-error";
+import type { ClearTamperTokenResponse } from "@/lib/clear-tamper-token";
+
+export type {
+  ClearTamperTokenData,
+  ClearTamperTokenResponse,
+} from "@/lib/clear-tamper-token";
+export { extractClearTamperToken } from "@/lib/clear-tamper-token";
 
 
 export interface AssignMeterPayload {
@@ -166,6 +173,23 @@ export const setEstateVendLimits = createAsyncThunk(
       const res = await axiosInstance.put<EstateVendLimitsResponse>(
         `/api/v1/meters/estate/${estateId}/vend-limits`,
         { minVendAmount, maxVendAmount },
+      );
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: unknown } };
+      return rejectWithValue(err?.response?.data);
+    }
+  },
+);
+
+/** POST /api/v1/meters/clear-tamper-token — body: { meterNumber } */
+export const clearTamperToken = createAsyncThunk(
+  "admin-meter-mgt/clearTamperToken",
+  async ({ meterNumber }: { meterNumber: string }, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.post<ClearTamperTokenResponse>(
+        "/api/v1/meters/clear-tamper-token",
+        { meterNumber },
       );
       return res.data;
     } catch (error: unknown) {

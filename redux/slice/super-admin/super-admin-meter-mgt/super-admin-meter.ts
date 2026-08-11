@@ -1,5 +1,12 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import type { ClearTamperTokenResponse } from "@/lib/clear-tamper-token";
+
+export type {
+  ClearTamperTokenData,
+  ClearTamperTokenResponse,
+} from "@/lib/clear-tamper-token";
+export { extractClearTamperToken } from "@/lib/clear-tamper-token";
 
 
 interface SuperAdminMeterData {
@@ -36,19 +43,6 @@ export const removeEstateMeter = createAsyncThunk(
     async (data: SuperAdminMeterData, { rejectWithValue }) => {
         try {
             const res = await axiosInstance.put("/api/v1/meters/remove-estate-meter", data);
-            return res.data;
-        } catch (error: any) {
-            return rejectWithValue(error.response?.data);
-        }
-    }
-);
-
-
-export const reAssignMeter = createAsyncThunk(
-    "super-admin-meter/reAssignMeter",
-    async (data: SuperAdminMeterData, { rejectWithValue }) => {
-        try {
-            const res = await axiosInstance.put("/api/v1/meters/reassign-meter", data);
             return res.data;
         } catch (error: any) {
             return rejectWithValue(error.response?.data);
@@ -134,4 +128,21 @@ export const deleteMeter = createAsyncThunk(
       return rejectWithValue(error.response?.data);
     }
   }
-)
+);
+
+/** POST /api/v1/meters/clear-tamper-token — body: { meterNumber } */
+export const clearTamperToken = createAsyncThunk(
+  "super-admin-meter/clearTamperToken",
+  async ({ meterNumber }: { meterNumber: string }, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.post<ClearTamperTokenResponse>(
+        "/api/v1/meters/clear-tamper-token",
+        { meterNumber },
+      );
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: unknown } };
+      return rejectWithValue(err?.response?.data);
+    }
+  },
+);

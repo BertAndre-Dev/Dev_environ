@@ -10,7 +10,16 @@ import type { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Select from "react-select";
-import { Plus, Search, Trash, Eye, Building2, Link, Unlink } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Trash,
+  Eye,
+  Building2,
+  Link,
+  Unlink,
+  ArrowRightLeft,
+} from "lucide-react";
 import { MeterEnergyUsageSection } from "@/components/charts/meter-energy-usage-section";
 import { EstatePowerUsageSection } from "@/components/charts/estate-power-usage-section";
 import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
@@ -141,6 +150,8 @@ export default function CompanyMeterManagement() {
   const dispatch = useDispatch<AppDispatch>();
   const [assignMeter, setAssignMeter] = useState(false);
   const [assignToEstateMeter, setAssignToEstateMeter] =
+    useState<CompanyMeterRow | null>(null);
+  const [reassignMeterRow, setReassignMeterRow] =
     useState<CompanyMeterRow | null>(null);
   const [assignToAddressMeter, setAssignToAddressMeter] =
     useState<CompanyMeterRow | null>(null);
@@ -388,6 +399,14 @@ export default function CompanyMeterManagement() {
     setAssignToEstateMeter(null);
   };
 
+  const handleOpenReassignMeter = (meter: CompanyMeterRow) => {
+    setReassignMeterRow(meter);
+  };
+
+  const handleCloseReassignMeter = () => {
+    setReassignMeterRow(null);
+  };
+
   const handleOpenAssignToAddress = (meter: CompanyMeterRow) => {
     setAssignToAddressMeter(meter);
   };
@@ -566,7 +585,7 @@ export default function CompanyMeterManagement() {
                 Unassign from address
               </span>
             </div>
-          ) : isAllEstates ? (
+          ) : isAllEstates && !item.estateId ? (
             <div className="relative group/assign">
               <Button
                 variant="outline"
@@ -575,6 +594,7 @@ export default function CompanyMeterManagement() {
                 onClick={() => handleOpenAssignToEstate(item)}
                 aria-label="Assign to estate"
                 title="Assign to estate"
+                disabled={!companyId}
               >
                 <Building2 className="w-4 h-4 text-blue-600" />
               </Button>
@@ -585,7 +605,7 @@ export default function CompanyMeterManagement() {
                 Assign to estate
               </span>
             </div>
-          ) : (
+          ) : !isAllEstates ? (
             <div className="relative group/assign-address">
               <Button
                 variant="outline"
@@ -604,7 +624,28 @@ export default function CompanyMeterManagement() {
                 Assign to address
               </span>
             </div>
-          )}
+          ) : null}
+          {item.estateId ? (
+            <div className="relative group/reassign">
+              <Button
+                variant="outline"
+                size="sm"
+                className="cursor-pointer gap-1"
+                onClick={() => handleOpenReassignMeter(item)}
+                aria-label="Reassign meter"
+                title="Reassign to another estate"
+                disabled={!companyId}
+              >
+                <ArrowRightLeft className="w-4 h-4 text-indigo-600" />
+              </Button>
+              <span
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 -translate-x-1/2 whitespace-nowrap rounded bg-foreground px-2 py-1 text-xs text-background opacity-0 shadow transition-opacity group-hover/reassign:opacity-100"
+              >
+                Reassign to another estate
+              </span>
+            </div>
+          ) : null}
           <Button
             variant="outline"
             size="sm"
@@ -872,14 +913,32 @@ export default function CompanyMeterManagement() {
         </Modal>
       )}
 
-      {assignToEstateMeter && (
+      {assignToEstateMeter && companyId && (
         <Modal
           visible={Boolean(assignToEstateMeter)}
           onClose={handleCloseAssignToEstate}
         >
           <CompanyAssignMeterToEstateForm
             meterNumber={assignToEstateMeter.meterNumber}
+            companyId={companyId}
             close={handleCloseAssignToEstate}
+            refresh={handleRefresh}
+          />
+        </Modal>
+      )}
+
+      {reassignMeterRow && companyId && (
+        <Modal
+          visible={Boolean(reassignMeterRow)}
+          onClose={handleCloseReassignMeter}
+        >
+          <CompanyAssignMeterToEstateForm
+            meterNumber={reassignMeterRow.meterNumber}
+            companyId={
+              reassignMeterRow.companyId?.trim() || companyId
+            }
+            estateId={reassignMeterRow.estateId}
+            close={handleCloseReassignMeter}
             refresh={handleRefresh}
           />
         </Modal>

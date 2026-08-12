@@ -170,16 +170,22 @@ export const staffNav = [
     moduleKey: "complaints",
   },
   {
-    label: "Community Chat",
-    icon: MessagesSquare,
-    path: "/dashboard/staff/community",
-    moduleKey: "chat",
+    label: "Requests Management",
+    icon: ClipboardList,
+    path: "/dashboard/staff/request",
+    // moduleKey: "request",
   },
   {
     label: "Announcements",
     icon: Bell,
     path: "/dashboard/staff/announcements",
     moduleKey: "announcements",
+  },
+    {
+    label: "Community Chat",
+    icon: MessagesSquare,
+    path: "/dashboard/staff/community",
+    moduleKey: "chat",
   },
   {
     label: "Notifications",

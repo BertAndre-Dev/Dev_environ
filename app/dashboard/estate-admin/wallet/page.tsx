@@ -9,6 +9,7 @@ import Modal from "@/components/modal/page";
 import WithdrawFundForm from "@/components/estate-admin/transactions/fund-wallet-form/page";
 import EstateWalletOverviewCard from "@/components/estate-admin/wallet-overview-card/page";
 import SetWithdrawalAccountModal from "@/components/wallet/SetWithdrawalAccountModal";
+import RevenueWithdrawalAccountsCard from "@/components/wallet/RevenueWithdrawalAccountsCard";
 import {
   createWallet,
   getWallet,
@@ -427,6 +428,8 @@ export default function EstateAdminWalletPage() {
           </div>
         }
       />
+
+      <RevenueWithdrawalAccountsCard role="estateAdmin" />
 
       {/* Estate Credits Table */}
       <Card className="p-4">

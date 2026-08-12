@@ -12,6 +12,7 @@ import Modal from "@/components/modal/page";
 import Table from "@/components/tables/list/page";
 import EstateWalletOverviewCard from "@/components/estate-admin/wallet-overview-card/page";
 import SetWithdrawalAccountModal from "@/components/wallet/SetWithdrawalAccountModal";
+import RevenueWithdrawalAccountsCard from "@/components/wallet/RevenueWithdrawalAccountsCard";
 import EnergyProviderWithdrawFundForm from "@/components/energy-provider/wallet/EnergyProviderWithdrawFundForm";
 import { formatDateTime } from "@/lib/format-date";
 import {
@@ -323,6 +324,8 @@ export default function EnergyProviderWalletPage() {
         onSetWithdrawalAccount={() => setSetWithdrawalAccountModalOpen(true)}
         createWalletLoading={createWalletState === "isLoading"}
       />
+
+      <RevenueWithdrawalAccountsCard role="energyProvider" />
 
       <Card className="p-4 space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">

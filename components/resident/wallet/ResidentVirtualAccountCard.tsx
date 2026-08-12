@@ -163,12 +163,8 @@ function EmptyVirtualAccountState({
       </div>
 
       <h3 className="text-[17px] font-semibold tracking-tight text-foreground">
-        Get a permanent funding account
+        Get a virtual account
       </h3>
-      <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
-        Verify once with your NIN, then receive NGN transfers into your wallet
-        anytime—checkout funding stays the same.
-      </p>
 
       {!hasWallet ? (
         <p className="mt-3 max-w-sm text-xs leading-relaxed text-muted-foreground/90">

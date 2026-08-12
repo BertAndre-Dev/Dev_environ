@@ -51,6 +51,7 @@ import residentFlutterwaveVaSliceReducer from "@/redux/slice/resident/virtual-ac
 import residentRentMgtSliceReducer from "@/redux/slice/resident/rent-mgt/rent-mgt-slice";
 import residentInvitedTenantsSliceReducer from "@/redux/slice/resident/invited-tenants/invited-tenants-slice";
 import adminAnnouncementsSliceReducer from "@/redux/slice/admin/announcements/announcements-slice";
+import adminRequestSliceReducer from "@/redux/slice/admin/request/admin-request-slice";
 import superAdminMarketplaceSliceReducer from "@/redux/slice/super-admin/marketplace/marketplace-slice";
 import residentMarketplaceSliceReducer from "@/redux/slice/resident/marketplace/marketplace-slice";
 import residentAnnouncementsSliceReducer from "@/redux/slice/resident/announcements/announcements-slice";
@@ -114,6 +115,9 @@ import energyProviderUserSliceReducer from "@/redux/slice/energy-provider/user-m
 import superAdminRatesSliceReducer from "@/redux/slice/super-admin/rates/rates-slice";
 import notificationsSliceReducer from "@/redux/slice/notifications/notifications-slice";
 import withdrawalAccountSliceReducer from "@/redux/slice/wallet-mgt/withdrawal-account-slice";
+import companyRevenueWithdrawalAccountSliceReducer from "@/redux/slice/company/wallet-mgt/revenue-withdrawal-account-slice";
+import estateAdminRevenueWithdrawalAccountSliceReducer from "@/redux/slice/estate-admin/wallet-mgt/revenue-withdrawal-account-slice";
+import energyProviderRevenueWithdrawalAccountSliceReducer from "@/redux/slice/energy-provider/wallet-mgt/revenue-withdrawal-account-slice";
 import superAdminRevenueTrendSliceReducer from "@/redux/slice/super-admin/revenue-trend/revenue-trend-slice";
 import superAdminAveragePurchaseSliceReducer from "@/redux/slice/super-admin/average-purchase/average-purchase-slice";
 import superAdminTopEstatesEnergySliceReducer from "@/redux/slice/super-admin/top-estates-energy/top-estates-energy-slice";
@@ -340,6 +344,7 @@ export const store = configureStore({
     residentRentMgt: residentRentMgtSliceReducer,
     residentInvitedTenants: residentInvitedTenantsSliceReducer,
     adminAnnouncements: adminAnnouncementsSliceReducer,
+    adminRequest: adminRequestSliceReducer,
     superAdminMarketplace: superAdminMarketplaceSliceReducer,
     superAdminCompany: persistedSuperAdminCompanySliceReducer,
     companyMarketplace: persistedCompanyMarketplaceSliceReducer,
@@ -399,6 +404,11 @@ export const store = configureStore({
     superAdminRates: superAdminRatesSliceReducer,
     notifications: notificationsSliceReducer,
     withdrawalAccount: withdrawalAccountSliceReducer,
+    companyRevenueWithdrawalAccount: companyRevenueWithdrawalAccountSliceReducer,
+    estateAdminRevenueWithdrawalAccount:
+      estateAdminRevenueWithdrawalAccountSliceReducer,
+    energyProviderRevenueWithdrawalAccount:
+      energyProviderRevenueWithdrawalAccountSliceReducer,
     superAdminRevenueTrend: superAdminRevenueTrendSliceReducer,
     superAdminAveragePurchase: superAdminAveragePurchaseSliceReducer,
     superAdminTopEstatesEnergy: superAdminTopEstatesEnergySliceReducer,

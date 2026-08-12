@@ -12,7 +12,7 @@ export default function AuthLayout({
     <div className="min-h-screen flex font-sans">
       {/* Left Side - Branding (Figma: solid dark blue #0A387E) */}
       <div
-        className="hidden lg:flex lg:w-[40%] flex-col justify-between p-12 text-white"
+        className="hidden md:flex md:w-[42%] lg:w-[40%] flex-col justify-between p-8 lg:p-12 text-white"
         style={{ backgroundColor: "#0150AC" }}
       >
         <Link href="/" className="flex items-center">
@@ -21,28 +21,31 @@ export default function AuthLayout({
             alt="Berta Hub"
             width={140}
             height={48}
-            className="h-10 w-auto brightness-0 invert"
+            className="h-9 w-auto lg:h-10 brightness-0 invert"
           />
         </Link>
 
-        <div className="space-y-6">
+        <div className="space-y-4 lg:space-y-6">
           <div>
-            <h1 className="text-4xl font-bold mb-4 text-balance">
+            <h1 className="text-2xl lg:text-4xl font-bold mb-3 lg:mb-4 text-balance">
               Manage Your Estate With Confidence
             </h1>
-            <p className="text-lg opacity-90">
+            <p className="text-base lg:text-lg opacity-90">
               Join thousands of estate managers and residents using Berta hub to
               streamline operations and improve community living.
             </p>
           </div>
 
-          <ul className="space-y-4 list-none">
+          <ul className="space-y-3 lg:space-y-4 list-none">
             {[
               "Real-time bill tracking and payments",
               "Centralized resident management",
               "Secure transaction handling",
             ].map((feature, i) => (
-              <li key={i} className="flex items-center gap-3">
+              <li
+                key={i}
+                className="flex items-center gap-3 text-sm lg:text-base"
+              >
                 <span className="w-2 h-2 rounded-full bg-white/80 shrink-0" />
                 <span>{feature}</span>
               </li>
@@ -56,8 +59,8 @@ export default function AuthLayout({
       </div>
 
       {/* Right Side - Auth Form (white background) */}
-      <div className="w-full lg:w-[60%] flex flex-col lg:items-center lg:justify-center p-6 bg-white">
-        <Link href="/" className="mb-6 lg:hidden flex justify-center">
+      <div className="w-full md:w-[58%] lg:w-[60%] flex flex-col items-center justify-center p-6 md:p-8 lg:p-10 bg-white min-h-screen md:min-h-0">
+        <Link href="/" className="mb-6 md:hidden flex justify-center">
           <Image
             src="/logo.svg"
             alt="Berta Hub"
@@ -66,7 +69,7 @@ export default function AuthLayout({
             className="h-8 w-auto"
           />
         </Link>
-        <div className="flex-1 lg:flex-none flex items-center w-full max-w-md">
+        <div className="flex-1 md:flex-none flex items-center justify-center w-full max-w-md mx-auto">
           <div className="w-full">{children}</div>
         </div>
       </div>

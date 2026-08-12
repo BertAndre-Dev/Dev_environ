@@ -12,6 +12,7 @@ import Modal from "@/components/modal/page";
 import Table from "@/components/tables/list/page";
 import EstateWalletOverviewCard from "@/components/estate-admin/wallet-overview-card/page";
 import SetWithdrawalAccountModal from "@/components/wallet/SetWithdrawalAccountModal";
+import RevenueWithdrawalAccountsCard from "@/components/wallet/RevenueWithdrawalAccountsCard";
 import CompanyWithdrawFundForm from "@/components/company/wallet/CompanyWithdrawFundForm";
 import { formatDateTime } from "@/lib/format-date";
 import { isPending } from "@/lib/async-status";
@@ -351,6 +352,8 @@ export default function CompanyWalletPage() {
         walletLoading={walletLoading}
         createWalletLoading={createWalletState === "isLoading"}
       />
+
+      <RevenueWithdrawalAccountsCard role="company" />
 
       <Card className="p-4">
         <h2 className="font-semibold">Company Credits</h2>

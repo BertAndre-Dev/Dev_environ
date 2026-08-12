@@ -333,6 +333,12 @@ export const adminNav = [
     moduleKey: "meter",
   },
   {
+    label: "Request Management",
+    icon: ClipboardList,
+    path: "/dashboard/admin/request",
+    moduleKey: "request",
+  },
+  {
     label: "Visitors Management",
     icon: UserPlus,
     path: "/dashboard/admin/visitor",

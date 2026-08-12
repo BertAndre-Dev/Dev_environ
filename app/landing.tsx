@@ -10,7 +10,7 @@ import BertaShowcaseSection from "@/components/landing-page/bertaShowcaseSection
 import FeaturesSection from "@/components/landing-page/featuresSection";
 import Footer from "@/components/landing-page/footer";
 import TrustedBySection from "@/components/landing-page/trustedBy";
-import EverythingYouNeedSection from "@/components/landing-page/everythingYouNeedSection";
+// import EverythingYouNeedSection from "@/components/landing-page/everythingYouNeedSection";
 
 export default function Home() {
   return (
@@ -20,7 +20,7 @@ export default function Home() {
         <HeroSection />
         <FeaturesShowcaseSection />
         <TrustedBySection />
-        <EverythingYouNeedSection />
+        {/* <EverythingYouNeedSection /> */}
         <FeaturesSection />
         <BertaShowcaseSection />
         <FAQSection />

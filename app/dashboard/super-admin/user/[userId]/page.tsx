@@ -13,6 +13,7 @@ import {
   suspendUser,
 } from "@/redux/slice/super-admin/super-admin-user/super-admin-user";
 import UserDetailView from "@/app/dashboard/admin/user/components/AdminUserDetailView";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 const SUPER_ADMIN_USER_ACTIONS = {
   getUser,
@@ -36,9 +37,8 @@ export default function SuperAdminUserDetailPage() {
     try {
       await dispatch(getUser(userId)).unwrap();
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to load user details.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   }, [dispatch, userId]);
 

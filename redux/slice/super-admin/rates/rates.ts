@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export type RateFeeType = "VENDING" | "BILL_PAYMENT";
 export type RateScope = "GLOBAL" | "COMPANY" | "ESTATE";
@@ -206,11 +207,9 @@ export const getRates = createAsyncThunk(
         params,
       };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message ?? "Failed to fetch platform rates",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -232,11 +231,9 @@ export const getEffectiveRate = createAsyncThunk(
         data: parseEffectiveRate(res.data),
       };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
       return rejectWithValue({
         feeType: String(params.feeType),
-        message:
-          err?.response?.data?.message ?? "Failed to fetch effective rate",
+        message: getApiErrorMessage(error),
       });
     }
   },
@@ -264,11 +261,9 @@ export const upsertRate = createAsyncThunk(
           "Rate saved successfully",
       };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message ?? "Failed to save platform rate",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -281,11 +276,9 @@ export const deactivateRate = createAsyncThunk(
       const res = await axiosInstance.delete(`/api/v1/rates/${id}`);
       return { id, data: res.data };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message ?? "Failed to deactivate rate",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );

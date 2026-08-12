@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type {
   AnalyticsScope,
   CustomerGrowthData,
@@ -46,10 +47,7 @@ const customerGrowthSlice = createSlice({
       })
       .addCase(getCustomerGrowth.rejected, (state, action) => {
         state.status = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to fetch customer growth";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

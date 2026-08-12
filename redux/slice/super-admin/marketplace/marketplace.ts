@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export interface MarketplaceItem {
   id?: string;
@@ -65,10 +66,9 @@ export const getMarketplaceList = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to fetch marketplace",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   }
 );
@@ -83,10 +83,9 @@ export const getMarketplaceById = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to fetch listing",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   }
 );
@@ -107,11 +106,9 @@ export const createMarketplace = createAsyncThunk(
       });
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string | string[] } } };
-      const msg = err?.response?.data?.message;
-      return rejectWithValue({
-        message: Array.isArray(msg) ? msg[0] : msg ?? "Failed to create listing",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   }
 );
@@ -134,10 +131,9 @@ export const updateMarketplace = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to update listing",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   }
 );
@@ -157,10 +153,9 @@ export const suspendMarketplace = createAsyncThunk(
       );
       return { ...res.data, marketPlaceId };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to suspend listing",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   }
 );
@@ -175,10 +170,9 @@ export const activateMarketplace = createAsyncThunk(
       );
       return { ...res.data, marketPlaceId };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to activate listing",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   }
 );
@@ -193,10 +187,9 @@ export const deleteMarketplace = createAsyncThunk(
       );
       return { ...res.data, deletedId: marketPlaceId };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to delete listing",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   }
 );

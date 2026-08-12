@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch } from "@/redux/store";
 import { getFieldByEstate } from "@/redux/slice/admin/address-mgt/fields/fields";
 import { getEntriesByField } from "@/redux/slice/admin/address-mgt/entry/entry";
@@ -69,8 +70,9 @@ export default function CompanyAssignMeterToAddressForm({
             };
           }).filter((o: SelectOption) => Boolean(o.value)),
         );
-      } catch {
-        toast.error("Failed to load estate address entries.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setLoading(false);
       }
@@ -102,9 +104,9 @@ export default function CompanyAssignMeterToAddressForm({
       toast.success(res?.message || "Meter assigned successfully.");
       refresh();
       close();
-    } catch (error: unknown) {
-      const message = (error as { message?: string })?.message;
-      toast.error(message || "Failed to assign meter.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSubmitting(false);
     }

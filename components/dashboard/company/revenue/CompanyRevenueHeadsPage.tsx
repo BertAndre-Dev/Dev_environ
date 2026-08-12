@@ -41,6 +41,7 @@ import { Card } from "@/components/ui/card";
 import Loader from "@/components/ui/Loader";
 import Pagination from "@/components/pagination/page";
 import { isBusy, isPending, isSettled } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 const PAGE_SIZE = 12;
 
@@ -119,8 +120,9 @@ export default function CompanyRevenueHeadsPage() {
             getCompanyEstates({ page: 1, limit: 200 }),
           ).unwrap();
           options = mapCompanyEstateRows(res?.data);
-        } catch {
-          toast.error("Failed to fetch company estates.");
+        } catch (err: unknown) {
+          const message = getApiErrorMessage(err);
+          if (message) toast.error(message);
         }
         if (!options.length) options = parseCompanyEstates(data);
 
@@ -128,8 +130,9 @@ export default function CompanyRevenueHeadsPage() {
         if (options.length) {
           setSelectedEstate({ label: options[0].name, value: options[0].id });
         }
-      } catch {
-        toast.error("Failed to load company information.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setEstatesLoading(false);
       }
@@ -158,7 +161,10 @@ export default function CompanyRevenueHeadsPage() {
       }),
     )
       .unwrap()
-      .catch(() => toast.error("Failed to fetch revenue heads."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId, startDate, endDate, page]);
 
   useEffect(() => {
@@ -206,8 +212,8 @@ export default function CompanyRevenueHeadsPage() {
       toast.success("Revenue head deleted.");
       setItemToDelete(null);
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to delete.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     } finally {
       setDeleting(false);
@@ -224,8 +230,8 @@ export default function CompanyRevenueHeadsPage() {
       const payload = await dispatch(fetchCompanyRevenueHeadById(id)).unwrap();
       setViewItem(payload?.data ?? payload ?? null);
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to load revenue head.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       setViewOpen(false);
     } finally {
       setViewLoading(false);
@@ -260,8 +266,8 @@ export default function CompanyRevenueHeadsPage() {
       setEditing(null);
       setModalValues({ name: "", description: "" });
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to save revenue head.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSaving(false);
     }

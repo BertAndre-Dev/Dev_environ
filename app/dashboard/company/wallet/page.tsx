@@ -16,6 +16,7 @@ import RevenueWithdrawalAccountsCard from "@/components/wallet/RevenueWithdrawal
 import CompanyWithdrawFundForm from "@/components/company/wallet/CompanyWithdrawFundForm";
 import { formatDateTime } from "@/lib/format-date";
 import { isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
   getBanks,
@@ -218,10 +219,9 @@ export default function CompanyWalletPage() {
       handleCloseCreateWalletModal();
       await dispatch(getCompanyWallet(companyId));
       await fetchCredits(1);
-    } catch (error: unknown) {
-      toast.error(
-        (error as { message?: string })?.message || "Failed to create wallet.",
-      );
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -267,9 +267,8 @@ export default function CompanyWalletPage() {
         );
         window.history.replaceState({}, document.title, url.toString());
       } catch (err: unknown) {
-        toast.error(
-          (err as { message?: string })?.message || "Verification failed",
-        );
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     };
 

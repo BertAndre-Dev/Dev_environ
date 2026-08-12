@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export type CompanyModuleKey = string;
 
@@ -72,10 +73,9 @@ export const getCompanies = createAsyncThunk(
       });
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to fetch companies",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -88,10 +88,9 @@ export const getCompanyById = createAsyncThunk(
       const res = await axiosInstance.get(`/api/v1/company-mgt/${id}`);
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to fetch company",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -104,10 +103,9 @@ export const getCompanyModules = createAsyncThunk(
       const res = await axiosInstance.get("/api/v1/company-mgt/modules");
       return res.data as { success?: boolean; message?: string; data?: CompanyModuleKey[] };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to fetch company modules",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -120,11 +118,9 @@ export const createCompany = createAsyncThunk(
       const res = await axiosInstance.post("/api/v1/company-mgt", payload);
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string | string[] } } };
-      const msg = err?.response?.data?.message;
-      return rejectWithValue({
-        message: Array.isArray(msg) ? msg[0] : msg ?? "Failed to create company",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -138,10 +134,9 @@ export const updateCompany = createAsyncThunk(
       const res = await axiosInstance.put(`/api/v1/company-mgt/${id}`, data);
       return { ...res.data, updatedId: id };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to update company",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -155,10 +150,9 @@ export const updateCompanyModules = createAsyncThunk(
       const res = await axiosInstance.put(`/api/v1/company-mgt/${id}/modules`, { modules });
       return { ...res.data, updatedId: id, modules };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to update company modules",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -171,10 +165,9 @@ export const suspendCompany = createAsyncThunk(
       const res = await axiosInstance.put(`/api/v1/company-mgt/${id}/suspend-company`);
       return { ...res.data, companyId: id };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to suspend company",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -187,10 +180,9 @@ export const activateCompany = createAsyncThunk(
       const res = await axiosInstance.put(`/api/v1/company-mgt/${id}/activate-company`);
       return { ...res.data, companyId: id };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to activate company",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -203,10 +195,9 @@ export const deleteCompany = createAsyncThunk(
       const res = await axiosInstance.delete(`/api/v1/company-mgt/${id}`);
       return { ...res.data, deletedId: id };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to delete company",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );

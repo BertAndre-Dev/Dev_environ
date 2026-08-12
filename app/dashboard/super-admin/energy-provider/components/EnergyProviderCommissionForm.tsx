@@ -14,6 +14,7 @@ import { getCompanies } from "@/redux/slice/super-admin/company-mgt/company";
 import { getAllUsersByEstate } from "@/redux/slice/super-admin/super-admin-user/super-admin-user";
 import { setEnergyProviderConfig } from "@/redux/slice/super-admin/energy-provider-config/energy-provider-config";
 import { ENERGY_PROVIDER_ROLE } from "@/lib/invite-user-roles";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 type SelectOption = { value: string; label: string };
 type ConfigScope = "estate" | "company";
@@ -117,8 +118,9 @@ export default function EnergyProviderCommissionForm({
             .map((e) => toEstateRecord(e))
             .filter((e): e is EstateRecord => Boolean(e)),
         );
-      } catch {
-        toast.error("Failed to load estates");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setLoadingEstates(false);
       }
@@ -145,8 +147,9 @@ export default function EnergyProviderCommissionForm({
             }))
             .filter((c) => c.value),
         );
-      } catch {
-        toast.error("Failed to load companies");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setLoadingCompanies(false);
       }
@@ -180,8 +183,9 @@ export default function EnergyProviderCommissionForm({
             }))
             .filter((u) => u.value),
         );
-      } catch {
-        toast.error("Failed to load energy providers for this estate");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
         setEnergyProviderOptions([]);
       } finally {
         setLoadingProviders(false);
@@ -289,10 +293,8 @@ export default function EnergyProviderCommissionForm({
       onSuccess?.();
       onClose?.();
     } catch (err: unknown) {
-      const message =
-        (err as { message?: string })?.message ??
-        "Failed to configure energy provider commission";
-      toast.error(message);
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSubmitting(false);
     }

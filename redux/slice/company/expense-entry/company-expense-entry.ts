@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export type CompanyExpenseEntry = {
   id?: string;
@@ -46,11 +47,7 @@ export const createCompanyExpenseEntries = createAsyncThunk(
       const res = await axiosInstance.post("/api/v1/expense-entry", payload);
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to create expense entries.",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -85,12 +82,7 @@ export const fetchCompanyExpenseEntries = createAsyncThunk(
       );
       return res.data as CompanyExpenseEntryListResponse;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message ||
-          "Failed to fetch expense entries for head.",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -115,11 +107,7 @@ export const fetchCompanyExpenseEntryById = createAsyncThunk(
       });
       return res2.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to fetch expense entry.",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -151,11 +139,7 @@ export const updateCompanyExpenseEntry = createAsyncThunk(
       });
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to update expense entry.",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -167,11 +151,7 @@ export const deleteCompanyExpenseEntry = createAsyncThunk(
       const res = await axiosInstance.delete(`/api/v1/expense-entry/${id}`);
       return res.data ? { id, ...res.data } : { id };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to delete expense entry.",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );

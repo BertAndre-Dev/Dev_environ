@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   getCompanyEnergyProviderConfigs,
   setCompanyEnergyProviderConfig,
@@ -55,10 +56,7 @@ const companyEnergyProviderConfigSlice = createSlice({
         state.getListStatus = "failed";
         state.list = [];
         state.pagination = null;
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to fetch energy provider configurations";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(setCompanyEnergyProviderConfig.pending, (state) => {
         state.setConfigStatus = "isLoading";
@@ -72,10 +70,7 @@ const companyEnergyProviderConfigSlice = createSlice({
       })
       .addCase(setCompanyEnergyProviderConfig.rejected, (state, action) => {
         state.setConfigStatus = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to set energy provider commission";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

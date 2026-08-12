@@ -7,6 +7,7 @@ import DeleteModal from "@/components/resident/delete-modal/page";
 import Table from "@/components/tables/list/page";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2 } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { RootState, AppDispatch } from "@/redux/store";
 import {
   createAssets,
@@ -110,7 +111,10 @@ export default function AssetsTab({
       getAssets({ estateId: selectedEstateId, page, limit: PAGE_SIZE, search }),
     )
       .unwrap()
-      .catch(() => toast.error("Failed to load assets."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, selectedEstateId, page, search]);
 
   const columns = useMemo(
@@ -210,9 +214,8 @@ export default function AssetsTab({
       setItemToDelete(null);
       setPage(1);
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to delete asset.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     }
   };
@@ -248,8 +251,9 @@ export default function AssetsTab({
       }
       closeModal();
       setPage(1);
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to save asset.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 

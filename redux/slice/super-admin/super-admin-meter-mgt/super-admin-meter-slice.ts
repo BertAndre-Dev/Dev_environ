@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { EnergyConsumptionPeriod } from "@/lib/energy-consumption-chart";
 import type { EstateEnergyUsageRange } from "@/lib/estate-energy-usage-chart";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
     assignMeterToEstate,
     getAllMeters,
@@ -172,10 +173,7 @@ const superAdminMeterSlice = createSlice({
             })
             .addCase(assignMeterToEstate.rejected, (state, action) => {
                 state.assignMeterToEstateState = "failed";
-                state.error =
-                    (action.payload as any)?.message ||
-                    action.error.message ||
-                    "Failed to assign meter to estate";
+                state.error = getApiErrorMessage(action.payload) ?? null;
             });
 
 
@@ -207,7 +205,7 @@ const superAdminMeterSlice = createSlice({
             .addCase(getAllMeters.rejected, (state, action) => {
                 state.getAllMetersState = "failed";
                 state.status = "failed";
-                state.error = action.error.message || "Failed to fetch meters";
+                state.error = getApiErrorMessage(action.payload) ?? null;
             });
 
 
@@ -227,8 +225,7 @@ const superAdminMeterSlice = createSlice({
             })
             .addCase(removeEstateMeter.rejected, (state, action) => {
                 state.removeEstateMeterState = "failed";
-                state.error =
-                    action.error.message || "Failed to remove meter";
+                state.error = getApiErrorMessage(action.payload) ?? null;
             });
 
 
@@ -243,7 +240,7 @@ const superAdminMeterSlice = createSlice({
             })
             .addCase(getMeter.rejected, (state, action) => {
                 state.getMeterState = "failed";
-                state.error = action.error.message || "Failed to fetch meter";
+                state.error = getApiErrorMessage(action.payload) ?? null;
             });
 
         // ✅ GET METER BY ADDRESS ID (View details)
@@ -258,7 +255,7 @@ const superAdminMeterSlice = createSlice({
             .addCase(getMeterByAddressId.rejected, (state, action) => {
                 state.getMeterByAddressIdState = "failed";
                 state.superAdminMeter = null;
-                state.error = (action.payload as any)?.message ?? action.error.message ?? "Failed to fetch meter details";
+                state.error = getApiErrorMessage(action.payload) ?? null;
             });
 
 
@@ -285,7 +282,7 @@ const superAdminMeterSlice = createSlice({
 
             .addCase(deleteMeter.rejected, (state, action) => {
                 state.deleteMeterState = "failed";
-                state.error = action.error.message || "Failed to delete meter";
+                state.error = getApiErrorMessage(action.payload) ?? null;
             });
         
             

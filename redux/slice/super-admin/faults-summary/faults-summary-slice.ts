@@ -2,6 +2,7 @@ import { createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
 import type { AnalyticsScope, FaultsSummaryData } from "@/types/analytics";
 import { getFaultsSummary } from "./faults-summary";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export interface FaultsSummaryState {
   data: FaultsSummaryData | null;
@@ -42,10 +43,7 @@ const faultsSummarySlice = createSlice({
       })
       .addCase(getFaultsSummary.rejected, (state, action) => {
         state.status = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to fetch faults summary";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

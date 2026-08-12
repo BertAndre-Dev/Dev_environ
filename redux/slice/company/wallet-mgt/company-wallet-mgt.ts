@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export interface CreateCompanyWalletData {
   companyId: string;
@@ -58,12 +59,6 @@ export interface CompanyWithdrawAuditPayload {
   isAuditOnly: true;
 }
 
-function getErrorMessage(error: unknown, fallback: string) {
-  const err = error as { response?: { data?: { message?: string | string[] } } };
-  const msg = err?.response?.data?.message;
-  return Array.isArray(msg) ? msg[0] : msg ?? fallback;
-}
-
 /** POST /api/v1/wallet-mgt */
 export const createCompanyWallet = createAsyncThunk(
   "company-wallet-mgt/createCompanyWallet",
@@ -79,7 +74,7 @@ export const createCompanyWallet = createAsyncThunk(
       return res.data;
     } catch (error: unknown) {
       return rejectWithValue({
-        message: getErrorMessage(error, "Wallet creation failed"),
+        message: getApiErrorMessage(error),
       });
     }
   },
@@ -100,7 +95,7 @@ export const getCompanyWallet = createAsyncThunk(
       return res.data;
     } catch (error: unknown) {
       return rejectWithValue({
-        message: getErrorMessage(error, "Failed to fetch wallet"),
+        message: getApiErrorMessage(error),
       });
     }
   },
@@ -134,7 +129,7 @@ export const getCompanyCredits = createAsyncThunk(
       return res.data;
     } catch (error: unknown) {
       return rejectWithValue({
-        message: getErrorMessage(error, "Failed to fetch company credits"),
+        message: getApiErrorMessage(error),
       });
     }
   },
@@ -156,7 +151,7 @@ export const getCompanyT1Breakdown = createAsyncThunk(
       return res.data;
     } catch (error: unknown) {
       return rejectWithValue({
-        message: getErrorMessage(error, "Failed to fetch wallet breakdown"),
+        message: getApiErrorMessage(error),
       });
     }
   },
@@ -181,7 +176,7 @@ export const getCompanyT1Pending = createAsyncThunk(
       return res.data;
     } catch (error: unknown) {
       return rejectWithValue({
-        message: getErrorMessage(error, "Failed to fetch pending withdrawals"),
+        message: getApiErrorMessage(error),
       });
     }
   },
@@ -196,7 +191,7 @@ export const createCompanyWithdrawAudit = createAsyncThunk(
       return res.data;
     } catch (error: unknown) {
       return rejectWithValue({
-        message: getErrorMessage(error, "Failed to create withdrawal record"),
+        message: getApiErrorMessage(error),
       });
     }
   },
@@ -214,7 +209,7 @@ export const requestCompanyWithdrawOtp = createAsyncThunk(
       return res.data;
     } catch (error: unknown) {
       return rejectWithValue({
-        message: getErrorMessage(error, "Failed to request transfer OTP"),
+        message: getApiErrorMessage(error),
       });
     }
   },
@@ -232,7 +227,7 @@ export const transferCompanyFunds = createAsyncThunk(
       return res.data;
     } catch (error: unknown) {
       return rejectWithValue({
-        message: getErrorMessage(error, "Failed to transfer funds"),
+        message: getApiErrorMessage(error),
       });
     }
   },

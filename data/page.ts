@@ -276,6 +276,11 @@ export const companyNav = [
     moduleKey: "operations-reporting",
   },
   {
+    label: "Requests Management",
+    icon: ClipboardList,
+    path: "/dashboard/company/request",
+  },
+  {
     label: "Report",
     icon: BarChart,
     path: "/dashboard/company/reports",
@@ -553,6 +558,11 @@ export const estateAdminNav = [
     icon: BarChart,
     path: "/dashboard/estate-admin/reports",
     moduleKey: "reporting",
+  },
+  {
+    label: "Requests Management",
+    icon: ClipboardList,
+    path: "/dashboard/estate-admin/request",
   },
   {
     label: "Community Chat",

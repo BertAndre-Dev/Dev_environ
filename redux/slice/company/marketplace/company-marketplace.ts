@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export interface CompanyMarketplaceItem {
   id?: string;
@@ -75,10 +76,7 @@ export const getCompanyMarketplaceList = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to fetch marketplace",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -91,10 +89,7 @@ export const getCompanyMarketplaceById = createAsyncThunk(
       const res = await axiosInstance.get(`/api/v1/marketplace/${marketPlaceId}`);
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to fetch listing",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -114,11 +109,7 @@ export const createCompanyMarketplace = createAsyncThunk(
       });
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string | string[] } } };
-      const msg = err?.response?.data?.message;
-      return rejectWithValue({
-        message: Array.isArray(msg) ? msg[0] : msg ?? "Failed to create listing",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -141,10 +132,7 @@ export const updateCompanyMarketplace = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to update listing",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -164,10 +152,7 @@ export const suspendCompanyMarketplace = createAsyncThunk(
       );
       return { ...res.data, marketPlaceId };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to suspend listing",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -182,10 +167,7 @@ export const activateCompanyMarketplace = createAsyncThunk(
       );
       return { ...res.data, marketPlaceId };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to activate listing",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -198,10 +180,7 @@ export const deleteCompanyMarketplace = createAsyncThunk(
       const res = await axiosInstance.delete(`/api/v1/marketplace/${marketPlaceId}`);
       return { ...res.data, deletedId: marketPlaceId };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to delete listing",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );

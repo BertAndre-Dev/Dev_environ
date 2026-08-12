@@ -37,6 +37,7 @@ import {
   type EstateOption,
 } from "@/app/dashboard/company/asset/lib/estate";
 import { slugify } from "@/lib/slug";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 import { ExpensesHeader } from "@/components/dashboard/admin/expenses/ExpensesHeader";
 import { ExpensesFiltersBar } from "@/components/dashboard/admin/expenses/ExpensesFiltersBar";
@@ -144,8 +145,9 @@ export default function CompanyExpenseHeadDetailPage() {
             getCompanyEstates({ page: 1, limit: 200 }),
           ).unwrap();
           options = mapCompanyEstateRows(res?.data);
-        } catch {
-          toast.error("Failed to fetch company estates.");
+        } catch (err: unknown) {
+          const message = getApiErrorMessage(err);
+          if (message) toast.error(message);
         }
         if (!options.length) options = parseCompanyEstates(data);
 
@@ -158,8 +160,9 @@ export default function CompanyExpenseHeadDetailPage() {
         } else if (options.length) {
           setSelectedEstate({ label: options[0].name, value: options[0].id });
         }
-      } catch {
-        toast.error("Failed to load company information.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setEstatesLoading(false);
       }
@@ -175,7 +178,10 @@ export default function CompanyExpenseHeadDetailPage() {
     if (!estateId) return;
     dispatch(fetchCompanyExpenseHeads({ estateId, page: 1, limit: 500 }))
       .unwrap()
-      .catch(() => toast.error("Failed to load expense heads."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId]);
 
   useEffect(() => {
@@ -194,7 +200,10 @@ export default function CompanyExpenseHeadDetailPage() {
       }),
     )
       .unwrap()
-      .catch(() => toast.error("Failed to fetch expense entries."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, headId, page, startDate, endDate]);
 
   const filteredEntries = useMemo(() => {
@@ -294,8 +303,8 @@ export default function CompanyExpenseHeadDetailPage() {
         }),
       ).unwrap();
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to create entries.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       setSaving(false);
     }
   };
@@ -340,8 +349,8 @@ export default function CompanyExpenseHeadDetailPage() {
       toast.success("Expense entry updated.");
       closeEdit();
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to update entry.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       setSaving(false);
     }
   };
@@ -362,8 +371,8 @@ export default function CompanyExpenseHeadDetailPage() {
       toast.success("Expense entry deleted.");
       setItemToDelete(null);
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to delete.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     } finally {
       setDeleting(false);

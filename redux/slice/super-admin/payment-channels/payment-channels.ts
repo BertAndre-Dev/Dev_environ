@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import type { PaymentChannelsResponse } from "@/types/analytics";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 /** GET /api/v1/analytics/finance/payment-channels */
 export const getPaymentChannels = createAsyncThunk(
@@ -12,16 +13,9 @@ export const getPaymentChannels = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return rejectWithValue({
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to fetch payment channels.",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );

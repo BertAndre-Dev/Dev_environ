@@ -9,6 +9,7 @@ import {
 } from "./company-revenue-head";
 import type { RootState } from "@/redux/store";
 import { isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export interface CompanyRevenueHeadPagination {
   total: number;
@@ -83,10 +84,7 @@ const companyRevenueHeadSlice = createSlice({
       })
       .addCase(createCompanyRevenueHead.rejected, (state, action) => {
         state.createState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to create revenue head.";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -107,10 +105,7 @@ const companyRevenueHeadSlice = createSlice({
       })
       .addCase(fetchCompanyRevenueHeads.rejected, (state, action) => {
         state.listState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to fetch revenue heads.";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -124,10 +119,7 @@ const companyRevenueHeadSlice = createSlice({
       })
       .addCase(fetchCompanyRevenueHeadById.rejected, (state, action) => {
         state.getByIdState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to fetch revenue head.";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -150,10 +142,7 @@ const companyRevenueHeadSlice = createSlice({
       })
       .addCase(updateCompanyRevenueHead.rejected, (state, action) => {
         state.updateState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to update revenue head.";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -171,10 +160,7 @@ const companyRevenueHeadSlice = createSlice({
       })
       .addCase(deleteCompanyRevenueHead.rejected, (state, action) => {
         state.deleteState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to delete revenue head.";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

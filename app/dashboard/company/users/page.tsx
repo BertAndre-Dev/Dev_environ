@@ -19,6 +19,7 @@ import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import Loader from "@/components/ui/Loader";
 import { isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
@@ -158,8 +159,9 @@ export default function CompanyUsersPage() {
         }
         setCompanyId(company.id);
         setCompanyName(company.name);
-      } catch {
-        toast.error("Failed to load company information.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     })();
   }, [dispatch]);
@@ -183,8 +185,9 @@ export default function CompanyUsersPage() {
               Boolean(x),
             ) ?? [];
         setEstateOptions(options);
-      } catch {
-        toast.error("Failed to fetch estates");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
         setEstateOptions([]);
       } finally {
         setEstatesLoading(false);
@@ -200,9 +203,10 @@ export default function CompanyUsersPage() {
 
   useEffect(() => {
     if (!selectedEstate?.value) return;
-    fetchUsers(1).catch(() =>
-      toast.error("Failed to fetch users for selected estate"),
-    );
+    fetchUsers(1).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
   }, [selectedEstate, fetchUsers]);
 
   const closeStatusModal = () => {
@@ -241,10 +245,8 @@ export default function CompanyUsersPage() {
       closeStatusModal();
       await fetchUsers(Number(pagination?.currentPage) || 1);
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ??
-          "Failed to update user status.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setStatusSubmitting(false);
     }
@@ -264,8 +266,8 @@ export default function CompanyUsersPage() {
       setItemToDelete(null);
       await fetchUsers(1);
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to delete user.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     } finally {
       setDeleting(false);
@@ -511,9 +513,10 @@ export default function CompanyUsersPage() {
               pageSize,
             }}
             onPageChange={(page) => {
-              fetchUsers(page).catch(() =>
-                toast.error("Failed to change page"),
-              );
+              fetchUsers(page).catch((err: unknown) => {
+                const message = getApiErrorMessage(err);
+                if (message) toast.error(message);
+              });
             }}
             enableExport
             exportFileName="company-users"

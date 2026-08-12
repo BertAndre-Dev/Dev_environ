@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 import Select from "react-select";
 import Loader from "@/components/ui/Loader";
 import type { AppDispatch } from "@/redux/store";
@@ -76,7 +77,7 @@ export default function CompanyAssetMaintenancePage() {
         setScheduleRecords(res?.data ?? []);
       } catch (err: unknown) {
         setScheduleRecords([]);
-        const message = (err as { message?: string })?.message;
+        const message = getApiErrorMessage(err);
         if (message) toast.error(message);
       } finally {
         setScheduleLoading(false);
@@ -111,7 +112,7 @@ export default function CompanyAssetMaintenancePage() {
           ).unwrap();
           options = mapCompanyEstateRows(res?.data);
         } catch (err: unknown) {
-          const message = (err as { message?: string })?.message;
+          const message = getApiErrorMessage(err);
           if (message) toast.error(message);
         }
         if (!options.length) options = parseCompanyEstates(data);
@@ -121,7 +122,7 @@ export default function CompanyAssetMaintenancePage() {
           setSelectedEstate({ label: options[0].name, value: options[0].id });
         }
       } catch (err: unknown) {
-        const message = (err as { message?: string })?.message;
+        const message = getApiErrorMessage(err);
         if (message) toast.error(message);
       } finally {
         setEstatesLoading(false);

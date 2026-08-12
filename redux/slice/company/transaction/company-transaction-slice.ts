@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   getCompanyTransactionHistory,
   getCompanyPaidBills,
@@ -86,10 +87,7 @@ const companyTransactionSlice = createSlice({
       })
       .addCase(getCompanyTransactionHistory.rejected, (state, action) => {
         state.getCompanyTransactionHistoryState = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          null;
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
 
       .addCase(getCompanyPaidBills.pending, (state) => {
@@ -104,10 +102,7 @@ const companyTransactionSlice = createSlice({
       })
       .addCase(getCompanyPaidBills.rejected, (state, action) => {
         state.getCompanyPaidBillsState = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          null;
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
 
       .addCase(verifyCompanyTransaction.pending, (state) => {
@@ -118,10 +113,7 @@ const companyTransactionSlice = createSlice({
       })
       .addCase(verifyCompanyTransaction.rejected, (state, action) => {
         state.verifyTransactionState = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          null;
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

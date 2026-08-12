@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import type { EnergyProviderVendRow } from "@/lib/energy-provider-vends";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export interface GetEnergyProviderVendsParams {
   estateId: string;
@@ -84,11 +85,9 @@ export const getEnergyProviderVends = createAsyncThunk(
         pagination: normalizePagination(res.data?.pagination, data.length, page, limit),
       } satisfies EnergyProviderVendsResult;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message ?? "Failed to fetch vend history",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );

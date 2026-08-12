@@ -134,6 +134,7 @@ import type {
 import Loader from "@/components/ui/Loader";
 import { isPending } from "@/lib/async-status";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 function formatGrowthCount(metric: CustomerGrowthMetric | null): string {
   if (!metric) return "—";
@@ -288,21 +289,15 @@ export default function SuperAdminDashboard() {
 
   useEffect(() => {
     dispatch(getAllEstates({ page: 1, limit: 200 })).catch((err: unknown) => {
-      const message =
-        err && typeof err === "object" && "message" in err
-          ? String((err as { message?: string }).message)
-          : "Failed to fetch estates";
-      toast.error(message);
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     });
   }, [dispatch]);
 
   useEffect(() => {
     dispatch(getCompanies({ page: 1, limit: 200 })).catch((err: unknown) => {
-      const message =
-        err && typeof err === "object" && "message" in err
-          ? String((err as { message?: string }).message)
-          : "Failed to fetch companies";
-      toast.error(message);
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     });
   }, [dispatch]);
 

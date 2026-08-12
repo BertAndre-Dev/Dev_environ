@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type {
   AnalyticsScope,
   CustomerActivationsData,
@@ -45,10 +46,7 @@ const customerActivationsSlice = createSlice({
       })
       .addCase(getCustomerActivations.rejected, (state, action) => {
         state.status = "failed";
-        state.error =
-          action.payload?.message ||
-          action.error.message ||
-          "Failed to fetch customer activations";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

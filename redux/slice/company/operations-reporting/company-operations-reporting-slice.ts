@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 import {
   fetchCompanyOperationsReportingEntries,
@@ -90,10 +91,7 @@ const companyOperationsReportingSlice = createSlice({
         state.getTypesStatus = "failed";
         state.types = [];
         state.typesPagination = null;
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to fetch reporting types";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -110,10 +108,7 @@ const companyOperationsReportingSlice = createSlice({
         state.getFieldsStatus = "failed";
         state.fields = [];
         state.fieldsPagination = null;
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to fetch report fields";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -130,10 +125,7 @@ const companyOperationsReportingSlice = createSlice({
         state.getEntriesStatus = "failed";
         state.entries = [];
         state.entriesPagination = null;
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to fetch report entries";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

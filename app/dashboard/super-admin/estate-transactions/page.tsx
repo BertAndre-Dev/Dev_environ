@@ -28,6 +28,7 @@ import { PaidBillsTab } from "@/app/dashboard/estate-admin/transactions/componen
 import { formatDateTime } from "@/lib/format-date";
 import Loader from "@/components/ui/Loader";
 import { isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 const ESTATE_FILTER_FETCH_LIMIT = 500;
 
@@ -111,7 +112,10 @@ export default function SuperAdminEstateTransactionsPage() {
   useEffect(() => {
     dispatch(getAllEstates({ page: 1, limit: ESTATE_FILTER_FETCH_LIMIT }))
       .unwrap()
-      .catch(() => toast.error("Failed to fetch estates"));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch]);
 
   useEffect(() => {

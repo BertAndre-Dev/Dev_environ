@@ -23,6 +23,7 @@ import {
   type RateFeeType,
   type RateSplit,
 } from "@/redux/slice/super-admin/rates/rates";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 type BankOption = { value: string; label: string };
 
@@ -221,9 +222,8 @@ export function SetEstateRateModal({
       onSuccess(feeType);
       onClose();
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to save rate",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSubmitting(false);
     }

@@ -22,6 +22,7 @@ import {
   IsoLinkedRangeStart,
 } from "@/components/ui/iso-date-picker";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
 import {
@@ -71,7 +72,6 @@ function useIsolatedReport(
   startDate: string,
   endDate: string,
   dispatch: AppDispatch,
-  errorLabel: string,
 ) {
   const [data, setData] = useState<FinancialReportData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -95,9 +95,11 @@ function useIsolatedReport(
         const payload = res?.data ?? res;
         if (!abortRef.current) setData(payload as FinancialReportData);
       })
-      .catch((e: { message?: string }) => {
-        if (!abortRef.current)
-          toast.error(e?.message ?? `Failed to load ${errorLabel}.`);
+      .catch((err: unknown) => {
+        if (!abortRef.current) {
+          const message = getApiErrorMessage(err);
+          if (message) toast.error(message);
+        }
       })
       .finally(() => {
         if (!abortRef.current) setLoading(false);
@@ -106,7 +108,7 @@ function useIsolatedReport(
     return () => {
       abortRef.current = true;
     };
-  }, [estateId, startDate, endDate, dispatch, errorLabel]);
+  }, [estateId, startDate, endDate, dispatch]);
 
   return { data, loading };
 }
@@ -167,8 +169,9 @@ export default function CompanyReportsPage() {
             getCompanyEstates({ page: 1, limit: 200 }),
           ).unwrap();
           options = mapCompanyEstateRows(res?.data);
-        } catch {
-          toast.error("Failed to fetch company estates.");
+        } catch (err: unknown) {
+          const message = getApiErrorMessage(err);
+          if (message) toast.error(message);
         }
         if (!options.length) options = parseCompanyEstates(data);
 
@@ -178,8 +181,9 @@ export default function CompanyReportsPage() {
           setSelectedEstate(first);
           dispatch(setCompanyFinancialReportEstate(first.value));
         }
-      } catch {
-        toast.error("Failed to load company information.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setEstatesLoading(false);
       }
@@ -200,9 +204,10 @@ export default function CompanyReportsPage() {
       }),
     )
       .unwrap()
-      .catch((e: { message?: string }) =>
-        toast.error(e?.message ?? "Failed to fetch analytics chart."),
-      );
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [estateId, chartStartDate, chartEndDate, dispatch]);
 
   const { data: revenueReport } = useIsolatedReport(
@@ -210,7 +215,6 @@ export default function CompanyReportsPage() {
     revenueStartDate,
     revenueEndDate,
     dispatch,
-    "revenue report",
   );
 
   const { data: expensesReport } = useIsolatedReport(
@@ -218,7 +222,6 @@ export default function CompanyReportsPage() {
     expensesStartDate,
     expensesEndDate,
     dispatch,
-    "expenses report",
   );
 
   const totalRevenue =

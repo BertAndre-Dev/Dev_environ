@@ -23,6 +23,7 @@ import {
   type EstateData,
 } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useState } from "react";
@@ -100,7 +101,10 @@ export default function EstatePage() {
   );
 
   useEffect(() => {
-    fetchEstates(1).catch(() => toast.error("Failed to fetch estates"));
+    fetchEstates(1).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
   }, [fetchEstates]);
 
   const applySearch = useCallback(() => {
@@ -157,8 +161,9 @@ export default function EstatePage() {
       }
       handleCloseModal();
       await fetchEstates(1);
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to save estate");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -191,8 +196,9 @@ export default function EstatePage() {
       }
       closeStatusModal();
       await fetchEstates(1);
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to update estate status.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setStatusSubmitting(false);
     }
@@ -215,9 +221,8 @@ export default function EstatePage() {
       setEstateToDelete(null);
       await fetchEstates(1);
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message || "Failed to delete estate.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     } finally {
       setDeleting(false);
@@ -466,9 +471,10 @@ export default function EstatePage() {
             pageSize: PAGE_SIZE,
           }}
           onPageChange={(page) => {
-            fetchEstates(page).catch(() =>
-              toast.error("Failed to change page"),
-            );
+            fetchEstates(page).catch((err: unknown) => {
+              const message = getApiErrorMessage(err);
+              if (message) toast.error(message);
+            });
           }}
           enableExport
           exportFileName="estates"

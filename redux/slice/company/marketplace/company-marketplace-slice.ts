@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   getCompanyMarketplaceList,
   getCompanyMarketplaceById,
@@ -68,10 +69,7 @@ const companyMarketplaceSlice = createSlice({
         state.getListStatus = "failed";
         state.list = null;
         state.pagination = null;
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to fetch marketplace";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(getCompanyMarketplaceById.pending, (state) => {
         state.getByIdStatus = "isLoading";
@@ -84,10 +82,7 @@ const companyMarketplaceSlice = createSlice({
       .addCase(getCompanyMarketplaceById.rejected, (state, action) => {
         state.getByIdStatus = "failed";
         state.current = null;
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to fetch listing";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(createCompanyMarketplace.pending, (state) => {
         state.createStatus = "isLoading";
@@ -103,10 +98,7 @@ const companyMarketplaceSlice = createSlice({
       })
       .addCase(createCompanyMarketplace.rejected, (state, action) => {
         state.createStatus = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to create listing";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(updateCompanyMarketplace.pending, (state) => {
         state.updateStatus = "isLoading";
@@ -125,10 +117,7 @@ const companyMarketplaceSlice = createSlice({
       })
       .addCase(updateCompanyMarketplace.rejected, (state, action) => {
         state.updateStatus = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to update listing";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(suspendCompanyMarketplace.fulfilled, (state, action) => {
         const id = (action.payload as { marketPlaceId?: string })?.marketPlaceId;

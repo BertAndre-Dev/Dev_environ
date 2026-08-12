@@ -9,6 +9,7 @@ import {
 } from "./company-expense-head";
 import type { RootState } from "@/redux/store";
 import { isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export interface CompanyExpenseHeadPagination {
   total: number;
@@ -83,10 +84,7 @@ const companyExpenseHeadSlice = createSlice({
       })
       .addCase(createCompanyExpenseHead.rejected, (state, action) => {
         state.createState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to create expense head.";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -107,10 +105,7 @@ const companyExpenseHeadSlice = createSlice({
       })
       .addCase(fetchCompanyExpenseHeads.rejected, (state, action) => {
         state.listState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to fetch expense heads.";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -124,10 +119,7 @@ const companyExpenseHeadSlice = createSlice({
       })
       .addCase(fetchCompanyExpenseHeadById.rejected, (state, action) => {
         state.getByIdState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to fetch expense head.";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -150,10 +142,7 @@ const companyExpenseHeadSlice = createSlice({
       })
       .addCase(updateCompanyExpenseHead.rejected, (state, action) => {
         state.updateState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to update expense head.";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -171,10 +160,7 @@ const companyExpenseHeadSlice = createSlice({
       })
       .addCase(deleteCompanyExpenseHead.rejected, (state, action) => {
         state.deleteState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to delete expense head.";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

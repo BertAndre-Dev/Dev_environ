@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Modal from "@/components/modal/page";
 import { CheckCircle } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 const PAGE_SIZE = 10;
 
@@ -209,8 +210,9 @@ export default function SuperAdminTransactionsPage() {
         printWindow.focus();
         printWindow.print();
       }
-    } catch {
-      toast.error("Failed to export transactions.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -299,12 +301,9 @@ export default function SuperAdminTransactionsPage() {
           endDate: toDate || "",
         }),
       ).unwrap();
-    } catch (err: any) {
-      toast.error(
-        (err?.payload as { message?: string })?.message ??
-          err?.message ??
-          "Failed to verify transaction",
-      );
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     }
   };

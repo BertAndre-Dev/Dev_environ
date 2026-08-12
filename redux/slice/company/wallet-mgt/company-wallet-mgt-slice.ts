@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   createCompanyWallet,
   getCompanyWallet,
@@ -102,10 +103,7 @@ const companyWalletSlice = createSlice({
       })
       .addCase(createCompanyWallet.rejected, (state, action) => {
         state.createWalletState = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to create wallet";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
 
       .addCase(getCompanyWallet.pending, (state) => {
@@ -117,10 +115,7 @@ const companyWalletSlice = createSlice({
       })
       .addCase(getCompanyWallet.rejected, (state, action) => {
         state.getWalletState = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to fetch wallet";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
 
       .addCase(getCompanyCredits.pending, (state) => {
@@ -141,10 +136,7 @@ const companyWalletSlice = createSlice({
       })
       .addCase(getCompanyCredits.rejected, (state, action) => {
         state.getCompanyCreditsState = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to fetch company credits";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
 
       .addCase(getCompanyT1Breakdown.pending, (state) => {
@@ -156,10 +148,7 @@ const companyWalletSlice = createSlice({
       })
       .addCase(getCompanyT1Breakdown.rejected, (state, action) => {
         state.getT1BreakdownState = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          null;
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
 
       .addCase(getCompanyT1Pending.pending, (state) => {
@@ -174,10 +163,7 @@ const companyWalletSlice = createSlice({
       })
       .addCase(getCompanyT1Pending.rejected, (state, action) => {
         state.getT1PendingState = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          null;
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
 
       .addCase(requestCompanyWithdrawOtp.pending, (state) => {
@@ -188,10 +174,7 @@ const companyWalletSlice = createSlice({
       })
       .addCase(requestCompanyWithdrawOtp.rejected, (state, action) => {
         state.requestOtpState = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          null;
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
 
       .addCase(transferCompanyFunds.pending, (state) => {
@@ -202,17 +185,11 @@ const companyWalletSlice = createSlice({
       })
       .addCase(transferCompanyFunds.rejected, (state, action) => {
         state.transferFundsState = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          null;
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
 
       .addCase(createCompanyWithdrawAudit.rejected, (state, action) => {
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          null;
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

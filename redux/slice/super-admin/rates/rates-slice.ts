@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   deactivateRate,
   getEffectiveRate,
@@ -49,10 +50,7 @@ const ratesSlice = createSlice({
       .addCase(getRates.rejected, (state, action) => {
         state.getRatesStatus = "failed";
         state.rates = [];
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to fetch platform rates";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(getEffectiveRate.pending, (state) => {
         state.getEffectiveRateStatus = "isLoading";
@@ -65,10 +63,7 @@ const ratesSlice = createSlice({
       .addCase(getEffectiveRate.rejected, (state, action) => {
         state.getEffectiveRateStatus = "failed";
         state.effectiveRate = null;
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to fetch effective rate";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(upsertRate.pending, (state) => {
         state.upsertRateStatus = "isLoading";
@@ -79,10 +74,7 @@ const ratesSlice = createSlice({
       })
       .addCase(upsertRate.rejected, (state, action) => {
         state.upsertRateStatus = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to save platform rate";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(deactivateRate.pending, (state) => {
         state.deactivateRateStatus = "isLoading";
@@ -97,10 +89,7 @@ const ratesSlice = createSlice({
       })
       .addCase(deactivateRate.rejected, (state, action) => {
         state.deactivateRateStatus = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to deactivate rate";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

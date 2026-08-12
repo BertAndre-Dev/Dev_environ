@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { ClipboardList, Pencil, Settings2 } from "lucide-react";
+import { ClipboardList, Settings2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Loader from "@/components/ui/Loader";
@@ -138,17 +138,8 @@ export default function AdminRequestPage() {
             disabled={!estateId}
             className="shrink-0 rounded-full active:scale-[0.97] transition-transform duration-100 ease-out"
           >
-            {hasWorkflow ? (
-              <>
-                <Pencil className="w-4 h-4 mr-2" />
-                Edit workflow
-              </>
-            ) : (
-              <>
-                <Settings2 className="w-4 h-4 mr-2" />
-                Configure workflow
-              </>
-            )}
+            <Settings2 className="w-4 h-4 mr-2" />
+            Set workflow
           </Button>
         </div>
 
@@ -168,7 +159,7 @@ export default function AdminRequestPage() {
                 className="rounded-full active:scale-[0.97] transition-transform duration-100 ease-out"
               >
                 <Settings2 className="w-4 h-4 mr-2" />
-                Configure workflow
+                Set workflow
               </Button>
             </div>
           ) : (
@@ -190,8 +181,8 @@ export default function AdminRequestPage() {
                   onClick={() => setModalOpen(true)}
                   className="rounded-full active:scale-[0.97] transition-transform duration-100 ease-out"
                 >
-                  <Pencil className="w-4 h-4 mr-2" />
-                  Edit
+                  <Settings2 className="w-4 h-4 mr-2" />
+                  Set workflow
                 </Button>
               </div>
 
@@ -238,7 +229,6 @@ export default function AdminRequestPage() {
         <WorkflowConfigModal
           visible={modalOpen}
           estateId={estateId}
-          workflow={workflow}
           saving={saving}
           onClose={() => setModalOpen(false)}
           onSave={handleSave}

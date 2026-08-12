@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export type ApiPagination = {
   total?: number;
@@ -40,12 +41,6 @@ export type CompanyOperationsReportingEntry = {
 
 const normalizeId = (id: string | undefined) => id ?? "";
 
-function getErrorMessage(error: unknown, fallback: string) {
-  const err = error as { response?: { data?: { message?: string | string[] } } };
-  const msg = err?.response?.data?.message;
-  return Array.isArray(msg) ? msg[0] : msg ?? fallback;
-}
-
 export type FetchCompanyOperationsReportingTypesParams = {
   estateId: string;
   page?: number;
@@ -75,7 +70,7 @@ export const fetchCompanyOperationsReportingTypes = createAsyncThunk(
       };
     } catch (error: unknown) {
       return rejectWithValue({
-        message: getErrorMessage(error, "Failed to fetch reporting types"),
+        message: getApiErrorMessage(error),
       });
     }
   },
@@ -110,7 +105,7 @@ export const fetchCompanyOperationsReportingFields = createAsyncThunk(
       };
     } catch (error: unknown) {
       return rejectWithValue({
-        message: getErrorMessage(error, "Failed to fetch report fields"),
+        message: getApiErrorMessage(error),
       });
     }
   },
@@ -142,7 +137,7 @@ export const fetchCompanyOperationsReportingEntries = createAsyncThunk(
       };
     } catch (error: unknown) {
       return rejectWithValue({
-        message: getErrorMessage(error, "Failed to fetch report entries"),
+        message: getApiErrorMessage(error),
       });
     }
   },

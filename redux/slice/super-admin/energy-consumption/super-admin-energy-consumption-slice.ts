@@ -1,6 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { EnergyConsumptionDataPoint } from "@/lib/energy-consumption-chart";
 import { getSuperAdminEnergyConsumptionChart } from "./super-admin-energy-consumption";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export interface SuperAdminEnergyConsumptionState {
   chart: EnergyConsumptionDataPoint[];
@@ -38,10 +39,7 @@ const superAdminEnergyConsumptionSlice = createSlice({
       .addCase(getSuperAdminEnergyConsumptionChart.rejected, (state, action) => {
         state.chartStatus = "failed";
         state.chart = [];
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to fetch energy consumption chart";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

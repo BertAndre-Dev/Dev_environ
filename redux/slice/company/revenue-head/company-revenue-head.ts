@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export type CompanyRevenueHead = {
   id?: string;
@@ -33,11 +34,7 @@ export const createCompanyRevenueHead = createAsyncThunk(
       const res = await axiosInstance.post("/api/v1/revenue-head", data);
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to create revenue head.",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -75,11 +72,7 @@ export const fetchCompanyRevenueHeads = createAsyncThunk(
       );
       return res.data as CompanyRevenueHeadListResponse;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to fetch revenue heads.",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -104,11 +97,7 @@ export const fetchCompanyRevenueHeadById = createAsyncThunk(
       });
       return res2.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to fetch revenue head.",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -130,11 +119,7 @@ export const updateCompanyRevenueHead = createAsyncThunk(
       });
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to update revenue head.",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -148,11 +133,7 @@ export const deleteCompanyRevenueHead = createAsyncThunk(
       });
       return res.data ? { id, ...res.data } : { id };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to delete revenue head.",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );

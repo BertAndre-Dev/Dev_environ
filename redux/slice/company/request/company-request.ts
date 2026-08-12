@@ -1,0 +1,389 @@
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import axiosInstance from "@/utils/axiosInstance";
+
+export const COMPANY_REQUEST_STATUSES = [
+  "draft",
+  "pending_approval",
+  "approved",
+  "rejected",
+  "cancelled",
+] as const;
+
+export type CompanyRequestStatus = (typeof COMPANY_REQUEST_STATUSES)[number];
+
+export const COMPANY_REQUEST_STATUS_OPTIONS: {
+  value: CompanyRequestStatus | "";
+  label: string;
+}[] = [
+  { value: "", label: "All statuses" },
+  { value: "draft", label: "Draft" },
+  { value: "pending_approval", label: "Pending approval" },
+  { value: "approved", label: "Approved" },
+  { value: "rejected", label: "Rejected" },
+  { value: "cancelled", label: "Cancelled" },
+];
+
+export type CompanyRequestDecision = "approve" | "reject";
+
+export interface CompanyRequestActor {
+  id?: string;
+  _id?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+}
+
+export interface CompanyRequestStepDecision {
+  stepOrder?: number;
+  decision?: string;
+  comment?: string;
+  decidedBy?: string | CompanyRequestActor;
+  decidedAt?: string;
+}
+
+export interface CompanyRequestWorkflowStepSnapshot {
+  order?: number;
+  name?: string;
+  approverType?: string;
+  status?: string;
+}
+
+export interface CompanyRequestItem {
+  id: string;
+  _id?: string;
+  title: string;
+  description?: string;
+  category?: string;
+  estateId?: string;
+  attachments?: string[];
+  workflowId?: string;
+  status?: CompanyRequestStatus;
+  currentStepOrder?: number;
+  currentStepName?: string;
+  steps?: CompanyRequestWorkflowStepSnapshot[];
+  decisions?: CompanyRequestStepDecision[];
+  createdBy?: string | CompanyRequestActor;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ListCompanyRequestsParams {
+  estateId: string;
+  status?: CompanyRequestStatus | "";
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface DecideCompanyRequestPayload {
+  id: string;
+  decision: CompanyRequestDecision;
+  comment?: string;
+}
+
+interface CompanyRequestsListResponse {
+  success?: boolean;
+  data?:
+    | CompanyRequestItem[]
+    | {
+        items?: CompanyRequestItem[];
+        pagination?: {
+          total: number;
+          page: number;
+          limit: number;
+          pages?: number;
+        };
+      };
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    pages?: number;
+  };
+  message?: string;
+}
+
+function normalizeStatus(raw: unknown): CompanyRequestStatus {
+  const value = String(raw ?? "")
+    .trim()
+    .toLowerCase();
+  return (COMPANY_REQUEST_STATUSES as readonly string[]).includes(value)
+    ? (value as CompanyRequestStatus)
+    : "pending_approval";
+}
+
+function extractList(payload: CompanyRequestsListResponse | undefined): CompanyRequestItem[] {
+  const dataBlock = payload?.data;
+  if (Array.isArray(dataBlock)) return dataBlock;
+  if (dataBlock && Array.isArray(dataBlock.items)) return dataBlock.items;
+  return [];
+}
+
+function extractPagination(payload: CompanyRequestsListResponse | undefined) {
+  const nested =
+    payload?.data && !Array.isArray(payload.data)
+      ? payload.data.pagination
+      : undefined;
+  return (
+    nested ??
+    payload?.pagination ?? {
+      total: 0,
+      page: 1,
+      limit: 10,
+      pages: 1,
+    }
+  );
+}
+
+function normalizeActor(
+  raw: unknown,
+): string | CompanyRequestActor | undefined {
+  if (raw == null) return undefined;
+  if (typeof raw === "string") return raw;
+  if (typeof raw !== "object") return undefined;
+  const item = raw as Record<string, unknown>;
+  return {
+    id: item.id != null ? String(item.id) : undefined,
+    _id: item._id != null ? String(item._id) : undefined,
+    firstName:
+      item.firstName != null ? String(item.firstName) : undefined,
+    lastName: item.lastName != null ? String(item.lastName) : undefined,
+    email: item.email != null ? String(item.email) : undefined,
+  };
+}
+
+function normalizeDecision(raw: unknown): CompanyRequestStepDecision | null {
+  if (!raw || typeof raw !== "object") return null;
+  const item = raw as Record<string, unknown>;
+  return {
+    stepOrder:
+      item.stepOrder != null ? Number(item.stepOrder) : undefined,
+    decision: item.decision != null ? String(item.decision) : undefined,
+    comment: item.comment != null ? String(item.comment) : undefined,
+    decidedBy: normalizeActor(item.decidedBy),
+    decidedAt:
+      item.decidedAt != null ? String(item.decidedAt) : undefined,
+  };
+}
+
+function normalizeStepSnapshot(
+  raw: unknown,
+): CompanyRequestWorkflowStepSnapshot | null {
+  if (!raw || typeof raw !== "object") return null;
+  const item = raw as Record<string, unknown>;
+  return {
+    order: item.order != null ? Number(item.order) : undefined,
+    name: item.name != null ? String(item.name) : undefined,
+    approverType:
+      item.approverType != null ? String(item.approverType) : undefined,
+    status: item.status != null ? String(item.status) : undefined,
+  };
+}
+
+export function normalizeCompanyRequestItem(
+  raw: Record<string, unknown>,
+): CompanyRequestItem {
+  const id = String(raw._id ?? raw.id ?? "");
+  const stepsRaw = Array.isArray(raw.steps) ? raw.steps : [];
+  const decisionsRaw = Array.isArray(raw.decisions)
+    ? raw.decisions
+    : Array.isArray(raw.history)
+      ? raw.history
+      : [];
+
+  const currentStep =
+    raw.currentStep && typeof raw.currentStep === "object"
+      ? (raw.currentStep as Record<string, unknown>)
+      : null;
+
+  return {
+    id,
+    _id: id,
+    title: String(raw.title ?? ""),
+    description:
+      raw.description != null ? String(raw.description) : undefined,
+    category: raw.category != null ? String(raw.category) : undefined,
+    estateId: raw.estateId != null ? String(raw.estateId) : undefined,
+    attachments: Array.isArray(raw.attachments)
+      ? raw.attachments.map((url) => String(url))
+      : undefined,
+    workflowId:
+      raw.workflowId != null ? String(raw.workflowId) : undefined,
+    status: normalizeStatus(raw.status),
+    currentStepOrder:
+      raw.currentStepOrder != null
+        ? Number(raw.currentStepOrder)
+        : currentStep?.order != null
+          ? Number(currentStep.order)
+          : undefined,
+    currentStepName:
+      raw.currentStepName != null
+        ? String(raw.currentStepName)
+        : currentStep?.name != null
+          ? String(currentStep.name)
+          : undefined,
+    steps: stepsRaw
+      .map(normalizeStepSnapshot)
+      .filter((s): s is CompanyRequestWorkflowStepSnapshot => Boolean(s)),
+    decisions: decisionsRaw
+      .map(normalizeDecision)
+      .filter((d): d is CompanyRequestStepDecision => Boolean(d)),
+    createdBy: normalizeActor(raw.createdBy),
+    createdAt: raw.createdAt != null ? String(raw.createdAt) : undefined,
+    updatedAt: raw.updatedAt != null ? String(raw.updatedAt) : undefined,
+  };
+}
+
+function extractRequestPayload(data: unknown): CompanyRequestItem | null {
+  if (!data || typeof data !== "object") return null;
+  const root = data as Record<string, unknown>;
+  const nested = root.data;
+
+  if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+    return normalizeCompanyRequestItem(nested as Record<string, unknown>);
+  }
+  if (Array.isArray(nested) && nested[0] && typeof nested[0] === "object") {
+    return normalizeCompanyRequestItem(nested[0] as Record<string, unknown>);
+  }
+  if (root.id != null || root._id != null || root.title != null) {
+    return normalizeCompanyRequestItem(root);
+  }
+  return null;
+}
+
+/** GET /api/v1/requests — list estate requests */
+export const getCompanyRequests = createAsyncThunk(
+  "companyRequest/getList",
+  async (params: ListCompanyRequestsParams, { rejectWithValue }) => {
+    try {
+      const { estateId, status, search, page = 1, limit = 10 } = params;
+      if (!estateId?.trim()) {
+        return rejectWithValue({ message: "Estate is required." });
+      }
+
+      const query: Record<string, string | number> = {
+        estateId: estateId.trim(),
+        page,
+        limit,
+      };
+      if (status?.trim()) query.status = status.trim();
+      if (search?.trim()) query.search = search.trim();
+
+      const res = await axiosInstance.get<CompanyRequestsListResponse>(
+        "/api/v1/requests",
+        { params: query },
+      );
+
+      const list = extractList(res.data).map((item) =>
+        normalizeCompanyRequestItem(item as unknown as Record<string, unknown>),
+      );
+      const pagination = extractPagination(res.data);
+
+      return { list, pagination };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ?? "Failed to fetch requests",
+      });
+    }
+  },
+);
+
+/** GET /api/v1/requests/{id} — get a request by ID */
+export const getCompanyRequestById = createAsyncThunk(
+  "companyRequest/getById",
+  async (id: string, { rejectWithValue }) => {
+    const requestId = id?.trim();
+    if (!requestId) {
+      return rejectWithValue({ message: "Request id is required." });
+    }
+
+    try {
+      const res = await axiosInstance.get(`/api/v1/requests/${requestId}`);
+      const item = extractRequestPayload(res.data);
+      if (!item?.id) {
+        return rejectWithValue({ message: "Request not found." });
+      }
+      return item;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ?? "Failed to fetch request details",
+      });
+    }
+  },
+);
+
+/** POST /api/v1/requests/{id}/decide — approve or reject the current step */
+export const decideCompanyRequest = createAsyncThunk(
+  "companyRequest/decide",
+  async (payload: DecideCompanyRequestPayload, { rejectWithValue }) => {
+    const id = payload.id?.trim();
+    const decision = payload.decision;
+    const comment = payload.comment?.trim() ?? "";
+
+    if (!id) {
+      return rejectWithValue({ message: "Request id is required." });
+    }
+    if (decision !== "approve" && decision !== "reject") {
+      return rejectWithValue({ message: "Decision must be approve or reject." });
+    }
+    if (decision === "reject" && comment.length < 3) {
+      return rejectWithValue({
+        message: "A rejection reason of at least 3 characters is required.",
+      });
+    }
+
+    try {
+      const body: Record<string, string> = { decision };
+      if (comment) body.comment = comment;
+
+      const res = await axiosInstance.post(
+        `/api/v1/requests/${id}/decide`,
+        body,
+      );
+      return {
+        id,
+        decision,
+        data: res.data,
+        item: extractRequestPayload(res.data),
+      };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ?? "Failed to submit decision",
+      });
+    }
+  },
+);
+
+/** POST /api/v1/requests/{id}/cancel — cancel a pending request */
+export const cancelCompanyRequest = createAsyncThunk(
+  "companyRequest/cancel",
+  async (id: string, { rejectWithValue }) => {
+    const requestId = id?.trim();
+    if (!requestId) {
+      return rejectWithValue({ message: "Request id is required." });
+    }
+
+    try {
+      const res = await axiosInstance.post(
+        `/api/v1/requests/${requestId}/cancel`,
+      );
+      return {
+        id: requestId,
+        data: res.data,
+        item: extractRequestPayload(res.data),
+      };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ?? "Failed to cancel request",
+      });
+    }
+  },
+);

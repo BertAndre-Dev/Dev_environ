@@ -36,6 +36,7 @@ import { MarketplaceListingCard } from "@/components/super-admin/marketplace-lis
 import Loader from "@/components/ui/Loader";
 import { isBusy, isPending } from "@/lib/async-status";
 import Pagination from "@/components/pagination/page";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export default function SuperAdminMarketplacePage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -101,7 +102,10 @@ export default function SuperAdminMarketplacePage() {
         endDate: shouldApplyDate ? endDate : undefined,
       }),
     )
-      .catch(() => toast.error("Failed to load marketplace."))
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      })
       .finally(() => setBootstrapping(false));
   }, [
     dispatch,
@@ -158,8 +162,8 @@ export default function SuperAdminMarketplacePage() {
       closeModal();
       setPage(1);
     } catch (err: unknown) {
-      const msg = (err as { message?: string })?.message ?? "Failed to save.";
-      toast.error(msg);
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -177,9 +181,9 @@ export default function SuperAdminMarketplacePage() {
       ).unwrap();
       toast.success("Listing suspended.");
       setSuspendItem(null);
-    } catch (e: unknown) {
-      const msg = (e as { message?: string })?.message ?? "Failed to suspend.";
-      toast.error(msg);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSuspendSubmitting(false);
     }
@@ -190,9 +194,10 @@ export default function SuperAdminMarketplacePage() {
     dispatch(activateMarketplace(item.id))
       .unwrap()
       .then(() => toast.success("Listing activated."))
-      .catch((e: { message?: string }) =>
-        toast.error(e?.message ?? "Failed to activate."),
-      );
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   };
 
   const handleDelete = (item: MarketplaceItem) => {
@@ -209,8 +214,8 @@ export default function SuperAdminMarketplacePage() {
       setItemToDelete(null);
       setPage(1);
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to delete listing.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     } finally {
       setDeleting(false);

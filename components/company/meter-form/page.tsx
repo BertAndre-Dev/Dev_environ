@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch } from "@/redux/store";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
 import { addCompanyMeter } from "@/redux/slice/company/meter-mgt/company-meter";
@@ -53,8 +54,9 @@ export default function CompanyAssignMeterForm({
             })
             .filter((o): o is SelectOption => Boolean(o)),
         );
-      } catch {
-        toast.error("Failed to load estates.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setLoadingEstates(false);
       }
@@ -89,10 +91,9 @@ export default function CompanyAssignMeterForm({
       toast.success(res?.message || "Meter assigned successfully.");
       refresh();
       close();
-    } catch (error: unknown) {
-      const message =
-        (error as { message?: string })?.message ?? "Failed to assign meter";
-      toast.error(message);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSubmitting(false);
     }

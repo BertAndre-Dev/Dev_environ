@@ -101,7 +101,7 @@ function AveragePurchaseBody({
       <div className="flex flex-col items-start gap-3">
         <div className="flex items-center gap-2 text-sm text-destructive">
           <AlertCircle className="h-4 w-4 shrink-0" aria-hidden />
-          <span>{error ?? "Failed to load."}</span>
+          <span>{error}</span>
         </div>
         {onRetry ? (
           <Button variant="outline" size="sm" className="gap-2" onClick={onRetry}>

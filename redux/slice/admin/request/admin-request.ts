@@ -21,8 +21,8 @@ export const APPROVER_TYPE_OPTIONS: { value: ApproverType; label: string }[] = [
 ];
 
 export const APPROVAL_MODE_OPTIONS: { value: ApprovalMode; label: string }[] = [
-  { value: "any", label: "Any approver" },
-  { value: "all", label: "All approvers" },
+  { value: "any", label: "Any" },
+  { value: "all", label: "All" },
 ];
 
 export interface WorkflowStep {
@@ -153,12 +153,12 @@ function extractWorkflowPayload(data: unknown): RequestWorkflow | null {
 export function createEmptyWorkflowStep(order = 1): WorkflowStep {
   return {
     order,
-    name: order === 1 ? "Estate admin approval" : `Approval step ${order}`,
+    name: "",
     approverType: "estate_admin",
     userIds: [],
     approvalMode: "any",
     allowReject: true,
-    reminderEnabled: true,
+    reminderEnabled: false,
     reminderIntervalHours: 24,
     reminderMaxCount: 3,
   };

@@ -18,6 +18,7 @@ import {
   validateEnergyProviderInviteScope,
 } from "@/lib/invite-user-roles";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch, RootState } from "@/redux/store";
 
 type InviteUserFormProps = {
@@ -75,9 +76,9 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
         const payload = res?.payload || res;
         const data = payload?.data || payload;
         if (Array.isArray(data)) setEstates(data);
-      } catch (err) {
-        console.error("Failed to fetch estates", err);
-        toast.error("Failed to fetch estates");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setLoadingEstates(false);
       }
@@ -96,8 +97,9 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
         ).unwrap();
         const data = res?.data ?? [];
         setCompanies(Array.isArray(data) ? data : []);
-      } catch {
-        toast.error("Failed to fetch companies");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setLoadingCompanies(false);
       }
@@ -178,10 +180,9 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
       resetForm();
       setInviteScope("estate");
       close();
-    } catch (err: any) {
-      const message =
-        err?.response?.data?.message || "Failed to invite user (unknown error)";
-      toast.error(message);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSubmitting(false);
     }

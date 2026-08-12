@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { EstateEnergyUsageData } from "@/lib/estate-energy-usage-chart";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   getSuperAdminEstateEnergyUsage,
   type SuperAdminEstateEnergyUsageJobMeta,
@@ -57,10 +58,7 @@ const superAdminEstateEnergyUsageSlice = createSlice({
         state.usage = null;
         state.progress = null;
         state.message = null;
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          null;
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

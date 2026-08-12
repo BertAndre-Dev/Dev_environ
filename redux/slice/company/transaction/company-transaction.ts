@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 interface VerifyTransactionPayload {
   tx_ref: string;
@@ -75,12 +76,7 @@ export const getCompanyTransactionHistory = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message ||
-          "Failed to fetch transaction history",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -122,11 +118,7 @@ export const getCompanyPaidBills = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to fetch paid bills",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -146,13 +138,9 @@ export const verifyCompanyTransaction = createAsyncThunk(
 
       return response.data;
     } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return rejectWithValue(
-        err.response?.data || { message: err.message || "Verification failed" },
-      );
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );

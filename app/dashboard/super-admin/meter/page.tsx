@@ -328,8 +328,9 @@ export default function AdminMeterManagement() {
   }, [dispatch, estateOptions, selectedEstateId]);
 
   useEffect(() => {
-    fetchMeters(1, searchQuery).catch(() => {
-      toast.error("Failed to fetch meters");
+    fetchMeters(1, searchQuery).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     });
   }, [searchQuery, fetchMeters]);
 
@@ -340,8 +341,9 @@ export default function AdminMeterManagement() {
         estateId: selectedEstateId,
         range: usageRange,
       }),
-    ).catch((error: { message?: string }) => {
-      toast.error(error?.message ?? "Failed to load estate energy usage.");
+    ).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     });
   }, [dispatch, selectedEstateId, usageRange]);
 
@@ -352,10 +354,9 @@ export default function AdminMeterManagement() {
         estateId: selectedEstateId,
         period: energyPeriod,
       }),
-    ).catch((error: { message?: string }) => {
-      toast.error(
-        error?.message ?? "Failed to load energy consumption chart.",
-      );
+    ).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     });
   }, [dispatch, selectedEstateId, energyPeriod]);
 
@@ -370,8 +371,9 @@ export default function AdminMeterManagement() {
           refresh: true,
         }),
       ).unwrap();
-    } catch (error: any) {
-      toast.error(error?.message ?? "Failed to refresh estate energy usage.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setUsageRefreshing(false);
     }
@@ -392,8 +394,9 @@ export default function AdminMeterManagement() {
   const handleRefresh = async () => {
     try {
       await fetchMeters(Number(pagination?.currentPage) || 1, searchQuery);
-    } catch {
-      toast.error("Failed to refresh meter list");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -434,9 +437,9 @@ export default function AdminMeterManagement() {
       toast.success("Meter removed successfully");
       handleRefresh();
       handleCloseModal();
-    } catch (error: any) {
-      console.error("Failed to remove meter:", error);
-      toast.error(error?.message || "Failed to remove meter");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -450,8 +453,9 @@ export default function AdminMeterManagement() {
     setDetailsMeterNumber(meter.meterNumber);
     setMeterUsageRange("weekly");
     setDetailsModalOpen(true);
-    dispatch(getMeterByAddressId(addressIdStr)).catch((err: any) => {
-      toast.error(err?.message ?? "Failed to load meter details");
+    dispatch(getMeterByAddressId(addressIdStr)).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     });
   };
 
@@ -501,8 +505,9 @@ export default function AdminMeterManagement() {
     if (!detailsModalOpen || !detailsMeterNumber) return;
     dispatch(
       getMeterUsage({ meterNumber: detailsMeterNumber, range: meterUsageRange }),
-    ).catch((error: { message?: string }) => {
-      toast.error(error?.message ?? "Failed to load meter energy usage.");
+    ).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     });
   }, [dispatch, detailsModalOpen, detailsMeterNumber, meterUsageRange]);
 
@@ -523,8 +528,8 @@ export default function AdminMeterManagement() {
       setItemToDelete(null);
       handleRefresh();
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to delete meter.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     } finally {
       setDeleting(false);
@@ -857,8 +862,11 @@ export default function AdminMeterManagement() {
                           pageSize: Number(pagination?.pageSize) || 10,
                         }}
                         onPageChange={(page) => {
-                          fetchMeters(page, searchQuery).catch(() =>
-                            toast.error("Failed to fetch meters"),
+                          fetchMeters(page, searchQuery).catch(
+                            (err: unknown) => {
+                              const message = getApiErrorMessage(err);
+                              if (message) toast.error(message);
+                            },
                           );
                         }}
                         enableExport

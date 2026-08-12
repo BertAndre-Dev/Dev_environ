@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   activateCompanyUser,
   deleteCompanyUser,
@@ -109,10 +110,7 @@ const companyUserSlice = createSlice({
       action: { payload?: unknown; error: { message?: string } },
     ) => {
       state.getUsersStatus = "failed";
-      state.error =
-        (action.payload as { message?: string } | undefined)?.message ??
-        action.error.message ??
-        "Failed to fetch users";
+      state.error = getApiErrorMessage(action.payload) ?? null;
     };
 
     builder
@@ -133,10 +131,7 @@ const companyUserSlice = createSlice({
       })
       .addCase(getCompanyUser.rejected, (state, action) => {
         state.getUserStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to fetch user";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -155,10 +150,7 @@ const companyUserSlice = createSlice({
       })
       .addCase(activateCompanyUser.rejected, (state, action) => {
         state.activateUserStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to activate user";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -177,10 +169,7 @@ const companyUserSlice = createSlice({
       })
       .addCase(suspendCompanyUser.rejected, (state, action) => {
         state.suspendUserStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to suspend user";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -202,10 +191,7 @@ const companyUserSlice = createSlice({
       })
       .addCase(deleteCompanyUser.rejected, (state, action) => {
         state.deleteUserStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to delete user";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

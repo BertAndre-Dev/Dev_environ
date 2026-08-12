@@ -6,17 +6,12 @@ import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  createEmptyWorkflowStep,
-  type RequestWorkflow,
-  type WorkflowStep,
-} from "@/redux/slice/admin/request/admin-request";
+import type { WorkflowStep } from "@/redux/slice/admin/request/admin-request";
 import WorkflowStepsEditor from "./WorkflowStepsEditor";
 
 interface WorkflowConfigModalProps {
   readonly visible: boolean;
   readonly estateId?: string | null;
-  readonly workflow: RequestWorkflow | null;
   readonly loading?: boolean;
   readonly saving?: boolean;
   readonly onClose: () => void;
@@ -30,34 +25,21 @@ interface WorkflowConfigModalProps {
 export default function WorkflowConfigModal({
   visible,
   estateId,
-  workflow,
   loading = false,
   saving = false,
   onClose,
   onSave,
 }: WorkflowConfigModalProps) {
-  const [name, setName] = useState("Standard estate request approval");
+  const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [steps, setSteps] = useState<WorkflowStep[]>([
-    createEmptyWorkflowStep(1),
-  ]);
+  const [steps, setSteps] = useState<WorkflowStep[]>([]);
 
   useEffect(() => {
     if (!visible) return;
-    if (!workflow) {
-      setName("Standard estate request approval");
-      setDescription("");
-      setSteps([createEmptyWorkflowStep(1)]);
-      return;
-    }
-    setName(workflow.name?.trim() || "Standard estate request approval");
-    setDescription(workflow.description ?? "");
-    setSteps(
-      workflow.steps && workflow.steps.length > 0
-        ? workflow.steps
-        : [createEmptyWorkflowStep(1)],
-    );
-  }, [visible, workflow]);
+    setName("");
+    setDescription("");
+    setSteps([]);
+  }, [visible]);
 
   const busy = loading || saving;
 
@@ -89,7 +71,7 @@ export default function WorkflowConfigModal({
       <div className="flex flex-col min-h-0 max-h-[90vh]">
         <div className="shrink-0 px-5 sm:px-6 pt-5 sm:pt-6 pb-4 border-b border-black/5 bg-white/80 backdrop-blur-xl">
           <h2 className="font-heading text-xl font-semibold tracking-[-0.02em]">
-            Configure approval workflow
+            Set approval workflow
           </h2>
           <p className="text-sm text-muted-foreground mt-1 leading-snug">
             Create or replace the estate&apos;s active request approval path.
@@ -113,7 +95,7 @@ export default function WorkflowConfigModal({
                   id="workflow-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Standard estate request approval"
+                  placeholder="Workflow name"
                   className="mt-1.5 rounded-xl"
                   disabled={busy}
                   required
@@ -122,12 +104,12 @@ export default function WorkflowConfigModal({
 
               <div>
                 <Label htmlFor="workflow-description">Description</Label>
-                <textarea
+                <Input
                   id="workflow-description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Optional notes about this approval path..."
-                  className="mt-1.5 w-full min-h-[88px] rounded-xl border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  placeholder="Description"
+                  className="mt-1.5 rounded-xl"
                   disabled={busy}
                 />
               </div>

@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export type ApiPagination = {
   total?: number;
@@ -98,16 +99,6 @@ export type MaintenanceCommentsResponse = {
 };
 
 const normalizeId = (id: string | undefined) => id ?? "";
-
-function getApiErrorMessage(error: unknown): string | undefined {
-  const err = error as {
-    response?: { data?: { message?: string | string[] } };
-  };
-  const msg = err?.response?.data?.message;
-  if (Array.isArray(msg)) return msg[0];
-  if (typeof msg === "string" && msg.trim()) return msg;
-  return undefined;
-}
 
 /** POST /api/v1/asset-maintenance */
 export const createAssetMaintenance = createAsyncThunk(

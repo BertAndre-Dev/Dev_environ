@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "@/redux/store";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   getCompanyCredits,
   getCompanyWallet,
@@ -168,9 +169,8 @@ export default function CompanyWithdrawFundForm({
       setOtpRequested(true);
       toast.success("OTP sent to your email. Please enter it to confirm.");
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message || "Failed to process withdrawal.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -211,10 +211,8 @@ export default function CompanyWithdrawFundForm({
       await refreshWalletData();
       onClose?.();
     } catch (err: unknown) {
-      setOtpError(
-        (err as { message?: string })?.message ||
-          "Failed to verify OTP. Please try again.",
-      );
+      const message = getApiErrorMessage(err);
+      setOtpError(message ?? null);
     } finally {
       setSubmitting(false);
     }
@@ -245,10 +243,8 @@ export default function CompanyWithdrawFundForm({
         }),
       ).unwrap();
     } catch (err: unknown) {
-      setOtpError(
-        (err as { message?: string })?.message ||
-          "Failed to resend OTP. Please try again.",
-      );
+      const message = getApiErrorMessage(err);
+      setOtpError(message ?? null);
     } finally {
       setSubmitting(false);
     }

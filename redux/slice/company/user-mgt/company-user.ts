@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export type GetCompanyUsersParams = {
   page?: number;
@@ -50,10 +51,7 @@ export const getCompanyUsersByEstate = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to fetch users",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -77,10 +75,7 @@ export const getCompanyUsersByCompany = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to fetch users",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -93,10 +88,7 @@ export const getCompanyUser = createAsyncThunk(
       const res = await axiosInstance.get(`/api/v1/user-mgt/${id}`);
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to fetch user",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -109,10 +101,7 @@ export const deleteCompanyUser = createAsyncThunk(
       const res = await axiosInstance.delete(`/api/v1/user-mgt/${id}`);
       return { ...(res.data as object), deletedId: id };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to delete user",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -125,10 +114,7 @@ export const suspendCompanyUser = createAsyncThunk(
       const res = await axiosInstance.put(`/api/v1/user-mgt/${id}/suspend-user`);
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to suspend user",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -141,10 +127,7 @@ export const activateCompanyUser = createAsyncThunk(
       const res = await axiosInstance.put(`/api/v1/user-mgt/${id}/activate-user`);
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to activate user",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );

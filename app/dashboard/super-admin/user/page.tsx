@@ -38,6 +38,7 @@ import InviteUserForm from "@/components/super-admin/user-form/page";
 import EditUserForm from "@/app/dashboard/super-admin/user/components/EditUserForm";
 import Loader from "@/components/ui/Loader";
 import { isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { UserStatusModal } from "./components/UserStatusModal";
 import {
   DEFAULT_ESTATE_USER_ROLE,
@@ -292,10 +293,16 @@ export default function SuperAdminUserPage() {
   useEffect(() => {
     dispatch(getAllEstates({ page: 1, limit: FILTER_FETCH_LIMIT }))
       .unwrap()
-      .catch(() => toast.error("Failed to fetch estates"));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
     dispatch(getCompanies({ page: 1, limit: FILTER_FETCH_LIMIT }))
       .unwrap()
-      .catch(() => toast.error("Failed to fetch companies"));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch]);
 
   // Default to the first estate/company for the active scope
@@ -326,13 +333,10 @@ export default function SuperAdminUserPage() {
     if (partialDate) return;
 
     setCurrentPage(1);
-    fetchUsers(1).catch(() =>
-      toast.error(
-        filterScope === "company"
-          ? "Failed to fetch users for selected company"
-          : "Failed to fetch users for selected estate",
-      ),
-    );
+    fetchUsers(1).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
   }, [
     filterScope,
     selectedFilterEntity?.value,
@@ -420,8 +424,9 @@ export default function SuperAdminUserPage() {
       if (selectedFilterEntity?.value) {
         await fetchUsers(1);
       }
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to update user status.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setStatusSubmitting(false);
     }
@@ -441,8 +446,8 @@ export default function SuperAdminUserPage() {
       setItemToDelete(null);
       if (selectedFilterEntity?.value) await fetchUsers(1);
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to delete user.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     } finally {
       setDeleting(false);
@@ -762,9 +767,10 @@ export default function SuperAdminUserPage() {
               pageSize: Number(userPagination?.pageSize) || 10,
             }}
             onPageChange={(page) => {
-              fetchUsers(page).catch(() =>
-                toast.error("Failed to change page"),
-              );
+              fetchUsers(page).catch((err: unknown) => {
+                const message = getApiErrorMessage(err);
+                if (message) toast.error(message);
+              });
             }}
             enableExport
             exportFileName="users"

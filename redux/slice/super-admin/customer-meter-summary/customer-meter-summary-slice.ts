@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type {
   AnalyticsScope,
   CustomerMeterSummaryData,
@@ -86,10 +87,7 @@ const customerMeterSummarySlice = createSlice({
       .addCase(getCustomerMeterSummary.rejected, (state, action) => {
         if (!argMatchesFilter(action.meta.arg, state.filter)) return;
         state.status = "failed";
-        state.error =
-          action.payload?.message ||
-          action.error.message ||
-          "Failed to fetch customer & meter summary";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

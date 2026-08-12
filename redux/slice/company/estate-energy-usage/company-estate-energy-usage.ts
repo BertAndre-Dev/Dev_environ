@@ -1,4 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   fetchEstateEnergyUsageJob,
   type EstateEnergyUsageJobMeta,
@@ -40,16 +41,7 @@ export const getCompanyEstateEnergyUsage = createAsyncThunk(
         refresh,
       });
     } catch (error: unknown) {
-      const err = error as {
-        message?: string;
-        response?: { data?: { message?: string } };
-      };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message ||
-          err?.message ||
-          "Failed to fetch estate energy usage.",
-      });
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );

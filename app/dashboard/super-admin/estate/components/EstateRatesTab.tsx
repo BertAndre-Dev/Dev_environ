@@ -18,6 +18,7 @@ import {
 } from "@/redux/slice/super-admin/rates/rates";
 import { clearRatesState } from "@/redux/slice/super-admin/rates/rates-slice";
 import { SetEstateRateModal } from "./SetEstateRateModal";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 const FEE_TYPE_OPTIONS: { value: RateFeeType; label: string }[] = [
   { value: "VENDING", label: "Vending" },
@@ -265,9 +266,8 @@ export function EstateRatesTab({ estateId }: Props) {
       toast.success("Rate deactivated.");
       await refreshRates();
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to deactivate rate",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 

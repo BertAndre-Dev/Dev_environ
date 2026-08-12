@@ -17,6 +17,7 @@ import {
   type EstateOption,
 } from "@/app/dashboard/company/asset/lib/estate";
 import Loader from "@/components/ui/Loader";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 type EstateSelectOption = { label: string; value: string };
 
@@ -51,8 +52,9 @@ export default function CompanyOperationsReportsPage() {
             getCompanyEstates({ page: 1, limit: 200 }),
           ).unwrap();
           options = mapCompanyEstateRows(res?.data);
-        } catch {
-          toast.error("Failed to fetch company estates.");
+        } catch (err: unknown) {
+          const message = getApiErrorMessage(err);
+          if (message) toast.error(message);
         }
         if (!options.length) options = parseCompanyEstates(data);
 
@@ -62,8 +64,9 @@ export default function CompanyOperationsReportsPage() {
           setSelectedEstate(first);
           dispatch(setCompanyOperationsReportingEstate(first.value));
         }
-      } catch {
-        toast.error("Failed to load company information.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setEstatesLoading(false);
       }

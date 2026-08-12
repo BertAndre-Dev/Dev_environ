@@ -113,7 +113,6 @@ export default function WorkflowStepsEditor({
   };
 
   const removeStep = (index: number) => {
-    if (steps.length <= 1) return;
     onChange(renumber(steps.filter((_, i) => i !== index)));
   };
 
@@ -134,7 +133,8 @@ export default function WorkflowStepsEditor({
             Approval steps
           </h3>
           <p className="mt-0.5 text-sm text-muted-foreground leading-snug">
-            Ordered path — estate admin, company, admin, or specific users.
+            Add ordered approval steps — estate admin, company, admin, or
+            specific users.
           </p>
         </div>
         <Button
@@ -149,6 +149,12 @@ export default function WorkflowStepsEditor({
           Add step
         </Button>
       </div>
+
+      {steps.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-black/10 bg-[#F7F8FA] px-4 py-8 text-center text-sm text-muted-foreground">
+          No steps yet. Click Add step to configure an approval step.
+        </p>
+      ) : null}
 
       <ol className="space-y-3">
         {steps.map((step, index) => (
@@ -171,7 +177,7 @@ export default function WorkflowStepsEditor({
               <button
                 type="button"
                 onClick={() => removeStep(index)}
-                disabled={disabled || steps.length <= 1}
+                disabled={disabled}
                 className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium text-[#D31510] hover:bg-[#D31510]/8 disabled:opacity-40 disabled:pointer-events-none active:scale-[0.97] transition-[transform,background-color] duration-100 ease-out cursor-pointer"
                 aria-label={`Remove step ${index + 1}`}
               >
@@ -187,7 +193,7 @@ export default function WorkflowStepsEditor({
                   id={`step-name-${index}`}
                   value={step.name}
                   onChange={(e) => updateStep(index, { name: e.target.value })}
-                  placeholder="e.g. Estate admin approval"
+                  placeholder="Step name"
                   className="mt-1.5 rounded-xl"
                   disabled={disabled}
                 />

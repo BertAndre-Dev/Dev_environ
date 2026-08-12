@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { EnergyConsumptionPeriod } from "@/lib/energy-consumption-chart";
 import type { EstateEnergyUsageRange } from "@/lib/estate-energy-usage-chart";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   addCompanyMeter,
   assignCompanyMeterToEstate,
@@ -160,10 +161,7 @@ const companyMeterSlice = createSlice({
       })
       .addCase(addCompanyMeter.rejected, (state, action) => {
         state.addMeterState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to add meter";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -188,10 +186,7 @@ const companyMeterSlice = createSlice({
       })
       .addCase(getCompanyMeters.rejected, (state, action) => {
         state.getMetersState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to fetch meters";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -209,10 +204,7 @@ const companyMeterSlice = createSlice({
       })
       .addCase(removeCompanyEstateMeter.rejected, (state, action) => {
         state.removeEstateMeterState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to remove meter";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -247,10 +239,7 @@ const companyMeterSlice = createSlice({
       })
       .addCase(assignCompanyMeterToEstate.rejected, (state, action) => {
         state.assignMeterToEstateState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to assign or unassign meter";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -264,10 +253,7 @@ const companyMeterSlice = createSlice({
       .addCase(getCompanyMeterByAddressId.rejected, (state, action) => {
         state.getMeterByAddressIdState = "failed";
         state.meterDetails = null;
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to fetch meter details";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -286,10 +272,7 @@ const companyMeterSlice = createSlice({
       })
       .addCase(deleteCompanyMeter.rejected, (state, action) => {
         state.deleteMeterState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to delete meter";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

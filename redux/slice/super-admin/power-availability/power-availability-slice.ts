@@ -2,6 +2,7 @@ import { createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
 import type { AnalyticsScope, PowerAvailabilityData } from "@/types/analytics";
 import { getPowerAvailability } from "./power-availability";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export interface PowerAvailabilityState {
   data: PowerAvailabilityData | null;
@@ -42,10 +43,7 @@ const powerAvailabilitySlice = createSlice({
       })
       .addCase(getPowerAvailability.rejected, (state, action) => {
         state.status = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to fetch power availability";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

@@ -16,6 +16,7 @@ import { CompanyFormModal } from "./components/CompanyFormModal";
 import { CompanyStatusModal } from "./components/CompanyStatusModal";
 import Loader from "@/components/ui/Loader";
 import { isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   activateCompany,
   createCompany,
@@ -176,9 +177,10 @@ export default function SuperAdminCompanyPage() {
     if (!open) return;
     dispatch(getCompanyModules())
       .unwrap()
-      .catch((err: any) =>
-        toast.error(err?.message ?? "Failed to fetch available modules"),
-      );
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, open]);
 
   const fetchList = useCallback(
@@ -194,9 +196,10 @@ export default function SuperAdminCompanyPage() {
         }),
       )
         .unwrap()
-        .catch((err: any) =>
-          toast.error(err?.message ?? "Failed to fetch companies"),
-        );
+        .catch((err: unknown) => {
+          const message = getApiErrorMessage(err);
+          if (message) toast.error(message);
+        });
     },
     [dispatch, effectivePageSize, searchQuery, startDate, endDate],
   );
@@ -281,8 +284,9 @@ export default function SuperAdminCompanyPage() {
       closeModal();
       setPage(1);
       await fetchList(1);
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to save company");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -313,8 +317,9 @@ export default function SuperAdminCompanyPage() {
       closeStatusModal();
       setPage(1);
       await fetchList(1);
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to update company status.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setStatusSubmitting(false);
     }
@@ -338,8 +343,8 @@ export default function SuperAdminCompanyPage() {
       setPage(1);
       await fetchList(1);
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to delete company.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     } finally {
       setDeleting(false);

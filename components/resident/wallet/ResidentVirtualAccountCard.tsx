@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import {
-  Building2,
-  Landmark,
-  RefreshCw,
-  ShieldCheck,
-} from "lucide-react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { Building2, ShieldCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -18,195 +19,46 @@ import {
   type FlutterwaveVirtualAccount,
 } from "@/redux/slice/resident/virtual-accounts/flutterwave-va";
 import SetupVirtualAccountModal from "@/components/resident/wallet/SetupVirtualAccountModal";
-import { toast } from "react-toastify";
 import { cn } from "@/lib/utils";
 
-type Props = {
-  /** When false, skip fetching (e.g. user not loaded yet). */
-  enabled?: boolean;
-  /** Wallet and VA are independent; used only for helper copy. */
-  hasWallet?: boolean;
+type VaContextValue = {
+  loading: boolean;
+  hasAccount: boolean;
+  virtualAccount: FlutterwaveVirtualAccount | null;
+  openSetup: () => void;
 };
+
+const VaContext = createContext<VaContextValue | null>(null);
+
+function useVaContext() {
+  const ctx = useContext(VaContext);
+  if (!ctx) {
+    throw new Error(
+      "Resident virtual account controls must be used within ResidentVirtualAccountProvider",
+    );
+  }
+  return ctx;
+}
 
 function formatAccountNumber(value: string) {
   return value.replace(/\s/g, "").replace(/(\d{4})(?=\d)/g, "$1 ");
 }
 
-function ActiveVirtualAccountDetails({
-  virtualAccount,
-  hasWallet,
-  refreshing,
-  onRefresh,
-}: Readonly<{
-  virtualAccount: FlutterwaveVirtualAccount;
-  hasWallet: boolean;
-  refreshing: boolean;
-  onRefresh: () => void;
-}>) {
-  const accountNumber = virtualAccount.accountNumber ?? "";
+type ProviderProps = {
+  enabled?: boolean;
+  children: React.ReactNode;
+};
 
-  return (
-    <div className="space-y-5">
-      {/* Hero: account number is the only job of this surface */}
-      <div
-        className={cn(
-          "relative overflow-hidden rounded-2xl border border-black/5",
-          "bg-gradient-to-b from-slate-50/90 to-white",
-          "px-5 py-6 sm:px-6",
-          "shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]",
-        )}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-            Account number
-          </p>
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
-            <ShieldCheck className="size-3" aria-hidden />
-            Identity verified
-          </span>
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-          <p
-            className={cn(
-              "font-semibold tabular-nums tracking-[0.12em] text-foreground",
-              "text-[1.65rem] leading-none sm:text-[1.85rem]",
-              "select-all",
-            )}
-          >
-            {accountNumber ? formatAccountNumber(accountNumber) : "—"}
-          </p>
-          {accountNumber ? (
-            <CopyButton
-              value={accountNumber}
-              title="Copy account number"
-              copiedMessage="Account number copied"
-              className={cn(
-                "h-8 rounded-full border border-black/8 bg-white/80 px-3",
-                "text-foreground/80 shadow-xs backdrop-blur-sm",
-                "transition-transform duration-100 ease-out active:scale-[0.97]",
-                "hover:bg-white hover:text-foreground",
-              )}
-            />
-          ) : null}
-        </div>
-
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <div className="min-w-0">
-            <p className="text-xs text-muted-foreground">Bank</p>
-            <p className="mt-0.5 truncate text-sm font-medium text-foreground">
-              {virtualAccount.bankName || "—"}
-            </p>
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs text-muted-foreground">Account name</p>
-            <p className="mt-0.5 truncate text-sm font-medium text-foreground">
-              {virtualAccount.accountName || "—"}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <p className="max-w-md text-xs leading-relaxed text-muted-foreground">
-          Transfer here to fund your wallet. Credits appear after bank
-          confirmation.
-          {typeof virtualAccount.serviceFee === "number" &&
-          virtualAccount.serviceFee > 0
-            ? ` A ₦${virtualAccount.serviceFee.toLocaleString()} service fee applies per funding.`
-            : null}
-          {!hasWallet
-            ? " Create a wallet if you haven’t already, so transfers can credit your balance."
-            : null}
-        </p>
-
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onRefresh}
-          disabled={refreshing}
-          className={cn(
-            "shrink-0 self-end text-muted-foreground",
-            "transition-transform duration-100 ease-out active:scale-[0.97]",
-          )}
-        >
-          <RefreshCw
-            className={cn("size-3.5", refreshing && "animate-spin")}
-            aria-hidden
-          />
-          {refreshing ? "Refreshing…" : "Refresh"}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function EmptyVirtualAccountState({
-  hasWallet,
-  onSetup,
-}: Readonly<{
-  hasWallet: boolean;
-  onSetup: () => void;
-}>) {
-  return (
-    <div className="flex flex-col items-center px-2 py-8 text-center sm:py-10">
-      <div
-        className={cn(
-          "mb-5 flex size-14 items-center justify-center rounded-2xl",
-          "bg-primary/8 text-primary",
-          "ring-1 ring-inset ring-primary/10",
-        )}
-        aria-hidden
-      >
-        <Landmark className="size-6" strokeWidth={1.75} />
-      </div>
-
-      <h3 className="text-[17px] font-semibold tracking-tight text-foreground">
-        Get a virtual account
-      </h3>
-
-      {!hasWallet ? (
-        <p className="mt-3 max-w-sm text-xs leading-relaxed text-muted-foreground/90">
-          You’ll need a wallet so transfers can credit your balance.
-        </p>
-      ) : null}
-
-      <Button
-        type="button"
-        onClick={onSetup}
-        className={cn(
-          "mt-6 h-10 rounded-full px-6",
-          "transition-transform duration-100 ease-out active:scale-[0.97]",
-        )}
-      >
-        Set up virtual account
-      </Button>
-    </div>
-  );
-}
-
-function LoadingVirtualAccountState() {
-  return (
-    <div className="space-y-4 py-2" aria-busy aria-label="Loading virtual account">
-      <div className="h-36 animate-pulse rounded-2xl bg-muted/60" />
-      <div className="h-3 w-2/3 animate-pulse rounded-full bg-muted/50" />
-    </div>
-  );
-}
-
-export function ResidentVirtualAccountCard({
+export function ResidentVirtualAccountProvider({
   enabled = true,
-  hasWallet = false,
-}: Readonly<Props>) {
+  children,
+}: Readonly<ProviderProps>) {
   const dispatch = useDispatch<AppDispatch>();
-  const reduceMotion = useReducedMotion();
   const { virtualAccount, getVirtualAccountState } = useSelector(
     (state: RootState) => state.residentFlutterwaveVa,
   );
 
   const [setupOpen, setSetupOpen] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   const loading = !initialLoadDone && getVirtualAccountState !== "failed";
@@ -227,98 +79,152 @@ export function ResidentVirtualAccountCard({
     };
   }, [dispatch, enabled]);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await dispatch(getFlutterwaveVirtualAccount()).unwrap();
-      toast.success("Status refreshed.");
-    } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message || "Failed to refresh.",
-      );
-    } finally {
-      setRefreshing(false);
-    }
-  };
+  const openSetup = useCallback(() => setSetupOpen(true), []);
+  const handleSetupClose = useCallback(() => setSetupOpen(false), []);
+  const handleSetupSuccess = useCallback(() => setSetupOpen(false), []);
 
-  let bodyKey = "empty";
-  let body: React.ReactNode = (
-    <EmptyVirtualAccountState
-      hasWallet={hasWallet}
-      onSetup={() => setSetupOpen(true)}
-    />
+  const value = useMemo<VaContextValue>(
+    () => ({
+      loading,
+      hasAccount,
+      virtualAccount,
+      openSetup,
+    }),
+    [loading, hasAccount, virtualAccount, openSetup],
   );
-  if (loading && !hasAccount) {
-    bodyKey = "loading";
-    body = <LoadingVirtualAccountState />;
-  } else if (hasAccount && virtualAccount) {
-    bodyKey = "active";
-    body = (
-      <ActiveVirtualAccountDetails
-        virtualAccount={virtualAccount}
-        hasWallet={hasWallet}
-        refreshing={refreshing}
-        onRefresh={handleRefresh}
+
+  return (
+    <VaContext.Provider value={value}>
+      {children}
+      <SetupVirtualAccountModal
+        visible={setupOpen}
+        onClose={handleSetupClose}
+        onSuccess={handleSetupSuccess}
       />
+    </VaContext.Provider>
+  );
+}
+
+/** Header action: set up VA when the user does not have one yet. */
+export function ResidentVirtualAccountSetupButton() {
+  const { loading, hasAccount, openSetup } = useVaContext();
+
+  if (hasAccount) return null;
+
+  return (
+    <Button
+      type="button"
+      onClick={openSetup}
+      disabled={loading}
+      className={cn(
+        "h-10 shrink-0 rounded-full px-4",
+        "transition-transform duration-100 ease-out active:scale-[0.97]",
+      )}
+    >
+      <Building2 className="size-4" aria-hidden />
+      {loading ? "Checking…" : "Set up virtual account"}
+    </Button>
+  );
+}
+
+/** Card under My Wallet: account number + account name when VA exists. */
+export function ResidentVirtualAccountCard() {
+  const { loading, hasAccount, virtualAccount } = useVaContext();
+
+  if (loading && !hasAccount) {
+    return (
+      <Card className="p-4 shadow-md md:p-6" aria-busy aria-label="Loading virtual account">
+        <CardHeader className="pb-3">
+          <div className="h-5 w-40 animate-pulse rounded-md bg-muted/60" />
+        </CardHeader>
+        <CardContent className="space-y-3 pt-0">
+          <div className="h-8 w-56 animate-pulse rounded-md bg-muted/60" />
+          <div className="h-4 w-44 animate-pulse rounded-md bg-muted/50" />
+        </CardContent>
+      </Card>
     );
   }
 
+  if (!hasAccount || !virtualAccount) return null;
+
+  const accountNumber = virtualAccount.accountNumber ?? "";
+
   return (
-    <>
-      <Card className="overflow-hidden p-4 shadow-md md:p-6">
-        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
-          <div className="min-w-0 pr-3">
-            <div className="flex items-center gap-2">
-              <Building2
-                className="size-4 shrink-0 text-muted-foreground"
-                aria-hidden
-              />
-              <CardTitle className="text-lg font-semibold tracking-tight">
-                Bank transfer
-              </CardTitle>
-            </div>
-            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-              Permanent NGN account for wallet funding.
-            </p>
+    <Card className="overflow-hidden p-4 shadow-md md:p-6">
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <Building2
+              className="size-4 shrink-0 text-muted-foreground"
+              aria-hidden
+            />
+            <CardTitle className="text-lg font-semibold tracking-tight">
+              Virtual account
+            </CardTitle>
           </div>
-          {hasAccount ? (
-            <span
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Bank transfer details for wallet funding.
+          </p>
+        </div>
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-500/15">
+          <ShieldCheck className="size-3" aria-hidden />
+          Active
+        </span>
+      </CardHeader>
+
+      <CardContent className="pt-1">
+        <div
+          className={cn(
+            "relative overflow-hidden rounded-2xl border border-black/5",
+            "bg-linear-to-b from-slate-50/90 to-white",
+            "px-5 py-5 sm:px-6",
+            "shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]",
+          )}
+        >
+          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+            Account number
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+            <p
               className={cn(
-                "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium",
-                "bg-emerald-500/10 text-emerald-700",
-                "ring-1 ring-inset ring-emerald-500/15",
+                "font-semibold tabular-nums tracking-[0.12em] text-foreground",
+                "text-[1.65rem] leading-none sm:text-[1.85rem]",
+                "select-all",
               )}
             >
-              Active
-            </span>
-          ) : null}
-        </CardHeader>
+              {accountNumber ? formatAccountNumber(accountNumber) : "—"}
+            </p>
+            {accountNumber ? (
+              <CopyButton
+                value={accountNumber}
+                title="Copy account number"
+                copiedMessage="Account number copied"
+                className={cn(
+                  "h-8 rounded-full border border-black/8 bg-white/80 px-3",
+                  "text-foreground/80 shadow-xs backdrop-blur-sm",
+                  "transition-transform duration-100 ease-out active:scale-[0.97]",
+                  "hover:bg-white hover:text-foreground",
+                )}
+              />
+            ) : null}
+          </div>
 
-        <CardContent className="pt-1">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={bodyKey}
-              initial={
-                reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }
-              }
-              animate={{ opacity: 1, y: 0 }}
-              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
-              transition={
-                reduceMotion
-                  ? { duration: 0.15 }
-                  : { type: "spring", bounce: 0, duration: 0.35 }
-              }
-            >
-              {body}
-            </motion.div>
-          </AnimatePresence>
-        </CardContent>
-      </Card>
-
-      <SetupVirtualAccountModal
-        visible={setupOpen}
-        onClose={() => setSetupOpen(false)}
-      />
-    </>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Account name</p>
+              <p className="mt-0.5 truncate text-sm font-medium text-foreground">
+                {virtualAccount.accountName || "—"}
+              </p>
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Bank</p>
+              <p className="mt-0.5 truncate text-sm font-medium text-foreground">
+                {virtualAccount.bankName || "—"}
+              </p>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

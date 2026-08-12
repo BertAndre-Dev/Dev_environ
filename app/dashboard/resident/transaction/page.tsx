@@ -30,7 +30,11 @@ import type { WalletData } from "@/redux/slice/resident/wallet-mgt/wallet-mgt-sl
 import Loader from "@/components/ui/Loader";
 import { CopyButton } from "@/components/ui/copy-button";
 import { ResidentWalletCard } from "@/components/resident/wallet/ResidentWalletCard";
-import { ResidentVirtualAccountCard } from "@/components/resident/wallet/ResidentVirtualAccountCard";
+import {
+  ResidentVirtualAccountProvider,
+  ResidentVirtualAccountSetupButton,
+  ResidentVirtualAccountCard,
+} from "@/components/resident/wallet/ResidentVirtualAccountCard";
 import { formatDateTime } from "@/lib/format-date";
 import { isPending } from "@/lib/async-status";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -535,123 +539,138 @@ export default function TransactionPage() {
     <div className="relative">
       {loading && <Loader fullScreen label="Loading wallet..." />}
 
-      <div
-        className={[
-          "space-y-6",
-          loading ? "pointer-events-none select-none" : "",
-        ].join(" ")}
-      >
-        <ResidentWalletCard
-          wallet={wallet}
-          isOwner={isOwner}
-          formatNaira={formatNaira}
-          walletLoading={walletLoading}
-          createWalletState={String(createWalletState)}
-          createWalletModalOpen={createWalletModalOpen}
-          onFundWalletClick={handleOpenModal}
-          onWithdrawClick={handleOpenWithdrawModal}
-          onTransferToBalanceClick={handleOpenTransferToBalanceModal}
-          onCreateWalletClick={handleCreateWalletClick}
-          onSetWithdrawalAccountClick={handleOpenSetWithdrawalAccountModal}
-        />
+      <ResidentVirtualAccountProvider enabled={Boolean(userId)}>
+        <div
+          className={[
+            "space-y-6",
+            loading ? "pointer-events-none select-none" : "",
+          ].join(" ")}
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h1 className="text-lg font-bold text-black">
+                Wallet Management
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Manage your wallet and transactions.
+              </p>
+            </div>
+            <ResidentVirtualAccountSetupButton />
+          </div>
 
-        {/* VA is independent of wallet — user may have both */}
-        <ResidentVirtualAccountCard
-          enabled={Boolean(userId)}
-          hasWallet={Boolean(wallet?.id)}
-        />
+          <ResidentWalletCard
+            wallet={wallet}
+            isOwner={isOwner}
+            formatNaira={formatNaira}
+            walletLoading={walletLoading}
+            createWalletState={String(createWalletState)}
+            createWalletModalOpen={createWalletModalOpen}
+            onFundWalletClick={handleOpenModal}
+            onWithdrawClick={handleOpenWithdrawModal}
+            onTransferToBalanceClick={handleOpenTransferToBalanceModal}
+            onCreateWalletClick={handleCreateWalletClick}
+            onSetWithdrawalAccountClick={handleOpenSetWithdrawalAccountModal}
+          />
 
-        {/* Transactions Table */}
-        <Card className="p-4">
-          <h2 className="font-semibold mb-4">Transaction History</h2>
-          <Table
-            columns={columns}
-            data={transactions}
-            emptyMessage="No transactions found."
-            showPagination
-            paginationInfo={{
-              total: pagination?.total || transactions.length || 0,
-              current: pagination?.currentPage || currentPage,
-              pageSize: pagination?.pageSize || limit,
-            }}
-            onPageChange={handlePageChange}
-            enableExport
-            exportFileName="transactions"
-            onExportRequest={
-              userId
-                ? async () => {
-                    const res = await dispatch(
-                      getTransactionHistory({ userId, page: 1, limit: 50000 }),
-                    ).unwrap();
-                    return res?.data ?? [];
-                  }
-                : undefined
+          <ResidentVirtualAccountCard />
+
+          {/* Transactions Table */}
+          <Card className="p-4">
+            <h2 className="font-semibold mb-4">Transaction History</h2>
+            <Table
+              columns={columns}
+              data={transactions}
+              emptyMessage="No transactions found."
+              showPagination
+              paginationInfo={{
+                total: pagination?.total || transactions.length || 0,
+                current: pagination?.currentPage || currentPage,
+                pageSize: pagination?.pageSize || limit,
+              }}
+              onPageChange={handlePageChange}
+              enableExport
+              exportFileName="transactions"
+              onExportRequest={
+                userId
+                  ? async () => {
+                      const res = await dispatch(
+                        getTransactionHistory({
+                          userId,
+                          page: 1,
+                          limit: 50000,
+                        }),
+                      ).unwrap();
+                      return res?.data ?? [];
+                    }
+                  : undefined
+              }
+            />
+
+            <div className="flex justify-end items-center gap-2 mt-4">
+              <Button
+                disabled={currentPage === 1}
+                onClick={() => handlePageChange(currentPage - 1)}
+              >
+                Prev
+              </Button>
+              <Button
+                disabled={
+                  currentPage >= Math.ceil((pagination?.total || 0) / limit)
+                }
+                onClick={() => handlePageChange(currentPage + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </Card>
+
+          <FundWalletModal
+            visible={open}
+            onClose={handleOpenModal}
+            userId={userId}
+            walletId={wallet?.id ?? null}
+            onSubmit={handleFundWallet}
+          />
+
+          <WithdrawModal
+            visible={withdrawModalOpen}
+            onClose={handleCloseWithdrawModal}
+            userId={userId}
+            walletId={wallet?.id ?? null}
+            defaultAccountNumber={wallet?.accountNumber ?? ""}
+            maxWithdrawableAmount={wallet?.withdrawableBalance ?? 0}
+            estateId={ownerEstateId}
+            bankCode={wallet?.bankCode ?? ""}
+            bankName={
+              wallet?.bankCode
+                ? residentBanks.find((b) => b.code === wallet.bankCode)?.name ??
+                  ""
+                : ""
             }
           />
 
-          <div className="flex justify-end items-center gap-2 mt-4">
-            <Button
-              disabled={currentPage === 1}
-              onClick={() => handlePageChange(currentPage - 1)}
-            >
-              Prev
-            </Button>
-            <Button
-              disabled={
-                currentPage >= Math.ceil((pagination?.total || 0) / limit)
-              }
-              onClick={() => handlePageChange(currentPage + 1)}
-            >
-              Next
-            </Button>
-          </div>
-        </Card>
+          <TransferToBalanceModal
+            visible={transferToBalanceModalOpen}
+            onClose={handleCloseTransferToBalanceModal}
+            withdrawableBalance={wallet?.withdrawableBalance ?? 0}
+            submitting={transferToBalanceLoading}
+            onSubmit={handleTransferToMainBalance}
+          />
 
-        <FundWalletModal
-          visible={open}
-          onClose={handleOpenModal}
-          userId={userId}
-          walletId={wallet?.id ?? null}
-          onSubmit={handleFundWallet}
-        />
+          <CreateWalletModalWrapper
+            visible={createWalletModalOpen}
+            onClose={() => setCreateWalletModalOpen(false)}
+            userId={userId}
+            onSuccess={handleCreateWalletSuccess}
+          />
 
-        <WithdrawModal
-          visible={withdrawModalOpen}
-          onClose={handleCloseWithdrawModal}
-          userId={userId}
-          walletId={wallet?.id ?? null}
-          defaultAccountNumber={wallet?.accountNumber ?? ""}
-          maxWithdrawableAmount={wallet?.withdrawableBalance ?? 0}
-          estateId={ownerEstateId}
-          bankCode={wallet?.bankCode ?? ""}
-          bankName={
-            wallet?.bankCode
-              ? residentBanks.find((b) => b.code === wallet.bankCode)?.name ?? ""
-              : ""
-          }
-        />
-
-        <TransferToBalanceModal
-          visible={transferToBalanceModalOpen}
-          onClose={handleCloseTransferToBalanceModal}
-          withdrawableBalance={wallet?.withdrawableBalance ?? 0}
-          submitting={transferToBalanceLoading}
-          onSubmit={handleTransferToMainBalance}
-        />
-
-        <CreateWalletModalWrapper
-          visible={createWalletModalOpen}
-          onClose={() => setCreateWalletModalOpen(false)}
-          userId={userId}
-          onSuccess={handleCreateWalletSuccess}
-        />
-
-        <SetWithdrawalAccountModal
-          visible={setWithdrawalAccountModalOpen}
-          onClose={handleCloseSetWithdrawalAccountModal}
-          onSuccess={handleSetWithdrawalAccountSuccess}
-        />
-      </div>
+          <SetWithdrawalAccountModal
+            visible={setWithdrawalAccountModalOpen}
+            onClose={handleCloseSetWithdrawalAccountModal}
+            onSuccess={handleSetWithdrawalAccountSuccess}
+          />
+        </div>
+      </ResidentVirtualAccountProvider>
     </div>
   );
 }

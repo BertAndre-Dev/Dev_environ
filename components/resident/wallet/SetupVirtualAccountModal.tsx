@@ -19,6 +19,8 @@ import { cn } from "@/lib/utils";
 type Props = {
   visible: boolean;
   onClose: () => void;
+  /** Called after a successful create, before the modal closes. */
+  onSuccess?: () => void;
 };
 
 const PHONE_RE = /^0[789][01]\d{8}$/;
@@ -27,6 +29,7 @@ const NIN_RE = /^\d{11}$/;
 export default function SetupVirtualAccountModal({
   visible,
   onClose,
+  onSuccess,
 }: Readonly<Props>) {
   const dispatch = useDispatch<AppDispatch>();
   const { createVirtualAccountState } = useSelector(
@@ -77,7 +80,11 @@ export default function SetupVirtualAccountModal({
       await dispatch(getFlutterwaveVirtualAccount());
       toast.success("Virtual account created successfully.");
       resetForm();
-      onClose();
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        onClose();
+      }
     } catch (err: unknown) {
       const message = getApiErrorMessage(err);
       toast.error(message || "Failed to set up virtual account.");

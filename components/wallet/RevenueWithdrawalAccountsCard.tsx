@@ -245,23 +245,36 @@ function AutoSettlementPanel({
 }>) {
   if (variant === "overview") {
     return (
-      <div className="flex h-[150px] w-full flex-col items-center justify-center rounded-lg border border-[#CCCCCC] px-4 py-4 text-center">
-        <div className="flex items-center gap-1.5">
-          <Sparkles className="size-3.5 text-emerald-700" aria-hidden />
-          <p className="text-sm text-muted-foreground">Auto-settlement</p>
-        </div>
-        <div className="mt-3">
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-lg border border-[#CCCCCC]",
+          "bg-linear-to-b from-slate-50/90 to-white",
+          "px-4 py-4 sm:px-5",
+        )}
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <Sparkles
+                className="size-3.5 shrink-0 text-emerald-700"
+                aria-hidden
+              />
+              <p className="text-sm font-medium text-foreground">
+                Auto-settlement
+              </p>
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              {autoEnabled
+                ? "On — configured revenue settles to the matching bank account after T+1."
+                : "Off — revenue stays in your wallet until you withdraw."}
+            </p>
+          </div>
           <AutoSettlementToggle
             enabled={autoEnabled}
             pending={toggling}
             onChange={onToggle}
           />
         </div>
-        <p className="mt-3 max-w-[14rem] text-xs leading-relaxed text-muted-foreground">
-          {autoEnabled
-            ? "On — configured revenue settles after T+1."
-            : "Off — revenue stays in your wallet until you withdraw."}
-        </p>
       </div>
     );
   }

@@ -31,7 +31,7 @@ interface EstateWalletOverviewCardProps {
   walletLoading?: boolean;
   createWalletLoading?: boolean;
   filterExportSlot?: React.ReactNode;
-  /** When set, embeds auto-settlement beside balance cards. */
+  /** When set, embeds auto-settlement above the balance cards. */
   revenueSettlementRole?: RevenueWithdrawalRole;
 }
 
@@ -52,12 +52,9 @@ function WalletBalancesAndActions({
 
   return (
     <div className="space-y-6">
-      <div
-        className={[
-          "grid grid-cols-1 gap-2 lg:gap-6",
-          autoSettlement ? "md:grid-cols-2 xl:grid-cols-3" : "md:grid-cols-2",
-        ].join(" ")}
-      >
+      {autoSettlement}
+
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:gap-6">
         <div className="flex h-[150px] w-full flex-col items-center justify-center rounded-lg border border-[#CCCCCC] lg:px-4 lg:py-4">
           <p className="text-sm text-muted-foreground">Available Balance</p>
           <p className="mt-1 text-3xl font-bold md:text-4xl">
@@ -78,7 +75,6 @@ function WalletBalancesAndActions({
             {formatNaira(wallet.withdrawableBalance ?? 0)}
           </p>
         </div>
-        {autoSettlement}
       </div>
 
       <div className="flex items-center justify-center rounded-lg bg-[#D0DFF233] p-4">

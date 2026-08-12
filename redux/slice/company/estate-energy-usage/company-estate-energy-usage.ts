@@ -1,5 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { apiErrorRejectValue } from "@/lib/api-error";
 import {
   fetchEstateEnergyUsageJob,
   type EstateEnergyUsageJobMeta,
@@ -41,7 +41,7 @@ export const getCompanyEstateEnergyUsage = createAsyncThunk(
         refresh,
       });
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 export interface CreateCompanyWalletData {
   companyId: string;
@@ -73,9 +73,7 @@ export const createCompanyWallet = createAsyncThunk(
       });
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({
-        message: getApiErrorMessage(error),
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -94,9 +92,7 @@ export const getCompanyWallet = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({
-        message: getApiErrorMessage(error),
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -128,9 +124,7 @@ export const getCompanyCredits = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({
-        message: getApiErrorMessage(error),
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -150,9 +144,7 @@ export const getCompanyT1Breakdown = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({
-        message: getApiErrorMessage(error),
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -175,9 +167,7 @@ export const getCompanyT1Pending = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({
-        message: getApiErrorMessage(error),
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -190,9 +180,7 @@ export const createCompanyWithdrawAudit = createAsyncThunk(
       const res = await axiosInstance.post("/api/v1/transaction-mgt", data);
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({
-        message: getApiErrorMessage(error),
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -208,9 +196,7 @@ export const requestCompanyWithdrawOtp = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({
-        message: getApiErrorMessage(error),
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -226,9 +212,7 @@ export const transferCompanyFunds = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({
-        message: getApiErrorMessage(error),
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

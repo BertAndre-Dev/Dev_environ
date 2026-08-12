@@ -1,7 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import type { TransactionSummaryData } from "@/lib/transaction-summary-chart";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 export interface TransactionSummaryResponse {
   success: boolean;
@@ -20,7 +20,7 @@ export const getCompanyTransactionSummary = createAsyncThunk(
       );
       return res.data.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

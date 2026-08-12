@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 export interface TransactionUser {
   id: string;
@@ -110,9 +110,7 @@ export const getAllTransactionHistory = createAsyncThunk(
       // can decide how to store it.
       return { ...(res.data as any), forGrandTotal, forExport };
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   }
 );
@@ -148,9 +146,7 @@ export const getUserTransactionHistory = createAsyncThunk(
       });
       return res.data;
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -163,9 +159,7 @@ export const getTransactionById = createAsyncThunk(
       const res = await axiosInstance.get(`/api/v1/transaction-mgt/by-id/${transactionId}`);
       return res.data;
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   }
 );
@@ -180,9 +174,7 @@ export const verifyTransaction = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   }
 );

@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 export type CompanyExpenseEntry = {
   id?: string;
@@ -47,7 +47,7 @@ export const createCompanyExpenseEntries = createAsyncThunk(
       const res = await axiosInstance.post("/api/v1/expense-entry", payload);
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -82,7 +82,7 @@ export const fetchCompanyExpenseEntries = createAsyncThunk(
       );
       return res.data as CompanyExpenseEntryListResponse;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -107,7 +107,7 @@ export const fetchCompanyExpenseEntryById = createAsyncThunk(
       });
       return res2.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -139,7 +139,7 @@ export const updateCompanyExpenseEntry = createAsyncThunk(
       });
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -151,7 +151,7 @@ export const deleteCompanyExpenseEntry = createAsyncThunk(
       const res = await axiosInstance.delete(`/api/v1/expense-entry/${id}`);
       return res.data ? { id, ...res.data } : { id };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

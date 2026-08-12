@@ -173,6 +173,7 @@ export const staffNav = [
     label: "Requests Management",
     icon: ClipboardList,
     path: "/dashboard/staff/request",
+    // Hardcoded on sidebar (always visible; not gated by estate modules).
     // moduleKey: "request",
   },
   {
@@ -279,6 +280,8 @@ export const companyNav = [
     label: "Requests Management",
     icon: ClipboardList,
     path: "/dashboard/company/request",
+    // Hardcoded on sidebar (always visible; not gated by estate modules).
+    // moduleKey: "request",
   },
   {
     label: "Report",
@@ -341,7 +344,8 @@ export const adminNav = [
     label: "Request Management",
     icon: ClipboardList,
     path: "/dashboard/admin/request",
-    moduleKey: "request",
+    // Hardcoded on sidebar (always visible; not gated by estate modules).
+    // moduleKey: "request",
   },
   {
     label: "Visitors Management",
@@ -563,6 +567,8 @@ export const estateAdminNav = [
     label: "Requests Management",
     icon: ClipboardList,
     path: "/dashboard/estate-admin/request",
+    // Hardcoded on sidebar (always visible; not gated by estate modules).
+    // moduleKey: "request",
   },
   {
     label: "Community Chat",

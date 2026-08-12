@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 export type CompanyRevenueHead = {
   id?: string;
@@ -34,7 +34,7 @@ export const createCompanyRevenueHead = createAsyncThunk(
       const res = await axiosInstance.post("/api/v1/revenue-head", data);
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -72,7 +72,7 @@ export const fetchCompanyRevenueHeads = createAsyncThunk(
       );
       return res.data as CompanyRevenueHeadListResponse;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -97,7 +97,7 @@ export const fetchCompanyRevenueHeadById = createAsyncThunk(
       });
       return res2.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -119,7 +119,7 @@ export const updateCompanyRevenueHead = createAsyncThunk(
       });
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -133,7 +133,7 @@ export const deleteCompanyRevenueHead = createAsyncThunk(
       });
       return res.data ? { id, ...res.data } : { id };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

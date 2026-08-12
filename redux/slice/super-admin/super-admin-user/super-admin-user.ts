@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 // get all users by estate (with pagination)
 export const getAllUsersByEstate = createAsyncThunk(
@@ -51,9 +51,7 @@ export const getAllUsersByEstate = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -109,9 +107,7 @@ export const getAllUsersByCompany = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -124,9 +120,7 @@ export const getUser = createAsyncThunk(
       const res = await axiosInstance.get(`/api/v1/user-mgt/${id}`);
       return res.data;
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -139,9 +133,7 @@ export const deleteUser = createAsyncThunk(
       const res = await axiosInstance.delete(`/api/v1/user-mgt/${id}`);
       return res.data;
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -156,9 +148,7 @@ export const suspendUser = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -173,9 +163,7 @@ export const activateUser = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -205,9 +193,7 @@ export const updateUser = createAsyncThunk(
       const res = await axiosInstance.put(`/api/v1/user-mgt/${id}`, data);
       return res.data;
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

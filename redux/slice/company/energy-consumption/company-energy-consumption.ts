@@ -1,7 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import { formatAddressEntryLabel } from "@/lib/address";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { apiErrorRejectValue } from "@/lib/api-error";
 import {
   mapVendAnalyticsToEnergyConsumption,
   type EnergyConsumptionPeriod,
@@ -73,7 +73,7 @@ export const getCompanyEnergyConsumptionAddressOptions = createAsyncThunk(
       );
       return [ALL_ADDRESSES_OPTION, ...sorted];
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -119,7 +119,7 @@ export const getCompanyEnergyConsumptionChart = createAsyncThunk(
 
       return { chart };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

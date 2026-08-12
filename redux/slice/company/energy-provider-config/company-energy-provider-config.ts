@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { apiErrorRejectValue } from "@/lib/api-error";
 import {
   mapEnergyProviderConfigList,
   paginateEnergyProviderRows,
@@ -62,7 +62,7 @@ export const getCompanyEnergyProviderConfigs = createAsyncThunk(
 
       return paginateEnergyProviderRows(rows, page, limit);
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -83,7 +83,7 @@ export const setCompanyEnergyProviderConfig = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

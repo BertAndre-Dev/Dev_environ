@@ -1,7 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import type { EnergyProviderVendRow } from "@/lib/energy-provider-vends";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 export interface GetCompanyEnergyProviderVendsParams {
   estateId: string;
@@ -91,7 +91,7 @@ export const getCompanyEnergyProviderVends = createAsyncThunk(
         ),
       } satisfies CompanyEnergyProviderVendsResult;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

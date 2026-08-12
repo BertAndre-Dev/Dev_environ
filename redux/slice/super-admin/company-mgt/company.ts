@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 export type CompanyModuleKey = string;
 
@@ -73,9 +73,7 @@ export const getCompanies = createAsyncThunk(
       });
       return res.data;
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -88,9 +86,7 @@ export const getCompanyById = createAsyncThunk(
       const res = await axiosInstance.get(`/api/v1/company-mgt/${id}`);
       return res.data;
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -103,9 +99,7 @@ export const getCompanyModules = createAsyncThunk(
       const res = await axiosInstance.get("/api/v1/company-mgt/modules");
       return res.data as { success?: boolean; message?: string; data?: CompanyModuleKey[] };
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -118,9 +112,7 @@ export const createCompany = createAsyncThunk(
       const res = await axiosInstance.post("/api/v1/company-mgt", payload);
       return res.data;
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -134,9 +126,7 @@ export const updateCompany = createAsyncThunk(
       const res = await axiosInstance.put(`/api/v1/company-mgt/${id}`, data);
       return { ...res.data, updatedId: id };
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -150,9 +140,7 @@ export const updateCompanyModules = createAsyncThunk(
       const res = await axiosInstance.put(`/api/v1/company-mgt/${id}/modules`, { modules });
       return { ...res.data, updatedId: id, modules };
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -165,9 +153,7 @@ export const suspendCompany = createAsyncThunk(
       const res = await axiosInstance.put(`/api/v1/company-mgt/${id}/suspend-company`);
       return { ...res.data, companyId: id };
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -180,9 +166,7 @@ export const activateCompany = createAsyncThunk(
       const res = await axiosInstance.put(`/api/v1/company-mgt/${id}/activate-company`);
       return { ...res.data, companyId: id };
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -195,9 +179,7 @@ export const deleteCompany = createAsyncThunk(
       const res = await axiosInstance.delete(`/api/v1/company-mgt/${id}`);
       return { ...res.data, deletedId: id };
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

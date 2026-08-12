@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 export type ApiPagination = {
   total?: number;
@@ -69,9 +69,7 @@ export const fetchCompanyOperationsReportingTypes = createAsyncThunk(
         pagination?: ApiPagination;
       };
     } catch (error: unknown) {
-      return rejectWithValue({
-        message: getApiErrorMessage(error),
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -104,9 +102,7 @@ export const fetchCompanyOperationsReportingFields = createAsyncThunk(
         pagination?: ApiPagination;
       };
     } catch (error: unknown) {
-      return rejectWithValue({
-        message: getApiErrorMessage(error),
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -136,9 +132,7 @@ export const fetchCompanyOperationsReportingEntries = createAsyncThunk(
         pagination?: ApiPagination;
       };
     } catch (error: unknown) {
-      return rejectWithValue({
-        message: getApiErrorMessage(error),
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

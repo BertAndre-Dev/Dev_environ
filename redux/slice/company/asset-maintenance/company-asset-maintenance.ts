@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 export type ApiPagination = {
   total?: number;
@@ -108,7 +108,7 @@ export const createAssetMaintenance = createAsyncThunk(
       const res = await axiosInstance.post("/api/v1/asset-maintenance", payload);
       return res.data as { success?: boolean; message?: string; data?: AssetMaintenanceRecord };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -136,7 +136,7 @@ export const getAssetMaintenanceList = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -151,7 +151,7 @@ export const getAssetMaintenanceById = createAsyncThunk(
       );
       return res.data as { success?: boolean; message?: string; data?: AssetMaintenanceRecord };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -168,7 +168,7 @@ export const updateAssetMaintenance = createAsyncThunk(
       );
       return { ...(res.data as object), maintenanceId };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -183,7 +183,7 @@ export const deleteAssetMaintenance = createAsyncThunk(
       );
       return { ...(res.data as object), deletedId: maintenanceId };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -198,7 +198,7 @@ export const suspendAssetMaintenance = createAsyncThunk(
       );
       return { ...(res.data as object), maintenanceId };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -213,7 +213,7 @@ export const activateAssetMaintenance = createAsyncThunk(
       );
       return { ...(res.data as object), maintenanceId };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -236,7 +236,7 @@ export const getAssetMaintenanceComments = createAsyncThunk(
       );
       return { ...res.data, maintenanceId };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -253,7 +253,7 @@ export const addAssetMaintenanceComment = createAsyncThunk(
       );
       return { ...(res.data as object), maintenanceId };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

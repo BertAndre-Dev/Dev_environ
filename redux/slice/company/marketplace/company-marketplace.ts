@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 export interface CompanyMarketplaceItem {
   id?: string;
@@ -76,7 +76,7 @@ export const getCompanyMarketplaceList = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -89,7 +89,7 @@ export const getCompanyMarketplaceById = createAsyncThunk(
       const res = await axiosInstance.get(`/api/v1/marketplace/${marketPlaceId}`);
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -109,7 +109,7 @@ export const createCompanyMarketplace = createAsyncThunk(
       });
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -132,7 +132,7 @@ export const updateCompanyMarketplace = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -152,7 +152,7 @@ export const suspendCompanyMarketplace = createAsyncThunk(
       );
       return { ...res.data, marketPlaceId };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -167,7 +167,7 @@ export const activateCompanyMarketplace = createAsyncThunk(
       );
       return { ...res.data, marketPlaceId };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -180,7 +180,7 @@ export const deleteCompanyMarketplace = createAsyncThunk(
       const res = await axiosInstance.delete(`/api/v1/marketplace/${marketPlaceId}`);
       return { ...res.data, deletedId: marketPlaceId };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

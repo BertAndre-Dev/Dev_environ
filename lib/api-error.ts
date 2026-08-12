@@ -44,3 +44,10 @@ export function getApiSuccessMessage(payload: unknown): string | undefined {
   if (typeof message === "string" && message.trim()) return message.trim();
   return undefined;
 }
+
+/** Typed rejectWithValue payload from an API/Axios error (no hardcoded fallback). */
+export type ApiErrorRejectValue = { message?: string };
+
+export function apiErrorRejectValue(error: unknown): ApiErrorRejectValue {
+  return { message: getApiErrorMessage(error) };
+}

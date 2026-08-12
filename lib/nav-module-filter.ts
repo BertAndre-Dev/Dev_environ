@@ -5,6 +5,7 @@ export const NAV_ALWAYS_VISIBLE_LABELS = new Set([
   "Logout",
   "Energy Provider Management",
   "Notifications",
+  // Request management is hardcoded for admin / staff / company / estate admin.
   "Request Management",
   "Requests Management",
   "Map",

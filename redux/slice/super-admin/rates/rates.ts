@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 export type RateFeeType = "VENDING" | "BILL_PAYMENT";
 export type RateScope = "GLOBAL" | "COMPANY" | "ESTATE";
@@ -207,9 +207,7 @@ export const getRates = createAsyncThunk(
         params,
       };
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -233,7 +231,7 @@ export const getEffectiveRate = createAsyncThunk(
     } catch (error: unknown) {
       return rejectWithValue({
         feeType: String(params.feeType),
-        message: getApiErrorMessage(error),
+        ...apiErrorRejectValue(error),
       });
     }
   },
@@ -261,9 +259,7 @@ export const upsertRate = createAsyncThunk(
           "Rate saved successfully",
       };
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -276,9 +272,7 @@ export const deactivateRate = createAsyncThunk(
       const res = await axiosInstance.delete(`/api/v1/rates/${id}`);
       return { id, data: res.data };
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

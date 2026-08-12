@@ -1,7 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import { parseEstateModulesResponse } from "@/lib/estate-module-labels";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 export enum VisitorVerificationMode {
   VIEW_AND_VERIFY = "VIEW_AND_VERIFY",
@@ -43,7 +43,7 @@ export const fetchCompanyEstateEnabledModules = createAsyncThunk(
       );
       return { data: parseEstateModulesResponse(res.data) };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -59,7 +59,7 @@ export const updateCompanyEstateModules = createAsyncThunk(
       });
       return { ...res.data, updatedId: id, modules };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -74,7 +74,7 @@ export const fetchCompanyEstateModules = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -87,7 +87,7 @@ export const createCompanyEstate = createAsyncThunk(
       const res = await axiosInstance.post("/api/v1/estate-mgt", data);
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -108,7 +108,7 @@ export const getCompanyEstates = createAsyncThunk(
       const res = await axiosInstance.get(`/api/v1/estate-mgt${suffix}`);
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -121,7 +121,7 @@ export const getCompanyEstateById = createAsyncThunk(
       const res = await axiosInstance.get(`/api/v1/estate-mgt/${id}`);
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -137,7 +137,7 @@ export const updateCompanyEstate = createAsyncThunk(
       const res = await axiosInstance.put(`/api/v1/estate-mgt/${id}`, data);
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -150,7 +150,7 @@ export const deleteCompanyEstate = createAsyncThunk(
       const res = await axiosInstance.delete(`/api/v1/estate-mgt/${id}`);
       return { ...(res.data as object), deletedId: id };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -163,7 +163,7 @@ export const suspendCompanyEstate = createAsyncThunk(
       const res = await axiosInstance.put(`/api/v1/estate-mgt/${id}/suspend-estate`);
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -176,7 +176,7 @@ export const activateCompanyEstate = createAsyncThunk(
       const res = await axiosInstance.put(`/api/v1/estate-mgt/${id}/activate-estate`);
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

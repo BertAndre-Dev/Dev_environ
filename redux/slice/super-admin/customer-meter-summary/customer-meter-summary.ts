@@ -1,7 +1,10 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import type { CustomerMeterSummaryResponse } from "@/types/analytics";
-import { getApiErrorMessage } from "@/lib/api-error";
+import {
+  apiErrorRejectValue,
+  type ApiErrorRejectValue,
+} from "@/lib/api-error";
 
 export type GetCustomerMeterSummaryArgs = {
   estateId?: string;
@@ -28,7 +31,7 @@ export function filterToSummaryArgs(
 export const getCustomerMeterSummary = createAsyncThunk<
   CustomerMeterSummaryResponse,
   GetCustomerMeterSummaryArgs | undefined,
-  { rejectValue: { message: string } }
+  { rejectValue: ApiErrorRejectValue }
 >(
   "super-admin-customer-meter-summary/get",
   async (args, { rejectWithValue }) => {
@@ -48,9 +51,7 @@ export const getCustomerMeterSummary = createAsyncThunk<
       );
       return res.data;
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

@@ -1,7 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import type { ClearTamperTokenResponse } from "@/lib/clear-tamper-token";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 export type {
   ClearTamperTokenData,
@@ -32,9 +32,7 @@ export const assignMeterToEstate = createAsyncThunk(
       const res = await axiosInstance.post("/api/v1/meters/add-meter", data);
       return res.data;
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   }
 );
@@ -48,9 +46,7 @@ export const removeEstateMeter = createAsyncThunk(
             const res = await axiosInstance.put("/api/v1/meters/remove-estate-meter", data);
             return res.data;
         } catch (error: unknown) {
-            const data = (error as { response?: { data?: unknown } })?.response?.data;
-            if (data && typeof data === "object") return rejectWithValue(data);
-            return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
         }
     }
 );
@@ -90,9 +86,7 @@ export const getAllMeters = createAsyncThunk(
 
       return res.data;
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   }
 );
@@ -106,9 +100,7 @@ export const getMeter = createAsyncThunk(
             const res = await axiosInstance.get(`/api/v1/meters/${meterId}`);
             return res.data;
         } catch (error: unknown) {
-            const data = (error as { response?: { data?: unknown } })?.response?.data;
-            if (data && typeof data === "object") return rejectWithValue(data);
-            return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
         }
     }
 );
@@ -121,9 +113,7 @@ export const getMeterByAddressId = createAsyncThunk(
       const res = await axiosInstance.get(`/api/v1/meters/address/${addressId}`);
       return res.data;
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   }
 );
@@ -136,9 +126,7 @@ export const deleteMeter = createAsyncThunk(
       const res = await axiosInstance.delete(`/api/v1/meters/${meterId}`);
       return res.data;
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   }
 );
@@ -154,9 +142,7 @@ export const clearTamperToken = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

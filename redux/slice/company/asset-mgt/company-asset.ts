@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { apiErrorRejectValue } from "@/lib/api-error";
 import {
   normalizeAssetList,
   normalizeAssetPagination,
@@ -118,7 +118,7 @@ export const createAssetCategory = createAsyncThunk(
       });
       return res.data as { success?: boolean; message?: string; data?: AssetCategory };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -148,7 +148,7 @@ export const getAssetCategories = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -164,7 +164,7 @@ export const updateAssetCategory = createAsyncThunk(
       );
       return { ...(res.data as any), id: payload.id };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -186,7 +186,7 @@ export const deleteAssetCategory = createAsyncThunk(
       });
       return { ...(res.data as any), deletedId: id };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -203,7 +203,7 @@ export const createAssets = createAsyncThunk(
       const res = await axiosInstance.post("/api/v1/assets", payload);
       return res.data as { success?: boolean; message?: string; data?: Asset | Asset[] };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -233,7 +233,7 @@ export const getAssets = createAsyncThunk(
         pagination: normalizeAssetPagination(res.data?.pagination),
       };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -246,7 +246,7 @@ export const getAssetById = createAsyncThunk(
       const res = await axiosInstance.get(`/api/v1/assets/${normalizeId(id)}`);
       return res.data as { success?: boolean; message?: string; data?: Asset };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -260,7 +260,7 @@ export const updateAsset = createAsyncThunk(
       const res = await axiosInstance.put(`/api/v1/assets/${normalizeId(id)}`, body);
       return { ...(res.data as any), id };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -273,7 +273,7 @@ export const deleteAsset = createAsyncThunk(
       const res = await axiosInstance.delete(`/api/v1/assets/${normalizeId(id)}`);
       return { ...(res.data as any), deletedId: id };
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

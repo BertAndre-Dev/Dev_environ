@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 interface CompanyMeterEstatePayload {
   meterNumber: string;
@@ -33,8 +33,7 @@ export const addCompanyMeter = createAsyncThunk(
       const res = await axiosInstance.post("/api/v1/meters/add-meter", data);
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: unknown } };
-      return rejectWithValue(err.response?.data);
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -49,8 +48,7 @@ export const removeCompanyEstateMeter = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: unknown } };
-      return rejectWithValue(err.response?.data);
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -70,7 +68,7 @@ export const assignCompanyMeterToEstate = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -104,8 +102,7 @@ export const getCompanyMeters = createAsyncThunk(
       const res = await axiosInstance.get(`${baseUrl}?${params.toString()}`);
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: unknown } };
-      return rejectWithValue(err.response?.data);
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -119,9 +116,7 @@ export const getCompanyMeterByAddressId = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const data = (error as { response?: { data?: unknown } })?.response?.data;
-      if (data && typeof data === "object") return rejectWithValue(data);
-      return rejectWithValue({ message: getApiErrorMessage(error) });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -133,8 +128,7 @@ export const deleteCompanyMeter = createAsyncThunk(
       const res = await axiosInstance.delete(`/api/v1/meters/${meterId}`);
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: unknown } };
-      return rejectWithValue(err.response?.data);
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

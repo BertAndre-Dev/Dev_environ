@@ -295,12 +295,6 @@ export const companyNav = [
   //   path: "/dashboard/company/community",
   // },
   {
-    label: "Notifications",
-    icon: Inbox,
-    path: "/dashboard/company/notifications",
-    moduleKey: "notifications",
-  },
-  {
     label: "Settings",
     icon: FiSettings,
     path: "/dashboard/settings",

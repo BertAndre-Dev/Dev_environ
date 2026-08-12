@@ -24,8 +24,11 @@ import { cn } from "@/lib/utils";
 
 const PREVIEW_LIMIT = 10;
 
-function isSuperAdminRole(role: string | null | undefined): boolean {
-  return (role || "").toLowerCase().trim() === "super admin";
+function isNotificationsDisabledRole(
+  role: string | null | undefined,
+): boolean {
+  const normalized = (role || "").toLowerCase().trim();
+  return normalized === "super admin" || normalized === "company";
 }
 
 export function NotificationsBell() {
@@ -38,7 +41,7 @@ export function NotificationsBell() {
   );
   const [open, setOpen] = useState(false);
   const fetchedOnce = useRef(false);
-  const enabled = !isSuperAdminRole(role);
+  const enabled = !isNotificationsDisabledRole(role);
 
   const fetchPreview = useCallback(() => {
     if (!enabled) return;

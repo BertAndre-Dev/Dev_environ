@@ -8,7 +8,7 @@ import {
   type ElementType,
 } from "react";
 import { useRouter } from "next/navigation";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import DeleteModal from "@/components/resident/delete-modal/page";
 import Image from "next/image";
@@ -33,11 +33,13 @@ import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import { MaintenanceRequestCard } from "@/components/admin/maintenance/maintenance-request-card";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { cn } from "@/lib/utils";
-import { normalizeAddresses, type AddressOption } from "@/lib/address";
+import { normalizeAddresses, formatAddressLabel, type AddressOption } from "@/lib/address";
 import type { AsyncThunk } from "@reduxjs/toolkit";
-import type { AppDispatch } from "@/redux/store";
+import type { AppDispatch, RootState } from "@/redux/store";
 import type { DashboardUserDetails } from "@/lib/dashboard-user-details";
 import { getResidentBills } from "@/redux/slice/resident/bill-mgt/bills-mgt";
+import { getBillsForAddress } from "@/redux/slice/admin/bills-mgt/bills";
+import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getMeterByAddress } from "@/redux/slice/resident/meter-mgt/meter-mgt";
 import type { ResidentMeterData } from "@/redux/slice/resident/meter-mgt/meter-mgt-slice";
 import { getComplaintsByAddress } from "@/redux/slice/resident/maintenance/resident-complaints";
@@ -57,6 +59,31 @@ interface UserBillRow {
   lastPaymentDate?: string | null;
 }
 
+interface AssignedBillRow {
+  id: string;
+  billName?: string;
+  frequency?: string;
+  amountDue?: number;
+  amount?: number;
+  status?: string;
+  compulsory?: boolean;
+  startDate?: string;
+  nextDueDate?: string;
+  createdAt?: string;
+  addressId?: string;
+  addressLabel?: string;
+}
+
+function resolveEstateId(raw: unknown): string {
+  if (!raw) return "";
+  if (typeof raw === "string") return raw.trim();
+  if (typeof raw === "object") {
+    const o = raw as { id?: string; _id?: string };
+    return String(o._id || o.id || "").trim();
+  }
+  return "";
+}
+
 interface UserVisitorRow {
   id: string;
   firstName?: string;
@@ -71,7 +98,7 @@ interface UserVisitorRow {
 }
 
 const BASE_TABS: { id: DetailTab; label: string }[] = [
-  { id: "bills", label: "Bills" },
+  { id: "bills", label: "Assigned Bills" },
   { id: "complaints", label: "Complaints" },
   { id: "visitors", label: "Visitors" },
 ];
@@ -382,11 +409,16 @@ export default function UserDetailView({
 }: UserDetailViewProps) {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
+  const authEstateId = useSelector((state: RootState) =>
+    resolveEstateId(state.auth.user?.estateId),
+  );
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<DetailTab>("bills");
   const [relatedLoading, setRelatedLoading] = useState(true);
   const [bills, setBills] = useState<UserBillRow[]>([]);
+  const [assignedBills, setAssignedBills] = useState<AssignedBillRow[]>([]);
+  const [estateId, setEstateId] = useState(authEstateId);
   const [complaints, setComplaints] = useState<ResidentComplaintItem[]>([]);
   const [meterByAddressId, setMeterByAddressId] = useState<
     Record<string, string | null>
@@ -418,10 +450,36 @@ export default function UserDetailView({
     [user],
   );
 
+  useEffect(() => {
+    if (authEstateId) {
+      setEstateId(authEstateId);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await dispatch(getSignedInUser()).unwrap();
+        const data = (res?.data ?? res) as Record<string, unknown>;
+        const resolved = resolveEstateId(data?.estateId);
+        if (!cancelled && resolved) setEstateId(resolved);
+      } catch {
+        // non-blocking: assigned bills need estateId
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authEstateId, dispatch]);
+
   const fetchRelatedData = useCallback(async () => {
     if (!user) return;
     const uid = getUserId(user);
     const addresses = getUserAddresses(user);
+    const resolvedEstateId =
+      estateId ||
+      resolveEstateId(
+        (user as DashboardUserDetails & { estateId?: unknown }).estateId,
+      );
 
     setRelatedLoading(true);
     try {
@@ -430,6 +488,45 @@ export default function UserDetailView({
             getResidentBills({ residentId: uid, page: 1, limit: 100 }),
           ).unwrap()
         : Promise.resolve({ data: [] });
+
+      const assignedBillPromises =
+        resolvedEstateId && addresses.length > 0
+          ? addresses.map(async (addr) => {
+              try {
+                const res = await dispatch(
+                  getBillsForAddress({
+                    addressId: addr.id,
+                    estateId: resolvedEstateId,
+                    page: 1,
+                    limit: 100,
+                  }),
+                ).unwrap();
+                const label = formatAddressLabel(addr);
+                return ((res?.data ?? []) as Record<string, unknown>[]).map(
+                  (bill, i) => ({
+                    id: String(
+                      bill.id ?? bill._id ?? bill.billId ?? `${addr.id}-${i}`,
+                    ),
+                    billName: (bill.billName ?? bill.name) as
+                      | string
+                      | undefined,
+                    frequency: bill.frequency as string | undefined,
+                    amountDue: bill.amountDue as number | undefined,
+                    amount: bill.amount as number | undefined,
+                    status: bill.status as string | undefined,
+                    compulsory: Boolean(bill.compulsory),
+                    startDate: bill.startDate as string | undefined,
+                    nextDueDate: bill.nextDueDate as string | undefined,
+                    createdAt: bill.createdAt as string | undefined,
+                    addressId: addr.id,
+                    addressLabel: label,
+                  }),
+                );
+              } catch {
+                return [] as AssignedBillRow[];
+              }
+            })
+          : [];
 
       const complaintPromises = addresses.map(async (addr) => {
         try {
@@ -466,13 +563,19 @@ export default function UserDetailView({
             .catch(() => ({ data: [], pagination: { total: 0 } }))
         : Promise.resolve({ data: [], pagination: { total: 0 } });
 
-      const [billsRes, complaintGroups, meterEntries, visitorRes] =
-        await Promise.all([
-          billPromise,
-          Promise.all(complaintPromises),
-          Promise.all(meterPromises),
-          visitorPromise,
-        ]);
+      const [
+        billsRes,
+        assignedGroups,
+        complaintGroups,
+        meterEntries,
+        visitorRes,
+      ] = await Promise.all([
+        billPromise,
+        Promise.all(assignedBillPromises),
+        Promise.all(complaintPromises),
+        Promise.all(meterPromises),
+        visitorPromise,
+      ]);
 
       setBills(
         (billsRes?.data ?? []).map(
@@ -487,6 +590,15 @@ export default function UserDetailView({
             lastPaymentDate: bill.lastPaymentDate as string | null | undefined,
           }),
         ),
+      );
+
+      const assignedSeen = new Set<string>();
+      setAssignedBills(
+        assignedGroups.flat().filter((bill) => {
+          if (!bill.id || assignedSeen.has(bill.id)) return false;
+          assignedSeen.add(bill.id);
+          return true;
+        }),
       );
 
       setMeterByAddressId(Object.fromEntries(meterEntries));
@@ -533,7 +645,7 @@ export default function UserDetailView({
     } finally {
       setRelatedLoading(false);
     }
-  }, [dispatch, user]);
+  }, [dispatch, estateId, user]);
 
   useEffect(() => {
     fetchRelatedData().catch(() => {});
@@ -611,6 +723,61 @@ export default function UserDetailView({
       setDeleting(false);
     }
   };
+
+  const assignedBillColumns = [
+    {
+      key: "createdAt",
+      header: "Created",
+      render: (item: AssignedBillRow) => formatDate(item.createdAt),
+    },
+    {
+      key: "billName",
+      header: "Bill Name",
+      render: (item: AssignedBillRow) => item.billName || "—",
+    },
+    {
+      key: "addressLabel",
+      header: "Address",
+      render: (item: AssignedBillRow) => item.addressLabel || "—",
+    },
+    {
+      key: "frequency",
+      header: "Frequency",
+      render: (item: AssignedBillRow) => formatLabel(item.frequency),
+    },
+    {
+      key: "amountDue",
+      header: "Amount Due",
+      render: (item: AssignedBillRow) =>
+        `₦${Number(item.amountDue ?? item.amount ?? 0).toLocaleString()}`,
+    },
+    {
+      key: "compulsory",
+      header: "Compulsory",
+      render: (item: AssignedBillRow) => (
+        <StatusPill tone={item.compulsory ? "amber" : "slate"}>
+          {item.compulsory ? "Yes" : "No"}
+        </StatusPill>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (item: AssignedBillRow) => {
+        const active = (item.status ?? "").toLowerCase() === "active";
+        return (
+          <StatusPill tone={active ? "green" : "red"}>
+            {formatLabel(item.status) || "—"}
+          </StatusPill>
+        );
+      },
+    },
+    {
+      key: "nextDueDate",
+      header: "Next Due",
+      render: (item: AssignedBillRow) => formatDateTime(item.nextDueDate),
+    },
+  ];
 
   const billColumns = [
     { key: "billName", header: "Bill Name" },
@@ -857,8 +1024,8 @@ export default function UserDetailView({
             {/* Quick stats */}
             <div className="grid grid-cols-1 gap-3 pt-8 sm:grid-cols-3">
               <SummaryCard
-                label="Bills"
-                value={bills.length}
+                label="Assigned Bills"
+                value={assignedBills.length}
                 icon={FileText}
                 active={activeTab === "bills"}
                 onClick={() => setActiveTab("bills")}
@@ -894,8 +1061,8 @@ export default function UserDetailView({
                   ].join(" ")}
                 >
                   {tab.label}
-                  {tab.id === "bills" && bills.length > 0
-                    ? ` (${bills.length})`
+                  {tab.id === "bills" && assignedBills.length > 0
+                    ? ` (${assignedBills.length})`
                     : ""}
                   {tab.id === "complaints" && complaints.length > 0
                     ? ` (${complaints.length})`
@@ -910,13 +1077,24 @@ export default function UserDetailView({
 
             {/* Tab content */}
             {activeTab === "bills" ? (
-              <Card className="p-4">
-                <Table
-                  columns={billColumns}
-                  data={bills}
-                  emptyMessage="No bills found for this user."
-                />
-              </Card>
+              <div className="space-y-4">
+                <Card className="p-4">
+                  <h3 className="mb-3 text-sm font-semibold">Assigned Bills</h3>
+                  <Table
+                    columns={assignedBillColumns}
+                    data={assignedBills}
+                    emptyMessage="No bills assigned to this user's addresses."
+                  />
+                </Card>
+                <Card className="p-4">
+                  <h3 className="mb-3 text-sm font-semibold">Payment History</h3>
+                  <Table
+                    columns={billColumns}
+                    data={bills}
+                    emptyMessage="No paid bills found for this user."
+                  />
+                </Card>
+              </div>
             ) : null}
 
             {activeTab === "complaints" ? (

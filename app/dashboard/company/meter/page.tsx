@@ -6,6 +6,7 @@ import Modal from "@/components/modal/page";
 import Table from "@/components/tables/list/page";
 import { toast } from "react-toastify";
 import DeleteModal from "@/components/resident/delete-modal/page";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -287,22 +288,25 @@ export default function CompanyMeterManagement() {
           toast.warning("No company linked to your account.");
         }
       })
-      .catch(() => toast.error("Failed to load company information."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, companyId]);
 
   useEffect(() => {
     dispatch(getCompanyEstates({ page: 1, limit: ESTATE_FILTER_FETCH_LIMIT }))
       .unwrap()
-      .catch(() => toast.error("Failed to load estates."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch]);
 
   useEffect(() => {
-    fetchMeters(1, searchQuery).catch(() => {
-      toast.error(
-        isAllEstates
-          ? "Failed to fetch company meters"
-          : "Failed to fetch estate meters",
-      );
+    fetchMeters(1, searchQuery).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     });
   }, [selectedEstateId, searchQuery, fetchMeters, isAllEstates]);
 
@@ -313,8 +317,9 @@ export default function CompanyMeterManagement() {
         estateId: chartEstateId,
         range: usageRange,
       }),
-    ).catch((error: { message?: string }) => {
-      toast.error(error?.message ?? "Failed to load estate energy usage.");
+    ).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     });
   }, [dispatch, chartEstateId, usageRange]);
 
@@ -325,10 +330,9 @@ export default function CompanyMeterManagement() {
         estateId: chartEstateId,
         period: energyPeriod,
       }),
-    ).catch((error: { message?: string }) => {
-      toast.error(
-        error?.message ?? "Failed to load energy consumption chart.",
-      );
+    ).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     });
   }, [dispatch, chartEstateId, energyPeriod]);
 
@@ -343,11 +347,9 @@ export default function CompanyMeterManagement() {
           refresh: true,
         }),
       ).unwrap();
-    } catch (error: unknown) {
-      toast.error(
-        (error as { message?: string })?.message ??
-          "Failed to refresh estate energy usage.",
-      );
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setUsageRefreshing(false);
     }
@@ -369,8 +371,9 @@ export default function CompanyMeterManagement() {
   const handleRefresh = async () => {
     try {
       await fetchMeters(Number(pagination?.currentPage) || 1, searchQuery);
-    } catch {
-      toast.error("Failed to refresh meter list");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -397,8 +400,9 @@ export default function CompanyMeterManagement() {
     setMeterUsageRange("weekly");
     setDetailsModalOpen(true);
     dispatch(getCompanyMeterByAddressId(addressIdStr)).catch(
-      (err: { message?: string }) => {
-        toast.error(err?.message ?? "Failed to load meter details");
+      (err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       },
     );
   };
@@ -413,8 +417,9 @@ export default function CompanyMeterManagement() {
     if (!detailsModalOpen || !detailsMeterNumber) return;
     dispatch(
       getMeterUsage({ meterNumber: detailsMeterNumber, range: meterUsageRange }),
-    ).catch((error: { message?: string }) => {
-      toast.error(error?.message ?? "Failed to load meter energy usage.");
+    ).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     });
   }, [dispatch, detailsModalOpen, detailsMeterNumber, meterUsageRange]);
 
@@ -435,8 +440,8 @@ export default function CompanyMeterManagement() {
       setItemToDelete(null);
       handleRefresh();
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to delete meter.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     } finally {
       setDeleting(false);
@@ -751,13 +756,10 @@ export default function CompanyMeterManagement() {
                           pageSize: Number(pagination?.pageSize) || 10,
                         }}
                         onPageChange={(page) => {
-                          fetchMeters(page, searchQuery).catch(() =>
-                            toast.error(
-                              isAllEstates
-                                ? "Failed to fetch company meters"
-                                : "Failed to fetch estate meters",
-                            ),
-                          );
+                          fetchMeters(page, searchQuery).catch((err: unknown) => {
+                            const message = getApiErrorMessage(err);
+                            if (message) toast.error(message);
+                          });
                         }}
                         enableExport
                         exportFileName={

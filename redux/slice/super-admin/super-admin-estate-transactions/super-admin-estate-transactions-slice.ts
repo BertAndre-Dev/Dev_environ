@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   getSuperAdminEstateTransactionHistory,
   getSuperAdminEstateVends,
@@ -80,10 +81,7 @@ const superAdminEstateTransactionsSlice = createSlice({
       })
       .addCase(getSuperAdminEstateTransactionHistory.rejected, (state, action) => {
         state.getTransactionHistoryState = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          null;
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
 
       .addCase(getSuperAdminEstateVends.pending, (state) => {
@@ -94,10 +92,7 @@ const superAdminEstateTransactionsSlice = createSlice({
       })
       .addCase(getSuperAdminEstateVends.rejected, (state, action) => {
         state.getVendsState = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          null;
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
 
       .addCase(getSuperAdminEstatePaidBills.pending, (state) => {
@@ -108,10 +103,7 @@ const superAdminEstateTransactionsSlice = createSlice({
       })
       .addCase(getSuperAdminEstatePaidBills.rejected, (state, action) => {
         state.getPaidBillsState = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          null;
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

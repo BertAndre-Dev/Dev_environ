@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
 import DeleteModal from "@/components/resident/delete-modal/page";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { ListCheck, PauseCircle, Pencil, PlayCircle, Plus, Store, Trash2 } from "lucide-react";
 import type { RootState, AppDispatch } from "@/redux/store";
 import {
@@ -92,7 +93,10 @@ export default function CompanyMarketplacePage() {
         endDate: shouldApplyDate ? endDate : undefined,
       }),
     )
-      .catch(() => toast.error("Failed to load marketplace."))
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      })
       .finally(() => setBootstrapping(false));
   }, [dispatch, page, limit, statusFilter, categoryFilter, startDate, endDate]);
 
@@ -140,8 +144,8 @@ export default function CompanyMarketplacePage() {
       closeModal();
       setPage(1);
     } catch (err: unknown) {
-      const msg = (err as { message?: string })?.message ?? "Failed to save.";
-      toast.error(msg);
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -159,9 +163,9 @@ export default function CompanyMarketplacePage() {
       ).unwrap();
       toast.success("Listing suspended.");
       setSuspendItem(null);
-    } catch (e: unknown) {
-      const msg = (e as { message?: string })?.message ?? "Failed to suspend.";
-      toast.error(msg);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSuspendSubmitting(false);
     }
@@ -172,9 +176,10 @@ export default function CompanyMarketplacePage() {
     dispatch(activateCompanyMarketplace(item.id))
       .unwrap()
       .then(() => toast.success("Listing activated."))
-      .catch((e: { message?: string }) =>
-        toast.error(e?.message ?? "Failed to activate."),
-      );
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   };
 
   const handleDelete = (item: MarketplaceItem) => {
@@ -192,8 +197,8 @@ export default function CompanyMarketplacePage() {
       setItemToDelete(null);
       setPage(1);
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to delete listing.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     } finally {
       setDeleting(false);

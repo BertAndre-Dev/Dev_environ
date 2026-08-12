@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export interface TransactionUser {
   id: string;
@@ -108,8 +109,10 @@ export const getAllTransactionHistory = createAsyncThunk(
       // We return the full response plus the flags so the slice
       // can decide how to store it.
       return { ...(res.data as any), forGrandTotal, forExport };
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data);
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   }
 );
@@ -144,10 +147,10 @@ export const getUserTransactionHistory = createAsyncThunk(
         },
       });
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data || { message: "Failed to fetch user transactions" },
-      );
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -159,8 +162,10 @@ export const getTransactionById = createAsyncThunk(
     try {
       const res = await axiosInstance.get(`/api/v1/transaction-mgt/by-id/${transactionId}`);
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data || { message: "Failed to fetch transaction" });
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   }
 );
@@ -174,10 +179,10 @@ export const verifyTransaction = createAsyncThunk(
         `/api/v1/transaction-mgt/verify?tx_ref=${encodeURIComponent(tx_ref)}`
       );
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data || { message: "Failed to verify transaction" }
-      );
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   }
 );

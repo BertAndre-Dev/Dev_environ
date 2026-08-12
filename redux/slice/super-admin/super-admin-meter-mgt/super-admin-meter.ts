@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import type { ClearTamperTokenResponse } from "@/lib/clear-tamper-token";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export type {
   ClearTamperTokenData,
@@ -30,8 +31,10 @@ export const assignMeterToEstate = createAsyncThunk(
     try {
       const res = await axiosInstance.post("/api/v1/meters/add-meter", data);
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data);
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   }
 );
@@ -44,8 +47,10 @@ export const removeEstateMeter = createAsyncThunk(
         try {
             const res = await axiosInstance.put("/api/v1/meters/remove-estate-meter", data);
             return res.data;
-        } catch (error: any) {
-            return rejectWithValue(error.response?.data);
+        } catch (error: unknown) {
+            const data = (error as { response?: { data?: unknown } })?.response?.data;
+            if (data && typeof data === "object") return rejectWithValue(data);
+            return rejectWithValue({ message: getApiErrorMessage(error) });
         }
     }
 );
@@ -84,8 +89,10 @@ export const getAllMeters = createAsyncThunk(
       const res = await axiosInstance.get(`${baseUrl}?${params.toString()}`);
 
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data);
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   }
 );
@@ -98,8 +105,10 @@ export const getMeter = createAsyncThunk(
         try {
             const res = await axiosInstance.get(`/api/v1/meters/${meterId}`);
             return res.data;
-        } catch (error: any) {
-            return rejectWithValue(error.response?.data);;
+        } catch (error: unknown) {
+            const data = (error as { response?: { data?: unknown } })?.response?.data;
+            if (data && typeof data === "object") return rejectWithValue(data);
+            return rejectWithValue({ message: getApiErrorMessage(error) });
         }
     }
 );
@@ -111,8 +120,10 @@ export const getMeterByAddressId = createAsyncThunk(
     try {
       const res = await axiosInstance.get(`/api/v1/meters/address/${addressId}`);
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue(error?.response?.data ?? { message: "Failed to fetch meter details" });
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   }
 );
@@ -124,8 +135,10 @@ export const deleteMeter = createAsyncThunk(
     try {
       const res = await axiosInstance.delete(`/api/v1/meters/${meterId}`);
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data);
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   }
 );
@@ -141,8 +154,9 @@ export const clearTamperToken = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: unknown } };
-      return rejectWithValue(err?.response?.data);
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );

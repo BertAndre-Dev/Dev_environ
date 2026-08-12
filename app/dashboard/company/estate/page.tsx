@@ -20,6 +20,7 @@ import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import Loader from "@/components/ui/Loader";
 import { isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
@@ -105,7 +106,10 @@ export default function CompanyEstatePage() {
   }, [dispatch]);
 
   useEffect(() => {
-    fetchEstates(1).catch(() => toast.error("Failed to fetch estates"));
+    fetchEstates(1).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, startDate, endDate, search]);
 
@@ -145,7 +149,8 @@ export default function CompanyEstatePage() {
       handleCloseModal();
       await fetchEstates(1);
     } catch (err: unknown) {
-      toast.error((err as { message?: string })?.message ?? "Failed to save estate");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -180,9 +185,8 @@ export default function CompanyEstatePage() {
       closeStatusModal();
       await fetchEstates(Number(pagination?.currentPage) || 1);
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to update estate status.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setStatusSubmitting(false);
     }
@@ -202,8 +206,8 @@ export default function CompanyEstatePage() {
       setItemToDelete(null);
       await fetchEstates(1);
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to delete estate.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     } finally {
       setDeleting(false);
@@ -425,7 +429,10 @@ export default function CompanyEstatePage() {
               pageSize,
             }}
             onPageChange={(page) => {
-              fetchEstates(page).catch(() => toast.error("Failed to fetch estates"));
+              fetchEstates(page).catch((err: unknown) => {
+                const message = getApiErrorMessage(err);
+                if (message) toast.error(message);
+              });
             }}
             enableExport
             exportFileName="company-estates"

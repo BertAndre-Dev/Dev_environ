@@ -5,6 +5,7 @@ export const NAV_ALWAYS_VISIBLE_LABELS = new Set([
   "Logout",
   "Energy Provider Management",
   "Notifications",
+  "Request Management",
   "Requests Management",
   "Map",
 ]);

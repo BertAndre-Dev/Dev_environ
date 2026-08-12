@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import { parseEstateModulesResponse } from "@/lib/estate-module-labels";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export enum VisitorVerificationMode {
   VIEW_AND_VERIFY = "VIEW_AND_VERIFY",
@@ -34,11 +35,9 @@ export const fetchEstateModules = createAsyncThunk(
       );
       return { data: parseEstateModulesResponse(res.data) };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message ?? "Failed to load estate modules",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -55,11 +54,9 @@ export const updateEstateModules = createAsyncThunk(
       );
       return { ...res.data, updatedId: id, modules };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message ?? "Failed to update estate modules",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -71,10 +68,10 @@ export const createEstate = createAsyncThunk(
     try {
       const res = await axiosInstance.post("/api/v1/estate-mgt", data);
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue({
-        message: error.res?.data?.message,
-      });
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -109,8 +106,10 @@ export const getAllEstates = createAsyncThunk(
       const suffix = query ? "?" + query : "";
       const res = await axiosInstance.get(`/api/v1/estate-mgt` + suffix);
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data);
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -122,10 +121,10 @@ export const getEstate = createAsyncThunk(
     try {
       const res = await axiosInstance.get(`/api/v1/estate-mgt/${id}`);
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue({
-        message: error.res?.data?.message,
-      });
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -137,10 +136,10 @@ export const deleteEstate = createAsyncThunk(
     try {
       const res = await axiosInstance.delete(`/api/v1/estate-mgt/${id}`);
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue({
-        message: error.res?.data?.message,
-      });
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -155,10 +154,10 @@ export const updateEstate = createAsyncThunk(
     try {
       const res = await axiosInstance.put(`/api/v1/estate-mgt/${id}`, data);
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue({
-        message: error.res?.data?.message,
-      });
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -172,10 +171,10 @@ export const suspendEstate = createAsyncThunk(
         `/api/v1/estate-mgt/${id}/suspend-estate`,
       );
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue({
-        message: error.res?.data?.message,
-      });
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -189,10 +188,10 @@ export const activateEstate = createAsyncThunk(
         `/api/v1/estate-mgt/${id}/activate-estate`,
       );
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue({
-        message: error.res?.data?.message,
-      });
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );

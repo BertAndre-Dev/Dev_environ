@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export const getSuperAdminEstateTransactionHistory = createAsyncThunk(
   "super-admin-estate-transactions/getSuperAdminEstateTransactionHistory",
@@ -38,12 +39,9 @@ export const getSuperAdminEstateTransactionHistory = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message ||
-          "Failed to fetch estate transactions",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -79,11 +77,9 @@ export const getSuperAdminEstateVends = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to fetch estate vends",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );
@@ -119,11 +115,9 @@ export const getSuperAdminEstatePaidBills = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to fetch paid bills",
-      });
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({ message: getApiErrorMessage(error) });
     }
   },
 );

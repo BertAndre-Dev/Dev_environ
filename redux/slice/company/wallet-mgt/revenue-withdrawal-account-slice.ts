@@ -1,40 +1,50 @@
 import { createRevenueWithdrawalModule } from "@/redux/slice/wallet-mgt/create-revenue-withdrawal-module";
 import type { RevenueWithdrawalAccountState } from "@/redux/slice/wallet-mgt/create-revenue-withdrawal-module";
-import type { RootState } from "@/redux/store";
 
-const module = createRevenueWithdrawalModule("company");
+const companyRevenueWithdrawal = createRevenueWithdrawalModule("company");
 
 export const setCompanyRevenueWithdrawalAccount =
-  module.setRevenueWithdrawalAccount;
+  companyRevenueWithdrawal.setRevenueWithdrawalAccount;
 export const getCompanyRevenueWithdrawalAccounts =
-  module.getRevenueWithdrawalAccounts;
+  companyRevenueWithdrawal.getRevenueWithdrawalAccounts;
 export const getCompanyRevenueWithdrawalTypes =
-  module.getRevenueWithdrawalTypes;
-export const setCompanyAutoSettlement = module.setAutoSettlement;
+  companyRevenueWithdrawal.getRevenueWithdrawalTypes;
+export const setCompanyAutoSettlement =
+  companyRevenueWithdrawal.setAutoSettlement;
 export const {
   clearRevenueWithdrawalError,
   resetSetRevenueWithdrawalAccountState,
   resetRevenueWithdrawalAccountState,
-} = module;
+} = companyRevenueWithdrawal;
 
 export type { RevenueWithdrawalAccountState };
 
-export const selectCompanyRevenueWithdrawalAccounts = (state: RootState) =>
-  state.companyRevenueWithdrawalAccount.accounts;
-export const selectCompanyRevenueWithdrawalTypes = (state: RootState) =>
-  state.companyRevenueWithdrawalAccount.types;
-export const selectCompanyAutoSettlementEnabled = (state: RootState) =>
-  state.companyRevenueWithdrawalAccount.autoSettlementEnabled;
-export const selectCompanyRevenueWithdrawalLoading = (state: RootState) =>
+type CompanyRevenueWithdrawalRoot = {
+  companyRevenueWithdrawalAccount: RevenueWithdrawalAccountState;
+};
+
+export const selectCompanyRevenueWithdrawalAccounts = (
+  state: CompanyRevenueWithdrawalRoot,
+) => state.companyRevenueWithdrawalAccount.accounts;
+export const selectCompanyRevenueWithdrawalTypes = (
+  state: CompanyRevenueWithdrawalRoot,
+) => state.companyRevenueWithdrawalAccount.types;
+export const selectCompanyAutoSettlementEnabled = (
+  state: CompanyRevenueWithdrawalRoot,
+) => state.companyRevenueWithdrawalAccount.autoSettlementEnabled;
+export const selectCompanyRevenueWithdrawalLoading = (
+  state: CompanyRevenueWithdrawalRoot,
+) =>
   state.companyRevenueWithdrawalAccount.getAccountsState === "isLoading" ||
   state.companyRevenueWithdrawalAccount.getTypesState === "isLoading";
 export const selectCompanySetRevenueWithdrawalAccountState = (
-  state: RootState,
+  state: CompanyRevenueWithdrawalRoot,
 ) => state.companyRevenueWithdrawalAccount.setAccountState;
-export const selectCompanySetAutoSettlementState = (state: RootState) =>
-  state.companyRevenueWithdrawalAccount.setAutoSettlementState;
+export const selectCompanySetAutoSettlementState = (
+  state: CompanyRevenueWithdrawalRoot,
+) => state.companyRevenueWithdrawalAccount.setAutoSettlementState;
 export const selectCompanyGetRevenueWithdrawalAccountsState = (
-  state: RootState,
+  state: CompanyRevenueWithdrawalRoot,
 ) => state.companyRevenueWithdrawalAccount.getAccountsState;
 
-export default module.reducer;
+export default companyRevenueWithdrawal.reducer;

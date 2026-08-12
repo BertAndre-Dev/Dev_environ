@@ -18,17 +18,14 @@ import { clearVerifiedAccount } from "@/redux/slice/estate-admin/fund-wallet/fun
 import type { RevenueWithdrawalRole } from "@/redux/slice/wallet-mgt/create-revenue-withdrawal-module";
 import {
   resetSetRevenueWithdrawalAccountState as resetCompanySetState,
-  selectCompanySetRevenueWithdrawalAccountState,
   setCompanyRevenueWithdrawalAccount,
 } from "@/redux/slice/company/wallet-mgt/revenue-withdrawal-account-slice";
 import {
   resetSetRevenueWithdrawalAccountState as resetEstateAdminSetState,
-  selectEstateAdminSetRevenueWithdrawalAccountState,
   setEstateAdminRevenueWithdrawalAccount,
 } from "@/redux/slice/estate-admin/wallet-mgt/revenue-withdrawal-account-slice";
 import {
   resetSetRevenueWithdrawalAccountState as resetEnergyProviderSetState,
-  selectEnergyProviderSetRevenueWithdrawalAccountState,
   setEnergyProviderRevenueWithdrawalAccount,
 } from "@/redux/slice/energy-provider/wallet-mgt/revenue-withdrawal-account-slice";
 import { ChevronDown, Search } from "lucide-react";
@@ -40,17 +37,20 @@ const ROLE_API = {
   company: {
     setAccount: setCompanyRevenueWithdrawalAccount,
     resetSetState: resetCompanySetState,
-    selectSetState: selectCompanySetRevenueWithdrawalAccountState,
+    selectSetState: (state: RootState) =>
+      state.companyRevenueWithdrawalAccount.setAccountState,
   },
   estateAdmin: {
     setAccount: setEstateAdminRevenueWithdrawalAccount,
     resetSetState: resetEstateAdminSetState,
-    selectSetState: selectEstateAdminSetRevenueWithdrawalAccountState,
+    selectSetState: (state: RootState) =>
+      state.estateAdminRevenueWithdrawalAccount.setAccountState,
   },
   energyProvider: {
     setAccount: setEnergyProviderRevenueWithdrawalAccount,
     resetSetState: resetEnergyProviderSetState,
-    selectSetState: selectEnergyProviderSetRevenueWithdrawalAccountState,
+    selectSetState: (state: RootState) =>
+      state.energyProviderRevenueWithdrawalAccount.setAccountState,
   },
 } as const;
 

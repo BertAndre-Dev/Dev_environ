@@ -1,44 +1,52 @@
 import { createRevenueWithdrawalModule } from "@/redux/slice/wallet-mgt/create-revenue-withdrawal-module";
 import type { RevenueWithdrawalAccountState } from "@/redux/slice/wallet-mgt/create-revenue-withdrawal-module";
-import type { RootState } from "@/redux/store";
 
-const module = createRevenueWithdrawalModule("energyProvider");
+const energyProviderRevenueWithdrawal =
+  createRevenueWithdrawalModule("energyProvider");
 
 export const setEnergyProviderRevenueWithdrawalAccount =
-  module.setRevenueWithdrawalAccount;
+  energyProviderRevenueWithdrawal.setRevenueWithdrawalAccount;
 export const getEnergyProviderRevenueWithdrawalAccounts =
-  module.getRevenueWithdrawalAccounts;
+  energyProviderRevenueWithdrawal.getRevenueWithdrawalAccounts;
 export const getEnergyProviderRevenueWithdrawalTypes =
-  module.getRevenueWithdrawalTypes;
-export const setEnergyProviderAutoSettlement = module.setAutoSettlement;
+  energyProviderRevenueWithdrawal.getRevenueWithdrawalTypes;
+export const setEnergyProviderAutoSettlement =
+  energyProviderRevenueWithdrawal.setAutoSettlement;
 export const {
   clearRevenueWithdrawalError,
   resetSetRevenueWithdrawalAccountState,
   resetRevenueWithdrawalAccountState,
-} = module;
+} = energyProviderRevenueWithdrawal;
 
 export type { RevenueWithdrawalAccountState };
 
+type EnergyProviderRevenueWithdrawalRoot = {
+  energyProviderRevenueWithdrawalAccount: RevenueWithdrawalAccountState;
+};
+
 export const selectEnergyProviderRevenueWithdrawalAccounts = (
-  state: RootState,
+  state: EnergyProviderRevenueWithdrawalRoot,
 ) => state.energyProviderRevenueWithdrawalAccount.accounts;
-export const selectEnergyProviderRevenueWithdrawalTypes = (state: RootState) =>
-  state.energyProviderRevenueWithdrawalAccount.types;
-export const selectEnergyProviderAutoSettlementEnabled = (state: RootState) =>
-  state.energyProviderRevenueWithdrawalAccount.autoSettlementEnabled;
+export const selectEnergyProviderRevenueWithdrawalTypes = (
+  state: EnergyProviderRevenueWithdrawalRoot,
+) => state.energyProviderRevenueWithdrawalAccount.types;
+export const selectEnergyProviderAutoSettlementEnabled = (
+  state: EnergyProviderRevenueWithdrawalRoot,
+) => state.energyProviderRevenueWithdrawalAccount.autoSettlementEnabled;
 export const selectEnergyProviderRevenueWithdrawalLoading = (
-  state: RootState,
+  state: EnergyProviderRevenueWithdrawalRoot,
 ) =>
   state.energyProviderRevenueWithdrawalAccount.getAccountsState ===
     "isLoading" ||
   state.energyProviderRevenueWithdrawalAccount.getTypesState === "isLoading";
 export const selectEnergyProviderSetRevenueWithdrawalAccountState = (
-  state: RootState,
+  state: EnergyProviderRevenueWithdrawalRoot,
 ) => state.energyProviderRevenueWithdrawalAccount.setAccountState;
-export const selectEnergyProviderSetAutoSettlementState = (state: RootState) =>
-  state.energyProviderRevenueWithdrawalAccount.setAutoSettlementState;
+export const selectEnergyProviderSetAutoSettlementState = (
+  state: EnergyProviderRevenueWithdrawalRoot,
+) => state.energyProviderRevenueWithdrawalAccount.setAutoSettlementState;
 export const selectEnergyProviderGetRevenueWithdrawalAccountsState = (
-  state: RootState,
+  state: EnergyProviderRevenueWithdrawalRoot,
 ) => state.energyProviderRevenueWithdrawalAccount.getAccountsState;
 
-export default module.reducer;
+export default energyProviderRevenueWithdrawal.reducer;

@@ -12,40 +12,22 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useDispatch, useSelector } from "react-redux";
-import type { AppDispatch } from "@/redux/store";
+import type { AppDispatch, RootState } from "@/redux/store";
 import type { RevenueWithdrawalRole } from "@/redux/slice/wallet-mgt/create-revenue-withdrawal-module";
 import {
   getCompanyRevenueWithdrawalAccounts,
   getCompanyRevenueWithdrawalTypes,
   setCompanyAutoSettlement,
-  selectCompanyAutoSettlementEnabled,
-  selectCompanyGetRevenueWithdrawalAccountsState,
-  selectCompanyRevenueWithdrawalAccounts,
-  selectCompanyRevenueWithdrawalLoading,
-  selectCompanyRevenueWithdrawalTypes,
-  selectCompanySetAutoSettlementState,
 } from "@/redux/slice/company/wallet-mgt/revenue-withdrawal-account-slice";
 import {
   getEstateAdminRevenueWithdrawalAccounts,
   getEstateAdminRevenueWithdrawalTypes,
   setEstateAdminAutoSettlement,
-  selectEstateAdminAutoSettlementEnabled,
-  selectEstateAdminGetRevenueWithdrawalAccountsState,
-  selectEstateAdminRevenueWithdrawalAccounts,
-  selectEstateAdminRevenueWithdrawalLoading,
-  selectEstateAdminRevenueWithdrawalTypes,
-  selectEstateAdminSetAutoSettlementState,
 } from "@/redux/slice/estate-admin/wallet-mgt/revenue-withdrawal-account-slice";
 import {
   getEnergyProviderRevenueWithdrawalAccounts,
   getEnergyProviderRevenueWithdrawalTypes,
   setEnergyProviderAutoSettlement,
-  selectEnergyProviderAutoSettlementEnabled,
-  selectEnergyProviderGetRevenueWithdrawalAccountsState,
-  selectEnergyProviderRevenueWithdrawalAccounts,
-  selectEnergyProviderRevenueWithdrawalLoading,
-  selectEnergyProviderRevenueWithdrawalTypes,
-  selectEnergyProviderSetAutoSettlementState,
 } from "@/redux/slice/energy-provider/wallet-mgt/revenue-withdrawal-account-slice";
 import SetRevenueWithdrawalAccountModal from "@/components/wallet/SetRevenueWithdrawalAccountModal";
 import { toast } from "react-toastify";
@@ -56,35 +38,21 @@ const ROLE_API = {
     getAccounts: getCompanyRevenueWithdrawalAccounts,
     getTypes: getCompanyRevenueWithdrawalTypes,
     setAutoSettlement: setCompanyAutoSettlement,
-    selectAccounts: selectCompanyRevenueWithdrawalAccounts,
-    selectTypes: selectCompanyRevenueWithdrawalTypes,
-    selectAutoSettlement: selectCompanyAutoSettlementEnabled,
-    selectLoading: selectCompanyRevenueWithdrawalLoading,
-    selectSetAutoSettlementState: selectCompanySetAutoSettlementState,
-    selectGetAccountsState: selectCompanyGetRevenueWithdrawalAccountsState,
+    selectSlice: (state: RootState) => state.companyRevenueWithdrawalAccount,
   },
   estateAdmin: {
     getAccounts: getEstateAdminRevenueWithdrawalAccounts,
     getTypes: getEstateAdminRevenueWithdrawalTypes,
     setAutoSettlement: setEstateAdminAutoSettlement,
-    selectAccounts: selectEstateAdminRevenueWithdrawalAccounts,
-    selectTypes: selectEstateAdminRevenueWithdrawalTypes,
-    selectAutoSettlement: selectEstateAdminAutoSettlementEnabled,
-    selectLoading: selectEstateAdminRevenueWithdrawalLoading,
-    selectSetAutoSettlementState: selectEstateAdminSetAutoSettlementState,
-    selectGetAccountsState: selectEstateAdminGetRevenueWithdrawalAccountsState,
+    selectSlice: (state: RootState) =>
+      state.estateAdminRevenueWithdrawalAccount,
   },
   energyProvider: {
     getAccounts: getEnergyProviderRevenueWithdrawalAccounts,
     getTypes: getEnergyProviderRevenueWithdrawalTypes,
     setAutoSettlement: setEnergyProviderAutoSettlement,
-    selectAccounts: selectEnergyProviderRevenueWithdrawalAccounts,
-    selectTypes: selectEnergyProviderRevenueWithdrawalTypes,
-    selectAutoSettlement: selectEnergyProviderAutoSettlementEnabled,
-    selectLoading: selectEnergyProviderRevenueWithdrawalLoading,
-    selectSetAutoSettlementState: selectEnergyProviderSetAutoSettlementState,
-    selectGetAccountsState:
-      selectEnergyProviderGetRevenueWithdrawalAccountsState,
+    selectSlice: (state: RootState) =>
+      state.energyProviderRevenueWithdrawalAccount,
   },
 } as const;
 
@@ -147,12 +115,15 @@ export default function RevenueWithdrawalAccountsCard({
   const reduceMotion = useReducedMotion();
   const api = ROLE_API[role];
 
-  const accounts = useSelector(api.selectAccounts);
-  const types = useSelector(api.selectTypes);
-  const autoSettlementEnabled = useSelector(api.selectAutoSettlement);
-  const loading = useSelector(api.selectLoading);
-  const setAutoSettlementState = useSelector(api.selectSetAutoSettlementState);
-  const getAccountsState = useSelector(api.selectGetAccountsState);
+  const slice = useSelector(api.selectSlice);
+  const accounts = slice.accounts;
+  const types = slice.types;
+  const autoSettlementEnabled = slice.autoSettlementEnabled;
+  const loading =
+    slice.getAccountsState === "isLoading" ||
+    slice.getTypesState === "isLoading";
+  const setAutoSettlementState = slice.setAutoSettlementState;
+  const getAccountsState = slice.getAccountsState;
 
   const [refreshing, setRefreshing] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);

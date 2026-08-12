@@ -504,7 +504,9 @@ export default function CompanyMeterManagement() {
       header: "Actions",
       exportable: false,
       render: (item: CompanyMeterRow) => {
-        const canReassign = Boolean(item.estateId?.trim());
+        const hasEstate = Boolean(item.estateId?.trim());
+        const canAssignOrReassign =
+          hasEstate || Boolean(item.companyId?.trim() || companyId);
         const canView = Boolean(toAddressIdString(item.addressId));
 
         return (
@@ -525,13 +527,13 @@ export default function CompanyMeterManagement() {
                 sideOffset={8}
                 className="z-50 min-w-[220px] rounded-md border bg-white p-1 shadow-md"
               >
-                {canReassign ? (
+                {canAssignOrReassign ? (
                   <DropdownMenu.Item
                     disabled={!companyId}
                     onSelect={() => handleOpenReassignMeter(item)}
                     className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
                   >
-                    Reassign to estate
+                    {hasEstate ? "Reassign to estate" : "Assign to estate"}
                   </DropdownMenu.Item>
                 ) : null}
                 <DropdownMenu.Item

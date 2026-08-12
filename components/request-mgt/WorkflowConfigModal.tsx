@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { WorkflowStep } from "@/redux/slice/admin/request/admin-request";
-import WorkflowStepsEditor from "./WorkflowStepsEditor";
+import WorkflowStepsEditor from "@/components/request-mgt/WorkflowStepsEditor";
 
 interface WorkflowConfigModalProps {
   readonly visible: boolean;

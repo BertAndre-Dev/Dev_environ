@@ -40,6 +40,10 @@ export interface RequestManagementViewProps {
   estatesLoading?: boolean;
   bootstrapping?: boolean;
   emptyHint?: string;
+  /** Optional content rendered above the requests list card (e.g. workflow config). */
+  beforeList?: ReactNode;
+  /** Optional actions rendered next to the page title. */
+  headerActions?: ReactNode;
 }
 
 export default function RequestManagementView({
@@ -53,6 +57,8 @@ export default function RequestManagementView({
   estatesLoading = false,
   bootstrapping = false,
   emptyHint = "No requests found.",
+  beforeList,
+  headerActions,
 }: RequestManagementViewProps) {
   const dispatch = useDispatch<AppDispatch>();
   const api = useMemo(() => getRequestScopeApi(scope), [scope]);
@@ -214,33 +220,38 @@ export default function RequestManagementView({
             <p className="text-muted-foreground mt-1">{description}</p>
           </div>
 
-          {showEstateFilter ? (
-            <div className="w-full sm:w-56 min-w-48">
-              <Select
-                options={estateOptions}
-                placeholder="Select estate"
-                value={selectedEstate}
-                onChange={(option) => {
-                  const next = option as EstateSelectOption | null;
-                  setSearchInput("");
-                  dispatch(api.setSearch(""));
-                  onEstateChange?.(next);
-                }}
-                isSearchable
-                isDisabled={!estateOptions?.length}
-                styles={{
-                  control: (base) => ({ ...base, cursor: "pointer" }),
-                  option: (base) => ({ ...base, cursor: "pointer" }),
-                  dropdownIndicator: (base) => ({
-                    ...base,
-                    cursor: "pointer",
-                  }),
-                  clearIndicator: (base) => ({ ...base, cursor: "pointer" }),
-                }}
-              />
-            </div>
-          ) : null}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+            {headerActions}
+            {showEstateFilter ? (
+              <div className="w-full sm:w-56 min-w-48">
+                <Select
+                  options={estateOptions}
+                  placeholder="Select estate"
+                  value={selectedEstate}
+                  onChange={(option) => {
+                    const next = option as EstateSelectOption | null;
+                    setSearchInput("");
+                    dispatch(api.setSearch(""));
+                    onEstateChange?.(next);
+                  }}
+                  isSearchable
+                  isDisabled={!estateOptions?.length}
+                  styles={{
+                    control: (base) => ({ ...base, cursor: "pointer" }),
+                    option: (base) => ({ ...base, cursor: "pointer" }),
+                    dropdownIndicator: (base) => ({
+                      ...base,
+                      cursor: "pointer",
+                    }),
+                    clearIndicator: (base) => ({ ...base, cursor: "pointer" }),
+                  }}
+                />
+              </div>
+            ) : null}
+          </div>
         </div>
+
+        {beforeList}
 
         <Card className="p-4 space-y-4">
           <div className="flex flex-col lg:flex-row gap-3">

@@ -12,6 +12,7 @@ import type { AppDispatch } from "@/redux/store";
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
 import { getCompanies } from "@/redux/slice/super-admin/company-mgt/company";
 import { assignMeterToEstate } from "@/redux/slice/super-admin/super-admin-meter-mgt/super-admin-meter";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 type AssignScope = "estate" | "company";
 
@@ -104,8 +105,9 @@ const AssignMeterForm: React.FC<AssignMeterFormProps> = ({ close, refresh }) => 
             })
             .filter((o): o is SelectOption => Boolean(o)),
         );
-      } catch {
-        toast.error("Failed to load companies or estates.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setLoadingOptions(false);
       }
@@ -151,10 +153,9 @@ const AssignMeterForm: React.FC<AssignMeterFormProps> = ({ close, refresh }) => 
       toast.success(res?.message || "Meter assigned successfully.");
       refresh();
       close();
-    } catch (error: unknown) {
-      const message =
-        (error as { message?: string })?.message ?? "Failed to assign meter";
-      toast.error(message);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setLoading(false);
     }

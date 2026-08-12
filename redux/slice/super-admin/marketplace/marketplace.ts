@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 export interface MarketplaceItem {
   id?: string;
@@ -65,10 +66,7 @@ export const getMarketplaceList = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to fetch marketplace",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   }
 );
@@ -83,10 +81,7 @@ export const getMarketplaceById = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to fetch listing",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   }
 );
@@ -107,11 +102,7 @@ export const createMarketplace = createAsyncThunk(
       });
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string | string[] } } };
-      const msg = err?.response?.data?.message;
-      return rejectWithValue({
-        message: Array.isArray(msg) ? msg[0] : msg ?? "Failed to create listing",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   }
 );
@@ -134,10 +125,7 @@ export const updateMarketplace = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to update listing",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   }
 );
@@ -157,10 +145,7 @@ export const suspendMarketplace = createAsyncThunk(
       );
       return { ...res.data, marketPlaceId };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to suspend listing",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   }
 );
@@ -175,10 +160,7 @@ export const activateMarketplace = createAsyncThunk(
       );
       return { ...res.data, marketPlaceId };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to activate listing",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   }
 );
@@ -193,10 +175,7 @@ export const deleteMarketplace = createAsyncThunk(
       );
       return { ...res.data, deletedId: marketPlaceId };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to delete listing",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   }
 );

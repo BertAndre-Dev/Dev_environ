@@ -13,6 +13,8 @@ import {
 } from "@/redux/slice/resident/marketplace/marketplace";
 import type { RootState, AppDispatch } from "@/redux/store";
 import Loader from "@/components/ui/Loader";
+import { isPending, isSettled } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 import Pagination from "@/components/pagination/page";
 
 const PAGE_SIZE = 10;
@@ -80,12 +82,15 @@ export default function ResidentMarketplacePage() {
         category: categoryFilter !== "All" ? categoryFilter : undefined,
       }),
     )
-      .catch(() => toast.error("Failed to load marketplace."))
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      })
       .finally(() => setBootstrapping(false));
   }, [dispatch, page, categoryFilter]);
 
-  const listLoading = getListStatus === "isLoading";
-  const pageLoading = bootstrapping || (listLoading && !list);
+  const pageLoading = bootstrapping || isPending(getListStatus);
 
   const paginationInfo = {
     total: pagination?.total ?? filteredListings.length,
@@ -173,7 +178,7 @@ export default function ResidentMarketplacePage() {
           </div>
         </div>
 
-        {filteredListings.length === 0 && !listLoading ? (
+        {filteredListings.length === 0 && isSettled(getListStatus) ? (
           <Card className="p-12 text-center">
             <Store className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">
@@ -244,7 +249,7 @@ export default function ResidentMarketplacePage() {
         <Pagination
           paginationInfo={paginationInfo}
           onPageChange={handlePageChange}
-          disabled={listLoading}
+          disabled={pageLoading}
           itemLabel="businesses"
         />
       </div>

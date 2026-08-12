@@ -19,6 +19,7 @@ import {
 } from "@/redux/slice/resident/payment-mgt/payment-mgt-slice";
 import { createWallet } from "@/redux/slice/resident/wallet-mgt/wallet-mgt";
 import { ChevronDown, Search } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 const COUNTRY = "NG";
 
@@ -158,9 +159,8 @@ export default function CreateWalletModal({
       onSuccess();
       onClose();
     } catch (err: unknown) {
-      const message =
-        (err as { message?: string })?.message || "Failed to create wallet.";
-      toast.error(message);
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSubmitting(false);
     }

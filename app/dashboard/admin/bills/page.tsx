@@ -4,7 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Edit2, Trash2, ScrollText, Power, PowerOff } from "lucide-react";
+import { Plus, Edit2, Trash2, ScrollText, Power, PowerOff, ChevronDown } from "lucide-react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import BillsForm, {
@@ -35,9 +36,11 @@ import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useState } from "react";
+import { getApiErrorMessage } from "@/lib/api-error";
 import DeleteModal from "@/components/resident/delete-modal/page";
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import Loader from "@/components/ui/Loader";
+import { isBusy, isPending } from "@/lib/async-status";
 import { formatAmountDisplay } from "@/lib/format-number";
 
 interface BillData {
@@ -48,6 +51,7 @@ interface BillData {
   description: string;
   yearlyAmount: number;
   isActive?: boolean;
+  compulsory?: boolean;
 }
 
 type BillsTab = "bills" | "assigned";
@@ -100,24 +104,42 @@ export default function BillPage() {
   const [assignedStartDate, setAssignedStartDate] = useState("");
   const [assignedEndDate, setAssignedEndDate] = useState("");
   const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(true);
 
-  const { allBills, pagination, assignedBills, assignedPagination, loading } =
-    useSelector((state: RootState) => {
-      const billState = state.adminBill as any;
-      return {
-        allBills: billState?.allBills?.data || [],
-        pagination: billState?.allBills?.pagination || {},
-        assignedBills: (billState?.assignedBills?.data ||
-          []) as AssignedBillData[],
-        assignedPagination: billState?.assignedBills?.pagination || {},
-        loading:
-          billState.getBillsByEstateState === "isLoading" ||
-          billState.getBillsForAddressState === "isLoading" ||
-          billState.createBillState === "isLoading" ||
-          billState.updateBillState === "isLoading" ||
-          billState.deleteBillState === "isLoading",
-      };
-    });
+  const {
+    allBills,
+    pagination,
+    assignedBills,
+    assignedPagination,
+    getBillsByEstateState,
+    getBillsForAddressState,
+    mutationLoading,
+  } = useSelector((state: RootState) => {
+    const billState = state.adminBill as any;
+    return {
+      allBills: billState?.allBills?.data || [],
+      pagination: billState?.allBills?.pagination || {},
+      assignedBills: (billState?.assignedBills?.data ||
+        []) as AssignedBillData[],
+      assignedPagination: billState?.assignedBills?.pagination || {},
+      getBillsByEstateState: billState.getBillsByEstateState as string,
+      getBillsForAddressState: billState.getBillsForAddressState as string,
+      mutationLoading:
+        isBusy(billState.createBillState) ||
+        isBusy(billState.updateBillState) ||
+        isBusy(billState.deleteBillState) ||
+        isBusy(billState.createBillForAddressState) ||
+        isBusy(billState.activateBillState) ||
+        isBusy(billState.suspendBillState),
+    };
+  });
+
+  const loading =
+    bootstrapping ||
+    mutationLoading ||
+    (activeTab === "bills"
+      ? Boolean(estateId) && isPending(getBillsByEstateState)
+      : Boolean(assignedAddressId) && isPending(getBillsForAddressState));
 
   const fetchAssignedBills = useCallback(
     async (
@@ -178,8 +200,11 @@ export default function BillPage() {
         await dispatch(
           getBillsByEstate({ estateId: foundEstateId, page: 1, limit: 10 }),
         ).unwrap();
-      } catch {
-        toast.error("Failed to fetch bills.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      } finally {
+        setBootstrapping(false);
       }
     })();
   }, [dispatch]);
@@ -211,8 +236,9 @@ export default function BillPage() {
         if (options.length === 1) {
           setAssignedAddressId((prev) => prev || options[0].value);
         }
-      } catch {
-        toast.error("Failed to load addresses.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setLoadingAddresses(false);
       }
@@ -232,7 +258,10 @@ export default function BillPage() {
       }),
     )
       .unwrap()
-      .catch(() => toast.error("Failed to fetch bills."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId, billsStartDate, billsEndDate, activeTab]);
 
   useEffect(() => {
@@ -241,8 +270,9 @@ export default function BillPage() {
     fetchAssignedBills(assignedAddressId, estateId, {
       startDate: assignedStartDate,
       endDate: assignedEndDate,
-    }).catch((err: any) => {
-      toast.error(err?.message || "Failed to fetch assigned bills.");
+    }).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     });
   }, [
     activeTab,
@@ -274,8 +304,9 @@ export default function BillPage() {
       billId: item.billId,
       addressId: assignedAddressId || undefined,
       name: item.billName,
-      amount: item.amountPaid,
+      amount: item.amountDue ?? item.amount ?? item.amountPaid,
       frequency: item.frequency,
+      compulsory: item.compulsory,
     });
     setAssignModalOpen(true);
   };
@@ -325,8 +356,9 @@ export default function BillPage() {
       toast.info(`${suspendBillItem.name} suspended.`);
       setSuspendBillItem(null);
       await refreshCurrentBillsList();
-    } catch (err: any) {
-      toast.error(err?.message);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSuspendSubmitting(false);
     }
@@ -338,8 +370,9 @@ export default function BillPage() {
       await dispatch(activateBill(bill.id)).unwrap();
       toast.success(`${bill.name} activated.`);
       await refreshCurrentBillsList();
-    } catch (err: any) {
-      toast.error(err?.message);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -356,8 +389,9 @@ export default function BillPage() {
       toast.success(`${billToDelete.name} deleted successfully.`);
       setBillToDelete(null);
       await refreshCurrentBillsList();
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to delete bill.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     } finally {
       setDeleteSubmitting(false);
@@ -393,8 +427,9 @@ export default function BillPage() {
           endDate: billsStartDate && billsEndDate ? billsEndDate : undefined,
         }),
       ).unwrap();
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to save bill.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -414,6 +449,7 @@ export default function BillPage() {
               description: data.description,
               amount: data.amount,
               isServiceCharge: data.isServiceCharge,
+              compulsory: data.compulsory,
             },
           }),
         ).unwrap();
@@ -428,6 +464,7 @@ export default function BillPage() {
             amount: data.amount,
             frequency: data.frequency,
             isServiceCharge: data.isServiceCharge,
+            compulsory: data.compulsory,
           }),
         ).unwrap();
         toast.success("Bill created for address successfully.");
@@ -441,12 +478,9 @@ export default function BillPage() {
         startDate: assignedStartDate,
         endDate: assignedEndDate,
       });
-    } catch (err: any) {
-      toast.error(
-        err?.message ??
-          err?.payload?.message ??
-          "Failed to save bill for address.",
-      );
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -474,6 +508,21 @@ export default function BillPage() {
       key: "yearlyAmount",
       header: "Amount (₦)",
       render: (item: BillData) => formatAmountDisplay(item.yearlyAmount),
+    },
+    {
+      key: "compulsory",
+      header: "Compulsory",
+      render: (item: BillData) => (
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+            item.compulsory
+              ? "bg-amber-100 text-amber-800"
+              : "bg-slate-100 text-slate-600"
+          }`}
+        >
+          {item.compulsory ? "Yes" : "No"}
+        </span>
+      ),
     },
     {
       key: "isActive",
@@ -565,9 +614,27 @@ export default function BillPage() {
       render: (item) => formatFrequencyLabel(item.frequency),
     },
     {
-      key: "amountPaid",
-      header: "Amount (₦)",
-      render: (item) => formatAmountDisplay(Number(item.amountPaid ?? 0)),
+      key: "amountDue",
+      header: "Amount Due (₦)",
+      render: (item) =>
+        formatAmountDisplay(
+          Number(item.amountDue ?? item.amount ?? item.amountPaid ?? 0),
+        ),
+    },
+    {
+      key: "compulsory",
+      header: "Compulsory",
+      render: (item) => (
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+            item.compulsory
+              ? "bg-amber-100 text-amber-800"
+              : "bg-slate-100 text-slate-600"
+          }`}
+        >
+          {item.compulsory ? "Yes" : "No"}
+        </span>
+      ),
     },
     {
       key: "status",
@@ -646,30 +713,44 @@ export default function BillPage() {
               Bills Management
             </h1>
             <p className="text-muted-foreground mt-1">
-              Create, track, and manage estate bills and payments in{" "}
+              Create, track, and manage estate bills in{" "}
               <span className="text-[18px] font-bold underline uppercase text-black">
                 {estateName}
               </span>
               .
             </p>
           </div>
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <Button
-              onClick={() => handleOpenModal()}
-              className="flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Create Bill
-            </Button>
-            <Button
-              variant="outline"
-              className="flex items-center gap-2"
-              onClick={openAssignModal}
-            >
-              <ScrollText className="w-4 h-4" />
-              Assign Bill
-            </Button>
-          </div>
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild>
+              <Button className="flex items-center gap-2 cursor-pointer">
+                <Plus className="w-4 h-4" />
+                Add Bill
+                <ChevronDown className="w-4 h-4" />
+              </Button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content
+                align="end"
+                sideOffset={8}
+                className="z-50 min-w-[180px] rounded-md border bg-white p-1 shadow-md"
+              >
+                <DropdownMenu.Item
+                  onSelect={() => handleOpenModal()}
+                  className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100 flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Bill
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  onSelect={() => openAssignModal()}
+                  className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100 flex items-center gap-2"
+                >
+                  <ScrollText className="w-4 h-4" />
+                  Assign Bill
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
         </div>
 
         <div className="grid grid-cols-1 gap-4 max-w-sm">
@@ -749,7 +830,10 @@ export default function BillPage() {
                   }),
                 )
                   .unwrap()
-                  .catch(() => toast.error("Failed to change page"));
+                  .catch((err: unknown) => {
+                    const message = getApiErrorMessage(err);
+                    if (message) toast.error(message);
+                  });
               }}
               enableExport
               exportFileName="bills"
@@ -839,7 +923,10 @@ export default function BillPage() {
                     page,
                     startDate: assignedStartDate,
                     endDate: assignedEndDate,
-                  }).catch(() => toast.error("Failed to change page"));
+                  }).catch((err: unknown) => {
+                    const message = getApiErrorMessage(err);
+                    if (message) toast.error(message);
+                  });
                 }}
                 enableExport
                 exportFileName="assigned-bills"

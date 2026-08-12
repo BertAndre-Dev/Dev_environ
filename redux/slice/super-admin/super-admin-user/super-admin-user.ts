@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 // get all users by estate (with pagination)
 export const getAllUsersByEstate = createAsyncThunk(
@@ -49,10 +50,8 @@ export const getAllUsersByEstate = createAsyncThunk(
         `/api/v1/user-mgt/estate/${estateIdValue}` + suffix,
       );
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue({
-        message: error?.response?.data?.message || "Failed to fetch users",
-      });
+    } catch (error: unknown) {
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -107,10 +106,8 @@ export const getAllUsersByCompany = createAsyncThunk(
         `/api/v1/user-mgt/company/${companyIdValue}` + suffix,
       );
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue({
-        message: error?.response?.data?.message || "Failed to fetch users",
-      });
+    } catch (error: unknown) {
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -122,10 +119,8 @@ export const getUser = createAsyncThunk(
     try {
       const res = await axiosInstance.get(`/api/v1/user-mgt/${id}`);
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue({
-        message: error?.response?.data?.message,
-      });
+    } catch (error: unknown) {
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -137,10 +132,8 @@ export const deleteUser = createAsyncThunk(
     try {
       const res = await axiosInstance.delete(`/api/v1/user-mgt/${id}`);
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue({
-        message: error.res?.data?.message,
-      });
+    } catch (error: unknown) {
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -154,10 +147,8 @@ export const suspendUser = createAsyncThunk(
         `/api/v1/user-mgt/${id}/suspend-user`,
       );
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue({
-        message: error.res?.data?.message,
-      });
+    } catch (error: unknown) {
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -171,10 +162,8 @@ export const activateUser = createAsyncThunk(
         `/api/v1/user-mgt/${id}/activate-user`,
       );
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue({
-        message: error.res?.data?.message,
-      });
+    } catch (error: unknown) {
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -203,11 +192,8 @@ export const updateUser = createAsyncThunk(
     try {
       const res = await axiosInstance.put(`/api/v1/user-mgt/${id}`, data);
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue({
-        message:
-          error?.response?.data?.message || "Failed to update user details",
-      });
+    } catch (error: unknown) {
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

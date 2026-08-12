@@ -34,7 +34,7 @@ export default function EstateForm({
         modulesLoading: companyState?.getModulesStatus === "isLoading",
         modulesError:
           companyState?.getModulesStatus === "failed"
-            ? companyState?.error ?? "Failed to load modules"
+            ? companyState?.error ?? null
             : null,
       }
     },

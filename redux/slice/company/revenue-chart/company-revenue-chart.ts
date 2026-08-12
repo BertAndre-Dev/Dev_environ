@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 export type CompanyRevenueChartPeriod =
   | "daily"
@@ -63,12 +64,7 @@ export const fetchCompanyRevenueChart = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message ||
-          "Failed to fetch revenue chart data.",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

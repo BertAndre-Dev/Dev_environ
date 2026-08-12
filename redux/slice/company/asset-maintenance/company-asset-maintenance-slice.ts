@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   activateAssetMaintenance,
   addAssetMaintenanceComment,
@@ -104,10 +105,7 @@ const companyAssetMaintenanceSlice = createSlice({
         state.getListStatus = "failed";
         state.records = [];
         state.pagination = null;
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          null;
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(createAssetMaintenance.pending, (state) => {
         state.createStatus = "isLoading";
@@ -120,10 +118,7 @@ const companyAssetMaintenanceSlice = createSlice({
       })
       .addCase(createAssetMaintenance.rejected, (state, action) => {
         state.createStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          null;
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(updateAssetMaintenance.pending, (state) => {
         state.updateStatus = "isLoading";
@@ -140,10 +135,7 @@ const companyAssetMaintenanceSlice = createSlice({
       })
       .addCase(updateAssetMaintenance.rejected, (state, action) => {
         state.updateStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          null;
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(deleteAssetMaintenance.pending, (state) => {
         state.deleteStatus = "isLoading";
@@ -159,10 +151,7 @@ const companyAssetMaintenanceSlice = createSlice({
       })
       .addCase(deleteAssetMaintenance.rejected, (state, action) => {
         state.deleteStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          null;
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(suspendAssetMaintenance.pending, (state) => {
         state.suspendStatus = "isLoading";
@@ -178,10 +167,7 @@ const companyAssetMaintenanceSlice = createSlice({
       })
       .addCase(suspendAssetMaintenance.rejected, (state, action) => {
         state.suspendStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          null;
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(activateAssetMaintenance.pending, (state) => {
         state.activateStatus = "isLoading";
@@ -197,10 +183,7 @@ const companyAssetMaintenanceSlice = createSlice({
       })
       .addCase(activateAssetMaintenance.rejected, (state, action) => {
         state.activateStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          null;
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(getAssetMaintenanceComments.pending, (state) => {
         state.getCommentsStatus = "isLoading";
@@ -217,10 +200,7 @@ const companyAssetMaintenanceSlice = createSlice({
       })
       .addCase(getAssetMaintenanceComments.rejected, (state, action) => {
         state.getCommentsStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          null;
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(addAssetMaintenanceComment.pending, (state) => {
         state.addCommentStatus = "isLoading";
@@ -246,10 +226,7 @@ const companyAssetMaintenanceSlice = createSlice({
       })
       .addCase(addAssetMaintenanceComment.rejected, (state, action) => {
         state.addCommentStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          null;
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

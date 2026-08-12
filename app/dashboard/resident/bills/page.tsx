@@ -30,6 +30,8 @@ import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
 import Loader from "@/components/ui/Loader";
+import { isPending, isSettled } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 type BillsTab = "estate" | "assigned";
 
@@ -85,7 +87,7 @@ function assignedBillName(bill: AssignedBillData): string {
 }
 
 function assignedBillAmount(bill: AssignedBillData): number {
-  return Number(bill.amountPaid ?? bill.amount ?? bill.yearlyAmount ?? 0);
+  return Number(bill.amountDue ?? bill.amount ?? bill.yearlyAmount ?? 0);
 }
 
 function assignedBillPayId(bill: AssignedBillData): string | null {
@@ -113,9 +115,9 @@ export default function BillPage() {
     assignedBills,
     paidBills,
     paidPagination,
-    loadingEstate,
-    loadingAssigned,
-    loadingPaid,
+    getBillsByEstateState,
+    getBillsForAddressState,
+    getResidentBillsState,
     paying,
   } = useSelector((state: RootState) => {
     const s = state.residentBill as any;
@@ -124,12 +126,16 @@ export default function BillPage() {
       assignedBills: (s?.assignedBills?.data || []) as AssignedBillData[],
       paidBills: (s?.paidBills?.data || []) as PaidBillData[],
       paidPagination: s?.paidBills?.pagination || {},
-      loadingEstate: s?.getBillsByEstateState === "isLoading",
-      loadingAssigned: s?.getBillsForAddressState === "isLoading",
-      loadingPaid: s?.getResidentBillsState === "isLoading",
+      getBillsByEstateState: s?.getBillsByEstateState as string,
+      getBillsForAddressState: s?.getBillsForAddressState as string,
+      getResidentBillsState: s?.getResidentBillsState as string,
       paying: s?.payBillState === "isLoading",
     };
   });
+
+  const loadingEstate = isPending(getBillsByEstateState);
+  const loadingAssigned = isPending(getBillsForAddressState);
+  const loadingPaid = isPending(getResidentBillsState);
 
   // Bootstrap user / addresses / estate bills
   useEffect(() => {
@@ -174,8 +180,9 @@ export default function BillPage() {
             getBillsByEstate({ estateId: eId, page: 1, limit: 50 }),
           ).unwrap();
         }
-      } catch (err: any) {
-        toast.error(err?.message || "Failed to fetch bills or user info");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setBootstrapping(false);
       }
@@ -195,7 +202,12 @@ export default function BillPage() {
         startDate: shouldApplyDate ? paidStartDate : undefined,
         endDate: shouldApplyDate ? paidEndDate : undefined,
       }),
-    ).catch(() => toast.error("Failed to fetch paid bills"));
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, userId, paidStartDate, paidEndDate]);
 
   // Assigned bills for selected address
@@ -212,7 +224,12 @@ export default function BillPage() {
         page: 1,
         limit: 50,
       }),
-    ).catch(() => toast.error("Failed to fetch assigned bills"));
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, selectedAddressId, estateId]);
 
   const refreshAfterPay = async () => {
@@ -283,10 +300,9 @@ export default function BillPage() {
       ).unwrap();
       toast.success("Bill payment successful");
       await refreshAfterPay();
-    } catch (err: any) {
-      toast.error(
-        err?.message || err?.payload?.message || "Failed to pay bill",
-      );
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -353,8 +369,10 @@ export default function BillPage() {
 
   const showLoader =
     bootstrapping ||
-    loadingEstate ||
-    (activeTab === "assigned" && loadingAssigned) ||
+    (activeTab === "estate" && Boolean(estateId) && loadingEstate) ||
+    (activeTab === "assigned" &&
+      Boolean(selectedAddressId) &&
+      loadingAssigned) ||
     paying;
 
   return (
@@ -415,7 +433,9 @@ export default function BillPage() {
 
         {activeTab === "estate" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {!loadingEstate && estateBills.length === 0 ? (
+            {!bootstrapping &&
+            isSettled(getBillsByEstateState) &&
+            estateBills.length === 0 ? (
               <p className="text-muted-foreground">
                 No payable bills for this estate.
               </p>
@@ -444,7 +464,9 @@ export default function BillPage() {
               <p className="text-muted-foreground">
                 Select an address to view assigned bills.
               </p>
-            ) : !loadingAssigned && assignedBills.length === 0 ? (
+            ) : !bootstrapping &&
+              isSettled(getBillsForAddressState) &&
+              assignedBills.length === 0 ? (
               <p className="text-muted-foreground">
                 No bills assigned to this address.
               </p>
@@ -492,7 +514,11 @@ export default function BillPage() {
           <Table
             columns={columns}
             data={paidBills}
-            emptyMessage="You haven't paid any bills yet."
+            emptyMessage={
+              isSettled(getResidentBillsState)
+                ? "You haven't paid any bills yet."
+                : " "
+            }
             enableDateRangeFilter
             defaultDateRangeDays={0}
             startDate={paidStartDate}
@@ -524,7 +550,12 @@ export default function BillPage() {
                   startDate: shouldApplyDate ? paidStartDate : undefined,
                   endDate: shouldApplyDate ? paidEndDate : undefined,
                 }),
-              ).catch(() => toast.error("Failed to change page"));
+              )
+                .unwrap()
+                .catch((err: unknown) => {
+                  const message = getApiErrorMessage(err);
+                  if (message) toast.error(message);
+                });
             }}
             enableExport
             exportFileName="paid-bills"

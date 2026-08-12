@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import { CommunityPageHeader } from "@/components/dashboard/admin/community/CommunityPageHeader";
 import { CommunityChatSidebar } from "@/components/dashboard/admin/community/CommunityChatSidebar";
 import { CommunityChatWindow } from "@/components/dashboard/admin/community/CommunityChatWindow";
@@ -17,7 +19,6 @@ import {
 import { groupMessageToCommunity } from "@/lib/community-chat-map";
 import { displayNameFromSignedInUser } from "@/lib/user-display-name";
 import { extractUserId } from "@/lib/user-id";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
   clearGroupDetail,
@@ -36,11 +37,20 @@ import {
 import type { ChatGroup, GroupMessageType } from "@/types/community-group";
 import type { CommunityReplyTarget } from "@/types/community-chat-ui";
 import type { RootState, AppDispatch } from "@/redux/store";
+import Loader from "@/components/ui/Loader";
+import { isBusy, isPending, isSettled } from "@/lib/async-status";
 import { useCommunityChatGroupRoom } from "@/hooks/useCommunityChatGroupRoom";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export default function ResidentCommunityChatPage() {
   const dispatch = useDispatch<AppDispatch>();
+  const searchParams = useSearchParams();
+  const groupIdFromUrl = searchParams.get("groupId")?.trim() || "";
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (groupIdFromUrl) setSelectedId(groupIdFromUrl);
+  }, [groupIdFromUrl]);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [draftByGroup, setDraftByGroup] = useState<Record<string, string>>({});
@@ -50,6 +60,7 @@ export default function ResidentCommunityChatPage() {
     id: string;
     text: string;
   } | null>(null);
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const authUserId = useSelector((state: RootState) =>
@@ -136,14 +147,8 @@ export default function ResidentCommunityChatPage() {
         dispatch(clearCommunityGroupError());
       } catch (e: unknown) {
         if (cancelled) return;
-        const msg =
-          e &&
-          typeof e === "object" &&
-          "message" in e &&
-          typeof (e as { message?: string }).message === "string"
-            ? (e as { message: string }).message
-            : "Failed to load groups.";
-        toast.error(msg);
+        const message = getApiErrorMessage(e);
+        if (message) toast.error(message);
       }
     })();
     return () => {
@@ -173,14 +178,8 @@ export default function ResidentCommunityChatPage() {
         await dispatch(getChatGroupById({ groupId: selectedId })).unwrap();
       } catch (e: unknown) {
         if (cancelled) return;
-        const msg =
-          e &&
-          typeof e === "object" &&
-          "message" in e &&
-          typeof (e as { message?: string }).message === "string"
-            ? (e as { message: string }).message
-            : "Failed to load group details.";
-        toast.error(msg);
+        const message = getApiErrorMessage(e);
+        if (message) toast.error(message);
       }
     })();
     return () => {
@@ -202,14 +201,8 @@ export default function ResidentCommunityChatPage() {
         ).unwrap();
       } catch (e: unknown) {
         if (cancelled) return;
-        const msg =
-          e &&
-          typeof e === "object" &&
-          "message" in e &&
-          typeof (e as { message?: string }).message === "string"
-            ? (e as { message: string }).message
-            : "Failed to load messages.";
-        toast.error(msg);
+        const message = getApiErrorMessage(e);
+        if (message) toast.error(message);
       }
     })();
     return () => {
@@ -309,14 +302,8 @@ export default function ResidentCommunityChatPage() {
         }
         setDraftByGroup((prev) => ({ ...prev, [selectedId]: "" }));
       } catch (e: unknown) {
-        const msg =
-          e &&
-          typeof e === "object" &&
-          "message" in e &&
-          typeof (e as { message?: string }).message === "string"
-            ? (e as { message: string }).message
-            : "Could not send message.";
-        toast.error(msg);
+        const message = getApiErrorMessage(e);
+        if (message) toast.error(message);
         throw e;
       }
     },
@@ -368,34 +355,53 @@ export default function ResidentCommunityChatPage() {
   );
 
   const closeEditModal = useCallback(() => {
-    if (editMessageLoading === "isLoading") return;
+    if (isBusy(editMessageLoading)) return;
     setEditingMessage(null);
     setEditError(null);
   }, [editMessageLoading]);
 
   const handleDeleteMessage = useCallback(
     (messageId: string) => {
-      confirmDeleteToast({
-        name: "this message",
-        onConfirm: async () => {
-          await dispatch(deleteGroupMessage({ messageId })).unwrap();
-          toast.success("Message deleted.");
-        },
-      });
+      setMessageToDelete(messageId);
     },
-    [dispatch],
+    [],
   );
 
+  const handleConfirmDeleteMessage = async () => {
+    if (!messageToDelete) return;
+    try {
+      await dispatch(deleteGroupMessage({ messageId: messageToDelete })).unwrap();
+      toast.success("Message deleted.");
+      setMessageToDelete(null);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
+    }
+  };
+
   const emptySidebar =
-    !listLoading && displayGroups.length === 0 && !debouncedSearch.trim();
+    isSettled(listLoading) &&
+    displayGroups.length === 0 &&
+    !debouncedSearch.trim();
 
   let emptyPanelTitle = "No group selected.";
-  if (listLoading) emptyPanelTitle = "Loading groups…";
+  if (isPending(listLoading)) emptyPanelTitle = "Loading groups…";
   else if (emptySidebar)
     emptyPanelTitle = "You are not in any community groups yet.";
 
+  const pageLoading = isPending(listLoading);
+
   return (
-    <div className="mx-auto max-w-[1400px] space-y-6">
+    <div className="relative mx-auto max-w-[1400px] space-y-6">
+      {pageLoading && <Loader fullScreen label="Loading community..." />}
+
+      <div
+        className={[
+          "space-y-6",
+          pageLoading ? "pointer-events-none select-none" : "",
+        ].join(" ")}
+      >
       <CommunityPageHeader estateName={estateName} showCreateGroup={false} />
 
       <div className="grid min-h-[560px] grid-cols-1 gap-4 lg:grid-cols-[minmax(260px,340px)_1fr] lg:gap-6">
@@ -410,7 +416,7 @@ export default function ResidentCommunityChatPage() {
           <CommunityChatWindow
             group={selectedGroupUi}
             messages={messages}
-            messagesLoading={messagesLoading === "isLoading"}
+            messagesLoading={isBusy(messagesLoading)}
             draft={draft}
             onDraftChange={(v) =>
               selectedId &&
@@ -418,8 +424,8 @@ export default function ResidentCommunityChatPage() {
             }
             onSend={handleSend}
             onOpenGroupInfo={() => setGroupInfoOpen(true)}
-            sendDisabled={sendMessageLoading === "isLoading"}
-            sending={sendMessageLoading === "isLoading"}
+            sendDisabled={isBusy(sendMessageLoading)}
+            sending={isBusy(sendMessageLoading)}
             currentUserId={effectiveUserId}
             onEditMessage={handleEditMessage}
             onDeleteMessage={handleDeleteMessage}
@@ -427,8 +433,7 @@ export default function ResidentCommunityChatPage() {
             replyingTo={replyingTo}
             onCancelReply={() => setReplyingTo(null)}
             messageActionsDisabled={
-              editMessageLoading === "isLoading" ||
-              deleteMessageLoading === "isLoading"
+              isBusy(editMessageLoading) || isBusy(deleteMessageLoading)
             }
           />
         ) : (
@@ -436,7 +441,7 @@ export default function ResidentCommunityChatPage() {
             <p className="text-sm font-medium text-foreground">
               {emptyPanelTitle}
             </p>
-            {!listLoading && emptySidebar ? (
+            {!pageLoading && emptySidebar ? (
               <p className="mt-2 max-w-sm text-sm text-muted-foreground">
                 When an estate admin adds you to a group, it will appear here.
               </p>
@@ -453,7 +458,7 @@ export default function ResidentCommunityChatPage() {
           members={infoModalMembers}
           memberTotal={selectedGroupUi.memberCount}
           estateDisplayName={estateName}
-          detailLoading={detailLoading === "isLoading"}
+          detailLoading={isBusy(detailLoading)}
           showMemberAdminTools={false}
           canUpdateGroupProfile={false}
           canDeleteGroup={false}
@@ -463,11 +468,20 @@ export default function ResidentCommunityChatPage() {
       <CommunityEditMessageModal
         visible={Boolean(editingMessage)}
         initialContent={editingMessage?.text ?? ""}
-        loading={editMessageLoading === "isLoading"}
+        loading={isBusy(editMessageLoading)}
         error={editError}
         onClose={closeEditModal}
         onSubmit={handleEditSubmit}
       />
+
+      <DeleteModal
+        visible={Boolean(messageToDelete)}
+        onClose={() => setMessageToDelete(null)}
+        itemName="this message"
+        title="Delete message"
+        onConfirm={handleConfirmDeleteMessage}
+      />
+      </div>
     </div>
   );
 }

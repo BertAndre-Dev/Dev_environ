@@ -13,6 +13,7 @@ import type { AppDispatch, RootState } from "@/redux/store";
 import { resetUserProfileState } from "@/redux/slice/resident/user-profile/user-profile-slice";
 import { getUserProfile } from "@/redux/slice/resident/user-profile/user-profile";
 import { updateUserProfile } from "@/redux/slice/settings/user-profile";
+import { isBusy, isPending } from "@/lib/async-status";
 
 type UserFormState = {
   firstName: string;
@@ -89,9 +90,10 @@ export function GeneralSettingsCard() {
   }, [user]);
 
   const isLoading = useMemo(
-    () => getStatus === "isLoading" || updateStatus === "isLoading",
+    () => isPending(getStatus) || isBusy(updateStatus),
     [getStatus, updateStatus],
   );
+  const isSaving = isBusy(updateStatus);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -159,7 +161,7 @@ export function GeneralSettingsCard() {
     <div className="space-y-6">
       <Card className="pt-6 md:pt-8 px-8 md:px-16 pb-12 md:pb-18 w-full md:w-3/4 lg:w-2/3 mx-auto">
         <h2 className="font-heading text-xl font-bold text-center">
-          Profile Information
+          Update Profile
         </h2>
         <p className="text-sm text-gray-500 text-center">
           This is your profile information. You can update your profile here.
@@ -255,7 +257,7 @@ export function GeneralSettingsCard() {
             disabled={isLoading}
           >
             <Save className="w-4 h-4 mr-2" />
-            {isLoading ? "Saving..." : "Save Changes"}
+            {isSaving ? "Saving..." : "Save Changes"}
           </Button>
         </form>
       </Card>

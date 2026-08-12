@@ -19,6 +19,7 @@ import { useCallback, useEffect, useState, useMemo } from "react";
 import { toast } from "react-toastify";
 import Select from "react-select";
 import { Search } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { type EstateTransactionsFilters } from "@/components/estate-admin/transactions-filter-bar";
 import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
 import {
@@ -103,8 +104,9 @@ export default function CompanyTransactionPage() {
 
         setCompanyId(company.id);
         setCompanyName(company.name);
-      } catch {
-        toast.error("Failed to load data.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     })();
   }, [dispatch]);
@@ -127,8 +129,9 @@ export default function CompanyTransactionPage() {
             .filter((x: EstateOption | null): x is EstateOption => Boolean(x)) ??
           [];
         setEstateOptions(options);
-      } catch {
-        toast.error("Failed to fetch estates");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
         setEstateOptions([]);
       } finally {
         setEstatesLoading(false);
@@ -155,7 +158,7 @@ export default function CompanyTransactionPage() {
     setPaidBillsPage(1);
   }, [selectedEstateId]);
 
-  const PAID_BILLS_FETCH_LIMIT = 2000;
+  const PAID_BILLS_FETCH_LIMIT = 10;
   useEffect(() => {
     if (activeTab !== "paid-bills" || !selectedEstateId) return;
     (async () => {
@@ -303,10 +306,9 @@ export default function CompanyTransactionPage() {
           url.searchParams.delete(key),
         );
         window.history.replaceState({}, document.title, url.toString());
-      } catch (err: any) {
-        const errorMessage =
-          err?.message || err?.payload?.message || "Verification failed";
-        toast.error(errorMessage);
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     };
 

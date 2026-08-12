@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 export interface SuperAdminBillsSummary {
   totalBills: number;
@@ -81,12 +82,8 @@ export const getSuperAdminBillsAnalyticsDashboard = createAsyncThunk(
         { params: { estateId } }
       );
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue({
-        message:
-          error?.response?.data?.message ||
-          "Failed to fetch bills analytics.",
-      });
+    } catch (error: unknown) {
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   }
 );

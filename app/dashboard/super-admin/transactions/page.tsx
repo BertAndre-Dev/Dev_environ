@@ -14,6 +14,7 @@ import { TransactionsFilterBar } from "@/components/super-admin/transactions-fil
 import { TransactionsSearchCard } from "./components/TransactionsSearchCard";
 import { TransactionsTableCard } from "./components/TransactionsTableCard";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 import { formatDateTime } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Modal from "@/components/modal/page";
 import { CheckCircle } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 const PAGE_SIZE = 10;
 
@@ -54,7 +56,7 @@ export default function SuperAdminTransactionsPage() {
         data: [],
         pagination: { total: 0, page: 1, limit: PAGE_SIZE, pages: 1 },
       },
-      loading: s?.getAllTransactionHistoryState === "isLoading",
+      loading: isPending(s?.getAllTransactionHistoryState),
     };
   });
 
@@ -208,8 +210,9 @@ export default function SuperAdminTransactionsPage() {
         printWindow.focus();
         printWindow.print();
       }
-    } catch {
-      toast.error("Failed to export transactions.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -298,12 +301,9 @@ export default function SuperAdminTransactionsPage() {
           endDate: toDate || "",
         }),
       ).unwrap();
-    } catch (err: any) {
-      toast.error(
-        (err?.payload as { message?: string })?.message ??
-          err?.message ??
-          "Failed to verify transaction",
-      );
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     }
   };

@@ -13,6 +13,7 @@ import {
   extractEstateIdFromUser,
   extractEstateNameFromUser,
 } from "@/lib/user-id";
+import { isPending } from "@/lib/async-status";
 
 const PAGE_SIZE = 10;
 
@@ -25,11 +26,11 @@ export default function EnergyProviderTransactionPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  const { vends, pagination, loadingVends } = useSelector(
+  const { vends, pagination, vendsStatus } = useSelector(
     (state: RootState) => ({
       vends: state.energyProviderTransaction.list,
       pagination: state.energyProviderTransaction.pagination,
-      loadingVends: state.energyProviderTransaction.status === "isLoading",
+      vendsStatus: state.energyProviderTransaction.status,
     }),
   );
 
@@ -76,7 +77,8 @@ export default function EnergyProviderTransactionPage() {
     fetchVends(page).catch(() => toast.error("Failed to load transactions"));
   }, [estateId, page, fetchVends]);
 
-  const loading = loadingUser || loadingVends;
+  const loading =
+    loadingUser || (Boolean(estateId) && isPending(vendsStatus));
 
   return (
     <div className="relative space-y-6">

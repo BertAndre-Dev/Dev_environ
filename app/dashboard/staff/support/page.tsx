@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import SupportChatModal from "@/components/support/SupportChatModal";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { resetStaffSupportState } from "@/redux/slice/staff/support/staff-support-slice";
 import { submitStaffContactRequest } from "@/redux/slice/staff/support/staff-support";
@@ -101,10 +102,9 @@ export default function StaffSupportPage() {
       ).unwrap();
       toast.success(res?.message || "Your message has been sent successfully");
       setMessage("");
-    } catch (err: any) {
-      const msg =
-        err?.message || error || "Failed to send message. Please try again.";
-      toast.error(msg);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 

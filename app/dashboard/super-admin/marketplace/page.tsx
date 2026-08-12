@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import {
   Plus,
   Pencil,
@@ -24,7 +25,6 @@ import {
   activateMarketplace,
   type MarketplaceItem,
 } from "@/redux/slice/super-admin/marketplace/marketplace";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import type { RootState, AppDispatch } from "@/redux/store";
 import Modal from "@/components/modal/page";
 import Tab from "@/components/tabs/page";
@@ -34,12 +34,16 @@ import type { AddBusinessFormPayload } from "@/components/super-admin/add-busine
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import { MarketplaceListingCard } from "@/components/super-admin/marketplace-listing-card";
 import Loader from "@/components/ui/Loader";
+import { isBusy, isPending } from "@/lib/async-status";
 import Pagination from "@/components/pagination/page";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export default function SuperAdminMarketplacePage() {
   const dispatch = useDispatch<AppDispatch>();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MarketplaceItem | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<MarketplaceItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [suspendItem, setSuspendItem] = useState<MarketplaceItem | null>(null);
   const [suspendSubmitting, setSuspendSubmitting] = useState(false);
   const [search, setSearch] = useState("");
@@ -98,7 +102,10 @@ export default function SuperAdminMarketplacePage() {
         endDate: shouldApplyDate ? endDate : undefined,
       }),
     )
-      .catch(() => toast.error("Failed to load marketplace."))
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      })
       .finally(() => setBootstrapping(false));
   }, [
     dispatch,
@@ -155,8 +162,8 @@ export default function SuperAdminMarketplacePage() {
       closeModal();
       setPage(1);
     } catch (err: unknown) {
-      const msg = (err as { message?: string })?.message ?? "Failed to save.";
-      toast.error(msg);
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -174,9 +181,9 @@ export default function SuperAdminMarketplacePage() {
       ).unwrap();
       toast.success("Listing suspended.");
       setSuspendItem(null);
-    } catch (e: unknown) {
-      const msg = (e as { message?: string })?.message ?? "Failed to suspend.";
-      toast.error(msg);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSuspendSubmitting(false);
     }
@@ -187,21 +194,32 @@ export default function SuperAdminMarketplacePage() {
     dispatch(activateMarketplace(item.id))
       .unwrap()
       .then(() => toast.success("Listing activated."))
-      .catch((e: { message?: string }) =>
-        toast.error(e?.message ?? "Failed to activate."),
-      );
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   };
 
   const handleDelete = (item: MarketplaceItem) => {
     if (!item.id) return;
-    confirmDeleteToast({
-      name: item.companyName ?? item.productName ?? "this listing",
-      onConfirm: async () => {
-        await dispatch(deleteMarketplace(item.id!)).unwrap();
-        toast.success("Listing deleted.");
-        setPage(1);
-      },
-    });
+    setItemToDelete(item);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete?.id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteMarketplace(itemToDelete.id)).unwrap();
+      toast.success("Listing deleted.");
+      setItemToDelete(null);
+      setPage(1);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const tableColumns = [
@@ -299,8 +317,7 @@ export default function SuperAdminMarketplacePage() {
     },
   ];
 
-  const formLoading =
-    createStatus === "isLoading" || updateStatus === "isLoading";
+  const formLoading = isBusy(createStatus) || isBusy(updateStatus);
 
   const paginationInfo = {
     total: pagination?.total ?? filteredListings.length,
@@ -308,9 +325,8 @@ export default function SuperAdminMarketplacePage() {
     pageSize: pagination?.limit ?? limit,
   };
 
-  const listLoading = getListStatus === "isLoading";
-  const pageLoading =
-    bootstrapping || (listLoading && listings.length === 0);
+  const listLoading = isPending(getListStatus);
+  const pageLoading = bootstrapping || listLoading;
 
   return (
     <div className="relative">
@@ -531,6 +547,15 @@ export default function SuperAdminMarketplacePage() {
         loading={suspendSubmitting}
       />
       </div>
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={itemToDelete?.companyName ?? itemToDelete?.productName ?? "this listing"}
+        title="Delete listing"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

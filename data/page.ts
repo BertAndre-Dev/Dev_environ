@@ -146,6 +146,12 @@ export const energyProviderNav = [
     moduleKey: "meter",
   },
   {
+    label: "Notifications",
+    icon: Inbox,
+    path: "/dashboard/energy-provider/notifications",
+    moduleKey: "notifications",
+  },
+  {
     label: "Settings",
     icon: FiSettings,
     path: "/dashboard/settings",
@@ -164,16 +170,28 @@ export const staffNav = [
     moduleKey: "complaints",
   },
   {
-    label: "Community Chat",
-    icon: MessagesSquare,
-    path: "/dashboard/staff/community",
-    moduleKey: "chat",
+    label: "Requests Management",
+    icon: ClipboardList,
+    path: "/dashboard/staff/request",
+    moduleKey: "requests",
   },
   {
     label: "Announcements",
     icon: Bell,
     path: "/dashboard/staff/announcements",
     moduleKey: "announcements",
+  },
+    {
+    label: "Community Chat",
+    icon: MessagesSquare,
+    path: "/dashboard/staff/community",
+    moduleKey: "chat",
+  },
+  {
+    label: "Notifications",
+    icon: Inbox,
+    path: "/dashboard/staff/notifications",
+    moduleKey: "notifications",
   },
   {
     label: "Settings",
@@ -258,6 +276,12 @@ export const companyNav = [
     moduleKey: "operations-reporting",
   },
   {
+    label: "Requests Management",
+    icon: ClipboardList,
+    path: "/dashboard/company/request",
+    moduleKey: "requests",
+  },
+  {
     label: "Report",
     icon: BarChart,
     path: "/dashboard/company/reports",
@@ -307,6 +331,12 @@ export const adminNav = [
     path: "/dashboard/admin/meter",
     module: "meter",
     moduleKey: "meter",
+  },
+  {
+    label: "Request Management",
+    icon: ClipboardList,
+    path: "/dashboard/admin/request",
+    moduleKey: "requests",
   },
   {
     label: "Visitors Management",
@@ -367,6 +397,12 @@ export const adminNav = [
     path: "/dashboard/admin/community",
     moduleKey: "chat",
   },
+  {
+    label: "Notifications",
+    icon: Inbox,
+    path: "/dashboard/admin/notifications",
+    moduleKey: "notifications",
+  },
   { label: "Settings", icon: FiSettings, path: "/dashboard/settings" },
   { label: "Logout", icon: FiLogOut },
 ];
@@ -393,6 +429,12 @@ export const securityNav = [
   //   icon: FiCheckCircle,
   //   path: "/dashboard/security/verify-visitor",
   // },
+  {
+    label: "Notifications",
+    icon: Inbox,
+    path: "/dashboard/security/notifications",
+    moduleKey: "notifications",
+  },
   { label: "Settings", icon: FiSettings, path: "/dashboard/settings" },
   { label: "Logout", icon: FiLogOut },
 ];
@@ -471,6 +513,17 @@ export const residentNav = [
     path: "/dashboard/resident/community",
     moduleKey: "chat",
   },
+  // {
+  //   label: "Map",
+  //   icon: FiMapPin,
+  //   path: "/dashboard/resident/map",
+  // },
+  {
+    label: "Notifications",
+    icon: Inbox,
+    path: "/dashboard/resident/notifications",
+    moduleKey: "notifications",
+  },
   { label: "Settings", icon: FiSettings, path: "/dashboard/settings" },
   { label: "Logout", icon: FiLogOut },
 ];
@@ -502,6 +555,12 @@ export const estateAdminNav = [
     moduleKey: "reporting",
   },
   {
+    label: "Requests Management",
+    icon: ClipboardList,
+    path: "/dashboard/estate-admin/request",
+    moduleKey: "requests",
+  },
+  {
     label: "Community Chat",
     icon: MessagesSquare,
     path: "/dashboard/estate-admin/chat",
@@ -512,6 +571,12 @@ export const estateAdminNav = [
     icon: Bell,
     path: "/dashboard/estate-admin/announcements",
     moduleKey: "announcements",
+  },
+  {
+    label: "Notifications",
+    icon: Inbox,
+    path: "/dashboard/estate-admin/notifications",
+    moduleKey: "notifications",
   },
   { label: "Settings", icon: FiSettings, path: "/dashboard/settings" },
   { label: "Logout", icon: FiLogOut },

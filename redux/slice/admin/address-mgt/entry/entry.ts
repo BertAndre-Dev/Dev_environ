@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 
 interface EntryData {
@@ -26,9 +27,11 @@ export const createEntry = createAsyncThunk(
       };
       const res = await axiosInstance.post("/api/v1/address-mgt/entry", payload);
       return res.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
       return rejectWithValue({
-        message: error.res?.data?.message,
+        message: getApiErrorMessage(error) ?? "Failed to create entry",
       });
     }
   }
@@ -52,9 +55,11 @@ export const updateEntry = createAsyncThunk(
         payload
       );
       return res.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
       return rejectWithValue({
-        message: error.res?.data?.message,
+        message: getApiErrorMessage(error) ?? "Failed to update entry",
       });
     }
   }
@@ -68,9 +73,11 @@ export const deleteEntry = createAsyncThunk(
         try {
             const res = await axiosInstance.delete(`/api/v1/address-mgt/entry/${entryId}`);
             return res.data;
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const data = (error as { response?: { data?: unknown } })?.response?.data;
+            if (data && typeof data === "object") return rejectWithValue(data);
             return rejectWithValue({
-                message: error.res?.data?.message
+                message: getApiErrorMessage(error) ?? "Failed to delete entry",
             });
         }
     }
@@ -84,9 +91,11 @@ export const getEntry = createAsyncThunk(
         try {
             const res = await axiosInstance.get(`/api/v1/address-mgt/entry/${entryId}`);
             return res.data;
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const data = (error as { response?: { data?: unknown } })?.response?.data;
+            if (data && typeof data === "object") return rejectWithValue(data);
             return rejectWithValue({
-                message: error.res?.data?.message
+                message: getApiErrorMessage(error) ?? "Failed to fetch entry",
             });
         }
     }
@@ -123,9 +132,11 @@ export const getEntriesByField = createAsyncThunk(
         `/api/v1/address-mgt/field-entries?${params.toString()}`,
       );
       return res.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
       return rejectWithValue({
-        message: error.response?.data?.message || error.message,
+        message: getApiErrorMessage(error) ?? "Failed to fetch entries",
       });
     }
   }
@@ -139,13 +150,12 @@ export const getEntryStats = createAsyncThunk(
         try {
             const res = await axiosInstance.get(`/api/v1/address-mgt/entry/${fieldId}/stats/`);
             return res.data;
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const data = (error as { response?: { data?: unknown } })?.response?.data;
+            if (data && typeof data === "object") return rejectWithValue(data);
             return rejectWithValue({
-                message: error.res?.data?.message
+                message: getApiErrorMessage(error) ?? "Failed to fetch entry stats",
             });
         }
     }
 );
-
-
-

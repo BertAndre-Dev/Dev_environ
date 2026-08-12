@@ -12,13 +12,14 @@ import {
 } from "@/redux/slice/admin/address-mgt/entry/entry";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import { useEffect, useState } from "react";
 import Modal from "@/components/modal/page";
 import EntryForm from "../forms/entry-form/page";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import { formatAddressRecordCreatedAt } from "@/lib/address";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 interface EntryData {
   estateId: string;
@@ -35,6 +36,8 @@ export default function EntryPage() {
   const [estateId, setEstateId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<EntryData | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name?: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [entries, setEntries] = useState<EntryData[]>([]);
   const [fields, setFields] = useState<any[]>([]);
   const [stats, setStats] = useState<Record<string, any>>({});
@@ -114,9 +117,10 @@ export default function EntryPage() {
 
       const statsRes = await dispatch(getEntryStats(fieldId)).unwrap();
       setStats({ [fieldId]: statsRes?.data || {} });
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
-      toast.error("Failed to fetch entries or stats.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -147,7 +151,10 @@ export default function EntryPage() {
         setEntries(res?.data || []);
         setPagination(res?.pagination || {});
       })
-      .catch(() => toast.error("Failed to fetch entries."))
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      })
       .finally(() => setLoading(false));
   }, [dispatch, startDate, endDate, fields]);
 
@@ -167,15 +174,24 @@ export default function EntryPage() {
       toast.error("Missing entry ID");
       return;
     }
+    setItemToDelete({ id: entryId, name: label });
+  };
 
-    confirmDeleteToast({
-      name: label || "this entry",
-      onConfirm: async () => {
-        await dispatch(deleteEntry(entryId)).unwrap();
-        toast.success(`${label || "Entry"} deleted successfully!`);
-        await fetchAllData();
-      },
-    });
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete?.id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteEntry(itemToDelete.id)).unwrap();
+      toast.success(`${itemToDelete.name || "Entry"} deleted successfully!`);
+      setItemToDelete(null);
+      await fetchAllData();
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // ✅ Build dynamic table
@@ -420,7 +436,10 @@ export default function EntryPage() {
                 setEntries(res?.data || []);
                 setPagination(res?.pagination || {});
               })
-              .catch(() => toast.error("Failed to change page"));
+              .catch((err: unknown) => {
+                const message = getApiErrorMessage(err);
+                if (message) toast.error(message);
+              });
           }}
           enableExport
           exportFileName="address-entries"
@@ -459,6 +478,15 @@ export default function EntryPage() {
           />
         </Modal>
       )}
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={itemToDelete?.name || "this entry"}
+        title="Delete entry"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

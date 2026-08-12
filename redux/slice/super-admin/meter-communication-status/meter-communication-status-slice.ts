@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type {
   AnalyticsScope,
   MeterCommunicationStatusData,
@@ -45,10 +46,7 @@ const meterCommunicationStatusSlice = createSlice({
       })
       .addCase(getMeterCommunicationStatus.rejected, (state, action) => {
         state.status = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to fetch meter communication status";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

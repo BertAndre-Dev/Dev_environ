@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import Select from "react-select";
 
 import { RevenueHeader } from "@/components/dashboard/admin/revenue/RevenueHeader";
@@ -13,7 +14,6 @@ import {
   type RevenueHeadModalValues,
 } from "@/components/dashboard/admin/revenue/RevenueHeadModal";
 import { ViewRevenueHeadModal } from "@/components/dashboard/admin/revenue/ViewRevenueHeadModal";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
 import {
@@ -27,7 +27,6 @@ import {
 import {
   selectCompanyRevenueHeads,
   selectCompanyRevenueHeadsError,
-  selectCompanyRevenueHeadsLoading,
   selectCompanyRevenueHeadsPagination,
   setCompanyRevenueHeadEstate,
 } from "@/redux/slice/company/revenue-head/company-revenue-head-slice";
@@ -41,6 +40,8 @@ import {
 import { Card } from "@/components/ui/card";
 import Loader from "@/components/ui/Loader";
 import Pagination from "@/components/pagination/page";
+import { isBusy, isPending, isSettled } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 const PAGE_SIZE = 12;
 
@@ -61,8 +62,9 @@ export default function CompanyRevenueHeadsPage() {
   const dispatch = useDispatch<AppDispatch>();
 
   const items = useSelector((s: RootState) => selectCompanyRevenueHeads(s));
-  const loading = useSelector((s: RootState) =>
-    selectCompanyRevenueHeadsLoading(s),
+  const listState = useSelector(
+    (s: RootState) =>
+      (s.companyRevenueHead as { listState?: string } | undefined)?.listState,
   );
   const error = useSelector((s: RootState) => selectCompanyRevenueHeadsError(s));
   const pagination = useSelector((s: RootState) =>
@@ -82,6 +84,8 @@ export default function CompanyRevenueHeadsPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CompanyRevenueHead | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<CompanyRevenueHead | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [modalValues, setModalValues] = useState<RevenueHeadModalValues>({
     name: "",
     description: "",
@@ -94,6 +98,8 @@ export default function CompanyRevenueHeadsPage() {
 
   const estateId = selectedEstate?.value ?? "";
   const estateName = selectedEstate?.label ?? "Estate";
+  const listPending = Boolean(estateId) && isPending(listState);
+  const listBusy = isBusy(listState);
 
   useEffect(() => {
     (async () => {
@@ -114,8 +120,9 @@ export default function CompanyRevenueHeadsPage() {
             getCompanyEstates({ page: 1, limit: 200 }),
           ).unwrap();
           options = mapCompanyEstateRows(res?.data);
-        } catch {
-          toast.error("Failed to fetch company estates.");
+        } catch (err: unknown) {
+          const message = getApiErrorMessage(err);
+          if (message) toast.error(message);
         }
         if (!options.length) options = parseCompanyEstates(data);
 
@@ -123,8 +130,9 @@ export default function CompanyRevenueHeadsPage() {
         if (options.length) {
           setSelectedEstate({ label: options[0].name, value: options[0].id });
         }
-      } catch {
-        toast.error("Failed to load company information.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setEstatesLoading(false);
       }
@@ -153,7 +161,10 @@ export default function CompanyRevenueHeadsPage() {
       }),
     )
       .unwrap()
-      .catch(() => toast.error("Failed to fetch revenue heads."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId, startDate, endDate, page]);
 
   useEffect(() => {
@@ -188,13 +199,25 @@ export default function CompanyRevenueHeadsPage() {
   const handleDelete = (item: CompanyRevenueHead) => {
     const id = getId(item);
     if (!id) return;
-    confirmDeleteToast({
-      name: item.name,
-      onConfirm: async () => {
-        await dispatch(deleteCompanyRevenueHead(id)).unwrap();
-        toast.success("Revenue head deleted.");
-      },
-    });
+    setItemToDelete(item);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
+    const id = getId(itemToDelete);
+    if (!id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteCompanyRevenueHead(id)).unwrap();
+      toast.success("Revenue head deleted.");
+      setItemToDelete(null);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleView = async (item: CompanyRevenueHead) => {
@@ -207,8 +230,8 @@ export default function CompanyRevenueHeadsPage() {
       const payload = await dispatch(fetchCompanyRevenueHeadById(id)).unwrap();
       setViewItem(payload?.data ?? payload ?? null);
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to load revenue head.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       setViewOpen(false);
     } finally {
       setViewLoading(false);
@@ -243,8 +266,8 @@ export default function CompanyRevenueHeadsPage() {
       setEditing(null);
       setModalValues({ name: "", description: "" });
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to save revenue head.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -263,7 +286,7 @@ export default function CompanyRevenueHeadsPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const pageLoading = estatesLoading || loading;
+  const pageLoading = estatesLoading || listPending;
 
   const content = useMemo(() => {
     if (!estateId) {
@@ -272,6 +295,9 @@ export default function CompanyRevenueHeadsPage() {
           Select an estate to view revenue heads.
         </p>
       );
+    }
+    if (!isSettled(listState)) {
+      return null;
     }
     if (filtered.length === 0) {
       return (
@@ -291,7 +317,7 @@ export default function CompanyRevenueHeadsPage() {
         estateId={estateId}
       />
     ));
-  }, [filtered, estateId, handleDelete, handleView]);
+  }, [filtered, estateId, handleDelete, handleView, listState]);
 
   return (
     <div className="relative">
@@ -373,7 +399,7 @@ export default function CompanyRevenueHeadsPage() {
             <Pagination
               paginationInfo={paginationInfo}
               onPageChange={handlePageChange}
-              disabled={loading}
+              disabled={listBusy}
               itemLabel="revenue heads"
             />
           </>
@@ -409,6 +435,15 @@ export default function CompanyRevenueHeadsPage() {
           }}
         />
       </div>
+    
+        <DeleteModal
+          visible={Boolean(itemToDelete)}
+          onClose={() => setItemToDelete(null)}
+          itemName={itemToDelete?.name ?? "this item"}
+          title="Delete revenue head"
+          loading={deleting}
+          onConfirm={handleConfirmDelete}
+        />
     </div>
   );
 }

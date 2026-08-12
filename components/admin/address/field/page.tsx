@@ -12,13 +12,15 @@ import {
 } from "@/redux/slice/admin/address-mgt/fields/fields";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
 import { useEffect, useState } from "react";
 import Modal from "@/components/modal/page";
 import FieldForm from "../forms/field-form/page";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import { formatAddressRecordCreatedAt } from "@/lib/address";
+import { isBusy, isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 interface FieldData {
   estateId: string;
@@ -34,22 +36,31 @@ export default function AddressField() {
   const dispatch = useDispatch<AppDispatch>();
   const [user, setUser] = useState<any>(null);
   const [estateId, setEstateId] = useState<string | null>(null);
+  const [bootstrapping, setBootstrapping] = useState(true);
   const [open, setOpen] = useState(false);
   const [selectedField, setSelectedField] = useState<FieldData | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name?: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // ✅ Get Redux state
-  const { allField, pagination, loading } = useSelector((state: RootState) => {
-    const fieldState = state.adminField as any;
-    return {
-      allField: fieldState.allField,
-      pagination: fieldState.allField?.pagination || {},
-      loading:
-        fieldState.getFieldByEstateState === "isLoading" ||
-        fieldState.createFieldState === "isLoading" ||
-        fieldState.updateFieldState === "isLoading" ||
-        fieldState.deleteFieldState === "isLoading",
-    };
-  });
+  const { allField, pagination, listStatus, mutationBusy } = useSelector(
+    (state: RootState) => {
+      const fieldState = state.adminField as any;
+      return {
+        allField: fieldState.allField,
+        pagination: fieldState.allField?.pagination || {},
+        listStatus: fieldState.getFieldByEstateState as string | undefined,
+        mutationBusy:
+          isBusy(fieldState.createFieldState) ||
+          isBusy(fieldState.updateFieldState) ||
+          isBusy(fieldState.deleteFieldState),
+      };
+    },
+  );
+  const loading =
+    bootstrapping ||
+    (Boolean(estateId) && isPending(listStatus)) ||
+    mutationBusy;
 
   // ✅ Fetch user & fields
   useEffect(() => {
@@ -75,8 +86,11 @@ export default function AddressField() {
         } else {
           toast.warning("No estate found for this user.");
         }
-      } catch {
-        toast.error("Failed to fetch user or estate fields.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      } finally {
+        setBootstrapping(false);
       }
     })();
   }, [dispatch]);
@@ -107,24 +121,34 @@ export default function AddressField() {
       if (estateId) {
         await dispatch(getFieldByEstate(estateId)).unwrap();
       }
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to save field.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
   const handleDeleteField = async (id?: string, name?: string) => {
     if (!id) return;
+    setItemToDelete({ id, name });
+  };
 
-    confirmDeleteToast({
-      name: name || "this field",
-      onConfirm: async () => {
-        await dispatch(deleteField(id)).unwrap();
-        toast.success(`${name || "Field"} deleted successfully!`);
-        if (user?.estateId) {
-          await dispatch(getFieldByEstate(user.estateId)).unwrap();
-        }
-      },
-    });
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete?.id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteField(itemToDelete.id)).unwrap();
+      toast.success(`${itemToDelete.name || "Field"} deleted successfully!`);
+      setItemToDelete(null);
+      if (user?.estateId) {
+        await dispatch(getFieldByEstate(user.estateId)).unwrap();
+      }
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // ✅ Use data directly from state
@@ -219,7 +243,10 @@ export default function AddressField() {
             if (!estateId) return;
             dispatch(getFieldByEstate(estateId))
               .unwrap()
-              .catch(() => toast.error("Failed to change page"));
+              .catch((err: unknown) => {
+                const message = getApiErrorMessage(err);
+                if (message) toast.error(message);
+              });
           }}
           enableExport
           exportFileName="address-fields"
@@ -235,6 +262,15 @@ export default function AddressField() {
           />
         </Modal>
       )}
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={itemToDelete?.name || "this field"}
+        title="Delete field"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

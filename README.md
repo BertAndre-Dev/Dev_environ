@@ -1,366 +1,264 @@
-# EstateHub - Estate Management System
+# BertaHub
 
-A comprehensive, modern estate management platform designed to streamline operations for residential estates, property managers, and residents. EstateHub provides a centralized solution for managing bills, transactions, meters, visitors, and user administration across multiple estates.
+Frontend for **BertaHub** — a multi-tenant estate operations platform for residential estates, serviced apartments, and property managers. Admins run billing, energy, maintenance, and resident communication from one dashboard; residents pay bills, vend power, manage visitors, and submit requests.
 
-## 🌐 Live URLs
-
-- **Production**: [https://berta-hub-app.vercel.app/](https://berta-hub-app.vercel.app/)
-- **Development**: [https://dev-bertahub.vercel.app/](https://dev-bertahub.vercel.app/)
-
-## ✨ Features
-
-### 🏢 Multi-Role System
-
-EstateHub supports four distinct user roles, each with tailored functionality:
-
-#### 👑 Super Admin
-- **Estate Management**: Create, view, and manage multiple estates
-- **Address Management**: Organize addresses and fields within estates
-- **User Management**: Invite and manage users across all estates
-- **Bills Management**: Oversee billing operations across estates
-- **Meter Management**: Monitor and manage utility meters
-- **Transaction Management**: View and manage all transactions
-- **Visitor Management**: Track and manage visitor records
-- **Payment Management**: Handle payment operations
-- **Analytics Dashboard**: Comprehensive overview with charts and statistics
-
-#### 🛡️ Admin
-- **Address Management**: Manage addresses, fields, and entries
-- **User Management**: Invite and manage users within assigned estate
-- **Bills Management**: Create, update, and track bills
-- **Meter Management**: Monitor utility meters for residents
-- **Visitor Management**: Register and verify visitors
-- **Dashboard**: Estate-specific analytics and insights
-
-#### 🏠 Resident
-- **Bills Management**: View and pay bills
-- **Meter Management**: View meter readings and vend power
-- **Transaction History**: Track all payment transactions
-- **Wallet Management**: Fund wallet and manage balance
-
-#### 🔒 Security
-- **Visitor Verification**: Verify visitor credentials
-- **View Visitors**: Access visitor information and records
-- **Dashboard**: Security-focused overview
-
-### 🔑 Core Functionality
-
-- **Authentication & Authorization**
-  - Secure login/signup system
-  - Role-based access control (RBAC)
-  - JWT token-based authentication
-  - Session management with Redux Persist
-  - Password recovery system
-
-- **Billing System**
-  - Create and manage bills (electricity, water, maintenance, security)
-  - Bill payment tracking
-  - Payment history
-  - Automated bill generation
-
-- **Transaction Management**
-  - Real-time transaction tracking
-  - Transaction history
-  - Wallet funding
-  - Payment processing
-
-- **Meter Management**
-  - Utility meter tracking
-  - Meter reading management
-  - Power vending for prepaid meters
-  - Meter analytics
-
-- **Visitor Management**
-  - Visitor registration
-  - Visitor verification system
-  - Visitor history tracking
-  - Security integration
-
-- **Address Management**
-  - Hierarchical address structure (Estate → Field → Entry)
-  - Address assignment to users
-  - Address-based filtering
-
-## 🛠️ Tech Stack
-
-### Frontend Framework
-- **Next.js 16** - React framework with App Router
-- **React 19** - UI library
-- **TypeScript** - Type safety
-
-### State Management
-- **Redux Toolkit** - State management
-- **Redux Persist** - State persistence
-
-### UI/UX
-- **Tailwind CSS 4** - Utility-first CSS framework
-- **Radix UI** - Accessible component primitives
-- **shadcn/ui** - Component library
-- **Framer Motion** - Animation library
-- **Lucide React** - Icon library
-- **React Icons** - Additional icons
-
-### Forms & Validation
-- **React Hook Form** - Form management
-- **Zod** - Schema validation
-- **@hookform/resolvers** - Form validation integration
-
-### Data Visualization
-- **Recharts** - Chart library for analytics
-
-### HTTP Client
-- **Axios** - HTTP requests with interceptors
-
-### Utilities
-- **date-fns** - Date manipulation
-- **jwt-decode** - JWT token decoding
-- **react-toastify** - Toast notifications
-- **Sonner** - Toast notifications
-- **react-select** - Select components
-- **react-day-picker** - Date picker
-
-### Deployment
-- **Vercel** - Hosting and deployment
-- **Vercel Analytics** - Analytics integration
-
-## 📋 Prerequisites
-
-Before you begin, ensure you have the following installed:
-
-- **Node.js** 18.x or higher
-- **npm**, **yarn**, **pnpm**, or **bun** package manager
-- **Git** for version control
-
-## 🚀 Getting Started
-
-### 1. Clone the Repository
-
-```bash
-git clone <repository-url>
-cd estate-management-FE
-```
-
-### 2. Install Dependencies
-
-```bash
-npm install
-# or
-yarn install
-# or
-pnpm install
-# or
-bun install
-```
-
-### 3. Environment Variables
-
-Create a `.env.local` file in the root directory:
-
-```env
-NEXT_PUBLIC_API_BASE_URL=your_api_base_url
-```
-
-### 4. Run Development Server
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
-
-### 5. Build for Production
-
-```bash
-npm run build
-# or
-yarn build
-# or
-pnpm build
-# or
-bun build
-```
-
-### 6. Start Production Server
-
-```bash
-npm start
-# or
-yarn start
-# or
-pnpm start
-# or
-bun start
-```
-
-## 📁 Project Structure
-
-```
-estate-management-FE/
-├── app/                          # Next.js App Router pages
-│   ├── auth/                     # Authentication pages
-│   │   ├── login/
-│   │   ├── signup/
-│   │   ├── forgot-password/
-│   │   └── verify-invited-user/
-│   ├── dashboard/                # Dashboard pages
-│   │   ├── admin/                # Admin role pages
-│   │   ├── estate-admin/         # Estate admin pages
-│   │   ├── resident/             # Resident pages
-│   │   ├── security/             # Security pages
-│   │   ├── super-admin/          # Super admin pages
-│   │   └── layout.tsx            # Dashboard layout
-│   ├── layout.tsx                # Root layout
-│   ├── page.tsx                  # Home page
-│   └── globals.css               # Global styles
-├── components/                   # React components
-│   ├── admin/                    # Admin-specific components
-│   ├── estate-admin/             # Estate admin components
-│   ├── resident/                 # Resident components
-│   ├── super-admin/              # Super admin components
-│   ├── client-provider/          # Client-side providers
-│   ├── modal/                    # Modal components
-│   ├── tables/                   # Table components
-│   ├── tabs/                     # Tab components
-│   └── ui/                       # Reusable UI components
-├── data/                         # Static data and configurations
-├── lib/                          # Utility libraries
-├── public/                       # Static assets
-├── redux/                        # Redux store and slices
-│   └── slice/                    # Feature-based slices
-│       ├── admin/                # Admin feature slices
-│       ├── auth-mgt/             # Authentication slice
-│       ├── estate-admin/         # Estate admin slices
-│       ├── resident/             # Resident feature slices
-│       ├── super-admin/          # Super admin slices
-│       └── user-mgt/             # User management slice
-├── utils/                        # Utility functions
-│   └── axiosInstance.ts          # Axios configuration
-├── components.json                # shadcn/ui configuration
-├── next.config.ts                # Next.js configuration
-├── package.json                  # Dependencies
-├── tsconfig.json                 # TypeScript configuration
-└── README.md                     # This file
-```
-
-## 🔐 Authentication Flow
-
-1. User signs up or logs in through `/auth/login` or `/auth/signup`
-2. JWT token is stored in localStorage
-3. User data is persisted in Redux store with Redux Persist
-4. Protected routes check for authentication
-5. Token is automatically attached to API requests via Axios interceptor
-6. On 401 errors, user is redirected to login page
-
-## 🎨 UI Components
-
-The application uses **shadcn/ui** components built on **Radix UI** primitives. Key components include:
-
-- Buttons, Cards, Dialogs
-- Forms with Input, Label, Select
-- Data tables with sorting and filtering
-- Modals and dialogs
-- Tabs and navigation components
-
-## 📊 State Management
-
-The application uses **Redux Toolkit** with the following slices:
-
-- `auth` - Authentication state
-- `estate` - Estate management
-- `superAdminUser` - Super admin user management
-- `adminField` - Address field management
-- `adminEntry` - Address entry management
-- `adminUser` - Admin user management
-- `adminBill` - Bill management
-- `residentBill` - Resident bill management
-- `wallet` - Wallet management
-- `residentTransaction` - Resident transactions
-- `estateAdminTransaction` - Estate admin transactions
-- `adminMeter` - Admin meter management
-- `residentMeter` - Resident meter management
-- `superAdminMeter` - Super admin meter management
-- `visitor` - Visitor management
-
-All slices are persisted using **Redux Persist** to maintain state across page refreshes.
-
-## 🔌 API Integration
-
-The application uses **Axios** for HTTP requests with:
-
-- Base URL configuration via environment variables
-- Automatic token injection via request interceptor
-- Error handling via response interceptor
-- Automatic logout on 401 errors
-
-## 🧪 Linting
-
-Run the linter:
-
-```bash
-npm run lint
-# or
-yarn lint
-# or
-pnpm lint
-```
-
-## 🚢 Deployment
-
-The application is deployed on **Vercel**:
-
-- **Production**: Automatically deploys from the main branch
-- **Development**: Deploys from development branches
-
-### Deployment Steps
-
-1. Push changes to the repository
-2. Vercel automatically builds and deploys
-3. Environment variables are configured in Vercel dashboard
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📝 Code Style
-
-- Use TypeScript for type safety
-- Follow React best practices
-- Use functional components with hooks
-- Follow the existing file structure
-- Use meaningful variable and function names
-- Add comments for complex logic
-
-## 🐛 Known Issues
-
-If you encounter any issues, please check:
-
-1. Environment variables are properly set
-2. API base URL is correct and accessible
-3. Node.js version is compatible
-4. All dependencies are installed
-
-## 📄 License
-
-This project is private and proprietary.
-
-## 👥 Support
-
-For support, please contact the development team or open an issue in the repository.
-
-## 🔄 Version
-
-Current version: **0.1.0**
+| Environment | URL |
+| --- | --- |
+| Production | [https://berta-hub-app.vercel.app](https://berta-hub-app.vercel.app/) |
+| Development | [https://dev-bertahub.vercel.app](https://dev-bertahub.vercel.app/) |
 
 ---
 
-Built with ❤️ using Next.js and modern web technologies.
+## Table of contents
+
+- [Overview](#overview)
+- [Roles](#roles)
+- [Tech stack](#tech-stack)
+- [Prerequisites](#prerequisites)
+- [Getting started](#getting-started)
+- [Environment variables](#environment-variables)
+- [Scripts](#scripts)
+- [Architecture](#architecture)
+- [Project structure](#project-structure)
+- [API & auth](#api--auth)
+- [Deployment](#deployment)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## Overview
+
+BertaHub centralizes day-to-day estate operations:
+
+- **Billing & payments** — rent, service charges, wallets, transaction history
+- **Energy intelligence** — smart meters, prepaid vending, usage analytics
+- **Visitor management** — registration, verification, activity logs
+- **Maintenance** — resident complaints and staff assignment workflows
+- **Communication** — announcements, community chat, support
+- **Assets & finance** — asset registers, expense/revenue heads, operational reporting
+- **Marketplace** — estate marketplace surfaces for admins and residents
+- **Maps** — Google Maps–backed estate map views
+
+The app is a Next.js App Router client that talks to a separate BertaHub API. Browser requests to `/api/v1/*` are proxied through Next.js so auth cookies stay same-origin.
+
+---
+
+## Roles
+
+Access is role-based. After login, users land on a role-specific dashboard path.
+
+| Role | Default path | Primary responsibilities |
+| --- | --- | --- |
+| Super Admin | `/dashboard/super-admin/dashboard` | Estates, companies, users, meters, transactions, marketplace, energy providers |
+| Admin | `/dashboard/admin/user` | Estate users, addresses, bills, meters, visitors, assets, finance, announcements |
+| Estate Admin | `/dashboard/estate-admin/transactions` | Wallet, transactions, analytics, reports, announcements, chat |
+| Company | `/dashboard/company/asset` | Multi-estate assets, meters, finance, operations, marketplace |
+| Energy Provider | `/dashboard/energy-provider/wallet` | Provider wallet, estates, addresses, users, transactions |
+| Resident | `/dashboard/resident/bills` | Bills, meters, wallet, visitors, maintenance, rent, community |
+| Security | `/dashboard/security/visitor-management` | Visitor verification and activity logs |
+| Staff | `/dashboard/staff/maintenance` | Maintenance, community, announcements, support |
+
+Users may belong to multiple memberships; switching membership remaps the current route to the equivalent path under the new role when possible.
+
+---
+
+## Tech stack
+
+| Layer | Choice |
+| --- | --- |
+| Framework | [Next.js](https://nextjs.org/) 16 (App Router) |
+| UI | React 19, TypeScript (strict) |
+| Styling | Tailwind CSS 4, shadcn/ui, Radix UI |
+| State | Redux Toolkit, Redux Persist (session storage) |
+| Forms | React Hook Form, Zod |
+| HTTP | Axios (credentials + CSRF + token refresh) |
+| Realtime | Socket.IO client |
+| Charts | Recharts |
+| Maps | `@react-google-maps/api` |
+| Hosting | Vercel (+ Analytics) |
+
+---
+
+## Prerequisites
+
+- **Node.js** 18+ (20 LTS recommended)
+- **npm** (lockfile is `package-lock.json`; yarn/pnpm/bun may work but are not the primary path)
+- Access to a running BertaHub API (or the shared dev API)
+- Git
+
+---
+
+## Getting started
+
+```bash
+git clone https://github.com/BertAndre-Dev/Dev_environ.git
+cd Dev_environ
+npm install
+cp .env.example .env.local   # if present; otherwise create .env.local manually
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+> The Next.js rewrite proxy uses `NEXT_PUBLIC_API_BASE_URL`. Without it, the config falls back to `https://bertahubdev.com`.
+
+---
+
+## Environment variables
+
+Create `.env.local` in the project root (never commit secrets). `.env*` is gitignored.
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `NEXT_PUBLIC_API_BASE_URL` | Yes | Backend origin, e.g. `https://bertahubdev.com` (no trailing path). Used for SSR, rewrites, and sockets. |
+| `NEXT_PUBLIC_SITE_URL` | Recommended | Canonical site URL for SEO/metadata (production/preview). |
+| `NEXT_PUBLIC_MAPS_JAVASCRIPT_API` | For maps | Google Maps JavaScript API key (resident map views). |
+| `NEXT_PUBLIC_PLACE_API` | Optional | Places / geocoding key fallback used by map helpers. |
+| `SENDGRID_API_KEY` | For book-demo | Server-only key for the `/api/book-demo` route. |
+
+Example:
+
+```env
+NEXT_PUBLIC_API_BASE_URL=https://bertahubdev.com
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_MAPS_JAVASCRIPT_API=your_google_maps_key
+SENDGRID_API_KEY=your_sendgrid_key
+```
+
+Configure the same keys in the Vercel project settings for each environment.
+
+---
+
+## Scripts
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Local dev server (Webpack) |
+| `npm run build` | Production build |
+| `npm start` | Serve the production build |
+| `npm run lint` | ESLint |
+
+---
+
+## Architecture
+
+### App Router & role dashboards
+
+- Marketing and legal pages live under `app/` (`landing`, blog, privacy, terms, book-demo).
+- Authenticated product UI lives under `app/dashboard/<role>/…`.
+- Shared dashboard chrome is in `app/dashboard/layout.tsx`.
+- Role → home path mapping is centralized in `lib/auth-dashboard-path.ts`.
+
+### State management
+
+- Feature domains are Redux Toolkit slices under `redux/slice/`, organized by role/domain (`admin`, `resident`, `company`, `super-admin`, etc.).
+- Auth and related client state are persisted with **Redux Persist** using **session storage** (tab-scoped).
+- The store is injected into Axios helpers via `utils/store-accessor.ts` so interceptors can read tokens without circular imports.
+
+### API proxy (same-origin cookies)
+
+`next.config.ts` rewrites browser traffic so cookies remain first-party:
+
+```
+/api/v1/*     →  ${NEXT_PUBLIC_API_BASE_URL}/api/v1/*
+/iec/*        →  ${NEXT_PUBLIC_API_BASE_URL}/iec/*
+/analytics/*  →  ${NEXT_PUBLIC_API_BASE_URL}/analytics/*
+```
+
+On the client, Axios uses a relative base URL (`""`). On the server, it calls the absolute API origin.
+
+### Auth flow (high level)
+
+1. User authenticates via `/auth/login` (or signup / invite verification / password reset).
+2. Access token is held in Redux; refresh uses HTTP-only cookies through the same-origin proxy.
+3. Request interceptor attaches `Authorization: Bearer <token>` and CSRF headers on unsafe methods.
+4. Response interceptor handles token refresh; on hard auth failure, local session is cleared and the user is sent to login.
+
+---
+
+## Project structure
+
+```
+.
+├── app/                      # Next.js App Router
+│   ├── api/                  # Route handlers (e.g. book-demo)
+│   ├── auth/                 # Login, signup, password, invite verify
+│   ├── blog/                 # Marketing blog
+│   ├── dashboard/            # Role-scoped product UI
+│   │   ├── admin/
+│   │   ├── company/
+│   │   ├── energy-provider/
+│   │   ├── estate-admin/
+│   │   ├── resident/
+│   │   ├── security/
+│   │   ├── staff/
+│   │   └── super-admin/
+│   ├── book-demo/
+│   └── …                     # Landing, legal, robots, sitemap
+├── components/               # UI by domain + shared `ui/` (shadcn)
+├── data/                     # Static / config data
+├── hooks/                    # Shared React hooks
+├── lib/                      # Domain helpers, charts, SEO, sockets, maps
+├── public/                   # Static assets
+├── redux/
+│   ├── api/                  # RTK Query APIs (e.g. maps)
+│   ├── slice/                # Feature slices by role/domain
+│   └── store.ts
+├── types/                    # Shared TypeScript types
+├── utils/                    # Axios, CSRF, auth storage, store accessor
+├── next.config.ts
+├── package.json
+└── tsconfig.json             # `@/*` path alias → project root
+```
+
+Path alias: import with `@/…` (see `tsconfig.json`).
+
+---
+
+## API & auth
+
+| Concern | Location |
+| --- | --- |
+| Axios client | `utils/axiosInstance.ts` |
+| CSRF helpers | `utils/csrf.ts` |
+| Auth slice | `redux/slice/auth-mgt/` |
+| Socket URL helper | `lib/socket-api-url.ts` |
+
+Expected backend shape: REST under `/api/v1/…`. Frontend does not own business persistence; treat the API as the source of truth.
+
+---
+
+## Deployment
+
+Deployed on **Vercel**.
+
+Typical flow:
+
+1. Merge to the branch wired to the Vercel project (production vs preview).
+2. Ensure environment variables are set for that environment.
+3. Vercel builds with `npm run build` and serves with `npm start`.
+
+Image hosts (e.g. Cloudinary) are allowlisted in `next.config.ts` (`images.remotePatterns`).
+
+---
+
+## Contributing
+
+1. Branch from the active integration branch (`main` / team convention).
+2. Keep changes focused; match existing patterns for slices, pages, and components.
+3. Prefer TypeScript, functional components, and shared helpers in `lib/` / `utils/` over one-off copies.
+4. Run `npm run lint` before opening a PR.
+5. Open a pull request with a short summary of **why** the change exists and how to verify it.
+
+Do not commit `.env*`, credentials, or local tooling artifacts (e.g. virtualenvs, `.next`).
+
+---
+
+## License
+
+Proprietary. All rights reserved. Unauthorized copying or distribution is prohibited.
+
+---
+
+**BertaHub** · Frontend · v0.1.0

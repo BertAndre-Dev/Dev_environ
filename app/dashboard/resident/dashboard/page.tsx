@@ -27,6 +27,7 @@ import {
 } from "@/redux/slice/resident/dashboard-analytics/resident-dashboard-analytics";
 import type { RootState, AppDispatch } from "@/redux/store";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 const formatNaira = (n: number) => `N${Number(n).toLocaleString()}`;
 
@@ -75,47 +76,47 @@ export default function ResidentDashboard() {
         setAddressOptions(addresses);
         setSelectedAddressId((prev) => prev ?? addresses[0].id);
       } catch (err: unknown) {
-        const e = err as { message?: string };
-        toast.error(e?.message ?? "Failed to load user.");
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     })();
   }, [dispatch]);
 
   useEffect(() => {
     if (!selectedAddressId) return;
-    dispatch(getMeterByAddress({ addressId: selectedAddressId })).catch(
-      (err: unknown) => {
-        const e = err as { message?: string };
-        toast.error(e?.message ?? "Failed to load meter for this address.");
-      },
-    );
+    dispatch(getMeterByAddress({ addressId: selectedAddressId }))
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [selectedAddressId, dispatch]);
 
   useEffect(() => {
     if (!userId) return;
-    dispatch(getResidentDashboardBills({ residentId: userId })).catch(
-      (err: unknown) => {
-        const e = err as { message?: string };
-        toast.error(e?.message ?? "Failed to load bills.");
-      },
-    );
-    dispatch(getResidentDashboardTransactions({ userId })).catch(
-      (err: unknown) => {
-        const e = err as { message?: string };
-        toast.error(e?.message ?? "Failed to load transactions.");
-      },
-    );
+    dispatch(getResidentDashboardBills({ residentId: userId }))
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
+    dispatch(getResidentDashboardTransactions({ userId }))
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [userId, dispatch]);
 
   useEffect(() => {
     const meterNumber = meter?.meterNumber;
     if (!meterNumber) return;
-    dispatch(
-      getResidentDashboardVendHistory({ meterNumber }),
-    ).catch((err: unknown) => {
-      const e = err as { message?: string };
-      toast.error(e?.message ?? "Failed to load vending history.");
-    });
+    dispatch(getResidentDashboardVendHistory({ meterNumber }))
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [meter?.meterNumber, dispatch]);
 
   const handleAddressChange = useCallback((addressId: string) => {

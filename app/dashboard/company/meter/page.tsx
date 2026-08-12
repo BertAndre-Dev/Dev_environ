@@ -5,11 +5,18 @@ import { Button } from "@/components/ui/button";
 import Modal from "@/components/modal/page";
 import Table from "@/components/tables/list/page";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Select from "react-select";
-import { Plus, Search, Trash, Eye, Building2 } from "lucide-react";
+import {
+  Plus,
+  Search,
+  MoreVertical,
+} from "lucide-react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { MeterEnergyUsageSection } from "@/components/charts/meter-energy-usage-section";
 import { EstatePowerUsageSection } from "@/components/charts/estate-power-usage-section";
 import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
@@ -37,9 +44,9 @@ import {
 } from "@/redux/slice/company/meter-mgt/company-meter-slice";
 import CompanyAssignMeterForm from "@/components/company/meter-form/page";
 import CompanyAssignMeterToEstateForm from "@/components/company/assign-meter-to-estate-form/page";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import { IoSpeedometerOutline } from "react-icons/io5";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { parseCompanyFromUser } from "../lib/company";
@@ -137,7 +144,7 @@ const ESTATE_FILTER_FETCH_LIMIT = 500;
 export default function CompanyMeterManagement() {
   const dispatch = useDispatch<AppDispatch>();
   const [assignMeter, setAssignMeter] = useState(false);
-  const [assignToEstateMeter, setAssignToEstateMeter] =
+  const [reassignMeterRow, setReassignMeterRow] =
     useState<CompanyMeterRow | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [detailsAddressId, setDetailsAddressId] = useState<string | null>(null);
@@ -147,6 +154,8 @@ export default function CompanyMeterManagement() {
   const [meterUsageRange, setMeterUsageRange] =
     useState<MeterUsageRange>("weekly");
   const [usageRefreshing, setUsageRefreshing] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const {
     meters,
@@ -172,7 +181,7 @@ export default function CompanyMeterManagement() {
       meters: (companyMeter?.meterList?.data || []) as CompanyMeterRow[],
       pagination: (companyMeter?.meterList?.pagination ??
         null) as Pagination | null,
-      loading: companyMeter?.getMetersState === "isLoading",
+      loading: isPending(companyMeter?.getMetersState),
       meterDetails: companyMeter?.meterDetails ?? null,
       detailsLoading: companyMeter?.getMeterByAddressIdState === "isLoading",
       selectedEstateId: filters.selectedEstateId || ALL_METERS_ESTATE_ID,
@@ -279,22 +288,25 @@ export default function CompanyMeterManagement() {
           toast.warning("No company linked to your account.");
         }
       })
-      .catch(() => toast.error("Failed to load company information."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, companyId]);
 
   useEffect(() => {
     dispatch(getCompanyEstates({ page: 1, limit: ESTATE_FILTER_FETCH_LIMIT }))
       .unwrap()
-      .catch(() => toast.error("Failed to load estates."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch]);
 
   useEffect(() => {
-    fetchMeters(1, searchQuery).catch(() => {
-      toast.error(
-        isAllEstates
-          ? "Failed to fetch company meters"
-          : "Failed to fetch estate meters",
-      );
+    fetchMeters(1, searchQuery).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     });
   }, [selectedEstateId, searchQuery, fetchMeters, isAllEstates]);
 
@@ -305,8 +317,9 @@ export default function CompanyMeterManagement() {
         estateId: chartEstateId,
         range: usageRange,
       }),
-    ).catch((error: { message?: string }) => {
-      toast.error(error?.message ?? "Failed to load estate energy usage.");
+    ).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     });
   }, [dispatch, chartEstateId, usageRange]);
 
@@ -317,10 +330,9 @@ export default function CompanyMeterManagement() {
         estateId: chartEstateId,
         period: energyPeriod,
       }),
-    ).catch((error: { message?: string }) => {
-      toast.error(
-        error?.message ?? "Failed to load energy consumption chart.",
-      );
+    ).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     });
   }, [dispatch, chartEstateId, energyPeriod]);
 
@@ -335,11 +347,9 @@ export default function CompanyMeterManagement() {
           refresh: true,
         }),
       ).unwrap();
-    } catch (error: unknown) {
-      toast.error(
-        (error as { message?: string })?.message ??
-          "Failed to refresh estate energy usage.",
-      );
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setUsageRefreshing(false);
     }
@@ -361,8 +371,9 @@ export default function CompanyMeterManagement() {
   const handleRefresh = async () => {
     try {
       await fetchMeters(Number(pagination?.currentPage) || 1, searchQuery);
-    } catch {
-      toast.error("Failed to refresh meter list");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -370,12 +381,12 @@ export default function CompanyMeterManagement() {
     setAssignMeter((prev) => !prev);
   };
 
-  const handleOpenAssignToEstate = (meter: CompanyMeterRow) => {
-    setAssignToEstateMeter(meter);
+  const handleOpenReassignMeter = (meter: CompanyMeterRow) => {
+    setReassignMeterRow(meter);
   };
 
-  const handleCloseAssignToEstate = () => {
-    setAssignToEstateMeter(null);
+  const handleCloseReassignMeter = () => {
+    setReassignMeterRow(null);
   };
 
   const handleViewDetails = (meter: CompanyMeterRow) => {
@@ -389,8 +400,9 @@ export default function CompanyMeterManagement() {
     setMeterUsageRange("weekly");
     setDetailsModalOpen(true);
     dispatch(getCompanyMeterByAddressId(addressIdStr)).catch(
-      (err: { message?: string }) => {
-        toast.error(err?.message ?? "Failed to load meter details");
+      (err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       },
     );
   };
@@ -405,8 +417,9 @@ export default function CompanyMeterManagement() {
     if (!detailsModalOpen || !detailsMeterNumber) return;
     dispatch(
       getMeterUsage({ meterNumber: detailsMeterNumber, range: meterUsageRange }),
-    ).catch((error: { message?: string }) => {
-      toast.error(error?.message ?? "Failed to load meter energy usage.");
+    ).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     });
   }, [dispatch, detailsModalOpen, detailsMeterNumber, meterUsageRange]);
 
@@ -415,15 +428,24 @@ export default function CompanyMeterManagement() {
       toast.error("Meter ID is missing");
       return;
     }
+    setItemToDelete({ id: meterId });
+  };
 
-    confirmDeleteToast({
-      name: "this meter",
-      onConfirm: async () => {
-        const response = await dispatch(deleteCompanyMeter(meterId)).unwrap();
-        toast.success(response?.message || "Meter deleted successfully");
-        handleRefresh();
-      },
-    });
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete?.id) return;
+    setDeleting(true);
+    try {
+      const response = await dispatch(deleteCompanyMeter(itemToDelete.id)).unwrap();
+      toast.success(response?.message || "Meter deleted successfully");
+      setItemToDelete(null);
+      handleRefresh();
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const columns = [
@@ -479,48 +501,59 @@ export default function CompanyMeterManagement() {
     },
     {
       key: "actions",
-      header: "Action",
-      render: (item: CompanyMeterRow) => (
-        <div className="flex items-center gap-2">
-          {isAllEstates && (
-            <div className="relative group/assign">
+      header: "Actions",
+      exportable: false,
+      render: (item: CompanyMeterRow) => {
+        const hasEstate = Boolean(item.estateId?.trim());
+        const canAssignOrReassign =
+          hasEstate || Boolean(item.companyId?.trim() || companyId);
+        const canView = Boolean(toAddressIdString(item.addressId));
+
+        return (
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="cursor-pointer gap-1"
-                onClick={() => handleOpenAssignToEstate(item)}
-                aria-label="Assign to estate"
+                title="Actions"
+                className="cursor-pointer"
               >
-                <Building2 className="w-4 h-4" />
+                <MoreVertical className="h-4 w-4" />
               </Button>
-              <span
-                role="tooltip"
-                className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 -translate-x-1/2 whitespace-nowrap rounded bg-foreground px-2 py-1 text-xs text-background opacity-0 shadow transition-opacity group-hover/assign:opacity-100"
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content
+                align="end"
+                sideOffset={8}
+                className="z-50 min-w-[220px] rounded-md border bg-white p-1 shadow-md"
               >
-                Assign to estate
-              </span>
-            </div>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            className="cursor-pointer gap-1"
-            onClick={() => handleViewDetails(item)}
-            title="View details"
-            disabled={!toAddressIdString(item.addressId)}
-          >
-            <Eye className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="destructive"
-            className="cursor-pointer"
-            size="sm"
-            onClick={() => handleDeleteMeter(item.id!)}
-          >
-            <Trash className="w-4 h-4" />
-          </Button>
-        </div>
-      ),
+                {canAssignOrReassign ? (
+                  <DropdownMenu.Item
+                    disabled={!companyId}
+                    onSelect={() => handleOpenReassignMeter(item)}
+                    className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                  >
+                    {hasEstate ? "Reassign to estate" : "Assign to estate"}
+                  </DropdownMenu.Item>
+                ) : null}
+                <DropdownMenu.Item
+                  disabled={!canView}
+                  onSelect={() => handleViewDetails(item)}
+                  className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                >
+                  View details
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  onSelect={() => handleDeleteMeter(item.id!)}
+                  className="cursor-pointer select-none rounded px-3 py-2 text-sm text-red-600 outline-none hover:bg-gray-100 focus:bg-gray-100"
+                >
+                  Delete
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
+        );
+      },
     },
   ];
 
@@ -725,13 +758,10 @@ export default function CompanyMeterManagement() {
                           pageSize: Number(pagination?.pageSize) || 10,
                         }}
                         onPageChange={(page) => {
-                          fetchMeters(page, searchQuery).catch(() =>
-                            toast.error(
-                              isAllEstates
-                                ? "Failed to fetch company meters"
-                                : "Failed to fetch estate meters",
-                            ),
-                          );
+                          fetchMeters(page, searchQuery).catch((err: unknown) => {
+                            const message = getApiErrorMessage(err);
+                            if (message) toast.error(message);
+                          });
                         }}
                         enableExport
                         exportFileName={
@@ -768,14 +798,18 @@ export default function CompanyMeterManagement() {
         </Modal>
       )}
 
-      {assignToEstateMeter && (
+      {reassignMeterRow && companyId && (
         <Modal
-          visible={Boolean(assignToEstateMeter)}
-          onClose={handleCloseAssignToEstate}
+          visible={Boolean(reassignMeterRow)}
+          onClose={handleCloseReassignMeter}
         >
           <CompanyAssignMeterToEstateForm
-            meterNumber={assignToEstateMeter.meterNumber}
-            close={handleCloseAssignToEstate}
+            meterNumber={reassignMeterRow.meterNumber}
+            companyId={
+              reassignMeterRow.companyId?.trim() || companyId
+            }
+            estateId={reassignMeterRow.estateId}
+            close={handleCloseReassignMeter}
             refresh={handleRefresh}
           />
         </Modal>
@@ -899,6 +933,15 @@ export default function CompanyMeterManagement() {
           ) : null}
         </div>
       </Modal>
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={"this meter"}
+        title="Delete meter"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

@@ -28,6 +28,7 @@ import {
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
 import { getCompanies } from "@/redux/slice/super-admin/company-mgt/company";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -35,8 +36,9 @@ import { useRouter } from "next/navigation";
 import Modal from "@/components/modal/page";
 import InviteUserForm from "@/components/super-admin/user-form/page";
 import EditUserForm from "@/app/dashboard/super-admin/user/components/EditUserForm";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { UserStatusModal } from "./components/UserStatusModal";
 import {
   DEFAULT_ESTATE_USER_ROLE,
@@ -139,27 +141,29 @@ export default function SuperAdminUserPage() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
 
-  const { allSuperAdminUsers, userPagination, loading } = useSelector(
-    (state: RootState) => {
-      const userState = state.superAdminUser as any;
-      const data = userState.allSuperAdminUsers?.data || [];
-      const userPagination = userState.allSuperAdminUsers?.pagination || {};
-      return {
-        allSuperAdminUsers: Array.isArray(data) ? data : [],
-        userPagination,
-        loading:
-          userState.getAllUsersByEstateState === "isLoading" ||
-          userState.getAllUsersByCompanyState === "isLoading",
-      };
-    },
-  );
+  const {
+    allSuperAdminUsers,
+    userPagination,
+    getAllUsersByEstateState,
+    getAllUsersByCompanyState,
+  } = useSelector((state: RootState) => {
+    const userState = state.superAdminUser as any;
+    const data = userState.allSuperAdminUsers?.data || [];
+    const userPagination = userState.allSuperAdminUsers?.pagination || {};
+    return {
+      allSuperAdminUsers: Array.isArray(data) ? data : [],
+      userPagination,
+      getAllUsersByEstateState: userState.getAllUsersByEstateState as string,
+      getAllUsersByCompanyState: userState.getAllUsersByCompanyState as string,
+    };
+  });
 
   const { allEstates, estateLoading } = useSelector((state: RootState) => {
     const estateState = state.estate as any;
     const data = estateState.allEstates?.data || [];
     return {
       allEstates: Array.isArray(data) ? data : [],
-      estateLoading: Boolean(estateState.loading),
+      estateLoading: isPending(estateState.getAllEstatesState),
     };
   });
 
@@ -168,11 +172,9 @@ export default function SuperAdminUserPage() {
     const data = companyState.list || [];
     return {
       allCompanies: Array.isArray(data) ? data : [],
-      companyLoading: companyState.getListStatus === "isLoading",
+      companyLoading: isPending(companyState.getListStatus),
     };
   });
-
-  const pageLoading = estateLoading || companyLoading || loading;
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [filterScope, setFilterScope] = useState<FilterScope>("estate");
@@ -196,6 +198,18 @@ export default function SuperAdminUserPage() {
   );
   const [statusSubmitting, setStatusSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name?: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // User list is only fetched after an estate/company is selected — gate idle.
+  const usersLoading =
+    filterScope === "company"
+      ? Boolean(selectedCompany?.value) &&
+        isPending(getAllUsersByCompanyState)
+      : Boolean(selectedEstate?.value) &&
+        isPending(getAllUsersByEstateState);
+
+  const pageLoading = estateLoading || companyLoading || usersLoading;
 
   const estateOptions: SelectOption[] = useMemo(
     () =>
@@ -279,10 +293,16 @@ export default function SuperAdminUserPage() {
   useEffect(() => {
     dispatch(getAllEstates({ page: 1, limit: FILTER_FETCH_LIMIT }))
       .unwrap()
-      .catch(() => toast.error("Failed to fetch estates"));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
     dispatch(getCompanies({ page: 1, limit: FILTER_FETCH_LIMIT }))
       .unwrap()
-      .catch(() => toast.error("Failed to fetch companies"));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch]);
 
   // Default to the first estate/company for the active scope
@@ -313,13 +333,10 @@ export default function SuperAdminUserPage() {
     if (partialDate) return;
 
     setCurrentPage(1);
-    fetchUsers(1).catch(() =>
-      toast.error(
-        filterScope === "company"
-          ? "Failed to fetch users for selected company"
-          : "Failed to fetch users for selected estate",
-      ),
-    );
+    fetchUsers(1).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
   }, [
     filterScope,
     selectedFilterEntity?.value,
@@ -407,8 +424,9 @@ export default function SuperAdminUserPage() {
       if (selectedFilterEntity?.value) {
         await fetchUsers(1);
       }
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to update user status.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setStatusSubmitting(false);
     }
@@ -416,15 +434,24 @@ export default function SuperAdminUserPage() {
 
   const handleDeleteUser = async (id?: string, name?: string) => {
     if (!id) return;
+    setItemToDelete({ id, name });
+  };
 
-    confirmDeleteToast({
-      name,
-      onConfirm: async () => {
-        await dispatch(deleteUser(id)).unwrap();
-        toast.success(`${name} deleted successfully!`);
-        if (selectedFilterEntity?.value) await fetchUsers(1);
-      },
-    });
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete?.id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteUser(itemToDelete.id)).unwrap();
+      toast.success(`${itemToDelete.name ?? "User"} deleted successfully!`);
+      setItemToDelete(null);
+      if (selectedFilterEntity?.value) await fetchUsers(1);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const showResidentColumns = roleFilter === "resident";
@@ -740,9 +767,10 @@ export default function SuperAdminUserPage() {
               pageSize: Number(userPagination?.pageSize) || 10,
             }}
             onPageChange={(page) => {
-              fetchUsers(page).catch(() =>
-                toast.error("Failed to change page"),
-              );
+              fetchUsers(page).catch((err: unknown) => {
+                const message = getApiErrorMessage(err);
+                if (message) toast.error(message);
+              });
             }}
             enableExport
             exportFileName="users"
@@ -813,6 +841,15 @@ export default function SuperAdminUserPage() {
           onConfirm={handleConfirmStatus}
         />
       </div>
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={itemToDelete?.name ?? "this user"}
+        title="Delete user"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

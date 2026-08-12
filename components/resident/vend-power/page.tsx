@@ -14,6 +14,7 @@ import {
   getMeterTariff,
 } from "@/redux/slice/resident/meter-mgt/meter-mgt";
 import { Copy, CheckCircle } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 interface VendPowerFormProps {
   walletId: string;
@@ -73,13 +74,14 @@ export default function VendPowerForm({
         const n = Number(raw);
         setApiTariffPrice(Number.isFinite(n) && n > 0 ? n : null);
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         if (!cancelled) {
           setApiTariffPrice(null);
           const hasFallback =
             tariffPrice != null && Number.isFinite(Number(tariffPrice));
           if (!hasFallback) {
-            toast.error("Could not load tariff for this meter.");
+            const message = getApiErrorMessage(err);
+            if (message) toast.error(message);
           }
         }
       })
@@ -150,8 +152,9 @@ export default function VendPowerForm({
       // Soft-reload vend history / related meter data without a full page refresh
       onSubmitSuccess?.();
       setAmount(0);
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to process payment");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSubmitting(false);
     }

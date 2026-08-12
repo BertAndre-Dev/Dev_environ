@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   activateCompany,
   createCompany,
@@ -78,10 +79,7 @@ const companySlice = createSlice({
         state.getListStatus = "failed";
         state.list = null;
         state.pagination = null;
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to fetch companies";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(getCompanyById.pending, (state) => {
         state.getByIdStatus = "isLoading";
@@ -94,10 +92,7 @@ const companySlice = createSlice({
       .addCase(getCompanyById.rejected, (state, action) => {
         state.getByIdStatus = "failed";
         state.current = null;
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to fetch company";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(getCompanyModules.pending, (state) => {
         state.getModulesStatus = "isLoading";
@@ -109,10 +104,7 @@ const companySlice = createSlice({
       .addCase(getCompanyModules.rejected, (state, action) => {
         state.getModulesStatus = "failed";
         state.modules = [];
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to fetch company modules";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(createCompany.pending, (state) => {
         state.createStatus = "isLoading";
@@ -128,10 +120,7 @@ const companySlice = createSlice({
       })
       .addCase(createCompany.rejected, (state, action) => {
         state.createStatus = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to create company";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(updateCompany.pending, (state) => {
         state.updateStatus = "isLoading";
@@ -152,10 +141,7 @@ const companySlice = createSlice({
       })
       .addCase(updateCompany.rejected, (state, action) => {
         state.updateStatus = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to update company";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(updateCompanyModules.fulfilled, (state, action) => {
         const updatedId = (action.payload as any)?.updatedId as string | undefined;

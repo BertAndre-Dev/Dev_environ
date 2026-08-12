@@ -22,6 +22,7 @@ interface BillData {
   updatedAt?: string;
   id?: string;
   isActive?: boolean;
+  compulsory?: boolean;
 }
 
 export interface AssignedBillData {
@@ -30,6 +31,8 @@ export interface AssignedBillData {
   userId?: string;
   billName?: string;
   frequency?: string;
+  amount?: number;
+  amountDue?: number;
   amountPaid?: number;
   startDate?: string;
   nextDueDate?: string;
@@ -37,6 +40,7 @@ export interface AssignedBillData {
   lastPaymentDate?: string | null;
   createdAt?: string;
   isServiceCharge?: boolean;
+  compulsory?: boolean;
 }
 
 
@@ -290,6 +294,8 @@ const billSlice = createSlice({
                                 isServiceCharge:
                                     updated?.isServiceCharge ??
                                     bill.isServiceCharge,
+                                compulsory:
+                                    updated?.compulsory ?? bill.compulsory,
                             };
                         },
                     );

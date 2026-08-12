@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { apiErrorRejectValue } from "@/lib/api-error";
 import type {
   RechargeBehaviorBucket,
   RechargeBehaviorResponse,
@@ -19,16 +20,7 @@ export const getRechargeBehavior = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return rejectWithValue({
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to fetch recharge behavior.",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

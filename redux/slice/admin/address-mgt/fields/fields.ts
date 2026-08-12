@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 
 interface FieldData {
@@ -17,9 +18,11 @@ export const createField = createAsyncThunk(
         try {
             const res = await axiosInstance.post('/api/v1/address-mgt/field', data);
             return res.data;
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const data = (error as { response?: { data?: unknown } })?.response?.data;
+            if (data && typeof data === "object") return rejectWithValue(data);
             return rejectWithValue({
-                message: error.res?.data?.message
+                message: getApiErrorMessage(error) ?? "Failed to create field",
             });
         }
     }
@@ -33,9 +36,11 @@ export const getField = createAsyncThunk(
         try {
             const res = await axiosInstance.get(`/api/v1/address-mgt/field/${fieldId}`);
             return res.data;
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const data = (error as { response?: { data?: unknown } })?.response?.data;
+            if (data && typeof data === "object") return rejectWithValue(data);
             return rejectWithValue({
-                message: error.res?.data?.message
+                message: getApiErrorMessage(error) ?? "Failed to fetch field",
             });
         }
     }
@@ -59,9 +64,11 @@ export const getFieldByEstate = createAsyncThunk(
         `/api/v1/address-mgt/estate/${normalizedEstateId}/fields`,
       );
       return res.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
       return rejectWithValue({
-        message: error.res?.data?.message,
+        message: getApiErrorMessage(error) ?? "Failed to fetch fields",
       });
     }
   },
@@ -75,9 +82,11 @@ export const updateField = createAsyncThunk(
         try {
             const res = await axiosInstance.put(`/api/v1/address-mgt/field/${fieldId}`, data);
             return res.data;
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const data = (error as { response?: { data?: unknown } })?.response?.data;
+            if (data && typeof data === "object") return rejectWithValue(data);
             return rejectWithValue({
-                message: error.res?.data?.message
+                message: getApiErrorMessage(error) ?? "Failed to update field",
             });
         }
     }
@@ -92,11 +101,12 @@ export const deleteField = createAsyncThunk(
         try {
             const res = await axiosInstance.delete(`/api/v1/address-mgt/field/${fieldId}`);
             return res.data;
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const data = (error as { response?: { data?: unknown } })?.response?.data;
+            if (data && typeof data === "object") return rejectWithValue(data);
             return rejectWithValue({
-                message: error.res?.data?.message
+                message: getApiErrorMessage(error) ?? "Failed to delete field",
             });
         }
     }
 );
-

@@ -1,6 +1,10 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import type { CustomerMeterSummaryResponse } from "@/types/analytics";
+import {
+  apiErrorRejectValue,
+  type ApiErrorRejectValue,
+} from "@/lib/api-error";
 
 export type GetCustomerMeterSummaryArgs = {
   estateId?: string;
@@ -27,7 +31,7 @@ export function filterToSummaryArgs(
 export const getCustomerMeterSummary = createAsyncThunk<
   CustomerMeterSummaryResponse,
   GetCustomerMeterSummaryArgs | undefined,
-  { rejectValue: { message: string } }
+  { rejectValue: ApiErrorRejectValue }
 >(
   "super-admin-customer-meter-summary/get",
   async (args, { rejectWithValue }) => {
@@ -47,16 +51,7 @@ export const getCustomerMeterSummary = createAsyncThunk<
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return rejectWithValue({
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to fetch customer & meter summary.",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

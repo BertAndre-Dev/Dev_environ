@@ -7,6 +7,8 @@ import Select from "react-select";
 import { Card } from "@/components/ui/card";
 import Tab from "@/components/tabs/page";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
@@ -38,22 +40,23 @@ export default function CompanyAssetPage() {
     [estates],
   );
 
-  const { assetsLoading, categoriesLoading } = useSelector(
+  const { assetsStatus, categoriesStatus } = useSelector(
     (state: RootState) => {
       const s = (state as unknown as { companyAsset?: Record<string, unknown> })
         .companyAsset;
       return {
-        assetsLoading: s?.getAssetsStatus === "isLoading",
-        categoriesLoading: s?.getCategoriesStatus === "isLoading",
+        assetsStatus: s?.getAssetsStatus as string | undefined,
+        categoriesStatus: s?.getCategoriesStatus as string | undefined,
       };
     },
   );
 
   const pageLoading =
     estatesLoading ||
-    (activeAssetTab === "Assets"
-      ? Boolean(assetsLoading || categoriesLoading)
-      : Boolean(categoriesLoading));
+    (Boolean(selectedEstateId) &&
+      (activeAssetTab === "Assets"
+        ? isPending(assetsStatus) || isPending(categoriesStatus)
+        : isPending(categoriesStatus)));
 
   useEffect(() => {
     (async () => {
@@ -74,8 +77,9 @@ export default function CompanyAssetPage() {
             getCompanyEstates({ page: 1, limit: 200 }),
           ).unwrap();
           options = mapCompanyEstateRows(res?.data);
-        } catch {
-          toast.error("Failed to fetch company estates.");
+        } catch (err: unknown) {
+          const message = getApiErrorMessage(err);
+          if (message) toast.error(message);
         }
 
         if (!options.length) {
@@ -88,8 +92,9 @@ export default function CompanyAssetPage() {
         } else {
           toast.warning("No estates found for your company.");
         }
-      } catch {
-        toast.error("Failed to load company information.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setEstatesLoading(false);
       }

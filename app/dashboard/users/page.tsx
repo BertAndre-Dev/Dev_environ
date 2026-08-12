@@ -13,24 +13,32 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 
 export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRole, setSelectedRole] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [showAddUser, setShowAddUser] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [editingUser, setEditingUser] = useState<string | null>(null);
 
   const handleDeleteUser = (name: string) => {
-    confirmDeleteToast({
-      name,
-      onConfirm: async () => {
-        // This page is using mock data (no API/delete yet).
-        toast.success(`${name} deleted successfully!`);
-      },
-    });
+    setItemToDelete({ name });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
+    setDeleting(true);
+    try {
+      // This page is using mock data (no API/delete yet).
+      toast.success(`${itemToDelete.name} deleted successfully!`);
+      setItemToDelete(null);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // Mock user data
@@ -437,6 +445,15 @@ export default function UsersPage() {
           </Card>
         </div>
       )}
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={itemToDelete?.name ?? "this user"}
+        title="Delete user"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

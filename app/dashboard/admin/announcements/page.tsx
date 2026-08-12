@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { Pencil, FileText } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
   getAnnouncements,
@@ -29,6 +30,7 @@ import { buildAdminAnnouncementStatsCards } from "@/lib/announcement-stats";
 import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
 import Loader from "@/components/ui/Loader";
+import { isBusy, isPending } from "@/lib/async-status";
 
 function formatAnnouncementDate(dateStr?: string) {
   if (!dateStr) return "—";
@@ -118,10 +120,12 @@ export default function AdminAnnouncementsPage() {
     if (!estateId) return;
     dispatch(
       getAnnouncements({ estateId, page: targetPage, limit: PAGE_SIZE }),
-    ).catch((err: unknown) => {
-      const e = err as { message?: string };
-      toast.error(e?.message ?? "Failed to load announcements.");
-    });
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   };
 
   useEffect(() => {
@@ -130,9 +134,11 @@ export default function AdminAnnouncementsPage() {
   }, [estateId, page, bootstrapping]);
 
   const announcements = list ?? [];
-  const listLoading = getStatus === "isLoading";
+  const listLoading = Boolean(estateId) && isPending(getStatus);
   const fullPageLoading =
-    bootstrapping || (listLoading && !list) || getStatsStatus === "isLoading";
+    bootstrapping ||
+    listLoading ||
+    (Boolean(estateId) && isPending(getStatsStatus));
   const statsCards = buildAdminAnnouncementStatsCards(
     stats,
     pagination?.total ?? announcements.length,
@@ -220,8 +226,8 @@ export default function AdminAnnouncementsPage() {
       if (nextPage !== page) setPage(nextPage);
       refreshAfterMutation(nextPage);
     } catch (err: unknown) {
-      const e = err as { message?: string };
-      toast.error(e?.message ?? "Failed to delete announcement.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       throw err;
     }
   };
@@ -267,7 +273,7 @@ export default function AdminAnnouncementsPage() {
           onSubmit={handleCreate}
           submitLabel="Send"
           title="Add Announcement"
-          loading={createStatus === "isLoading"}
+          loading={isBusy(createStatus)}
         />
 
         <AnnouncementFormModal
@@ -277,7 +283,7 @@ export default function AdminAnnouncementsPage() {
           onSubmit={handleUpdate}
           submitLabel="Update"
           title="Edit Announcement"
-          loading={updateStatus === "isLoading"}
+          loading={isBusy(updateStatus)}
         />
 
         <DeleteModal
@@ -286,7 +292,7 @@ export default function AdminAnnouncementsPage() {
           itemName={deletingItem?.title ?? "this announcement"}
           title="Delete announcement"
           onConfirm={handleConfirmDelete}
-          loading={deleteStatus === "isLoading"}
+          loading={isBusy(deleteStatus)}
         />
 
         <Modal visible={!!viewingItem} onClose={() => setViewingItem(null)}>

@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ModuleSelectionChips } from "@/components/shared/module-selection-chips";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch } from "@/redux/store";
 import {
   fetchCompanyEstateEnabledModules,
@@ -60,9 +61,10 @@ export function CompanyEstateModulesForm({
         const mods = parseEstateModulesResponse(res);
         setSelectedModules(mods.length > 0 ? mods : seeded);
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         if (seeded.length === 0) {
-          toast.error("Failed to load estate modules");
+          const message = getApiErrorMessage(err);
+          if (message) toast.error(message);
         }
       });
   }, [dispatch, estateId, initialModules]);
@@ -81,10 +83,8 @@ export function CompanyEstateModulesForm({
       toast.success("Estate modules updated successfully!");
       onSuccess();
     } catch (err: unknown) {
-      const message =
-        (err as { message?: string })?.message ??
-        "Failed to update estate modules";
-      toast.error(message);
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSubmitting(false);
     }

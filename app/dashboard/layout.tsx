@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { Menu, X, LogOut, Bell, Search } from "lucide-react";
+import { Menu, X, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   adminNav,
@@ -25,11 +25,13 @@ import {
   selectUserRole,
 } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 import { getSignedInUser, signOut } from "@/redux/slice/auth-mgt/auth-mgt";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { clearCsrfToken, ensureCsrfToken } from "@/utils/csrf";
 import { disconnectSocket } from "@/lib/socket";
 import { CommunityChatSocketProvider } from "@/components/providers/CommunityChatSocketProvider";
 import { WalletRequiredAlert } from "@/components/wallet/WalletRequiredAlert";
 import { MembershipSwitcher } from "@/components/dashboard/MembershipSwitcher";
+import { NotificationsBell } from "@/components/dashboard/NotificationsBell";
 import { filterNavItemsByEstateModules } from "@/lib/nav-module-filter";
 import Image from "next/image";
 import Loader from "@/components/ui/Loader";
@@ -145,10 +147,21 @@ export default function DashboardLayout({
       hasFetchedUser.current = true;
       dispatch(getSignedInUser())
         .unwrap()
-        .catch(() => {
-          toast.error("Session expired. Please sign in again.");
-          dispatch(logoutLocally());
-          router.push("/auth/login");
+        .catch((err: unknown) => {
+          const message = getApiErrorMessage(err);
+          const statusCode = (err as { statusCode?: number })?.statusCode;
+          const isUnauthorized =
+            statusCode === 401 ||
+            /unauthorized|session|token|expired/i.test(message ?? "");
+
+          if (message) toast.error(message);
+          else toast.error("Session expired. Please sign in again.");
+
+          // Compulsory-bill and other 403s should not force logout.
+          if (isUnauthorized || statusCode == null) {
+            dispatch(logoutLocally());
+            router.push("/auth/login");
+          }
         });
     }
   }, [dispatch, router, token]);
@@ -231,9 +244,13 @@ export default function DashboardLayout({
       "energy provider",
     ]);
     if (rolesWithModules.has(role)) {
-      navItems = filterNavItemsByEstateModules(navItems, estateModules, {
-        role,
-      });
+      navItems = filterNavItemsByEstateModules(
+        navItems as Array<(typeof navItems)[number] & { label: string }>,
+        estateModules,
+        {
+          role,
+        },
+      );
     }
 
     const isNavPathActive = (itemPath: string) =>
@@ -343,8 +360,22 @@ export default function DashboardLayout({
           {/* User Info */}
           <div className="bg-[#f2f2f2] border-t border-sidebar-border px-2 py-4  ">
             <button
-              className="flex items-center gap-0 md:gap-3 w-full hover:bg-sidebar-accent transition-colors overflow-x-scroll"
-              // onClick={handleSignOut}
+              type="button"
+              className="flex items-center gap-0 md:gap-3 w-full hover:bg-sidebar-accent transition-colors overflow-x-scroll cursor-pointer"
+              onClick={() => {
+                const role = (userRole || user?.role || "")
+                  .toString()
+                  .toLowerCase();
+                if (role === "resident") {
+                  router.push("/dashboard/settings?tab=my-profile");
+                }
+              }}
+              title={
+                (userRole || user?.role || "").toString().toLowerCase() ===
+                "resident"
+                  ? "View profile"
+                  : undefined
+              }
             >
               <div className="bg-[#4E61E5] rounded-full overflow-hidden w-8 h-8 flex-shrink-0">
                 <Image
@@ -407,22 +438,7 @@ export default function DashboardLayout({
 
             <div className="flex shrink-0 items-center gap-2 sm:gap-4">
               <MembershipSwitcher className="hidden sm:block cursor-pointer" />
-              {/* <div className="hidden items-center gap-2 rounded-lg bg-muted px-4 py-2 md:flex">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="w-48 bg-transparent text-sm outline-none"
-                />
-              </div> */}
-              {/* <button
-                type="button"
-                title="Notifications"
-                className="relative rounded-lg p-2 transition-colors hover:bg-muted cursor-pointer"
-              >
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-accent" />
-              </button> */}
+              <NotificationsBell />
               <MembershipSwitcher collapsed className="sm:hidden" />
               <button
                 type="button"

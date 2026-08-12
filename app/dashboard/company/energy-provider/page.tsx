@@ -10,6 +10,8 @@ import { Card } from "@/components/ui/card";
 import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
@@ -40,23 +42,22 @@ export default function CompanyEnergyProviderPage() {
   const [companyId, setCompanyId] = useState("");
   const [estateOptions, setEstateOptions] = useState<EstateOption[]>([]);
   const [selectedEstate, setSelectedEstate] = useState<EstateOption | null>(null);
-  const [loadingEstates, setLoadingEstates] = useState(false);
+  const [loadingEstates, setLoadingEstates] = useState(true);
   const [vendsPage, setVendsPage] = useState(1);
   const [vendsStartDate, setVendsStartDate] = useState("");
   const [vendsEndDate, setVendsEndDate] = useState("");
 
-  const { list, pagination, loadingConfigs } = useSelector((state: RootState) => ({
+  const { list, pagination, configsStatus } = useSelector((state: RootState) => ({
     list: state.companyEnergyProviderConfig.list,
     pagination: state.companyEnergyProviderConfig.pagination,
-    loadingConfigs:
-      state.companyEnergyProviderConfig.getListStatus === "isLoading",
+    configsStatus: state.companyEnergyProviderConfig.getListStatus as string,
   }));
 
-  const { vends, vendsPagination, loadingVends } = useSelector(
+  const { vends, vendsPagination, vendsStatus } = useSelector(
     (state: RootState) => ({
       vends: state.companyEnergyProviderVends.list,
       vendsPagination: state.companyEnergyProviderVends.pagination,
-      loadingVends: state.companyEnergyProviderVends.status === "isLoading",
+      vendsStatus: state.companyEnergyProviderVends.status as string,
     }),
   );
 
@@ -68,11 +69,14 @@ export default function CompanyEnergyProviderPage() {
         const company = parseCompanyFromUser(data);
         if (!company) {
           toast.warning("No company linked to your account.");
+          setLoadingEstates(false);
           return;
         }
         setCompanyId(company.id);
-      } catch {
-        toast.error("Failed to load company information.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+        setLoadingEstates(false);
       }
     })();
   }, [dispatch]);
@@ -95,8 +99,9 @@ export default function CompanyEnergyProviderPage() {
             .filter((x: EstateOption | null): x is EstateOption => Boolean(x)) ??
           [];
         setEstateOptions(options);
-      } catch {
-        toast.error("Failed to load estates");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
         setEstateOptions([]);
       } finally {
         setLoadingEstates(false);
@@ -144,14 +149,18 @@ export default function CompanyEnergyProviderPage() {
 
   useEffect(() => {
     if (activeTab !== "configurations" || !selectedEstate?.value) return;
-    fetchConfigs(1).catch(() =>
-      toast.error("Failed to load energy provider configurations"),
-    );
+    fetchConfigs(1).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
   }, [activeTab, selectedEstate, fetchConfigs]);
 
   useEffect(() => {
     if (activeTab !== "vend-history" || !selectedEstate?.value) return;
-    fetchVends(vendsPage).catch(() => toast.error("Failed to load vend history"));
+    fetchVends(vendsPage).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
   }, [activeTab, selectedEstate, vendsPage, fetchVends]);
 
   const configColumns = useMemo(
@@ -214,9 +223,10 @@ export default function CompanyEnergyProviderPage() {
 
   const handleConfigSuccess = () => {
     setConfigOpen(false);
-    fetchConfigs(pagination?.currentPage ?? 1).catch(() =>
-      toast.error("Failed to refresh energy provider configurations"),
-    );
+    fetchConfigs(pagination?.currentPage ?? 1).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
   };
 
   const handleEstateChange = (option: EstateOption | null) => {
@@ -226,8 +236,9 @@ export default function CompanyEnergyProviderPage() {
 
   const tabLoading =
     loadingEstates ||
-    (activeTab === "configurations" && loadingConfigs) ||
-    (activeTab === "vend-history" && loadingVends);
+    (Boolean(selectedEstate?.value) &&
+      ((activeTab === "configurations" && isPending(configsStatus)) ||
+        (activeTab === "vend-history" && isPending(vendsStatus))));
 
   return (
     <div className="relative space-y-6">
@@ -313,9 +324,10 @@ export default function CompanyEnergyProviderPage() {
                 pageSize: pagination?.pageSize ?? PAGE_SIZE,
               }}
               onPageChange={(page) => {
-                fetchConfigs(page).catch(() =>
-                  toast.error("Failed to change page"),
-                );
+                fetchConfigs(page).catch((err: unknown) => {
+                  const message = getApiErrorMessage(err);
+                  if (message) toast.error(message);
+                });
               }}
               enableExport
               exportFileName="energy-provider-configs"

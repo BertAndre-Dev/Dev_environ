@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 export const getSuperAdminEstateTransactionHistory = createAsyncThunk(
   "super-admin-estate-transactions/getSuperAdminEstateTransactionHistory",
@@ -38,12 +39,7 @@ export const getSuperAdminEstateTransactionHistory = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message ||
-          "Failed to fetch estate transactions",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -79,11 +75,7 @@ export const getSuperAdminEstateVends = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to fetch estate vends",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -119,11 +111,7 @@ export const getSuperAdminEstatePaidBills = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to fetch paid bills",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

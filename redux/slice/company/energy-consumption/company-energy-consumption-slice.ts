@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { EnergyConsumptionDataPoint } from "@/lib/energy-consumption-chart";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   getCompanyEnergyConsumptionAddressOptions,
   getCompanyEnergyConsumptionChart,
@@ -51,10 +52,7 @@ const companyEnergyConsumptionSlice = createSlice({
         (state, action) => {
           state.addressOptionsStatus = "failed";
           state.addressOptions = [{ label: "All addresses", value: "all" }];
-          state.error =
-            (action.payload as { message?: string } | undefined)?.message ||
-            action.error.message ||
-            "Failed to fetch address options";
+          state.error = getApiErrorMessage(action.payload) ?? null;
         },
       )
       .addCase(getCompanyEnergyConsumptionChart.pending, (state) => {
@@ -69,10 +67,7 @@ const companyEnergyConsumptionSlice = createSlice({
       .addCase(getCompanyEnergyConsumptionChart.rejected, (state, action) => {
         state.chartStatus = "failed";
         state.chart = [];
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to fetch energy consumption chart";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

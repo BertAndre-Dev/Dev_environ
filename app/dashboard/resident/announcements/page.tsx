@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Loader from "@/components/ui/Loader";
+import { isPending, isSettled } from "@/lib/async-status";
 import { Bell, Megaphone, FileText, Paperclip } from "lucide-react";
 import Modal from "@/components/modal/page";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
@@ -16,6 +17,7 @@ import {
 import AnnouncementsStatsGrid from "@/components/admin/announcements/announcements-stats-grid/page";
 import Pagination from "@/components/pagination/page";
 import { buildReadOnlyAnnouncementStatsCards } from "@/lib/announcement-stats";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { RootState, AppDispatch } from "@/redux/store";
 
 const PAGE_SIZE = 10;
@@ -155,14 +157,16 @@ export default function ResidentAnnouncementsPage() {
     if (!estateId || bootstrapping) return;
     dispatch(
       getResidentAnnouncements({ estateId, page, limit: PAGE_SIZE }),
-    ).catch((err: unknown) => {
-      const e = err as { message?: string };
-      toast.error(e?.message ?? "Failed to load announcements.");
-    });
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId, page, bootstrapping]);
 
-  const listLoading = getListStatus === "isLoading";
-  const fullPageLoading = bootstrapping || (listLoading && !list);
+  const listLoading = isPending(getListStatus);
+  const fullPageLoading = bootstrapping || listLoading;
   const statsCards = buildReadOnlyAnnouncementStatsCards(
     pagination?.total ?? announcements.length,
   );
@@ -205,7 +209,7 @@ export default function ResidentAnnouncementsPage() {
 
         <AnnouncementsStatsGrid stats={statsCards} />
 
-        {announcements.length === 0 && !listLoading ? (
+        {announcements.length === 0 && isSettled(getListStatus) ? (
           <Card className="p-12 text-center">
             <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">

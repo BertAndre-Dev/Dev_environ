@@ -4,7 +4,10 @@ import {
     getAllEstateMeter,
     getMeter,
     getVendingStatsByEstate,
+    getEstateVendLimits,
+    setEstateVendLimits,
     type VendingStatsByEstateData,
+    type EstateVendLimitsData,
 } from './meter-mgt';
 
 
@@ -56,10 +59,13 @@ export interface AdminMeterState {
     getAllEstateMeterState: "idle" | "isLoading" | "succeeded" | "failed";
     getMeterState: "idle" | "isLoading" | "succeeded" | "failed";
     getVendingStatsByEstateState: "idle" | "isLoading" | "succeeded" | "failed";
+    getEstateVendLimitsState: "idle" | "isLoading" | "succeeded" | "failed";
+    setEstateVendLimitsState: "idle" | "isLoading" | "succeeded" | "failed";
     status: "idle" | "isLoading" | "succeeded" | "failed";
     adminMeter: AdminMeterData | null;
     allAdminMeters: AdminMeterResponse | null;
     vendingStatsByEstate: VendingStatsByEstateData | null;
+    vendLimits: EstateVendLimitsData | null;
     error: string | null;
 }
 
@@ -69,10 +75,13 @@ const initialState: AdminMeterState = {
     getAllEstateMeterState: "idle",
     getMeterState: "idle",
     getVendingStatsByEstateState: "idle",
+    getEstateVendLimitsState: "idle",
+    setEstateVendLimitsState: "idle",
     status: "idle",
     adminMeter: null,
     allAdminMeters: null,
     vendingStatsByEstate: null,
+    vendLimits: null,
     error: null,
 }
 
@@ -94,30 +103,33 @@ const adminMeterSlice = createSlice({
             })
             .addCase(assignMeterToAddress.fulfilled, (state, action) => {
                 state.assignMeterToAddressState = "succeeded";
-                const newMeter = action.payload?.data;
-                if (newMeter) {
-                    if (state.allAdminMeters?.data) {
-                        state.allAdminMeters.data.push(newMeter);
-                        state.allAdminMeters.pagination.total += 1;
-                    } else {
-                        state.allAdminMeters = {
-                            success: true,
-                            message: "Meter assigned successfully",
-                            data: [newMeter],
-                            pagination: {
-                                total: 1,
-                                currentPage: 1,
-                                totalPages: 1,
-                                pageSize: 10,
-                            },
-                        };
-                    }
-                }
+                const updated = action.payload?.data;
+                const meterNumber =
+                    updated?.meterNumber ?? action.meta.arg.meterNumber;
+                if (!meterNumber || !state.allAdminMeters?.data) return;
+
+                const idx = state.allAdminMeters.data.findIndex(
+                    (m) => m.meterNumber === meterNumber,
+                );
+                if (idx === -1) return;
+
+                const unassign = action.meta.arg.unassign === true;
+                const existing = state.allAdminMeters.data[idx];
+                state.allAdminMeters.data[idx] = {
+                    ...existing,
+                    ...(updated && typeof updated === "object" ? updated : {}),
+                    isAssigned: unassign
+                        ? false
+                        : (updated?.isAssigned ?? true),
+                    ...(unassign ? { addressId: "" } : {}),
+                };
             })
             .addCase(assignMeterToAddress.rejected, (state, action) => {
                 state.assignMeterToAddressState = "failed";
                 state.error =
-                    action.error.message || "Failed to assign meter";
+                    (action.payload as { message?: string } | undefined)?.message ||
+                    action.error.message ||
+                    "Failed to assign or unassign meter";
             });
 
 
@@ -183,7 +195,43 @@ const adminMeterSlice = createSlice({
                     action.error.message ||
                     "Failed to fetch vending statistics";
             });
-        
+
+        // ✅ GET ESTATE VEND LIMITS
+        builder
+            .addCase(getEstateVendLimits.pending, (state) => {
+                state.getEstateVendLimitsState = "isLoading";
+                state.error = null;
+            })
+            .addCase(getEstateVendLimits.fulfilled, (state, action) => {
+                state.getEstateVendLimitsState = "succeeded";
+                state.vendLimits = action.payload?.data ?? null;
+            })
+            .addCase(getEstateVendLimits.rejected, (state, action) => {
+                state.getEstateVendLimitsState = "failed";
+                state.vendLimits = null;
+                state.error =
+                    (action.payload as { message?: string } | undefined)?.message ||
+                    action.error.message ||
+                    null;
+            });
+
+        // ✅ SET ESTATE VEND LIMITS
+        builder
+            .addCase(setEstateVendLimits.pending, (state) => {
+                state.setEstateVendLimitsState = "isLoading";
+                state.error = null;
+            })
+            .addCase(setEstateVendLimits.fulfilled, (state, action) => {
+                state.setEstateVendLimitsState = "succeeded";
+                state.vendLimits = action.payload?.data ?? state.vendLimits;
+            })
+            .addCase(setEstateVendLimits.rejected, (state, action) => {
+                state.setEstateVendLimitsState = "failed";
+                state.error =
+                    (action.payload as { message?: string } | undefined)?.message ||
+                    action.error.message ||
+                    null;
+            });
     },
 });
 

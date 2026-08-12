@@ -7,6 +7,7 @@ import Table from "@/components/tables/list/page";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2 } from "lucide-react";
 import DeleteModal from "@/components/resident/delete-modal/page";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { RootState, AppDispatch } from "@/redux/store";
 import {
   createAssetCategory,
@@ -56,7 +57,10 @@ export default function AssetCategoriesTab({ estateId }: Readonly<Props>) {
     if (!estateId) return;
     dispatch(getAssetCategories({ estateId, page, limit: PAGE_SIZE, search }))
       .unwrap()
-      .catch(() => toast.error("Failed to load asset categories."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId, page, search]);
 
   const handleConfirmDelete = async () => {
@@ -156,8 +160,9 @@ export default function AssetCategoriesTab({ estateId }: Readonly<Props>) {
       }
       closeModal();
       setPage(1);
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to save category.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 

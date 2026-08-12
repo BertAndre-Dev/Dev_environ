@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   formatAmountInput,
   parseFormattedNumber,
@@ -27,6 +28,7 @@ export interface BillForAddressFormData {
   amount: number;
   frequency: BillForAddressFrequency;
   isServiceCharge: boolean;
+  compulsory: boolean;
 }
 
 export interface BillForAddressInitialData {
@@ -37,6 +39,7 @@ export interface BillForAddressInitialData {
   description?: string;
   amount?: number;
   frequency?: string;
+  compulsory?: boolean;
 }
 
 interface ResidentRecord {
@@ -96,6 +99,7 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
       initialData?.amount != null
         ? formatAmountInput(String(initialData.amount))
         : "",
+    compulsory: Boolean(initialData?.compulsory),
   });
 
   const attachedResidentName = useMemo(() => {
@@ -166,8 +170,9 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
             prev.addressId ? prev : { ...prev, addressId: options[0].value },
           );
         }
-      } catch {
-        toast.error("Failed to load addresses.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setLoadingAddresses(false);
       }
@@ -196,16 +201,21 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
           description: fetchData.description || prev.description,
           amount: formatAmountInput(
             String(
-              fetchData.amount ??
+              fetchData.amountDue ??
+                fetchData.amount ??
                 fetchData.amountPaid ??
                 fetchData.yearlyAmount ??
                 initialData?.amount ??
                 0,
             ),
           ),
+          compulsory: Boolean(
+            fetchData.compulsory ?? initialData?.compulsory ?? prev.compulsory,
+          ),
         }));
-      } catch (error: any) {
-        toast.error(error?.message || "Failed to load bill");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setLoadingBill(false);
       }
@@ -214,7 +224,10 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
     loadBill();
   }, [dispatch, initialData]);
 
-  const handleChange = (field: keyof typeof form, value: string) => {
+  const handleChange = (
+    field: keyof typeof form,
+    value: string | boolean,
+  ) => {
     setForm((prev) => ({
       ...prev,
       [field]: value,
@@ -250,6 +263,7 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
         amount,
         frequency: "oneOff",
         isServiceCharge: false,
+        compulsory: form.compulsory,
       });
     } finally {
       setSubmitting(false);
@@ -258,12 +272,12 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <CardHeader>
-        <CardTitle className="text-lg pb-4 pt-8 font-semibold">
+      <CardHeader className="px-0 md:px-0">
+        <CardTitle className="text-lg pb-2 pt-2 font-semibold">
           {isEditing ? "Update bill for an address" : "Create bill for an address"}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4 px-0 md:px-0">
         {loadingBill ? (
           <p className="text-gray-500 italic">Loading bill...</p>
         ) : (
@@ -348,6 +362,24 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
                 }
                 placeholder="25,000"
               />
+            </div>
+
+            <div className="flex items-start gap-2">
+              <input
+                id="address-bill-compulsory"
+                type="checkbox"
+                checked={form.compulsory}
+                onChange={(e) => handleChange("compulsory", e.target.checked)}
+                className="mt-1 rounded border-input"
+              />
+              <div>
+                <Label
+                  htmlFor="address-bill-compulsory"
+                  className="cursor-pointer font-medium"
+                >
+                  Compulsory bill
+                </Label>
+              </div>
             </div>
           </>
         )}

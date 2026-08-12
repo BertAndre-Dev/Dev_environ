@@ -17,6 +17,7 @@ import { deleteUser } from "@/redux/slice/admin/user-mgt/user";
 import type { RootState, AppDispatch } from "@/redux/store";
 import { toast } from "react-toastify";
 import Loader from "@/components/ui/Loader";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 const PAGE_SIZE = 10;
 
@@ -72,8 +73,9 @@ export default function ResidentUserPage() {
           return;
         }
         await dispatch(getInvitedTenants({ page: 1, limit: PAGE_SIZE })).unwrap();
-      } catch {
-        toast.error("Failed to load tenants.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     })();
   }, [dispatch, router]);
@@ -88,7 +90,12 @@ export default function ResidentUserPage() {
         startDate: shouldApplyDate ? startDate : undefined,
         endDate: shouldApplyDate ? endDate : undefined,
       }),
-    ).catch(() => toast.error("Failed to load tenants."));
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, startDate, endDate]);
 
   const handlePageChange = (newPage: number) => {
@@ -99,8 +106,13 @@ export default function ResidentUserPage() {
         limit: PAGE_SIZE,
         startDate: startDate && endDate ? startDate : undefined,
         endDate: startDate && endDate ? endDate : undefined,
-      })
-    ).catch(() => toast.error("Failed to load tenants."));
+      }),
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   };
 
   const handleOpenModal = () => setOpen(true);
@@ -121,18 +133,24 @@ export default function ResidentUserPage() {
     if (!tenantToDelete) return;
     const userId = tenantToDelete.id || (tenantToDelete as { _id?: string })._id;
     if (!userId) return;
-    await dispatch(deleteUser(userId)).unwrap();
-    toast.success("Tenant deleted successfully.");
-    setTenantToDelete(null);
-    const shouldApplyDate = Boolean(startDate && endDate);
-    await dispatch(
-      getInvitedTenants({
-        page: currentPage,
-        limit: PAGE_SIZE,
-        startDate: shouldApplyDate ? startDate : undefined,
-        endDate: shouldApplyDate ? endDate : undefined,
-      }),
-    ).unwrap();
+    try {
+      await dispatch(deleteUser(userId)).unwrap();
+      toast.success("Tenant deleted successfully.");
+      setTenantToDelete(null);
+      const shouldApplyDate = Boolean(startDate && endDate);
+      await dispatch(
+        getInvitedTenants({
+          page: currentPage,
+          limit: PAGE_SIZE,
+          startDate: shouldApplyDate ? startDate : undefined,
+          endDate: shouldApplyDate ? endDate : undefined,
+        }),
+      ).unwrap();
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
+    }
   };
 
   const columns = [

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { AppDispatch } from "@/redux/store";
 import { Select } from "@/components/ui/select";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
@@ -100,9 +101,10 @@ const AssignMeterForm: React.FC<AssignMeterFormProps> = ({
         });
 
         setEntryOptions(options);
-      } catch (error: any) {
-        console.error(error);
-        toast.error("Failed to load estate address entries.");
+      } catch (err: unknown) {
+        console.error(err);
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setLoading(false);
       }
@@ -126,9 +128,10 @@ const AssignMeterForm: React.FC<AssignMeterFormProps> = ({
       toast.success(res?.message || "Meter assigned successfully.");
       refresh();
       close();
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error?.message || "Failed to assign meter.");
+    } catch (err: unknown) {
+      console.error(err);
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setLoading(false);
     }

@@ -4,6 +4,7 @@ import {
   type TransactionSummaryData,
 } from "@/lib/transaction-summary-chart";
 import { getCompanyTransactionSummary } from "./company-transaction-summary";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export interface CompanyTransactionSummaryState {
   summary: TransactionSummaryData;
@@ -41,10 +42,7 @@ const companyTransactionSummarySlice = createSlice({
       .addCase(getCompanyTransactionSummary.rejected, (state, action) => {
         state.status = "failed";
         state.summary = EMPTY_TRANSACTION_SUMMARY;
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to fetch transaction summary";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

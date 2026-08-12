@@ -34,6 +34,7 @@ import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import Loader from "@/components/ui/Loader";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export default function VisitorPage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -136,8 +137,9 @@ export default function VisitorPage() {
         } else {
           setOccupants([]);
         }
-      } catch (err: any) {
-        toast.error(err?.message || "Failed to fetch visitors");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setLoading(false);
       }
@@ -198,7 +200,10 @@ export default function VisitorPage() {
         setVisitors(visitorsRes?.data || []);
         setPagination(visitorsRes?.pagination || {});
       })
-      .catch(() => toast.error("Failed to fetch visitors"))
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      })
       .finally(() => setLoading(false));
   }, [dispatch, userId, startDate, endDate]);
 
@@ -224,8 +229,9 @@ export default function VisitorPage() {
       // API response has flat structure, not nested visitor object
       const visitorData = res?.data?.visitor || res?.data;
       setViewingVisitor(visitorData || null);
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to load visitor details");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -247,8 +253,9 @@ export default function VisitorPage() {
       toast.success("Visitor deleted successfully.");
       setVisitorToDelete(null);
       await refreshVisitors();
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to delete visitor");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -259,8 +266,9 @@ export default function VisitorPage() {
       toast.success("Occupant deleted successfully.");
       setOccupantToDelete(null);
       await refreshOccupants();
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to delete occupant");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -279,8 +287,9 @@ export default function VisitorPage() {
       ).unwrap();
       setVisitors(visitorsRes?.data || []);
       setPagination(visitorsRes?.pagination || {});
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to fetch visitors");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 

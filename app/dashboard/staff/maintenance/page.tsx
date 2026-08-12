@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import Table from "@/components/tables/list/page";
 import Loader from "@/components/ui/Loader";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   fetchStaffMaintenancePage,
   updateStaffComplaintStatus,
@@ -69,12 +70,10 @@ export default function StaffMaintenancePage() {
   const loadPage = useCallback(() => {
     return dispatch(fetchStaffMaintenancePage())
       .unwrap()
-      .catch((err: unknown) =>
-        toast.error(
-          (err as { message?: string })?.message ??
-            "Failed to load maintenance requests.",
-        ),
-      );
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch]);
 
   useEffect(() => {
@@ -93,9 +92,8 @@ export default function StaffMaintenancePage() {
       toast.success("Status updated");
       await loadPage();
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to update status",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 

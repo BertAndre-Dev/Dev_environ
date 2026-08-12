@@ -8,6 +8,7 @@ import {
   getCommentsByComplaint,
   createComment,
 } from "./complaints";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export type { ComplaintItem, CommentItem };
 
@@ -117,7 +118,8 @@ const complaintsSlice = createSlice({
       .addCase(getComplaintsByEstate.rejected, (state, action) => {
         state.getComplaintsByEstateStatus = "failed";
         state.complaintsByEstate = null;
-        state.error = (action.payload as string) ?? "Failed to fetch complaints";
+        state.error =
+          getApiErrorMessage(action.payload) ?? "Failed to fetch complaints";
       })
 
       .addCase(getComplaintById.pending, (state) => {
@@ -130,7 +132,8 @@ const complaintsSlice = createSlice({
       })
       .addCase(getComplaintById.rejected, (state, action) => {
         state.getComplaintByIdStatus = "failed";
-        state.error = (action.payload as string) ?? "Failed to fetch complaint";
+        state.error =
+          getApiErrorMessage(action.payload) ?? "Failed to fetch complaint";
       })
 
       .addCase(updateComplaintStatus.pending, (state) => {
@@ -148,7 +151,8 @@ const complaintsSlice = createSlice({
       })
       .addCase(updateComplaintStatus.rejected, (state, action) => {
         state.updateComplaintStatusStatus = "failed";
-        state.error = (action.payload as string) ?? "Failed to update status";
+        state.error =
+          getApiErrorMessage(action.payload) ?? "Failed to update status";
       })
 
       .addCase(assignComplaintToStaff.pending, (state) => {
@@ -170,7 +174,8 @@ const complaintsSlice = createSlice({
       .addCase(assignComplaintToStaff.rejected, (state, action) => {
         state.assignComplaintStatus = "failed";
         state.error =
-          (action.payload as string) ?? "Failed to assign complaint to staff";
+          getApiErrorMessage(action.payload) ??
+          "Failed to assign complaint to staff";
       })
 
       .addCase(getCommentsByComplaint.pending, (state) => {
@@ -206,7 +211,8 @@ const complaintsSlice = createSlice({
       })
       .addCase(createComment.rejected, (state, action) => {
         state.createCommentStatus = "failed";
-        state.error = (action.payload as string) ?? "Failed to add comment";
+        state.error =
+          getApiErrorMessage(action.payload) ?? "Failed to add comment";
       });
   },
 });

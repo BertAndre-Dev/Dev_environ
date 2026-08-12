@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 // get all users by estate (with search)
 export const getAllUsersByEstate = createAsyncThunk(
@@ -46,9 +47,11 @@ export const getAllUsersByEstate = createAsyncThunk(
       );
 
       return res.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
       return rejectWithValue({
-        message: error?.response?.data?.message || "Unable to fetch users",
+        message: getApiErrorMessage(error) ?? "Unable to fetch users",
       });
     }
   },
@@ -61,9 +64,11 @@ export const getUser = createAsyncThunk(
     try {
       const res = await axiosInstance.get(`/api/v1/user-mgt/${id}`);
       return res.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
       return rejectWithValue({
-        message: error.res?.data?.message,
+        message: getApiErrorMessage(error) ?? "Failed to fetch user",
       });
     }
   },
@@ -76,9 +81,11 @@ export const deleteUser = createAsyncThunk(
     try {
       const res = await axiosInstance.delete(`/api/v1/user-mgt/${id}`);
       return res.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
       return rejectWithValue({
-        message: error.res?.data?.message,
+        message: getApiErrorMessage(error) ?? "Failed to delete user",
       });
     }
   },
@@ -93,9 +100,11 @@ export const suspendUser = createAsyncThunk(
         `/api/v1/user-mgt/${id}/suspend-user`,
       );
       return res.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
       return rejectWithValue({
-        message: error.res?.data?.message,
+        message: getApiErrorMessage(error) ?? "Failed to suspend user",
       });
     }
   },
@@ -110,9 +119,11 @@ export const activateUser = createAsyncThunk(
         `/api/v1/user-mgt/${id}/activate-user`,
       );
       return res.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
       return rejectWithValue({
-        message: error.res?.data?.message,
+        message: getApiErrorMessage(error) ?? "Failed to activate user",
       });
     }
   },

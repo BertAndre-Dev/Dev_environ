@@ -11,8 +11,12 @@ import { Label } from "@/components/ui/label";
 import Modal from "@/components/modal/page";
 import Table from "@/components/tables/list/page";
 import EstateWalletOverviewCard from "@/components/estate-admin/wallet-overview-card/page";
+import SetWithdrawalAccountModal from "@/components/wallet/SetWithdrawalAccountModal";
+import RevenueWithdrawalAccountsCard from "@/components/wallet/RevenueWithdrawalAccountsCard";
 import CompanyWithdrawFundForm from "@/components/company/wallet/CompanyWithdrawFundForm";
 import { formatDateTime } from "@/lib/format-date";
+import { isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
   getBanks,
@@ -35,6 +39,7 @@ import {
 import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
 import type { AppDispatch, RootState } from "@/redux/store";
 import type { CompanyCreditItem } from "@/redux/slice/company/wallet-mgt/company-wallet-mgt-slice";
+import Loader from "@/components/ui/Loader";
 
 const LIMIT = 10;
 
@@ -56,6 +61,8 @@ export default function CompanyWalletPage() {
   const dispatch = useDispatch<AppDispatch>();
   const [open, setOpen] = useState(false);
   const [createWalletModalOpen, setCreateWalletModalOpen] = useState(false);
+  const [setWithdrawalAccountModalOpen, setSetWithdrawalAccountModalOpen] =
+    useState(false);
   const [createWalletAccountNumber, setCreateWalletAccountNumber] =
     useState("");
   const [createWalletBankCode, setCreateWalletBankCode] = useState("");
@@ -74,8 +81,8 @@ export default function CompanyWalletPage() {
   const createWalletState = useSelector(
     (state: RootState) => state.companyWallet?.createWalletState ?? "idle",
   );
-  const walletLoading =
-    getWalletState === "idle" || getWalletState === "isLoading";
+  const walletLoading = isPending(getWalletState);
+  const pageLoading = walletLoading || (!!companyId && creditsLoading);
   const {
     banks,
     getBanksState,
@@ -212,10 +219,9 @@ export default function CompanyWalletPage() {
       handleCloseCreateWalletModal();
       await dispatch(getCompanyWallet(companyId));
       await fetchCredits(1);
-    } catch (error: unknown) {
-      toast.error(
-        (error as { message?: string })?.message || "Failed to create wallet.",
-      );
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -261,9 +267,8 @@ export default function CompanyWalletPage() {
         );
         window.history.replaceState({}, document.title, url.toString());
       } catch (err: unknown) {
-        toast.error(
-          (err as { message?: string })?.message || "Verification failed",
-        );
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     };
 
@@ -319,24 +324,39 @@ export default function CompanyWalletPage() {
     typeof pag?.limit === "number" ? pag.limit : Number(pag?.limit) || LIMIT;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-heading text-3xl font-bold">Wallet Management</h1>
-        <p className="text-muted-foreground mt-1">
-          Welcome back! Here is an overview for{" "}
-          <span className="text-[18px] font-bold underline uppercase text-black">
-            {companyName}
-          </span>
-          .
-        </p>
+    <div className="relative">
+      {pageLoading && <Loader fullScreen label="Loading wallet..." />}
+      <div
+        className={[
+          "space-y-6",
+          pageLoading ? "pointer-events-none select-none" : "",
+        ].join(" ")}
+      >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="font-heading text-3xl font-bold">Wallet Management</h1>
+          <p className="text-muted-foreground mt-1">
+            Welcome back! Here is an overview for{" "}
+            <span className="text-[18px] font-bold underline uppercase text-black">
+              {companyName}
+            </span>
+            .
+          </p>
+        </div>
+        <RevenueWithdrawalAccountsCard
+          role="company"
+          className="w-full shrink-0 sm:w-auto"
+        />
       </div>
 
       <EstateWalletOverviewCard
         wallet={wallet}
         onWithdraw={() => setOpen((prev) => !prev)}
         onCreateWallet={() => setCreateWalletModalOpen(true)}
+        onSetWithdrawalAccount={() => setSetWithdrawalAccountModalOpen(true)}
         walletLoading={walletLoading}
         createWalletLoading={createWalletState === "isLoading"}
+        revenueSettlementRole="company"
       />
 
       <Card className="p-4">
@@ -495,6 +515,15 @@ export default function CompanyWalletPage() {
           </div>
         </div>
       </Modal>
+
+      <SetWithdrawalAccountModal
+        visible={setWithdrawalAccountModalOpen}
+        onClose={() => setSetWithdrawalAccountModalOpen(false)}
+        onSuccess={() => {
+          if (companyId) dispatch(getCompanyWallet(companyId));
+        }}
+      />
+      </div>
     </div>
   );
 }

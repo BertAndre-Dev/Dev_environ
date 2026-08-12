@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import "react-quill-new/dist/quill.snow.css";
 import { Calendar, FileText, ImageIcon, X } from "lucide-react";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -204,9 +205,8 @@ export default function AnnouncementFormModal({
       });
       onClose();
     } catch (err: unknown) {
-      const msg =
-        (err as { message?: string })?.message ?? "Failed to process image.";
-      toast.error(msg);
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 

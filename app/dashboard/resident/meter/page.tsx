@@ -34,6 +34,8 @@ import Tab from "@/components/tabs/page";
 import type { EnergyListItem } from "@/redux/slice/resident/meter-mgt/meter-mgt-slice";
 import Loader from "@/components/ui/Loader";
 import { CopyButton } from "@/components/ui/copy-button";
+import { isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 const METER_TAB_TITLES = ["Chart Overview", "Vend"] as const;
 
@@ -88,14 +90,14 @@ export default function ResidentMeter() {
   const meterUsageMessage = useSelector(
     (state: RootState) => state.residentMeter.meterUsageMessage,
   );
-  const meterUsageLoading =
-    useSelector(
-      (state: RootState) => state.residentMeter.getMeterUsageState,
-    ) === "isLoading";
-  const meterLoading =
-    useSelector(
-      (state: RootState) => state.residentMeter.getMeterByAddressState,
-    ) === "isLoading";
+  const getMeterUsageState = useSelector(
+    (state: RootState) => state.residentMeter.getMeterUsageState,
+  );
+  const getMeterByAddressState = useSelector(
+    (state: RootState) => state.residentMeter.getMeterByAddressState,
+  );
+  const meterUsageLoading = isPending(getMeterUsageState);
+  const meterLoading = isPending(getMeterByAddressState);
   // const vendingStats = useSelector(
   //   (state: RootState) => state.residentMeter.vendingStatsByAddress,
   // );
@@ -107,23 +109,23 @@ export default function ResidentMeter() {
   const energyConsumptionChart = useSelector(
     (state: RootState) => state.residentMeter.energyConsumptionChart,
   );
-  const energyChartLoading =
-    useSelector(
-      (state: RootState) => state.residentMeter.getEnergyConsumptionChartState,
-    ) === "isLoading";
+  const getEnergyConsumptionChartState = useSelector(
+    (state: RootState) => state.residentMeter.getEnergyConsumptionChartState,
+  );
+  const energyChartLoading = isPending(getEnergyConsumptionChartState);
 
   const {
     realtimeBalance,
-    realtimeBalanceLoading,
+    realtimeBalanceStatus,
     realtimeBalanceMessage,
     realtimeBalanceError,
   } = useSelector((state: RootState) => ({
     realtimeBalance: state.residentMeterRealtimeBalance.balance,
-    realtimeBalanceLoading:
-      state.residentMeterRealtimeBalance.status === "isLoading",
+    realtimeBalanceStatus: state.residentMeterRealtimeBalance.status,
     realtimeBalanceMessage: state.residentMeterRealtimeBalance.message,
     realtimeBalanceError: state.residentMeterRealtimeBalance.error,
   }));
+  const realtimeBalanceLoading = isPending(realtimeBalanceStatus);
 
   // Load user and normalize addresses (addressIds for owners, addressId for tenants)
   useEffect(() => {
@@ -148,9 +150,9 @@ export default function ResidentMeter() {
           const firstId = addresses[0].id;
           return prev ?? firstId;
         });
-      } catch (error: any) {
-        const message = error?.message ?? "Failed to load user";
-        toast.error(message);
+      } catch (error: unknown) {
+        const message = getApiErrorMessage(error);
+        if (message) toast.error(message);
       }
     })();
   }, [dispatch]);
@@ -163,9 +165,9 @@ export default function ResidentMeter() {
         await dispatch(
           getMeterByAddress({ addressId: selectedAddressId }),
         ).unwrap();
-      } catch (error: any) {
-        const message = error?.message ?? "Failed to fetch meter";
-        toast.error(message);
+      } catch (error: unknown) {
+        const message = getApiErrorMessage(error);
+        if (message) toast.error(message);
       }
     })();
   }, [dispatch, selectedAddressId]);
@@ -194,11 +196,12 @@ export default function ResidentMeter() {
   useEffect(() => {
     const meterNumber = meter?.meterNumber;
     if (!meterNumber) return;
-    dispatch(getMeterUsage({ meterNumber, range: usageRange })).catch(
-      (error: { message?: string }) => {
-        toast.error(error?.message ?? "Failed to load energy usage.");
-      },
-    );
+    dispatch(getMeterUsage({ meterNumber, range: usageRange }))
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [meter?.meterNumber, usageRange, dispatch]);
 
   useEffect(() => {
@@ -209,11 +212,12 @@ export default function ResidentMeter() {
         addressId: selectedAddressId,
         period: energyPeriod,
       }),
-    ).catch((error: { message?: string }) => {
-      toast.error(
-        error?.message ?? "Failed to load energy consumption chart.",
-      );
-    });
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId, selectedAddressId, energyPeriod]);
 
   useEffect(() => {
@@ -224,9 +228,12 @@ export default function ResidentMeter() {
     }
     dispatch(
       getMeterRealtimeBalance({ meterNumber, includeUsed: true }),
-    ).catch((error: { message?: string }) => {
-      toast.error(error?.message ?? "Failed to load realtime meter balance.");
-    });
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [meter?.meterNumber, dispatch]);
 
   const energyUsageLoading =
@@ -244,8 +251,9 @@ export default function ResidentMeter() {
           refresh: true,
         }),
       ).unwrap();
-    } catch (error: any) {
-      toast.error(error?.message ?? "Failed to refresh realtime meter balance.");
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error);
+      if (message) toast.error(message);
     } finally {
       setRealtimeBalanceRefreshing(false);
     }
@@ -286,9 +294,9 @@ export default function ResidentMeter() {
         );
       }
       await Promise.all(tasks);
-    } catch (error: any) {
-      const message = error?.message ?? "Failed to refresh meter";
-      toast.error(message);
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error);
+      if (message) toast.error(message);
     }
   };
 
@@ -316,8 +324,9 @@ export default function ResidentMeter() {
       }
       // Refresh meter data after toggling
       await handleRefresh();
-    } catch (error: any) {
-      toast.error("Failed to toggle meter status");
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error);
+      if (message) toast.error(message);
     }
   };
 

@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 import Select from "react-select";
 import Loader from "@/components/ui/Loader";
 import type { AppDispatch } from "@/redux/store";
@@ -26,10 +27,22 @@ import {
 } from "../asset/lib/estate";
 import MaintenanceScheduleCalendar from "./components/MaintenanceScheduleCalendar";
 import MaintenanceRecordsTable from "./components/MaintenanceRecordsTable";
+import MaintenanceDetailModal from "./components/MaintenanceDetailModal";
 
 const SCHEDULE_LIST_LIMIT = 500;
 
 type EstateSelectOption = { label: string; value: string };
+
+function getRecordId(record: AssetMaintenanceRecord) {
+  return record.id || record._id || "";
+}
+
+function resolveAssetId(record: AssetMaintenanceRecord) {
+  const raw = record.assetId;
+  if (!raw) return "";
+  if (typeof raw === "string") return raw;
+  return raw.id || raw._id || "";
+}
 
 export default function CompanyAssetMaintenancePage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -47,6 +60,8 @@ export default function CompanyAssetMaintenancePage() {
   const [assetNamesById, setAssetNamesById] = useState<Map<string, string>>(
     () => new Map(),
   );
+  const [viewingRecord, setViewingRecord] =
+    useState<AssetMaintenanceRecord | null>(null);
 
   const selectedEstateId = selectedEstate?.value ?? "";
 
@@ -76,7 +91,7 @@ export default function CompanyAssetMaintenancePage() {
         setScheduleRecords(res?.data ?? []);
       } catch (err: unknown) {
         setScheduleRecords([]);
-        const message = (err as { message?: string })?.message;
+        const message = getApiErrorMessage(err);
         if (message) toast.error(message);
       } finally {
         setScheduleLoading(false);
@@ -111,7 +126,7 @@ export default function CompanyAssetMaintenancePage() {
           ).unwrap();
           options = mapCompanyEstateRows(res?.data);
         } catch (err: unknown) {
-          const message = (err as { message?: string })?.message;
+          const message = getApiErrorMessage(err);
           if (message) toast.error(message);
         }
         if (!options.length) options = parseCompanyEstates(data);
@@ -121,7 +136,7 @@ export default function CompanyAssetMaintenancePage() {
           setSelectedEstate({ label: options[0].name, value: options[0].id });
         }
       } catch (err: unknown) {
-        const message = (err as { message?: string })?.message;
+        const message = getApiErrorMessage(err);
         if (message) toast.error(message);
       } finally {
         setEstatesLoading(false);
@@ -229,6 +244,13 @@ export default function CompanyAssetMaintenancePage() {
           assetNamesById={assetNamesById}
           loading={scheduleLoading}
           showScheduleButton={false}
+          onEventClick={(record) => {
+            const id = getRecordId(record as AssetMaintenanceRecord);
+            const matched =
+              scheduleRecords.find((r) => getRecordId(r) === id) ??
+              (record as AssetMaintenanceRecord);
+            setViewingRecord(matched);
+          }}
         />
 
         <MaintenanceRecordsTable
@@ -237,6 +259,18 @@ export default function CompanyAssetMaintenancePage() {
           categories={categories}
           onRecordsChange={refreshSchedule}
           readOnly
+        />
+
+        <MaintenanceDetailModal
+          visible={Boolean(viewingRecord)}
+          onClose={() => setViewingRecord(null)}
+          record={viewingRecord}
+          estateId={selectedEstateId}
+          assetName={
+            viewingRecord
+              ? assetNamesById.get(resolveAssetId(viewingRecord))
+              : undefined
+          }
         />
       </div>
     </div>

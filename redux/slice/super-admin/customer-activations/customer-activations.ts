@@ -1,12 +1,16 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import type { CustomerActivationsResponse } from "@/types/analytics";
+import {
+  apiErrorRejectValue,
+  type ApiErrorRejectValue,
+} from "@/lib/api-error";
 
 /** GET /api/v1/analytics/commercial/customers/activations */
 export const getCustomerActivations = createAsyncThunk<
   CustomerActivationsResponse,
   void,
-  { rejectValue: { message: string } }
+  { rejectValue: ApiErrorRejectValue }
 >("super-admin-customer-activations/get", async (_, { rejectWithValue }) => {
   try {
     const res = await axiosInstance.get<CustomerActivationsResponse>(
@@ -14,15 +18,6 @@ export const getCustomerActivations = createAsyncThunk<
     );
     return res.data;
   } catch (error: unknown) {
-    const err = error as {
-      response?: { data?: { message?: string } };
-      message?: string;
-    };
-    return rejectWithValue({
-      message:
-        err.response?.data?.message ||
-        err.message ||
-        "Failed to fetch customer activations.",
-    });
+    return rejectWithValue(apiErrorRejectValue(error));
   }
 });

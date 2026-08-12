@@ -11,6 +11,7 @@ import {
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 interface FieldDefinition {
   id: string;
@@ -80,8 +81,9 @@ export default function EntryForm({
       }
       onClose();
       refresh();
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to save entry.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 

@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   getSuperAdminBillsAnalyticsDashboard,
   type SuperAdminBillsAnalyticsData,
@@ -39,10 +40,7 @@ const superAdminBillsAnalyticsSlice = createSlice({
       })
       .addCase(getSuperAdminBillsAnalyticsDashboard.rejected, (state, action) => {
         state.status = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ||
-          action.error.message ||
-          "Failed to fetch bills analytics";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

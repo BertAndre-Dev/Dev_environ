@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import type { CollectionEfficiencyResponse } from "@/types/analytics";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 /** GET /api/v1/analytics/finance/collection-efficiency */
 export const getCollectionEfficiency = createAsyncThunk(
@@ -12,16 +13,7 @@ export const getCollectionEfficiency = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return rejectWithValue({
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to fetch collection efficiency.",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

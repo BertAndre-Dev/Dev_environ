@@ -8,8 +8,9 @@ import {
   type ElementType,
 } from "react";
 import { useRouter } from "next/navigation";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import Image from "next/image";
 import {
   ChevronDown,
@@ -19,9 +20,9 @@ import {
   Phone,
   Power,
   PowerOff,
-  Receipt,
   Trash2,
   User,
+  Users,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,26 +31,22 @@ import Table from "@/components/tables/list/page";
 import { CopyButton } from "@/components/ui/copy-button";
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import { MaintenanceRequestCard } from "@/components/admin/maintenance/maintenance-request-card";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { cn } from "@/lib/utils";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
-import { normalizeAddresses, type AddressOption } from "@/lib/address";
+import { normalizeAddresses, formatAddressLabel, type AddressOption } from "@/lib/address";
 import type { AsyncThunk } from "@reduxjs/toolkit";
-import type { AppDispatch } from "@/redux/store";
+import type { AppDispatch, RootState } from "@/redux/store";
 import type { DashboardUserDetails } from "@/lib/dashboard-user-details";
 import { getResidentBills } from "@/redux/slice/resident/bill-mgt/bills-mgt";
+import { getBillsForAddress } from "@/redux/slice/admin/bills-mgt/bills";
+import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getMeterByAddress } from "@/redux/slice/resident/meter-mgt/meter-mgt";
 import type { ResidentMeterData } from "@/redux/slice/resident/meter-mgt/meter-mgt-slice";
 import { getComplaintsByAddress } from "@/redux/slice/resident/maintenance/resident-complaints";
 import type { ResidentComplaintItem } from "@/redux/slice/resident/maintenance/resident-complaints";
-import { TransactionDetailsDialog } from "@/components/super-admin/transaction-modal/page";
-import {
-  getTransactionById,
-  getUserTransactionHistory,
-  verifyTransaction,
-} from "@/redux/slice/super-admin/super-admin-transactions-mgt/super-admin-transactions";
-import { formatDateTime as formatUtcDateTime } from "@/lib/format-date";
+import { getVisitorsByResident } from "@/redux/slice/resident/visitor/visitor";
 
-type DetailTab = "bills" | "complaints" | "transactions";
+type DetailTab = "bills" | "complaints" | "visitors";
 
 interface UserBillRow {
   id: string;
@@ -62,20 +59,48 @@ interface UserBillRow {
   lastPaymentDate?: string | null;
 }
 
-interface UserTransactionRow {
+interface AssignedBillRow {
   id: string;
-  type?: string;
+  billName?: string;
+  frequency?: string;
+  amountDue?: number;
   amount?: number;
-  paymentStatus?: string;
-  description?: string;
-  tx_ref?: string;
+  status?: string;
+  compulsory?: boolean;
+  startDate?: string;
+  nextDueDate?: string;
   createdAt?: string;
-  estateId?: { name?: string };
+  addressId?: string;
+  addressLabel?: string;
+}
+
+function resolveEstateId(raw: unknown): string {
+  if (!raw) return "";
+  if (typeof raw === "string") return raw.trim();
+  if (typeof raw === "object") {
+    const o = raw as { id?: string; _id?: string };
+    return String(o._id || o.id || "").trim();
+  }
+  return "";
+}
+
+interface UserVisitorRow {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  purpose?: string;
+  visitingType?: string;
+  visitorCode?: string;
+  checkinTime?: string | null;
+  checkoutTime?: string | null;
+  createdAt?: string;
 }
 
 const BASE_TABS: { id: DetailTab; label: string }[] = [
-  { id: "bills", label: "Bills" },
+  { id: "bills", label: "Assigned Bills" },
   { id: "complaints", label: "Complaints" },
+  { id: "visitors", label: "Visitors" },
 ];
 
 function getUserId(user: DashboardUserDetails | null | undefined) {
@@ -269,6 +294,11 @@ function UserProfileDetails({
           <DetailField label="First name" value={user.firstName || "—"} />
           <DetailField label="Last name" value={user.lastName || "—"} />
           <DetailField label="Gender" value={formatLabel(user.gender)} />
+          <DetailField
+            label="Email"
+            value={user.email || "—"}
+            copyValue={user.email || undefined}
+          />
           {user.role?.toLowerCase() === "resident" ? (
             <DetailField
               label="Resident type"
@@ -283,17 +313,22 @@ function UserProfileDetails({
             Contact & account
           </h2>
           <DetailField
-            label="Email"
-            value={user.email || "—"}
-            copyValue={user.email || undefined}
-          />
-          <DetailField
             label="Phone"
             value={phoneDisplay}
             copyValue={phoneDisplay !== "—" ? phoneDisplay : undefined}
           />
           {user.address ? (
             <DetailField label="Address" value={user.address} />
+          ) : null}
+          <DetailField
+            label="Invitation"
+            value={formatLabel(user.invitationStatus) || "—"}
+          />
+          {user.serviceCharge != null ? (
+            <DetailField
+              label="Service charge"
+              value={user.serviceCharge ? "Yes" : "No"}
+            />
           ) : null}
           <DetailField
             label="Member since"
@@ -312,7 +347,7 @@ function UserProfileDetails({
             <MapPin className="h-4 w-4 text-primary" />
             Addresses linked to this user
           </h2>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="grid grid-cols-1">
             {userAddresses.map((addr, index) => (
               <div key={addr.id || index} className="rounded-lg border p-4">
                 <p className="mb-2 text-xs font-medium text-muted-foreground">
@@ -363,7 +398,6 @@ export interface UserDetailViewProps {
   userLoading: boolean;
   listPath: string;
   actions: UserMgtActions;
-  showTransactionsTab?: boolean;
 }
 
 export default function UserDetailView({
@@ -372,36 +406,30 @@ export default function UserDetailView({
   userLoading,
   listPath,
   actions,
-  showTransactionsTab = false,
 }: UserDetailViewProps) {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
+  const authEstateId = useSelector((state: RootState) =>
+    resolveEstateId(state.auth.user?.estateId),
+  );
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<DetailTab>("bills");
-  const [relatedLoading, setRelatedLoading] = useState(false);
+  const [relatedLoading, setRelatedLoading] = useState(true);
   const [bills, setBills] = useState<UserBillRow[]>([]);
+  const [assignedBills, setAssignedBills] = useState<AssignedBillRow[]>([]);
+  const [estateId, setEstateId] = useState(authEstateId);
   const [complaints, setComplaints] = useState<ResidentComplaintItem[]>([]);
-  const [transactions, setTransactions] = useState<UserTransactionRow[]>([]);
-  const [transactionsLoading, setTransactionsLoading] = useState(false);
-  const [transactionsPage, setTransactionsPage] = useState(1);
-  const [transactionsTotal, setTransactionsTotal] = useState(0);
-  const [transactionsPageSize, setTransactionsPageSize] = useState(10);
-  const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState<Record<
-    string,
-    unknown
-  > | null>(null);
-  const [transactionDialogLoading, setTransactionDialogLoading] =
-    useState(false);
-  const [verifyTransactionLoading, setVerifyTransactionLoading] =
-    useState(false);
   const [meterByAddressId, setMeterByAddressId] = useState<
     Record<string, string | null>
   >({});
+  const [visitors, setVisitors] = useState<UserVisitorRow[]>([]);
+  const [visitorsTotal, setVisitorsTotal] = useState(0);
 
   const [suspendOpen, setSuspendOpen] = useState(false);
   const [suspendSubmitting, setSuspendSubmitting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedComplaintId, setSelectedComplaintId] = useState<string | null>(
     null,
@@ -412,10 +440,8 @@ export default function UserDetailView({
     try {
       await dispatch(actions.getUser(userId)).unwrap();
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ??
-          "Failed to load user details.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   }, [actions, dispatch, userId]);
 
@@ -424,10 +450,36 @@ export default function UserDetailView({
     [user],
   );
 
+  useEffect(() => {
+    if (authEstateId) {
+      setEstateId(authEstateId);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await dispatch(getSignedInUser()).unwrap();
+        const data = (res?.data ?? res) as Record<string, unknown>;
+        const resolved = resolveEstateId(data?.estateId);
+        if (!cancelled && resolved) setEstateId(resolved);
+      } catch {
+        // non-blocking: assigned bills need estateId
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authEstateId, dispatch]);
+
   const fetchRelatedData = useCallback(async () => {
     if (!user) return;
     const uid = getUserId(user);
     const addresses = getUserAddresses(user);
+    const resolvedEstateId =
+      estateId ||
+      resolveEstateId(
+        (user as DashboardUserDetails & { estateId?: unknown }).estateId,
+      );
 
     setRelatedLoading(true);
     try {
@@ -436,6 +488,45 @@ export default function UserDetailView({
             getResidentBills({ residentId: uid, page: 1, limit: 100 }),
           ).unwrap()
         : Promise.resolve({ data: [] });
+
+      const assignedBillPromises =
+        resolvedEstateId && addresses.length > 0
+          ? addresses.map(async (addr) => {
+              try {
+                const res = await dispatch(
+                  getBillsForAddress({
+                    addressId: addr.id,
+                    estateId: resolvedEstateId,
+                    page: 1,
+                    limit: 100,
+                  }),
+                ).unwrap();
+                const label = formatAddressLabel(addr);
+                return ((res?.data ?? []) as Record<string, unknown>[]).map(
+                  (bill, i) => ({
+                    id: String(
+                      bill.id ?? bill._id ?? bill.billId ?? `${addr.id}-${i}`,
+                    ),
+                    billName: (bill.billName ?? bill.name) as
+                      | string
+                      | undefined,
+                    frequency: bill.frequency as string | undefined,
+                    amountDue: bill.amountDue as number | undefined,
+                    amount: bill.amount as number | undefined,
+                    status: bill.status as string | undefined,
+                    compulsory: Boolean(bill.compulsory),
+                    startDate: bill.startDate as string | undefined,
+                    nextDueDate: bill.nextDueDate as string | undefined,
+                    createdAt: bill.createdAt as string | undefined,
+                    addressId: addr.id,
+                    addressLabel: label,
+                  }),
+                );
+              } catch {
+                return [] as AssignedBillRow[];
+              }
+            })
+          : [];
 
       const complaintPromises = addresses.map(async (addr) => {
         try {
@@ -460,10 +551,30 @@ export default function UserDetailView({
         }
       });
 
-      const [billsRes, complaintGroups, meterEntries] = await Promise.all([
+      const visitorPromise = uid
+        ? dispatch(
+            getVisitorsByResident({
+              residentId: uid,
+              page: 1,
+              limit: 100,
+            }),
+          )
+            .unwrap()
+            .catch(() => ({ data: [], pagination: { total: 0 } }))
+        : Promise.resolve({ data: [], pagination: { total: 0 } });
+
+      const [
+        billsRes,
+        assignedGroups,
+        complaintGroups,
+        meterEntries,
+        visitorRes,
+      ] = await Promise.all([
         billPromise,
+        Promise.all(assignedBillPromises),
         Promise.all(complaintPromises),
         Promise.all(meterPromises),
+        visitorPromise,
       ]);
 
       setBills(
@@ -481,6 +592,15 @@ export default function UserDetailView({
         ),
       );
 
+      const assignedSeen = new Set<string>();
+      setAssignedBills(
+        assignedGroups.flat().filter((bill) => {
+          if (!bill.id || assignedSeen.has(bill.id)) return false;
+          assignedSeen.add(bill.id);
+          return true;
+        }),
+      );
+
       setMeterByAddressId(Object.fromEntries(meterEntries));
 
       const seen = new Set<string>();
@@ -491,71 +611,47 @@ export default function UserDetailView({
         return true;
       });
       setComplaints(merged);
-    } catch {
-      toast.error("Failed to load bills or complaints.");
+
+      const visitorRows = (
+        (visitorRes?.data ?? []) as Record<string, unknown>[]
+      ).map((v, index) => ({
+        id: String(v.id ?? v._id ?? index),
+        firstName: v.firstName as string | undefined,
+        lastName: v.lastName as string | undefined,
+        phone: v.phone as string | undefined,
+        purpose: v.purpose as string | undefined,
+        visitingType: v.visitingType as string | undefined,
+        visitorCode: (v.visitorCode ?? v.code) as string | undefined,
+        checkinTime: (v.checkinTime ?? v.checkInTime) as
+          | string
+          | null
+          | undefined,
+        checkoutTime: (v.checkoutTime ?? v.checkOutTime) as
+          | string
+          | null
+          | undefined,
+        createdAt: v.createdAt as string | undefined,
+      }));
+      setVisitors(visitorRows);
+      setVisitorsTotal(
+        Number(
+          (visitorRes as { pagination?: { total?: number } })?.pagination
+            ?.total ?? visitorRows.length,
+        ),
+      );
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setRelatedLoading(false);
     }
-  }, [dispatch, user]);
+  }, [dispatch, estateId, user]);
 
   useEffect(() => {
     fetchRelatedData().catch(() => {});
   }, [fetchRelatedData]);
 
-  const fetchTransactions = useCallback(
-    async (page = 1) => {
-      const uid = getUserId(user);
-      if (!uid || !showTransactionsTab) return;
-
-      setTransactionsLoading(true);
-      try {
-        const res = await dispatch(
-          getUserTransactionHistory({ userId: uid, page, limit: 10 }),
-        ).unwrap();
-
-        const pagination = (res?.pagination ?? {}) as Record<string, unknown>;
-        setTransactions(
-          (res?.data ?? []).map(
-            (transaction: Record<string, unknown>, index: number) => ({
-              id: String(transaction.id ?? transaction._id ?? index),
-              type: transaction.type as string | undefined,
-              amount: transaction.amount as number | undefined,
-              paymentStatus: transaction.paymentStatus as string | undefined,
-              description: transaction.description as string | undefined,
-              tx_ref: transaction.tx_ref as string | undefined,
-              createdAt: transaction.createdAt as string | undefined,
-              estateId: transaction.estateId as { name?: string } | undefined,
-            }),
-          ),
-        );
-        setTransactionsPage(
-          Number(pagination.page ?? pagination.currentPage ?? page),
-        );
-        setTransactionsPageSize(
-          Number(pagination.limit ?? pagination.pageSize ?? 10),
-        );
-        setTransactionsTotal(Number(pagination.total ?? 0));
-      } catch {
-        toast.error("Failed to load transaction history.");
-      } finally {
-        setTransactionsLoading(false);
-      }
-    },
-    [dispatch, showTransactionsTab, user],
-  );
-
-  useEffect(() => {
-    if (!showTransactionsTab || !user) return;
-    fetchTransactions(1).catch(() => {});
-  }, [fetchTransactions, showTransactionsTab, user]);
-
-  const tabs = useMemo(
-    () =>
-      showTransactionsTab
-        ? [...BASE_TABS, { id: "transactions" as const, label: "Transactions" }]
-        : BASE_TABS,
-    [showTransactionsTab],
-  );
+  const tabs = BASE_TABS;
 
   const displayName = useMemo(() => {
     if (!user) return "User";
@@ -580,9 +676,8 @@ export default function UserDetailView({
       toast.success(`${displayName} has been activated.`);
       await fetchUser();
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to activate user.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setActionLoading(false);
     }
@@ -598,9 +693,8 @@ export default function UserDetailView({
       setSuspendOpen(false);
       await fetchUser();
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to suspend user.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSuspendSubmitting(false);
     }
@@ -609,56 +703,81 @@ export default function UserDetailView({
   const handleDelete = () => {
     const id = getUserId(user);
     if (!id) return;
-    confirmDeleteToast({
-      name: displayName,
-      onConfirm: async () => {
-        await dispatch(actions.deleteUser(id)).unwrap();
-        toast.success(`${displayName} deleted successfully.`);
-        router.push(listPath);
+    setDeleteOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    const id = getUserId(user);
+    if (!id) return;
+    setDeleting(true);
+    try {
+      await dispatch(actions.deleteUser(id)).unwrap();
+      toast.success(`${displayName} deleted successfully.`);
+      setDeleteOpen(false);
+      router.push(listPath);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const assignedBillColumns = [
+    {
+      key: "createdAt",
+      header: "Created",
+      render: (item: AssignedBillRow) => formatDate(item.createdAt),
+    },
+    {
+      key: "billName",
+      header: "Bill Name",
+      render: (item: AssignedBillRow) => item.billName || "—",
+    },
+    {
+      key: "addressLabel",
+      header: "Address",
+      render: (item: AssignedBillRow) => item.addressLabel || "—",
+    },
+    {
+      key: "frequency",
+      header: "Frequency",
+      render: (item: AssignedBillRow) => formatLabel(item.frequency),
+    },
+    {
+      key: "amountDue",
+      header: "Amount Due",
+      render: (item: AssignedBillRow) =>
+        `₦${Number(item.amountDue ?? item.amount ?? 0).toLocaleString()}`,
+    },
+    {
+      key: "compulsory",
+      header: "Compulsory",
+      render: (item: AssignedBillRow) => (
+        <StatusPill tone={item.compulsory ? "amber" : "slate"}>
+          {item.compulsory ? "Yes" : "No"}
+        </StatusPill>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (item: AssignedBillRow) => {
+        const active = (item.status ?? "").toLowerCase() === "active";
+        return (
+          <StatusPill tone={active ? "green" : "red"}>
+            {formatLabel(item.status) || "—"}
+          </StatusPill>
+        );
       },
-    });
-  };
-
-  const handleViewTransaction = async (transactionId: string) => {
-    if (!transactionId) return;
-    setTransactionDialogOpen(true);
-    setTransactionDialogLoading(true);
-    setSelectedTransaction(null);
-    try {
-      const res = await dispatch(getTransactionById(transactionId)).unwrap();
-      setSelectedTransaction((res?.data ?? res) as Record<string, unknown>);
-    } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ??
-          "Failed to load transaction details.",
-      );
-      setTransactionDialogOpen(false);
-    } finally {
-      setTransactionDialogLoading(false);
-    }
-  };
-
-  const handleVerifyTransaction = async (tx_ref: string) => {
-    if (!tx_ref) return;
-    setVerifyTransactionLoading(true);
-    try {
-      await dispatch(verifyTransaction(tx_ref)).unwrap();
-      toast.success("Transaction verified successfully.");
-      const id = selectedTransaction?.id || selectedTransaction?._id;
-      if (typeof id === "string") {
-        const res = await dispatch(getTransactionById(id)).unwrap();
-        setSelectedTransaction((res?.data ?? res) as Record<string, unknown>);
-      }
-      await fetchTransactions(transactionsPage);
-    } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ??
-          "Failed to verify transaction.",
-      );
-    } finally {
-      setVerifyTransactionLoading(false);
-    }
-  };
+    },
+    {
+      key: "nextDueDate",
+      header: "Next Due",
+      render: (item: AssignedBillRow) => formatDateTime(item.nextDueDate),
+    },
+  ];
 
   const billColumns = [
     { key: "billName", header: "Bill Name" },
@@ -705,80 +824,55 @@ export default function UserDetailView({
     },
   ];
 
-  const transactionColumns = [
+  const visitorColumns = [
     {
       key: "createdAt",
-      header: "Date",
-      render: (item: UserTransactionRow) =>
-        formatUtcDateTime(item.createdAt, "—"),
+      header: "Created",
+      render: (item: UserVisitorRow) => formatDateTime(item.createdAt),
     },
     {
-      key: "type",
+      key: "name",
+      header: "Visitor",
+      render: (item: UserVisitorRow) =>
+        `${item.firstName ?? ""} ${item.lastName ?? ""}`.trim() || "—",
+    },
+    {
+      key: "phone",
+      header: "Phone",
+      render: (item: UserVisitorRow) => item.phone || "—",
+    },
+    {
+      key: "purpose",
+      header: "Purpose",
+      render: (item: UserVisitorRow) => item.purpose || "—",
+    },
+    {
+      key: "visitingType",
       header: "Type",
-      render: (item: UserTransactionRow) => formatLabel(item.type),
+      render: (item: UserVisitorRow) => formatLabel(item.visitingType),
     },
     {
-      key: "amount",
-      header: "Amount",
-      render: (item: UserTransactionRow) =>
-        new Intl.NumberFormat("en-NG", {
-          style: "currency",
-          currency: "NGN",
-        }).format(item.amount ?? 0),
-    },
-    {
-      key: "paymentStatus",
-      header: "Status",
-      render: (item: UserTransactionRow) => {
-        const status = (item.paymentStatus ?? "").toLowerCase();
-        const paid =
-          status === "paid" ||
-          status === "successful" ||
-          status === "completed";
-        return (
-          <StatusPill tone={paid ? "green" : "amber"}>
-            {formatLabel(item.paymentStatus) || "Pending"}
-          </StatusPill>
-        );
-      },
-    },
-    {
-      key: "description",
-      header: "Description",
-      render: (item: UserTransactionRow) => (
-        <span className="max-w-[220px] break-words whitespace-normal">
-          {item.description || "—"}
-        </span>
+      key: "visitorCode",
+      header: "Code",
+      render: (item: UserVisitorRow) => (
+        <span className="font-mono text-xs">{item.visitorCode || "—"}</span>
       ),
     },
     {
-      key: "tx_ref",
-      header: "Reference",
-      render: (item: UserTransactionRow) => (
-        <span className="font-mono text-xs">{item.tx_ref || "—"}</span>
-      ),
+      key: "checkinTime",
+      header: "Check-in",
+      render: (item: UserVisitorRow) =>
+        formatDateTime(item.checkinTime ?? undefined),
     },
     {
-      key: "actions",
-      header: "Action",
-      render: (item: UserTransactionRow) => (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handleViewTransaction(item.id)}
-        >
-          View details
-        </Button>
-      ),
+      key: "checkoutTime",
+      header: "Check-out",
+      render: (item: UserVisitorRow) =>
+        formatDateTime(item.checkoutTime ?? undefined),
     },
   ];
 
-  const pageLoading =
-    userLoading ||
-    relatedLoading ||
-    (showTransactionsTab &&
-      transactionsLoading &&
-      activeTab === "transactions");
+  const pageLoading = userLoading || (Boolean(user) && relatedLoading);
 
   return (
     <div className="relative space-y-6">
@@ -928,15 +1022,10 @@ export default function UserDetailView({
         {user ? (
           <>
             {/* Quick stats */}
-            <div
-              className={cn(
-                "grid grid-cols-1 gap-3 pt-8 sm:grid-cols-2",
-                showTransactionsTab && "lg:grid-cols-3",
-              )}
-            >
+            <div className="grid grid-cols-1 gap-3 pt-8 sm:grid-cols-3">
               <SummaryCard
-                label="Bills"
-                value={bills.length}
+                label="Assigned Bills"
+                value={assignedBills.length}
                 icon={FileText}
                 active={activeTab === "bills"}
                 onClick={() => setActiveTab("bills")}
@@ -948,15 +1037,13 @@ export default function UserDetailView({
                 active={activeTab === "complaints"}
                 onClick={() => setActiveTab("complaints")}
               />
-              {showTransactionsTab ? (
-                <SummaryCard
-                  label="Transactions"
-                  value={transactionsTotal || transactions.length}
-                  icon={Receipt}
-                  active={activeTab === "transactions"}
-                  onClick={() => setActiveTab("transactions")}
-                />
-              ) : null}
+              <SummaryCard
+                label="Visitors"
+                value={visitorsTotal || visitors.length}
+                icon={Users}
+                active={activeTab === "visitors"}
+                onClick={() => setActiveTab("visitors")}
+              />
             </div>
 
             {/* Tabs */}
@@ -974,14 +1061,15 @@ export default function UserDetailView({
                   ].join(" ")}
                 >
                   {tab.label}
-                  {tab.id === "bills" && bills.length > 0
-                    ? ` (${bills.length})`
+                  {tab.id === "bills" && assignedBills.length > 0
+                    ? ` (${assignedBills.length})`
                     : ""}
                   {tab.id === "complaints" && complaints.length > 0
                     ? ` (${complaints.length})`
                     : ""}
-                  {tab.id === "transactions" && transactionsTotal > 0
-                    ? ` (${transactionsTotal})`
+                  {tab.id === "visitors" &&
+                  (visitorsTotal || visitors.length) > 0
+                    ? ` (${visitorsTotal || visitors.length})`
                     : ""}
                 </button>
               ))}
@@ -989,13 +1077,24 @@ export default function UserDetailView({
 
             {/* Tab content */}
             {activeTab === "bills" ? (
-              <Card className="p-4">
-                <Table
-                  columns={billColumns}
-                  data={bills}
-                  emptyMessage="No bills found for this user."
-                />
-              </Card>
+              <div className="space-y-4">
+                <Card className="p-4">
+                  <h3 className="mb-3 text-sm font-semibold">Assigned Bills</h3>
+                  <Table
+                    columns={assignedBillColumns}
+                    data={assignedBills}
+                    emptyMessage="No bills assigned to this user's addresses."
+                  />
+                </Card>
+                <Card className="p-4">
+                  <h3 className="mb-3 text-sm font-semibold">Payment History</h3>
+                  <Table
+                    columns={billColumns}
+                    data={bills}
+                    emptyMessage="No paid bills found for this user."
+                  />
+                </Card>
+              </div>
             ) : null}
 
             {activeTab === "complaints" ? (
@@ -1024,36 +1123,18 @@ export default function UserDetailView({
               </div>
             ) : null}
 
-            {activeTab === "transactions" && showTransactionsTab ? (
+            {activeTab === "visitors" ? (
               <Card className="p-4">
                 <Table
-                  columns={transactionColumns}
-                  data={transactions}
-                  emptyMessage="No transactions found for this user."
-                  showPagination
-                  paginationInfo={{
-                    total: transactionsTotal,
-                    current: transactionsPage,
-                    pageSize: transactionsPageSize,
-                  }}
-                  onPageChange={(page) => {
-                    fetchTransactions(page).catch(() => {});
-                  }}
+                  columns={visitorColumns}
+                  data={visitors}
+                  emptyMessage="No visitors found for this user."
                 />
               </Card>
             ) : null}
           </>
         ) : null}
       </div>
-
-      <TransactionDetailsDialog
-        open={transactionDialogOpen}
-        onOpenChange={setTransactionDialogOpen}
-        transaction={selectedTransaction}
-        loading={transactionDialogLoading}
-        onVerify={showTransactionsTab ? handleVerifyTransaction : undefined}
-        verifyLoading={verifyTransactionLoading}
-      />
 
       <SuspendRentModal
         visible={suspendOpen}
@@ -1063,6 +1144,15 @@ export default function UserDetailView({
         confirmLabel="Suspend"
         onConfirm={handleSuspendConfirm}
         loading={suspendSubmitting}
+      />
+
+      <DeleteModal
+        visible={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        itemName={displayName}
+        title="Delete user"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
       />
     </div>
   );

@@ -8,6 +8,8 @@ import {
   type CompanyRevenueEntry,
 } from "./company-revenue-entry";
 import type { RootState } from "@/redux/store";
+import { isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 type AsyncState = "idle" | "isLoading" | "succeeded" | "failed";
 
@@ -76,10 +78,7 @@ const companyRevenueEntrySlice = createSlice({
       })
       .addCase(createCompanyRevenueEntries.rejected, (state, action) => {
         state.createBulkState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to create revenue entries.";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -100,10 +99,7 @@ const companyRevenueEntrySlice = createSlice({
       })
       .addCase(fetchCompanyRevenueEntries.rejected, (state, action) => {
         state.listState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to fetch revenue entries.";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -117,10 +113,7 @@ const companyRevenueEntrySlice = createSlice({
       })
       .addCase(fetchCompanyRevenueEntryById.rejected, (state, action) => {
         state.getByIdState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to fetch revenue entry.";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -140,10 +133,7 @@ const companyRevenueEntrySlice = createSlice({
       })
       .addCase(updateCompanyRevenueEntry.rejected, (state, action) => {
         state.updateState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to update revenue entry.";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -161,10 +151,7 @@ const companyRevenueEntrySlice = createSlice({
       })
       .addCase(deleteCompanyRevenueEntry.rejected, (state, action) => {
         state.deleteState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to delete revenue entry.";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });
@@ -176,8 +163,7 @@ export default companyRevenueEntrySlice.reducer;
 export const selectCompanyRevenueEntries = (state: RootState) =>
   (state.companyRevenueEntry as CompanyRevenueEntryState)?.items ?? [];
 export const selectCompanyRevenueEntriesLoading = (state: RootState) =>
-  (state.companyRevenueEntry as CompanyRevenueEntryState)?.listState ===
-  "isLoading";
+  isPending((state.companyRevenueEntry as CompanyRevenueEntryState)?.listState);
 export const selectCompanyRevenueEntriesError = (state: RootState) =>
   (state.companyRevenueEntry as CompanyRevenueEntryState)?.error ?? null;
 export const selectCompanyRevenueEntriesPagination = (state: RootState) =>

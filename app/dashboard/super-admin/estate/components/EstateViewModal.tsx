@@ -16,6 +16,7 @@ import {
   getEstate,
 } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
 import { EstateRatesTab } from "./EstateRatesTab";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 type EstateViewData = {
   id?: string;
@@ -120,10 +121,8 @@ export function EstateViewModal({
         setModules(fromApi.length > 0 ? fromApi : modulesFromEstate(details));
       } catch (err: unknown) {
         if (cancelled) return;
-        const message =
-          (err as { message?: string })?.message ??
-          "Failed to load estate details";
-        setError(message);
+        const message = getApiErrorMessage(err);
+        setError(message ?? null);
         if (fallback) setEstate(fallback);
       } finally {
         if (!cancelled) setLoading(false);

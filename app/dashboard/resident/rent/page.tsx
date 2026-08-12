@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/modal/page";
@@ -21,7 +22,6 @@ import {
   type RentItem,
 } from "@/redux/slice/resident/rent-mgt/rent-mgt";
 import { clearCurrentRent } from "@/redux/slice/resident/rent-mgt/rent-mgt-slice";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import PayRentModal from "@/components/resident/pay-rent-modal/page";
 import CreateRentForm from "@/components/resident/rent/create-rent-form/page";
@@ -43,6 +43,8 @@ import {
 } from "lucide-react";
 import type { RootState, AppDispatch } from "@/redux/store";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 const PAGE_SIZE = 10;
 
@@ -60,6 +62,8 @@ export default function ResidentRentPage() {
   const [payRentItem, setPayRentItem] = useState<RentItem | null>(null);
   const [selectRentModalOpen, setSelectRentModalOpen] = useState(false);
   const [walletId, setWalletId] = useState<string | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<RentItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const {
     ownerRents,
@@ -97,13 +101,13 @@ export default function ResidentRentPage() {
       };
     },
   );
-  const tenantListLoading = tenantListStatus === "isLoading";
+  const tenantListLoading = isPending(tenantListStatus);
 
   const isOwner = residentType === "owner";
   const list = isOwner ? (ownerRents ?? []) : (tenantRents ?? []);
   const loading = isOwner
-    ? getOwnerRentsStatus === "isLoading"
-    : getTenantRentsStatus === "isLoading";
+    ? isPending(getOwnerRentsStatus)
+    : isPending(getTenantRentsStatus);
 
   useEffect(() => {
     (async () => {
@@ -122,8 +126,9 @@ export default function ResidentRentPage() {
             getTenantRents({ page: 1, limit: PAGE_SIZE }),
           ).unwrap();
         }
-      } catch {
-        toast.error("Failed to load user or rents.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     })();
   }, [dispatch]);
@@ -140,7 +145,12 @@ export default function ResidentRentPage() {
           startDate: shouldApplyDate ? startDate : undefined,
           endDate: shouldApplyDate ? endDate : undefined,
         }),
-      ).catch(() => toast.error("Failed to load rents."));
+      )
+        .unwrap()
+        .catch((err: unknown) => {
+          const message = getApiErrorMessage(err);
+          if (message) toast.error(message);
+        });
     } else {
       dispatch(
         getTenantRents({
@@ -149,7 +159,12 @@ export default function ResidentRentPage() {
           startDate: shouldApplyDate ? startDate : undefined,
           endDate: shouldApplyDate ? endDate : undefined,
         }),
-      ).catch(() => toast.error("Failed to load rents."));
+      )
+        .unwrap()
+        .catch((err: unknown) => {
+          const message = getApiErrorMessage(err);
+          if (message) toast.error(message);
+        });
     }
   }, [dispatch, residentType, startDate, endDate]);
 
@@ -158,8 +173,9 @@ export default function ResidentRentPage() {
       (async () => {
         try {
           await dispatch(getInvitedTenants({ page: 1, limit: 200 })).unwrap();
-        } catch {
-          toast.error("Failed to load tenants.");
+        } catch (err: unknown) {
+          const message = getApiErrorMessage(err);
+          if (message) toast.error(message);
         }
       })();
     }
@@ -176,14 +192,22 @@ export default function ResidentRentPage() {
         startDate: shouldApplyDate ? startDate : undefined,
         endDate: shouldApplyDate ? endDate : undefined,
       } as any),
-    ).catch(() => toast.error("Failed to load rents."));
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   };
 
   const handleViewRent = (id: string) => {
     setViewRentId(id);
-    dispatch(getRentById(id)).catch(() =>
-      toast.error("Failed to load rent details."),
-    );
+    dispatch(getRentById(id))
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   };
 
   const refreshList = () => {
@@ -196,20 +220,34 @@ export default function ResidentRentPage() {
         startDate: shouldApplyDate ? startDate : undefined,
         endDate: shouldApplyDate ? endDate : undefined,
       } as any),
-    ).catch(() => toast.error("Failed to refresh rents."));
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   };
 
   const handleDeleteRent = (item: RentItem) => {
     if (!item.id) return;
-    const tenantName = formatTenant(item);
-    confirmDeleteToast({
-      name: tenantName ? `rent for ${tenantName}` : "this rent record",
-      onConfirm: async () => {
-        await dispatch(deleteRent(item.id!)).unwrap();
-        toast.success("Rent deleted.");
-        refreshList();
-      },
-    });
+    setItemToDelete(item);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete?.id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteRent(itemToDelete.id)).unwrap();
+      toast.success("Rent deleted.");
+      setItemToDelete(null);
+      refreshList();
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleActivateRent = (item: RentItem) => {
@@ -220,9 +258,10 @@ export default function ResidentRentPage() {
         toast.success("Rent activated.");
         refreshList();
       })
-      .catch((err: { message?: string }) =>
-        toast.error(err?.message ?? "Failed to activate rent."),
-      );
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   };
 
   const handleSuspendRent = (item: RentItem) => {
@@ -241,9 +280,8 @@ export default function ResidentRentPage() {
       setSuspendRentItem(null);
       refreshList();
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to suspend rent.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSuspendSubmitting(false);
     }
@@ -284,9 +322,8 @@ export default function ResidentRentPage() {
       setPayRentItem(null);
       refreshList();
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to pay rent.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -604,6 +641,15 @@ export default function ResidentRentPage() {
           loading={payRentStatus === "isLoading"}
         />
       </div>
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={itemToDelete ? (formatTenant(itemToDelete) ? `rent for ${formatTenant(itemToDelete)}` : "this rent record") : "this rent record"}
+        title="Delete rent"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

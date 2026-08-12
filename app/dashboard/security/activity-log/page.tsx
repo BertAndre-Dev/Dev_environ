@@ -14,6 +14,7 @@ import {
 } from "@/redux/slice/security/visitor/visitor-slice";
 import Table from "@/components/tables/list/page";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Eye } from "lucide-react";
@@ -61,22 +62,24 @@ export default function ActivityLogPage() {
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [bootstrapping, setBootstrapping] = useState(true);
   const [viewingVisitor, setViewingVisitor] =
     useState<SecurityVisitorItem | null>(null);
 
   const authUser = useSelector((state: RootState) => state.auth.user);
 
-  const { allVisitors, loading, estateId, visitorVerificationMode } =
+  const { allVisitors, listPending, estateId, visitorVerificationMode } =
     useSelector((state: RootState) => {
       const v = state.securityVisitor;
       return {
         allVisitors: v?.allVisitors ?? null,
-        loading: v?.getAllVisitorsStatus === "isLoading",
+        listPending: isPending(v?.getAllVisitorsStatus),
         estateId: v?.estateId ?? null,
         visitorVerificationMode:
           v?.visitorVerificationMode ?? VisitorVerificationMode.VIEW_AND_VERIFY,
       };
     });
+  const loading = bootstrapping || (Boolean(estateId) && listPending);
 
   const verificationFlags = useMemo(
     () => getVerificationFlags(visitorVerificationMode),
@@ -163,6 +166,8 @@ export default function ActivityLogPage() {
       } catch (error: unknown) {
         const message = getApiErrorMessage(error);
         if (message) toast.error(message);
+      } finally {
+        setBootstrapping(false);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps

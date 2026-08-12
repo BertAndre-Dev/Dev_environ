@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type {
   AnalyticsScope,
   TopEstateEnergyEntry,
@@ -45,10 +46,7 @@ const topEstatesEnergySlice = createSlice({
       })
       .addCase(getTopEstatesEnergy.rejected, (state, action) => {
         state.status = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to fetch top estates by energy purchased";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

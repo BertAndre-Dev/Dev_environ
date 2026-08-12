@@ -1,5 +1,18 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
+
+function rejectApiError<Rejected>(
+  error: unknown,
+  rejectWithValue: (value: unknown) => Rejected,
+  fallback: string,
+): Rejected {
+  const data = (error as { response?: { data?: unknown } })?.response?.data;
+  if (data && typeof data === "object") return rejectWithValue(data);
+  return rejectWithValue({
+    message: getApiErrorMessage(error) ?? fallback,
+  });
+}
 
 /** Payload for creating a rent (owner only). POST /api/v1/rent/create */
 export interface CreateRentPayload {
@@ -64,18 +77,18 @@ export const createRent = createAsyncThunk(
       const res = await axiosInstance.post("/api/v1/rent/create", payload);
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to create rent",
-      });
+      return rejectApiError(error, rejectWithValue, "Failed to create rent");
     }
   }
 );
 
 /** Get all rents for the authenticated owner. GET /api/v1/rent/owner/all */
-export const getOwnerRents = createAsyncThunk(
+export const getOwnerRents = createAsyncThunk<
+  RentListResponse,
+  GetOwnerRentsParams | undefined
+>(
   "resident-rent-mgt/getOwnerRents",
-  async (params: GetOwnerRentsParams | undefined, { rejectWithValue }) => {
+  async (params, { rejectWithValue }) => {
     try {
       const { page = 1, limit = 10, startDate, endDate } = params ?? {};
       const res = await axiosInstance.get<RentListResponse>(
@@ -84,10 +97,7 @@ export const getOwnerRents = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to fetch rents",
-      });
+      return rejectApiError(error, rejectWithValue, "Failed to fetch rents");
     }
   }
 );
@@ -101,9 +111,12 @@ export interface GetTenantRentsParams {
 }
 
 /** Get all rents for the authenticated tenant. GET /api/v1/rent/tenant/all */
-export const getTenantRents = createAsyncThunk(
+export const getTenantRents = createAsyncThunk<
+  RentListResponse,
+  GetTenantRentsParams | undefined
+>(
   "resident-rent-mgt/getTenantRents",
-  async (params: GetTenantRentsParams | undefined, { rejectWithValue }) => {
+  async (params, { rejectWithValue }) => {
     try {
       const { page = 1, limit = 10, startDate, endDate } = params ?? {};
       const res = await axiosInstance.get<RentListResponse>(
@@ -112,10 +125,7 @@ export const getTenantRents = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to fetch rents",
-      });
+      return rejectApiError(error, rejectWithValue, "Failed to fetch rents");
     }
   }
 );
@@ -135,10 +145,7 @@ export const payRent = createAsyncThunk(
       const res = await axiosInstance.post("/api/v1/rent/pay", payload);
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to pay rent",
-      });
+      return rejectApiError(error, rejectWithValue, "Failed to pay rent");
     }
   }
 );
@@ -151,10 +158,7 @@ export const getRentById = createAsyncThunk(
       const res = await axiosInstance.get(`/api/v1/rent/${rentId}`);
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to fetch rent",
-      });
+      return rejectApiError(error, rejectWithValue, "Failed to fetch rent");
     }
   }
 );
@@ -167,10 +171,7 @@ export const deleteRent = createAsyncThunk(
       const res = await axiosInstance.delete(`/api/v1/rent/${rentId}/delete`);
       return { ...res.data, deletedId: rentId };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to delete rent",
-      });
+      return rejectApiError(error, rejectWithValue, "Failed to delete rent");
     }
   }
 );
@@ -184,10 +185,7 @@ export const updateRent = createAsyncThunk(
       const res = await axiosInstance.put(`/api/v1/rent/${id}/update`, body);
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to update rent",
-      });
+      return rejectApiError(error, rejectWithValue, "Failed to update rent");
     }
   }
 );
@@ -200,10 +198,7 @@ export const activateRent = createAsyncThunk(
       const res = await axiosInstance.put(`/api/v1/rent/${rentId}/activate`);
       return { ...res.data, rentId };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to activate rent",
-      });
+      return rejectApiError(error, rejectWithValue, "Failed to activate rent");
     }
   }
 );
@@ -222,10 +217,7 @@ export const suspendRent = createAsyncThunk(
       );
       return { ...res.data, rentId };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to suspend rent",
-      });
+      return rejectApiError(error, rejectWithValue, "Failed to suspend rent");
     }
   }
 );

@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   getAllTransactionHistory,
   TransactionData,
@@ -98,8 +99,7 @@ const superAdminTransactionSlice = createSlice({
       .addCase(getAllTransactionHistory.rejected, (state, action) => {
         state.getAllTransactionHistoryState = "failed";
         state.status = "failed";
-        state.error =
-          action.error.message || "Failed to fetch transactions";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     // GET SINGLE TRANSACTION
@@ -116,7 +116,7 @@ const superAdminTransactionSlice = createSlice({
       .addCase(getTransactionById.rejected, (state, action) => {
         state.getTransactionState = "failed";
         state.status = "failed";
-        state.error = action.error.message || "Failed to fetch transaction";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     // VERIFY TRANSACTION
@@ -133,10 +133,7 @@ const superAdminTransactionSlice = createSlice({
       })
       .addCase(verifyTransaction.rejected, (state, action) => {
         state.verifyTransactionState = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ||
-          action.error.message ||
-          "Failed to verify transaction";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { Label } from "@/components/ui/label";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getPaymentGateways } from "@/redux/slice/resident/payment-mgt/payment-mgt";
+import { isPending, isSettled } from "@/lib/async-status";
 
 interface PaymentGatewaySelectProps {
   value: string;
@@ -29,7 +30,9 @@ export default function PaymentGatewaySelect({
     (state: RootState) => state.residentPaymentMgt,
   );
 
-  const loading = getPaymentGatewaysState === "isLoading";
+  const loading = isPending(getPaymentGatewaysState);
+  const emptyGateways =
+    isSettled(getPaymentGatewaysState) && gateways.length === 0;
 
   useEffect(() => {
     dispatch(getPaymentGateways());
@@ -58,13 +61,13 @@ export default function PaymentGatewaySelect({
         className="mt-1 w-full border border-gray-300 rounded px-3 py-2"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        disabled={disabled || loading || gateways.length === 0}
+        disabled={disabled || loading || emptyGateways}
         required={required}
       >
         <option value="">
           {loading
             ? "Loading gateways..."
-            : gateways.length === 0
+            : emptyGateways
               ? "No gateways available"
               : "Select gateway"}
         </option>

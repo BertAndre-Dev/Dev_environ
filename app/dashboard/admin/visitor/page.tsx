@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -39,6 +40,7 @@ import {
   getVerificationFlags,
   resolveVisitorVerificationMode,
 } from "@/lib/visitor-verification-mode";
+import { isPending } from "@/lib/async-status";
 
 const PAGE_LIMIT = 10;
 const DATE_RANGE_PLACEHOLDERS = getDateRangePlaceholders();
@@ -63,28 +65,32 @@ export default function AdminVisitorManagement() {
   const [qrCodeVisitor, setQrCodeVisitor] = useState<QrCodeVisitor | null>(
     null,
   );
+  const [bootstrapping, setBootstrapping] = useState(true);
 
   const verificationFlags = useMemo(
     () => getVerificationFlags(visitorVerificationMode),
     [visitorVerificationMode],
   );
 
-  const { visitors, pagination, loading } = useSelector((state: RootState) => {
-    const visitorState = state.visitor;
+  const { visitors, pagination, listPending } = useSelector(
+    (state: RootState) => {
+      const visitorState = state.visitor;
 
-    const defaultPagination = {
-      total: 0,
-      page: 1,
-      limit: 10,
-      pages: 1,
-    };
+      const defaultPagination = {
+        total: 0,
+        page: 1,
+        limit: 10,
+        pages: 1,
+      };
 
-    return {
-      visitors: visitorState?.allVisitors?.data || [],
-      pagination: visitorState?.allVisitors?.pagination || defaultPagination,
-      loading: visitorState.getVisitorsByEstateState === "isLoading",
-    };
-  });
+      return {
+        visitors: visitorState?.allVisitors?.data || [],
+        pagination: visitorState?.allVisitors?.pagination || defaultPagination,
+        listPending: isPending(visitorState.getVisitorsByEstateState),
+      };
+    },
+  );
+  const loading = bootstrapping || (Boolean(estateId) && listPending);
   const authUser = useSelector((state: RootState) => state.auth.user);
 
   // ✅ Client-side filtered visitors
@@ -173,8 +179,11 @@ export default function AdminVisitorManagement() {
         }
 
         setEstateId(foundEstateId);
-      } catch (error: any) {
-        toast.error(error?.message);
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      } finally {
+        setBootstrapping(false);
       }
     })();
     // Intentionally run once on mount; prior auth user is read for membership fallback.
@@ -184,14 +193,18 @@ export default function AdminVisitorManagement() {
   // Single fetch when estate or date range changes.
   useEffect(() => {
     if (!estateId) return;
-    fetchVisitors(1).catch(() => toast.error("Failed to fetch visitors"));
+    fetchVisitors(1).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
   }, [estateId, fetchVisitors]);
 
   const handlePageChange = async (page: number) => {
     try {
       await fetchVisitors(page);
-    } catch {
-      toast.error("Failed to change page");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -220,9 +233,10 @@ export default function AdminVisitorManagement() {
   // };
 
   const refreshVisitors = () => {
-    fetchVisitors(pagination.page).catch(() =>
-      toast.error("Failed to fetch visitors"),
-    );
+    fetchVisitors(pagination.page).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
   };
 
   // const handleOpenDeleteModal = (visitor: any, e?: React.MouseEvent) => {
@@ -499,12 +513,12 @@ export default function AdminVisitorManagement() {
             className="gap-2"
           >
             <UserPlus className="w-4 h-4" />
-            Add Visitor
+            Invite Visitors
           </Button>
         </div>
 
         {/* Stats Card */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {(() => {
             const stats = [
               {

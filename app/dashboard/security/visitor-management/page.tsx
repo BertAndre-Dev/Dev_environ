@@ -9,6 +9,7 @@ import VerifyModal from "@/components/security/VerifyModal";
 import ClockOutCard from "@/components/security/ClockOutCard";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getAllVisitors } from "@/redux/slice/security/visitor/visitor";
 import {
@@ -44,7 +45,7 @@ export default function VisitorManagementPage() {
   const authUser = useSelector((state: RootState) => state.auth.user);
   const {
     allVisitors,
-    loading,
+    getAllVisitorsStatus,
     estateId,
     visitorVerificationMode,
     verificationDescription,
@@ -55,7 +56,7 @@ export default function VisitorManagementPage() {
     const v = state.securityVisitor;
     return {
       allVisitors: v?.allVisitors ?? null,
-      loading: v?.getAllVisitorsStatus === "isLoading",
+      getAllVisitorsStatus: v?.getAllVisitorsStatus ?? "idle",
       estateId: v?.estateId ?? null,
       visitorVerificationMode: v?.visitorVerificationMode ?? null,
       verificationDescription: v?.verificationDescription ?? null,
@@ -163,7 +164,10 @@ export default function VisitorManagementPage() {
       verificationFlags?.verifyOnly || verificationFlags?.viewAndVerify,
     );
   const actionCardCount = Number(showViewCard) + Number(showVerifyCard);
-  const pageLoading = loading || !contextReady;
+  // Gate list pending on estateId so idle never sticks after context is ready with no estate.
+  const pageLoading =
+    !contextReady ||
+    (Boolean(estateId) && isPending(getAllVisitorsStatus));
 
   return (
     <div className="relative">

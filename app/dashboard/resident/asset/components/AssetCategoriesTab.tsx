@@ -15,6 +15,7 @@ import {
   updateAssetCategory,
   type AssetCategory,
 } from "@/redux/slice/resident/asset-mgt/resident-asset";
+import { getApiErrorMessage } from "@/lib/api-error";
 import AssetCategoryFormModal from "./AssetCategoryFormModal";
 
 const PAGE_SIZE = 10;
@@ -56,7 +57,10 @@ export default function AssetCategoriesTab({ estateId }: Readonly<Props>) {
     if (!estateId) return;
     dispatch(getAssetCategories({ estateId, page, limit: PAGE_SIZE, search }))
       .unwrap()
-      .catch(() => toast.error("Failed to load asset categories."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId, page, search]);
 
   const handleConfirmDelete = async () => {
@@ -144,9 +148,8 @@ export default function AssetCategoriesTab({ estateId }: Readonly<Props>) {
       setEditing(null);
       setPage(1);
     } catch (err: unknown) {
-      const message =
-        (err as { message?: string })?.message ?? "Failed to save category.";
-      toast.error(message);
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 

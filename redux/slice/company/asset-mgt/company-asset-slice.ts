@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   createAssetCategory,
   deleteAssetCategory,
@@ -90,10 +91,7 @@ const companyAssetSlice = createSlice({
         state.getCategoriesStatus = "failed";
         state.categories = [];
         state.categoriesPagination = null;
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to fetch asset categories";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(createAssetCategory.pending, (state) => {
         state.createCategoryStatus = "isLoading";
@@ -106,10 +104,7 @@ const companyAssetSlice = createSlice({
       })
       .addCase(createAssetCategory.rejected, (state, action) => {
         state.createCategoryStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to create asset category";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(updateAssetCategory.pending, (state) => {
         state.updateCategoryStatus = "isLoading";
@@ -127,10 +122,7 @@ const companyAssetSlice = createSlice({
       })
       .addCase(updateAssetCategory.rejected, (state, action) => {
         state.updateCategoryStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to update asset category";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(deleteAssetCategory.pending, (state) => {
         state.deleteCategoryStatus = "isLoading";
@@ -143,10 +135,7 @@ const companyAssetSlice = createSlice({
       })
       .addCase(deleteAssetCategory.rejected, (state, action) => {
         state.deleteCategoryStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to delete asset category";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     // ── Assets
@@ -164,10 +153,7 @@ const companyAssetSlice = createSlice({
         state.getAssetsStatus = "failed";
         state.assets = [];
         state.assetsPagination = null;
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to fetch assets";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(getAssetById.pending, (state) => {
         state.getAssetStatus = "isLoading";
@@ -180,10 +166,7 @@ const companyAssetSlice = createSlice({
       .addCase(getAssetById.rejected, (state, action) => {
         state.getAssetStatus = "failed";
         state.currentAsset = null;
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to fetch asset";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(createAssets.pending, (state) => {
         state.createAssetsStatus = "isLoading";
@@ -197,10 +180,7 @@ const companyAssetSlice = createSlice({
       })
       .addCase(createAssets.rejected, (state, action) => {
         state.createAssetsStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to create asset(s)";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(updateAsset.pending, (state) => {
         state.updateAssetStatus = "isLoading";
@@ -221,10 +201,7 @@ const companyAssetSlice = createSlice({
       })
       .addCase(updateAsset.rejected, (state, action) => {
         state.updateAssetStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to update asset";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(deleteAsset.pending, (state) => {
         state.deleteAssetStatus = "isLoading";
@@ -240,10 +217,7 @@ const companyAssetSlice = createSlice({
       })
       .addCase(deleteAsset.rejected, (state, action) => {
         state.deleteAssetStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to delete asset";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

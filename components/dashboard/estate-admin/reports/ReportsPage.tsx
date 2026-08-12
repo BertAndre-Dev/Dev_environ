@@ -10,9 +10,10 @@ import {
   fetchFinancialReportAnalyticsChart,
   fetchFinancialReportGenerate,
 } from "@/redux/slice/estate-admin/financial-report/financial-report";
+import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 import {
   selectFinancialReportChartData,
-  selectFinancialReportLoading,
   selectFinancialReportError,
 } from "@/redux/slice/estate-admin/financial-report/financial-report-slice";
 
@@ -39,7 +40,6 @@ import {
 } from "@/lib/financial-report-utils";
 import { RevenueChartCard } from "@/components/dashboard/estate-admin/reports/RevenueChartCard";
 import { ExpenseChartCard } from "@/components/dashboard/estate-admin/reports/ExpenseChartCard";
-import Loader from "@/components/ui/Loader";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -89,16 +89,19 @@ function useIsolatedReport(
   errorLabel: string,
 ) {
   const [data, setData] = useState<FinancialReportData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<"idle" | "loading" | "settled">("idle");
 
   // Ref to cancel stale requests
   const abortRef = useRef(false);
 
   useEffect(() => {
-    if (!estateId) return;
+    if (!estateId) {
+      setStatus("idle");
+      return;
+    }
 
     abortRef.current = false;
-    setLoading(true);
+    setStatus("loading");
 
     dispatch(
       fetchFinancialReportGenerate({
@@ -118,7 +121,7 @@ function useIsolatedReport(
           toast.error(e?.message ?? `Failed to load ${errorLabel}.`);
       })
       .finally(() => {
-        if (!abortRef.current) setLoading(false);
+        if (!abortRef.current) setStatus("settled");
       });
 
     return () => {
@@ -126,6 +129,7 @@ function useIsolatedReport(
     };
   }, [estateId, startDate, endDate, dispatch, errorLabel]);
 
+  const loading = Boolean(estateId) && status !== "settled";
   return { data, loading };
 }
 
@@ -161,9 +165,13 @@ export default function ReportsPage() {
   const chartData = useSelector((s: RootState) =>
     selectFinancialReportChartData(s),
   );
-  const chartLoading = useSelector((s: RootState) =>
-    selectFinancialReportLoading(s),
-  );
+  const chartStatus = useSelector((s: RootState) => {
+    const report = s.estateAdminFinancialReport as
+      | { generateState?: string; analyticsState?: string }
+      | undefined;
+    return report?.analyticsState ?? report?.generateState ?? "idle";
+  });
+  const chartLoading = isPending(chartStatus);
   const error = useSelector((s: RootState) => selectFinancialReportError(s));
 
   // Resolve current user → estateId
@@ -322,10 +330,7 @@ export default function ReportsPage() {
 
   const pageLoading =
     bootstrapping ||
-    (!!estateId &&
-      ((revenueLoading && !revenueReport) ||
-        (expensesLoading && !expensesReport) ||
-        (chartLoading && !chartData)));
+    (!!estateId && (revenueLoading || expensesLoading || chartLoading));
 
   // ─────────────────────────────────────────────────────────────────────────
   return (

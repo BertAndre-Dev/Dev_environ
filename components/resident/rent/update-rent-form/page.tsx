@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "react-toastify";
 import { updateRent } from "@/redux/slice/resident/rent-mgt/rent-mgt";
 import type { RentItem, UpdateRentPayload } from "@/redux/slice/resident/rent-mgt/rent-mgt";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch } from "@/redux/store";
 import { formatAddress, isoToDateInput } from "../utils";
 
@@ -73,9 +74,8 @@ export default function UpdateRentForm({
       toast.success("Rent updated.");
       onSuccess();
     } catch (err: unknown) {
-      const msg =
-        (err as { message?: string })?.message ?? "Failed to update rent.";
-      toast.error(msg);
+      const msg = getApiErrorMessage(err);
+      if (msg) toast.error(msg);
     } finally {
       setSubmitting(false);
     }

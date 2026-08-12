@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type {
   AnalyticsScope,
   ConsumptionSnapshotData,
@@ -45,10 +46,7 @@ const consumptionSnapshotSlice = createSlice({
       })
       .addCase(getConsumptionSnapshot.rejected, (state, action) => {
         state.status = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to fetch consumption snapshot";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

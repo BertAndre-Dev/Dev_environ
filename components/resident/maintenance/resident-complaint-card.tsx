@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
 import { cn } from "@/lib/utils";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type {
   ResidentComplaintItem,
   ResidentCommentItem,
@@ -142,11 +143,10 @@ export function ResidentComplaintCard({
         setCommentText("");
         toast.success("Comment added");
       })
-      .catch((err: unknown) =>
-        toast.error(
-          (err as { message?: string })?.message ?? "Failed to add comment",
-        ),
-      )
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      })
       .finally(() => setSubmittingComment(false));
   };
 

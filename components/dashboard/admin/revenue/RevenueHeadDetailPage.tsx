@@ -4,6 +4,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
+import DeleteModal from "@/components/resident/delete-modal/page";
 
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
@@ -28,7 +30,6 @@ import {
   selectRevenueEntriesPagination,
 } from "@/redux/slice/admin/revenue-entry/revenue-entry-slice";
 import { slugify } from "@/lib/slug";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 
 import { RevenueHeader } from "@/components/dashboard/admin/revenue/RevenueHeader";
 import { RevenueFiltersBar } from "@/components/dashboard/admin/revenue/RevenueFiltersBar";
@@ -109,6 +110,8 @@ export default function RevenueHeadDetailPage() {
 
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<RevenueEntry | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<RevenueEntry | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [formDescription, setFormDescription] = useState("");
   const [formAmount, setFormAmount] = useState("");
   const [formDocumentNumber, setFormDocumentNumber] = useState("");
@@ -136,8 +139,9 @@ export default function RevenueHeadDetailPage() {
         const { estateId, estateName } = normalizeEstate(user);
         setEstateId(estateId);
         setEstateName(estateName);
-      } catch (err: any) {
-        toast.error(err?.message ?? "Failed to load user.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     })();
   }, [dispatch]);
@@ -146,7 +150,10 @@ export default function RevenueHeadDetailPage() {
     if (!estateId) return;
     dispatch(fetchRevenueHeads({ estateId, page: 1, limit: 500 }))
       .unwrap()
-      .catch(() => toast.error("Failed to load revenue heads."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId]);
 
   useEffect(() => {
@@ -165,7 +172,10 @@ export default function RevenueHeadDetailPage() {
       }),
     )
       .unwrap()
-      .catch(() => toast.error("Failed to fetch revenue entries."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, headId, page, startDate, endDate]);
 
   const filteredEntries = useMemo(() => {
@@ -264,8 +274,9 @@ export default function RevenueHeadDetailPage() {
           endDate: toIsoIfPresent(endDate),
         }),
       ).unwrap();
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to create entries.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       setSaving(false);
     }
   };
@@ -309,8 +320,9 @@ export default function RevenueHeadDetailPage() {
       ).unwrap();
       toast.success("Revenue entry updated.");
       closeEdit();
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to update entry.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       setSaving(false);
     }
   };
@@ -318,13 +330,25 @@ export default function RevenueHeadDetailPage() {
   const handleDelete = (item: RevenueEntry) => {
     const id = getId(item);
     if (!id) return;
-    confirmDeleteToast({
-      name: item.documentNumber,
-      onConfirm: async () => {
-        await dispatch(deleteRevenueEntry(id)).unwrap();
-        toast.success("Revenue entry deleted.");
-      },
-    });
+    setItemToDelete(item);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
+    const id = getId(itemToDelete);
+    if (!id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteRevenueEntry(id)).unwrap();
+      toast.success("Revenue entry deleted.");
+      setItemToDelete(null);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const pageLoading = headsLoading || entriesLoading;
@@ -424,6 +448,15 @@ export default function RevenueHeadDetailPage() {
           }}
         />
       </div>
+    
+        <DeleteModal
+          visible={Boolean(itemToDelete)}
+          onClose={() => setItemToDelete(null)}
+          itemName={itemToDelete?.documentNumber ?? "this entry"}
+          title="Delete revenue entry"
+          loading={deleting}
+          onConfirm={handleConfirmDelete}
+        />
     </div>
   );
 }

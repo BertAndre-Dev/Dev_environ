@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import {
   Building2,
   Users,
@@ -18,7 +19,8 @@ import { Button } from "@/components/ui/button";
 import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import Loader from "@/components/ui/Loader";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
+import { isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
@@ -50,6 +52,8 @@ export default function CompanyEstatePage() {
   const dispatch = useDispatch<AppDispatch>();
   const [companyName, setCompanyName] = useState("Company");
   const [open, setOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name?: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [modulesOpen, setModulesOpen] = useState(false);
   const [selectedEstate, setSelectedEstate] = useState<EstateTableRow | null>(null);
   const [modulesEstate, setModulesEstate] = useState<EstateTableRow | null>(null);
@@ -65,7 +69,7 @@ export default function CompanyEstatePage() {
     return {
       allEstates: (s?.allEstates?.data as EstateTableRow[]) ?? [],
       pagination: s?.allEstates?.pagination ?? null,
-      loading: s?.getAllEstatesStatus === "isLoading",
+      loading: isPending(s?.getAllEstatesStatus),
     };
   });
 
@@ -102,7 +106,10 @@ export default function CompanyEstatePage() {
   }, [dispatch]);
 
   useEffect(() => {
-    fetchEstates(1).catch(() => toast.error("Failed to fetch estates"));
+    fetchEstates(1).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, startDate, endDate, search]);
 
@@ -142,7 +149,8 @@ export default function CompanyEstatePage() {
       handleCloseModal();
       await fetchEstates(1);
     } catch (err: unknown) {
-      toast.error((err as { message?: string })?.message ?? "Failed to save estate");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -177,9 +185,8 @@ export default function CompanyEstatePage() {
       closeStatusModal();
       await fetchEstates(Number(pagination?.currentPage) || 1);
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to update estate status.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setStatusSubmitting(false);
     }
@@ -187,14 +194,24 @@ export default function CompanyEstatePage() {
 
   const handleDeleteEstate = (id?: string, name?: string) => {
     if (!id) return;
-    confirmDeleteToast({
-      name,
-      onConfirm: async () => {
-        await dispatch(deleteCompanyEstate(id)).unwrap();
-        toast.success(`${name ?? "Estate"} deleted successfully!`);
-        await fetchEstates(1);
-      },
-    });
+    setItemToDelete({ id, name });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete?.id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteCompanyEstate(itemToDelete.id)).unwrap();
+      toast.success(`${itemToDelete.name ?? "Estate"} deleted successfully!`);
+      setItemToDelete(null);
+      await fetchEstates(1);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const columns = [
@@ -412,7 +429,10 @@ export default function CompanyEstatePage() {
               pageSize,
             }}
             onPageChange={(page) => {
-              fetchEstates(page).catch(() => toast.error("Failed to fetch estates"));
+              fetchEstates(page).catch((err: unknown) => {
+                const message = getApiErrorMessage(err);
+                if (message) toast.error(message);
+              });
             }}
             enableExport
             exportFileName="company-estates"
@@ -478,6 +498,15 @@ export default function CompanyEstatePage() {
           onConfirm={handleConfirmStatus}
         />
       </div>
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={itemToDelete?.name ?? "this estate"}
+        title="Delete estate"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

@@ -21,6 +21,7 @@ import {
   OccupancyDistributionDonutCard,
   type OccupancyDistributionData,
 } from "@/components/charts/occupancy-distribution-donut-card";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { mapResidentTypeBreakdownToChartData } from "@/lib/resident-type-breakdown-chart";
 import {
   extractEstateIdFromUser,
@@ -72,44 +73,30 @@ export default function AdminOverview() {
           setEstateName(name);
         }
       } catch (err: unknown) {
-        const msg =
-          err &&
-          typeof err === "object" &&
-          "message" in err &&
-          typeof (err as { message?: string }).message === "string"
-            ? (err as { message: string }).message
-            : "Failed to load user.";
-        toast.error(msg);
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     })();
   }, [dispatch]);
 
   useEffect(() => {
     if (!estateId) return;
-    dispatch(getResidentTypeBreakdown({ estateId })).catch((err: unknown) => {
-      const msg =
-        err &&
-        typeof err === "object" &&
-        "message" in err &&
-        typeof (err as { message?: string }).message === "string"
-          ? (err as { message: string }).message
-          : "Failed to load resident breakdown.";
-      toast.error(msg);
-    });
+    dispatch(getResidentTypeBreakdown({ estateId }))
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId]);
 
   useEffect(() => {
     if (!estateId) return;
-    dispatch(getAdminTransactionSummary({ estateId })).catch((err: unknown) => {
-      const msg =
-        err &&
-        typeof err === "object" &&
-        "message" in err &&
-        typeof (err as { message?: string }).message === "string"
-          ? (err as { message: string }).message
-          : "Failed to load transaction summary.";
-      toast.error(msg);
-    });
+    dispatch(getAdminTransactionSummary({ estateId }))
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId]);
 
   const residentDistributionData = useMemo((): OccupancyDistributionData => {

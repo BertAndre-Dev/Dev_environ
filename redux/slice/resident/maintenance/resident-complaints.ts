@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export interface ResidentComplaintResident {
   id?: string;
@@ -55,6 +56,18 @@ export interface CreateComplaintPayload {
   status?: string;
 }
 
+function rejectComplaintError(
+  error: unknown,
+  rejectWithValue: (value: unknown) => unknown,
+  fallback: string,
+) {
+  const data = (error as { response?: { data?: unknown } })?.response?.data;
+  if (data && typeof data === "object") return rejectWithValue(data);
+  return rejectWithValue({
+    message: getApiErrorMessage(error) ?? fallback,
+  });
+}
+
 /** POST /api/v1/complaints */
 export const createComplaint = createAsyncThunk(
   "resident-complaints/create",
@@ -66,9 +79,10 @@ export const createComplaint = createAsyncThunk(
       });
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue(
-        err?.response?.data?.message ?? "Failed to create complaint"
+      return rejectComplaintError(
+        error,
+        rejectWithValue,
+        "Failed to create complaint",
       );
     }
   }
@@ -92,9 +106,10 @@ export const getComplaintsByAddress = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue(
-        err?.response?.data?.message ?? "Failed to fetch complaints"
+      return rejectComplaintError(
+        error,
+        rejectWithValue,
+        "Failed to fetch complaints",
       );
     }
   }
@@ -108,9 +123,10 @@ export const getComplaintById = createAsyncThunk(
       const res = await axiosInstance.get(`/api/v1/complaints/${id}`);
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue(
-        err?.response?.data?.message ?? "Failed to fetch complaint"
+      return rejectComplaintError(
+        error,
+        rejectWithValue,
+        "Failed to fetch complaint",
       );
     }
   }
@@ -130,9 +146,10 @@ export const updateComplaint = createAsyncThunk(
       const res = await axiosInstance.put(`/api/v1/complaints/${id}`, body);
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue(
-        err?.response?.data?.message ?? "Failed to update complaint"
+      return rejectComplaintError(
+        error,
+        rejectWithValue,
+        "Failed to update complaint",
       );
     }
   }
@@ -146,9 +163,10 @@ export const deleteComplaint = createAsyncThunk(
       const res = await axiosInstance.delete(`/api/v1/complaints/${id}`);
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue(
-        err?.response?.data?.message ?? "Failed to delete complaint"
+      return rejectComplaintError(
+        error,
+        rejectWithValue,
+        "Failed to delete complaint",
       );
     }
   }
@@ -172,9 +190,10 @@ export const getCommentsByComplaint = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue(
-        err?.response?.data?.message ?? "Failed to fetch comments"
+      return rejectComplaintError(
+        error,
+        rejectWithValue,
+        "Failed to fetch comments",
       );
     }
   }
@@ -206,9 +225,10 @@ export const createComment = createAsyncThunk(
       });
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue(
-        err?.response?.data?.message ?? "Failed to add comment"
+      return rejectComplaintError(
+        error,
+        rejectWithValue,
+        "Failed to add comment",
       );
     }
   }

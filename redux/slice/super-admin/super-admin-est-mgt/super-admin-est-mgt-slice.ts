@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   activateEstate,
   createEstate,
@@ -103,10 +104,7 @@ const estateSlice = createSlice({
       })
       .addCase(fetchEstateModules.rejected, (state, action) => {
         state.modulesLoading = false;
-        const payload = action.payload as { message?: string } | undefined;
-        state.modulesError =
-          payload?.message ||
-          (action.error?.message ?? "Failed to load estate modules");
+        state.modulesError = getApiErrorMessage(action.payload) ?? null;
         state.availableModules = [];
       });
 
@@ -161,7 +159,7 @@ const estateSlice = createSlice({
       .addCase(getAllEstates.rejected, (state, action) => {
         state.getAllEstatesState = "failed";
         state.status = "failed";
-        state.error = action.error.message || "Failed to fetch estates";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     // 🔹 GET SINGLE ESTATE
@@ -175,7 +173,7 @@ const estateSlice = createSlice({
       })
       .addCase(getEstate.rejected, (state, action) => {
         state.getEstateState = "failed";
-        state.error = action.error.message || "Failed to fetch estate";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     // 🔹 CREATE ESTATE
@@ -207,7 +205,7 @@ const estateSlice = createSlice({
       })
       .addCase(createEstate.rejected, (state, action) => {
         state.createEstateState = "failed";
-        state.error = action.error.message || "Failed to create estate";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     // 🔹 UPDATE ESTATE
@@ -226,7 +224,7 @@ const estateSlice = createSlice({
       })
       .addCase(updateEstate.rejected, (state, action) => {
         state.updateEstateState = "failed";
-        state.error = action.error.message || "Failed to update estate";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     // 🔹 UPDATE ESTATE MODULES
@@ -246,11 +244,7 @@ const estateSlice = createSlice({
       })
       .addCase(updateEstateModules.rejected, (state, action) => {
         state.updateEstateModulesState = "failed";
-        const payload = action.payload as { message?: string } | undefined;
-        state.error =
-          payload?.message ||
-          action.error.message ||
-          "Failed to update estate modules";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     // 🔹 DELETE ESTATE
@@ -270,7 +264,7 @@ const estateSlice = createSlice({
       })
       .addCase(deleteEstate.rejected, (state, action) => {
         state.deleteEstateState = "failed";
-        state.error = action.error.message || "Failed to delete estate";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     // 🔹 ACTIVATE ESTATE
@@ -289,7 +283,7 @@ const estateSlice = createSlice({
       })
       .addCase(activateEstate.rejected, (state, action) => {
         state.activateEstateState = "failed";
-        state.error = action.error.message || "Failed to activate estate";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     // 🔹 SUSPEND ESTATE
@@ -308,7 +302,7 @@ const estateSlice = createSlice({
       })
       .addCase(suspendEstate.rejected, (state, action) => {
         state.suspendEstateState = "failed";
-        state.error = action.error.message || "Failed to suspend estate";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

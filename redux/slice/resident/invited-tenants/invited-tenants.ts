@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export interface InvitedTenantAddress {
   /** Address entry id from address-mgt (API uses `id`) */
@@ -46,9 +47,11 @@ export const getInvitedTenants = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
       return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to fetch invited tenants",
+        message:
+          getApiErrorMessage(error) ?? "Failed to fetch invited tenants",
       });
     }
   }

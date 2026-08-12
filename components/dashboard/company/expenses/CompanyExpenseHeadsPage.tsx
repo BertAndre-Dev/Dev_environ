@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import Select from "react-select";
 
 import { ExpensesHeader } from "@/components/dashboard/admin/expenses/ExpensesHeader";
@@ -13,7 +14,6 @@ import {
   type ExpenseHeadModalValues,
 } from "@/components/dashboard/admin/expenses/ExpenseHeadModal";
 import { ViewExpenseHeadModal } from "@/components/dashboard/admin/expenses/ViewExpenseHeadModal";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
 import {
@@ -27,7 +27,6 @@ import {
 import {
   selectCompanyExpenseHeads,
   selectCompanyExpenseHeadsError,
-  selectCompanyExpenseHeadsLoading,
   selectCompanyExpenseHeadsPagination,
   setCompanyExpenseHeadEstate,
 } from "@/redux/slice/company/expense-head/company-expense-head-slice";
@@ -41,6 +40,8 @@ import {
 import { Card } from "@/components/ui/card";
 import Loader from "@/components/ui/Loader";
 import Pagination from "@/components/pagination/page";
+import { isBusy, isPending, isSettled } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 const PAGE_SIZE = 12;
 
@@ -61,8 +62,9 @@ export default function CompanyExpenseHeadsPage() {
   const dispatch = useDispatch<AppDispatch>();
 
   const items = useSelector((s: RootState) => selectCompanyExpenseHeads(s));
-  const loading = useSelector((s: RootState) =>
-    selectCompanyExpenseHeadsLoading(s),
+  const listState = useSelector(
+    (s: RootState) =>
+      (s.companyExpenseHead as { listState?: string } | undefined)?.listState,
   );
   const error = useSelector((s: RootState) => selectCompanyExpenseHeadsError(s));
   const pagination = useSelector((s: RootState) =>
@@ -82,6 +84,8 @@ export default function CompanyExpenseHeadsPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CompanyExpenseHead | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<CompanyExpenseHead | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [modalValues, setModalValues] = useState<ExpenseHeadModalValues>({
     name: "",
     description: "",
@@ -94,6 +98,8 @@ export default function CompanyExpenseHeadsPage() {
 
   const estateId = selectedEstate?.value ?? "";
   const estateName = selectedEstate?.label ?? "Estate";
+  const listPending = Boolean(estateId) && isPending(listState);
+  const listBusy = isBusy(listState);
 
   useEffect(() => {
     (async () => {
@@ -114,8 +120,9 @@ export default function CompanyExpenseHeadsPage() {
             getCompanyEstates({ page: 1, limit: 200 }),
           ).unwrap();
           options = mapCompanyEstateRows(res?.data);
-        } catch {
-          toast.error("Failed to fetch company estates.");
+        } catch (err: unknown) {
+          const message = getApiErrorMessage(err);
+          if (message) toast.error(message);
         }
         if (!options.length) options = parseCompanyEstates(data);
 
@@ -123,8 +130,9 @@ export default function CompanyExpenseHeadsPage() {
         if (options.length) {
           setSelectedEstate({ label: options[0].name, value: options[0].id });
         }
-      } catch {
-        toast.error("Failed to load company information.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setEstatesLoading(false);
       }
@@ -153,7 +161,10 @@ export default function CompanyExpenseHeadsPage() {
       }),
     )
       .unwrap()
-      .catch(() => toast.error("Failed to fetch expense heads."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId, startDate, endDate, page]);
 
   useEffect(() => {
@@ -188,13 +199,25 @@ export default function CompanyExpenseHeadsPage() {
   const handleDelete = (item: CompanyExpenseHead) => {
     const id = getId(item);
     if (!id) return;
-    confirmDeleteToast({
-      name: item.name,
-      onConfirm: async () => {
-        await dispatch(deleteCompanyExpenseHead(id)).unwrap();
-        toast.success("Expense head deleted.");
-      },
-    });
+    setItemToDelete(item);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
+    const id = getId(itemToDelete);
+    if (!id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteCompanyExpenseHead(id)).unwrap();
+      toast.success("Expense head deleted.");
+      setItemToDelete(null);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleView = async (item: CompanyExpenseHead) => {
@@ -207,8 +230,8 @@ export default function CompanyExpenseHeadsPage() {
       const payload = await dispatch(fetchCompanyExpenseHeadById(id)).unwrap();
       setViewItem(payload?.data ?? payload ?? null);
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to load expense head.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       setViewOpen(false);
     } finally {
       setViewLoading(false);
@@ -243,8 +266,8 @@ export default function CompanyExpenseHeadsPage() {
       setEditing(null);
       setModalValues({ name: "", description: "" });
     } catch (err: unknown) {
-      const message = (err as { message?: string })?.message;
-      toast.error(message ?? "Failed to save expense head.");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -263,7 +286,7 @@ export default function CompanyExpenseHeadsPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const pageLoading = estatesLoading || loading;
+  const pageLoading = estatesLoading || listPending;
 
   const content = useMemo(() => {
     if (!estateId) {
@@ -272,6 +295,9 @@ export default function CompanyExpenseHeadsPage() {
           Select an estate to view expense heads.
         </p>
       );
+    }
+    if (!isSettled(listState)) {
+      return null;
     }
     if (filtered.length === 0) {
       return (
@@ -291,7 +317,7 @@ export default function CompanyExpenseHeadsPage() {
         estateId={estateId}
       />
     ));
-  }, [filtered, estateId, handleDelete, handleView]);
+  }, [filtered, estateId, handleDelete, handleView, listState]);
 
   return (
     <div className="relative">
@@ -372,7 +398,7 @@ export default function CompanyExpenseHeadsPage() {
             <Pagination
               paginationInfo={paginationInfo}
               onPageChange={handlePageChange}
-              disabled={loading}
+              disabled={listBusy}
               itemLabel="expense heads"
             />
           </>
@@ -408,6 +434,15 @@ export default function CompanyExpenseHeadsPage() {
           }}
         />
       </div>
+    
+        <DeleteModal
+          visible={Boolean(itemToDelete)}
+          onClose={() => setItemToDelete(null)}
+          itemName={itemToDelete?.name ?? "this item"}
+          title="Delete expense head"
+          loading={deleting}
+          onConfirm={handleConfirmDelete}
+        />
     </div>
   );
 }

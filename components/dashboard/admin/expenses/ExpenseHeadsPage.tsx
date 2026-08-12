@@ -3,6 +3,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
+import DeleteModal from "@/components/resident/delete-modal/page";
 
 import { ExpensesHeader } from "@/components/dashboard/admin/expenses/ExpensesHeader";
 import { ExpensesFiltersBar } from "@/components/dashboard/admin/expenses/ExpensesFiltersBar";
@@ -12,7 +14,6 @@ import {
   type ExpenseHeadModalValues,
 } from "@/components/dashboard/admin/expenses/ExpenseHeadModal";
 import { ViewExpenseHeadModal } from "@/components/dashboard/admin/expenses/ViewExpenseHeadModal";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
   createExpenseHead,
@@ -25,13 +26,13 @@ import {
 import {
   selectExpenseHeads,
   selectExpenseHeadsError,
-  selectExpenseHeadsLoading,
   selectExpenseHeadsPagination,
 } from "@/redux/slice/admin/expense-head/expense-head-slice";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { Card } from "@/components/ui/card";
 import Loader from "@/components/ui/Loader";
 import Pagination from "@/components/pagination/page";
+import { isPending, isSettled } from "@/lib/async-status";
 
 const PAGE_SIZE = 12;
 
@@ -71,7 +72,10 @@ export default function ExpenseHeadsPage() {
   const dispatch = useDispatch<AppDispatch>();
 
   const items = useSelector((s: RootState) => selectExpenseHeads(s));
-  const loading = useSelector((s: RootState) => selectExpenseHeadsLoading(s));
+  const listState = useSelector(
+    (s: RootState) => s.adminExpenseHead?.listState ?? "idle",
+  );
+  const loading = isPending(listState);
   const error = useSelector((s: RootState) => selectExpenseHeadsError(s));
   const pagination = useSelector((s: RootState) =>
     selectExpenseHeadsPagination(s),
@@ -87,6 +91,8 @@ export default function ExpenseHeadsPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ExpenseHead | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<ExpenseHead | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [modalValues, setModalValues] = useState<ExpenseHeadModalValues>({
     name: "",
     description: "",
@@ -105,8 +111,9 @@ export default function ExpenseHeadsPage() {
         const { estateId, estateName } = normalizeEstate(user);
         setEstateId(estateId);
         setEstateName(estateName);
-      } catch (err: any) {
-        toast.error(err?.message ?? "Failed to load user.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     })();
   }, [dispatch]);
@@ -127,7 +134,10 @@ export default function ExpenseHeadsPage() {
       }),
     )
       .unwrap()
-      .catch(() => toast.error("Failed to fetch expense heads."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId, startDate, endDate, page]);
 
   useEffect(() => {
@@ -162,13 +172,25 @@ export default function ExpenseHeadsPage() {
   const handleDelete = (item: ExpenseHead) => {
     const id = getId(item);
     if (!id) return;
-    confirmDeleteToast({
-      name: item.name,
-      onConfirm: async () => {
-        await dispatch(deleteExpenseHead(id)).unwrap();
-        toast.success("Expense head deleted.");
-      },
-    });
+    setItemToDelete(item);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
+    const id = getId(itemToDelete);
+    if (!id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteExpenseHead(id)).unwrap();
+      toast.success("Expense head deleted.");
+      setItemToDelete(null);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleView = async (item: ExpenseHead) => {
@@ -180,8 +202,9 @@ export default function ExpenseHeadsPage() {
     try {
       const payload: any = await dispatch(fetchExpenseHeadById(id)).unwrap();
       setViewItem(payload?.data ?? payload ?? null);
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to load expense head.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
       setViewOpen(false);
     } finally {
       setViewLoading(false);
@@ -213,8 +236,9 @@ export default function ExpenseHeadsPage() {
       setModalOpen(false);
       setEditing(null);
       setModalValues({ name: "", description: "" });
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to save expense head.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -234,7 +258,7 @@ export default function ExpenseHeadsPage() {
   };
 
   const content = useMemo(() => {
-    if (filtered.length === 0) {
+    if (isSettled(listState) && filtered.length === 0) {
       return (
         <p className="text-muted-foreground py-10 text-center md:col-span-2 xl:col-span-3 rounded-lg border border-border bg-muted/20">
           No expense heads found.
@@ -250,7 +274,7 @@ export default function ExpenseHeadsPage() {
         onDelete={handleDelete}
       />
     ));
-  }, [filtered, handleDelete, handleView]);
+  }, [filtered, handleDelete, handleView, listState]);
 
   return (
     <div className="relative">
@@ -328,6 +352,15 @@ export default function ExpenseHeadsPage() {
           }}
         />
       </div>
+    
+        <DeleteModal
+          visible={Boolean(itemToDelete)}
+          onClose={() => setItemToDelete(null)}
+          itemName={itemToDelete?.name ?? "this item"}
+          title="Delete expense head"
+          loading={deleting}
+          onConfirm={handleConfirmDelete}
+        />
     </div>
   );
 }

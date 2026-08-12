@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import type { TransactionSummaryData } from "@/lib/transaction-summary-chart";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 export interface TransactionSummaryResponse {
   success: boolean;
@@ -19,12 +20,7 @@ export const getCompanyTransactionSummary = createAsyncThunk(
       );
       return res.data.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message ||
-          "Failed to fetch transaction summary.",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

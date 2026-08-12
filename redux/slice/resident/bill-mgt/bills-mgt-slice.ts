@@ -26,6 +26,7 @@ export interface AssignedBillData {
   billName?: string;
   name?: string;
   frequency?: string;
+  amountDue?: number;
   amountPaid?: number;
   amount?: number;
   yearlyAmount?: number;

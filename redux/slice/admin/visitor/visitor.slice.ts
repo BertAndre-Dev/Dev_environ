@@ -1,5 +1,10 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { getVisitorsByEstate, verifyVisitor, getVisitorDetailsByCode } from "./visitor";
+import {
+  createVisitor,
+  getVisitorsByEstate,
+  verifyVisitor,
+  getVisitorDetailsByCode,
+} from "./visitor";
 
 export interface VisitorEntry {
   id: string;
@@ -35,6 +40,7 @@ export interface VisitorsResponse {
 }
 
 export interface VisitorState {
+  createVisitorState: "idle" | "isLoading" | "succeeded" | "failed";
   getVisitorsByEstateState: "idle" | "isLoading" | "succeeded" | "failed";
   verifyVisitorState: "idle" | "isLoading" | "succeeded" | "failed";
   getVisitorDetailsByCodeState: "idle" | "isLoading" | "succeeded" | "failed";
@@ -45,6 +51,7 @@ export interface VisitorState {
 }
 
 const initialState: VisitorState = {
+  createVisitorState: "idle",
   getVisitorsByEstateState: "idle",
   verifyVisitorState: "idle",
   getVisitorDetailsByCodeState: "idle",
@@ -60,6 +67,7 @@ const visitorSlice = createSlice({
   reducers: {
     resetVisitorState: (state) => {
       state.status = "idle";
+      state.createVisitorState = "idle";
       state.getVisitorsByEstateState = "idle";
       state.verifyVisitorState = "idle";
       state.error = null;
@@ -67,6 +75,25 @@ const visitorSlice = createSlice({
     },
   },
   extraReducers(builder) {
+    builder
+      .addCase(createVisitor.pending, (state) => {
+        state.createVisitorState = "isLoading";
+        state.status = "isLoading";
+        state.error = null;
+      })
+      .addCase(createVisitor.fulfilled, (state) => {
+        state.createVisitorState = "succeeded";
+        state.status = "succeeded";
+      })
+      .addCase(createVisitor.rejected, (state, action) => {
+        state.createVisitorState = "failed";
+        state.status = "failed";
+        state.error =
+          (action.payload as { message?: string })?.message ||
+          action.error.message ||
+          "Failed to create visitor";
+      });
+
     // GET VISITORS
     builder
       .addCase(getVisitorsByEstate.pending, (state) => {

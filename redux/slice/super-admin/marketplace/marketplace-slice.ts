@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   getMarketplaceList,
   getMarketplaceById,
@@ -68,10 +69,7 @@ const marketplaceSlice = createSlice({
         state.getListStatus = "failed";
         state.list = null;
         state.pagination = null;
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to fetch marketplace";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(getMarketplaceById.pending, (state) => {
         state.getByIdStatus = "isLoading";
@@ -84,10 +82,7 @@ const marketplaceSlice = createSlice({
       .addCase(getMarketplaceById.rejected, (state, action) => {
         state.getByIdStatus = "failed";
         state.current = null;
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to fetch listing";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(createMarketplace.pending, (state) => {
         state.createStatus = "isLoading";
@@ -105,10 +100,7 @@ const marketplaceSlice = createSlice({
       })
       .addCase(createMarketplace.rejected, (state, action) => {
         state.createStatus = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to create listing";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(updateMarketplace.pending, (state) => {
         state.updateStatus = "isLoading";
@@ -128,10 +120,7 @@ const marketplaceSlice = createSlice({
       })
       .addCase(updateMarketplace.rejected, (state, action) => {
         state.updateStatus = "failed";
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to update listing";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(suspendMarketplace.fulfilled, (state, action) => {
         const id = (action.payload as { marketPlaceId?: string })?.marketPlaceId;

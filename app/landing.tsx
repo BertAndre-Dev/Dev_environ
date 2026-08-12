@@ -4,11 +4,13 @@ import Navbar from "@/components/landing-page/navbar";
 import HeroSection from "@/components/landing-page/heroSection";
 import CallToActionSection from "@/components/landing-page/callToActionSection";
 import FAQSection from "@/components/landing-page/faqSection";
+import BlogSection from "@/components/landing-page/blogSection";
 import FeaturesShowcaseSection from "@/components/landing-page/featuresShowcaseSection";
 import BertaShowcaseSection from "@/components/landing-page/bertaShowcaseSection";
 import FeaturesSection from "@/components/landing-page/featuresSection";
 import Footer from "@/components/landing-page/footer";
 import TrustedBySection from "@/components/landing-page/trustedBy";
+import EverythingYouNeedSection from "@/components/landing-page/everythingYouNeedSection";
 
 export default function Home() {
   return (
@@ -18,10 +20,12 @@ export default function Home() {
         <HeroSection />
         <FeaturesShowcaseSection />
         <TrustedBySection />
+        <EverythingYouNeedSection />
         <FeaturesSection />
         <BertaShowcaseSection />
         <FAQSection />
-        <CallToActionSection />
+        <BlogSection />
+        {/* <CallToActionSection /> */}
       </main>
       <Footer />
     </div>

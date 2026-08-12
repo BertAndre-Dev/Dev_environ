@@ -15,6 +15,8 @@ import {
   getStaffUserProfile,
   updateStaffUserProfile,
 } from "@/redux/slice/staff/user-profile/staff-user-profile";
+import { isBusy, isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 type StaffFormState = {
   firstName: string;
@@ -83,7 +85,7 @@ export function StaffGeneralSettingsCard() {
   }, [user]);
 
   const isLoading = useMemo(
-    () => getStatus === "isLoading" || updateStatus === "isLoading",
+    () => isPending(getStatus) || isBusy(updateStatus),
     [getStatus, updateStatus],
   );
 
@@ -127,11 +129,12 @@ export function StaffGeneralSettingsCard() {
         }),
       ).unwrap();
       toast.success(res?.message || "Profile updated successfully");
-    } catch (err: any) {
-      const message =
-        err?.message || err?.payload || "Failed to update profile";
-      setFormError(message);
-      toast.error(message);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) {
+        setFormError(message);
+        toast.error(message);
+      }
     }
   };
 

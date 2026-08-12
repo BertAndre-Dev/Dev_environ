@@ -47,9 +47,11 @@ import residentDashboardAnalyticsSliceReducer from "@/redux/slice/resident/dashb
 import residentInviteTenantSliceReducer from "@/redux/slice/resident/invite-tenant/invite-tenant-slice";
 import residentAddressOptionsSliceReducer from "@/redux/slice/resident/address-options/resident-address-options-slice";
 import residentPaymentMgtSliceReducer from "@/redux/slice/resident/payment-mgt/payment-mgt-slice";
+import residentFlutterwaveVaSliceReducer from "@/redux/slice/resident/virtual-accounts/flutterwave-va-slice";
 import residentRentMgtSliceReducer from "@/redux/slice/resident/rent-mgt/rent-mgt-slice";
 import residentInvitedTenantsSliceReducer from "@/redux/slice/resident/invited-tenants/invited-tenants-slice";
 import adminAnnouncementsSliceReducer from "@/redux/slice/admin/announcements/announcements-slice";
+import adminRequestSliceReducer from "@/redux/slice/admin/request/admin-request-slice";
 import superAdminMarketplaceSliceReducer from "@/redux/slice/super-admin/marketplace/marketplace-slice";
 import residentMarketplaceSliceReducer from "@/redux/slice/resident/marketplace/marketplace-slice";
 import residentAnnouncementsSliceReducer from "@/redux/slice/resident/announcements/announcements-slice";
@@ -83,6 +85,7 @@ import companyTransactionSummarySliceReducer from "@/redux/slice/company/transac
 import companyEnergyConsumptionSliceReducer from "@/redux/slice/company/energy-consumption/company-energy-consumption-slice";
 import companyEstateEnergyUsageSliceReducer from "@/redux/slice/company/estate-energy-usage/company-estate-energy-usage-slice";
 import companyMeterSliceReducer from "@/redux/slice/company/meter-mgt/company-meter-slice";
+import reassignMeterSliceReducer from "@/redux/slice/meter/reassign-meter/reassign-meter-slice";
 import companyWalletSliceReducer from "@/redux/slice/company/wallet-mgt/company-wallet-mgt-slice";
 import chatSliceReducer from "@/redux/slice/chat/chat-slice";
 import communityGroupSliceReducer from "@/redux/slice/community-group/community-group-slice";
@@ -95,6 +98,9 @@ import staffSupportSliceReducer from "@/redux/slice/staff/support/staff-support-
 import staffMaintenanceSliceReducer from "@/redux/slice/staff/maintenance/staff-maintenance-slice";
 import staffCommunitySliceReducer from "@/redux/slice/staff/community/staff-community-slice";
 import staffAnnouncementsSliceReducer from "@/redux/slice/staff/announcements/staff-announcements-slice";
+import staffRequestSliceReducer from "@/redux/slice/staff/request/staff-request-slice";
+import companyRequestSliceReducer from "@/redux/slice/company/request/company-request-slice";
+import estateAdminRequestSliceReducer from "@/redux/slice/estate-admin/request/estate-admin-request-slice";
 import estateAdminAnnouncementsSliceReducer from "@/redux/slice/estate-admin/announcements/estate-admin-announcements-slice";
 import superAdminEnergyProviderConfigSliceReducer from "@/redux/slice/super-admin/energy-provider-config/energy-provider-config-slice";
 import superAdminEnergyConsumptionSliceReducer from "@/redux/slice/super-admin/energy-consumption/super-admin-energy-consumption-slice";
@@ -109,6 +115,11 @@ import energyProviderEntrySliceReducer from "@/redux/slice/energy-provider/addre
 import energyProviderEstateSliceReducer from "@/redux/slice/energy-provider/estate-mgt/energy-provider-estate-slice";
 import energyProviderUserSliceReducer from "@/redux/slice/energy-provider/user-mgt/energy-provider-user-slice";
 import superAdminRatesSliceReducer from "@/redux/slice/super-admin/rates/rates-slice";
+import notificationsSliceReducer from "@/redux/slice/notifications/notifications-slice";
+import withdrawalAccountSliceReducer from "@/redux/slice/wallet-mgt/withdrawal-account-slice";
+import companyRevenueWithdrawalAccountSliceReducer from "@/redux/slice/company/wallet-mgt/revenue-withdrawal-account-slice";
+import estateAdminRevenueWithdrawalAccountSliceReducer from "@/redux/slice/estate-admin/wallet-mgt/revenue-withdrawal-account-slice";
+import energyProviderRevenueWithdrawalAccountSliceReducer from "@/redux/slice/energy-provider/wallet-mgt/revenue-withdrawal-account-slice";
 import superAdminRevenueTrendSliceReducer from "@/redux/slice/super-admin/revenue-trend/revenue-trend-slice";
 import superAdminAveragePurchaseSliceReducer from "@/redux/slice/super-admin/average-purchase/average-purchase-slice";
 import superAdminTopEstatesEnergySliceReducer from "@/redux/slice/super-admin/top-estates-energy/top-estates-energy-slice";
@@ -331,9 +342,11 @@ export const store = configureStore({
     residentInviteTenant: residentInviteTenantSliceReducer,
     residentAddressOptions: residentAddressOptionsSliceReducer,
     residentPaymentMgt: residentPaymentMgtSliceReducer,
+    residentFlutterwaveVa: residentFlutterwaveVaSliceReducer,
     residentRentMgt: residentRentMgtSliceReducer,
     residentInvitedTenants: residentInvitedTenantsSliceReducer,
     adminAnnouncements: adminAnnouncementsSliceReducer,
+    adminRequest: adminRequestSliceReducer,
     superAdminMarketplace: superAdminMarketplaceSliceReducer,
     superAdminCompany: persistedSuperAdminCompanySliceReducer,
     companyMarketplace: persistedCompanyMarketplaceSliceReducer,
@@ -358,6 +371,7 @@ export const store = configureStore({
     companyEnergyConsumption: companyEnergyConsumptionSliceReducer,
     companyEstateEnergyUsage: companyEstateEnergyUsageSliceReducer,
     companyMeter: companyMeterSliceReducer,
+    reassignMeter: reassignMeterSliceReducer,
     companyWallet: companyWalletSliceReducer,
     residentMarketplace: residentMarketplaceSliceReducer,
     residentAnnouncements: residentAnnouncementsSliceReducer,
@@ -378,6 +392,9 @@ export const store = configureStore({
     staffMaintenance: persistedStaffMaintenanceSliceReducer,
     staffCommunity: persistedStaffCommunitySliceReducer,
     staffAnnouncements: staffAnnouncementsSliceReducer,
+    staffRequest: staffRequestSliceReducer,
+    companyRequest: companyRequestSliceReducer,
+    estateAdminRequest: estateAdminRequestSliceReducer,
     superAdminEnergyProviderConfig: superAdminEnergyProviderConfigSliceReducer,
     energyProviderVends: energyProviderVendsSliceReducer,
     companyEnergyProviderConfig: companyEnergyProviderConfigSliceReducer,
@@ -389,6 +406,13 @@ export const store = configureStore({
     energyProviderEstate: energyProviderEstateSliceReducer,
     energyProviderUser: energyProviderUserSliceReducer,
     superAdminRates: superAdminRatesSliceReducer,
+    notifications: notificationsSliceReducer,
+    withdrawalAccount: withdrawalAccountSliceReducer,
+    companyRevenueWithdrawalAccount: companyRevenueWithdrawalAccountSliceReducer,
+    estateAdminRevenueWithdrawalAccount:
+      estateAdminRevenueWithdrawalAccountSliceReducer,
+    energyProviderRevenueWithdrawalAccount:
+      energyProviderRevenueWithdrawalAccountSliceReducer,
     superAdminRevenueTrend: superAdminRevenueTrendSliceReducer,
     superAdminAveragePurchase: superAdminAveragePurchaseSliceReducer,
     superAdminTopEstatesEnergy: superAdminTopEstatesEnergySliceReducer,

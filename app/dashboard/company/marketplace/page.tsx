@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { ListCheck, PauseCircle, Pencil, PlayCircle, Plus, Store, Trash2 } from "lucide-react";
 import type { RootState, AppDispatch } from "@/redux/store";
 import {
@@ -25,13 +27,15 @@ import type { AddBusinessFormPayload } from "@/components/super-admin/add-busine
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import { MarketplaceListingCard } from "@/components/super-admin/marketplace-listing-card";
 import Loader from "@/components/ui/Loader";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
+import { isBusy, isPending } from "@/lib/async-status";
 
 export default function CompanyMarketplacePage() {
   const dispatch = useDispatch<AppDispatch>();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MarketplaceItem | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<MarketplaceItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [suspendItem, setSuspendItem] = useState<MarketplaceItem | null>(null);
   const [suspendSubmitting, setSuspendSubmitting] = useState(false);
 
@@ -89,7 +93,10 @@ export default function CompanyMarketplacePage() {
         endDate: shouldApplyDate ? endDate : undefined,
       }),
     )
-      .catch(() => toast.error("Failed to load marketplace."))
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      })
       .finally(() => setBootstrapping(false));
   }, [dispatch, page, limit, statusFilter, categoryFilter, startDate, endDate]);
 
@@ -137,8 +144,8 @@ export default function CompanyMarketplacePage() {
       closeModal();
       setPage(1);
     } catch (err: unknown) {
-      const msg = (err as { message?: string })?.message ?? "Failed to save.";
-      toast.error(msg);
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -156,9 +163,9 @@ export default function CompanyMarketplacePage() {
       ).unwrap();
       toast.success("Listing suspended.");
       setSuspendItem(null);
-    } catch (e: unknown) {
-      const msg = (e as { message?: string })?.message ?? "Failed to suspend.";
-      toast.error(msg);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSuspendSubmitting(false);
     }
@@ -169,22 +176,33 @@ export default function CompanyMarketplacePage() {
     dispatch(activateCompanyMarketplace(item.id))
       .unwrap()
       .then(() => toast.success("Listing activated."))
-      .catch((e: { message?: string }) =>
-        toast.error(e?.message ?? "Failed to activate."),
-      );
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   };
 
   const handleDelete = (item: MarketplaceItem) => {
     const id = item.id;
     if (!id) return;
-    confirmDeleteToast({
-      name: item.companyName ?? item.productName ?? "this listing",
-      onConfirm: async () => {
-        await dispatch(deleteCompanyMarketplace(id)).unwrap();
-        toast.success("Listing deleted.");
-        setPage(1);
-      },
-    });
+    setItemToDelete(item);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete?.id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteCompanyMarketplace(itemToDelete.id)).unwrap();
+      toast.success("Listing deleted.");
+      setItemToDelete(null);
+      setPage(1);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const tableColumns = [
@@ -282,8 +300,8 @@ export default function CompanyMarketplacePage() {
     },
   ];
 
-  const formLoading = createStatus === "isLoading" || updateStatus === "isLoading";
-  const pageLoading = bootstrapping || getListStatus === "isLoading";
+  const formLoading = isBusy(createStatus) || isBusy(updateStatus);
+  const pageLoading = bootstrapping || isPending(getListStatus);
   let emptyMessage = 'No businesses yet. Click "Add business" to create one.';
   if (search.trim()) emptyMessage = "No businesses match your search.";
 
@@ -485,6 +503,15 @@ export default function CompanyMarketplacePage() {
         confirmLabel="Suspend"
         onConfirm={handleSuspendConfirm}
         loading={suspendSubmitting}
+      />
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={itemToDelete?.companyName ?? itemToDelete?.productName ?? "this listing"}
+        title="Delete listing"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
       />
     </>
   );

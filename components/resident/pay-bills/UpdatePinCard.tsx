@@ -3,8 +3,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import Modal from "@/components/modal/page";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -12,6 +13,7 @@ type Props = {
   title?: string;
   description?: string;
   submitLabel?: string;
+  buttonLabel?: string;
   onSubmitPin?: (payload: {
     currentPin: string;
     newPin: string;
@@ -151,7 +153,7 @@ function PinInputRow({
       <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
         {label}
       </p>
-      <div className="flex gap-2">
+      <div className="flex gap-2 justify-center">
         {digits.map((d, idx) => (
           <input
             key={`${label}-${idx}`}
@@ -182,6 +184,7 @@ export function UpdatePinCard({
   title = "Update PIN",
   description = "Enter your current PIN, then choose a new 4-digit bill payment PIN.",
   submitLabel = "Update PIN",
+  buttonLabel = "Update PIN",
   onSubmitPin,
 }: Readonly<Props>) {
   const [open, setOpen] = useState(false);
@@ -210,12 +213,17 @@ export function UpdatePinCard({
     setMismatch(confirmComplete ? newValue !== confirmValue : false);
   }, [newValue, confirmValue, confirmComplete]);
 
-  function handleReset() {
+  function resetForm() {
     setOpen(false);
     setCurrentPin(EMPTY_PIN());
     setNewPin(EMPTY_PIN());
     setConfirmPin(EMPTY_PIN());
     setMismatch(false);
+  }
+
+  function handleClose() {
+    if (submitting) return;
+    resetForm();
   }
 
   async function handleSubmit() {
@@ -244,27 +252,40 @@ export function UpdatePinCard({
     try {
       setSubmitting(true);
       await onSubmitPin({ currentPin: currentValue, newPin: newValue });
-      handleReset();
-    } catch (err: any) {
-      toast.error(
-        err?.message ?? err?.payload?.message ?? "Failed to update PIN.",
-      );
+      resetForm();
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Card className="w-full h-[230px] min-h-[220px] overflow-y-auto p-8 text-center">
-      <div className="mb-8 max-w-xs mx-auto">
-        <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
-        <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-          {description}
-        </p>
-      </div>
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="shrink-0"
+        onClick={() => setOpen(true)}
+      >
+        {buttonLabel}
+      </Button>
 
-      {open ? (
-        <>
+      <Modal
+        visible={open}
+        onClose={handleClose}
+        contentClassName="md:w-[min(420px,95vw)]"
+      >
+        <div className="space-y-6 text-center">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
+            <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
+              {description}
+            </p>
+          </div>
+
           <div className="mx-auto max-w-xs space-y-6">
             <PinInputRow
               label="Current PIN"
@@ -299,7 +320,7 @@ export function UpdatePinCard({
             )}
           </div>
 
-          <div className="mt-8 space-y-3 max-w-xs mx-auto animate-in fade-in duration-200">
+          <div className="space-y-3 max-w-xs mx-auto">
             <Button
               type="button"
               className="w-full h-12 text-sm font-medium"
@@ -314,23 +335,13 @@ export function UpdatePinCard({
               variant="outline"
               className="w-full h-12 text-sm font-medium"
               disabled={submitting}
-              onClick={handleReset}
+              onClick={handleClose}
             >
               Cancel
             </Button>
           </div>
-        </>
-      ) : (
-        <div className="max-w-xs mx-auto">
-          <Button
-            type="button"
-            className="w-full h-12 text-sm font-medium"
-            onClick={() => setOpen(true)}
-          >
-            Update PIN
-          </Button>
         </div>
-      )}
-    </Card>
+      </Modal>
+    </>
   );
 }

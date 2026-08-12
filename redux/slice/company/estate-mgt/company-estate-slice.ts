@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   activateCompanyEstate,
   createCompanyEstate,
@@ -112,10 +113,7 @@ const companyEstateSlice = createSlice({
       })
       .addCase(fetchCompanyEstateModules.rejected, (state, action) => {
         state.modulesLoading = false;
-        state.modulesError =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to load modules";
+        state.modulesError = getApiErrorMessage(action.payload) ?? null;
         state.availableModules = [];
       })
       .addCase(fetchCompanyEstateEnabledModules.pending, (state) => {
@@ -128,10 +126,7 @@ const companyEstateSlice = createSlice({
       })
       .addCase(fetchCompanyEstateEnabledModules.rejected, (state, action) => {
         state.estateModulesLoading = false;
-        state.estateModulesError =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to load estate modules";
+        state.estateModulesError = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(updateCompanyEstateModules.pending, (state) => {
         state.updateEstateModulesStatus = "isLoading";
@@ -148,10 +143,7 @@ const companyEstateSlice = createSlice({
       })
       .addCase(updateCompanyEstateModules.rejected, (state, action) => {
         state.updateEstateModulesStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to update estate modules";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(getCompanyEstates.pending, (state) => {
         state.getAllEstatesStatus = "isLoading";
@@ -174,10 +166,7 @@ const companyEstateSlice = createSlice({
       })
       .addCase(getCompanyEstates.rejected, (state, action) => {
         state.getAllEstatesStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to fetch estates";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(getCompanyEstateById.pending, (state) => {
         state.getEstateStatus = "isLoading";
@@ -188,10 +177,7 @@ const companyEstateSlice = createSlice({
       })
       .addCase(getCompanyEstateById.rejected, (state, action) => {
         state.getEstateStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to fetch estate";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(createCompanyEstate.pending, (state) => {
         state.createEstateStatus = "isLoading";
@@ -206,10 +192,7 @@ const companyEstateSlice = createSlice({
       })
       .addCase(createCompanyEstate.rejected, (state, action) => {
         state.createEstateStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to create estate";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(updateCompanyEstate.pending, (state) => {
         state.updateEstateStatus = "isLoading";
@@ -226,10 +209,7 @@ const companyEstateSlice = createSlice({
       })
       .addCase(updateCompanyEstate.rejected, (state, action) => {
         state.updateEstateStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to update estate";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(deleteCompanyEstate.pending, (state) => {
         state.deleteEstateStatus = "isLoading";
@@ -249,10 +229,7 @@ const companyEstateSlice = createSlice({
       })
       .addCase(deleteCompanyEstate.rejected, (state, action) => {
         state.deleteEstateStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to delete estate";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(activateCompanyEstate.pending, (state) => {
         state.activateEstateStatus = "isLoading";
@@ -269,10 +246,7 @@ const companyEstateSlice = createSlice({
       })
       .addCase(activateCompanyEstate.rejected, (state, action) => {
         state.activateEstateStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to activate estate";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(suspendCompanyEstate.pending, (state) => {
         state.suspendEstateStatus = "isLoading";
@@ -289,10 +263,7 @@ const companyEstateSlice = createSlice({
       })
       .addCase(suspendCompanyEstate.rejected, (state, action) => {
         state.suspendEstateStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to suspend estate";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

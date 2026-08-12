@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DeleteModal from "@/components/resident/delete-modal/page";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { labelToReportingFieldKey } from "@/lib/operations-reporting-field-key";
 import type { AppDispatch } from "@/redux/store";
 import {
@@ -93,7 +94,10 @@ export default function OperationsReportingTypesTab({
   }, [estateId]);
 
   useEffect(() => {
-    loadTypes(typesPage).catch(() => toast.error("Failed to load reporting types."));
+    loadTypes(typesPage).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
   }, [loadTypes, typesPage]);
 
   const loadFieldsForType = useCallback(
@@ -108,8 +112,9 @@ export default function OperationsReportingTypesTab({
           ...prev,
           [typeId]: res?.data ?? [],
         }));
-      } catch {
-        toast.error("Failed to load report fields.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
         setFieldsByType((prev) => ({ ...prev, [typeId]: [] }));
       } finally {
         setFieldsLoadingByType((prev) => ({ ...prev, [typeId]: false }));
@@ -152,9 +157,8 @@ export default function OperationsReportingTypesTab({
       await loadFieldsForType(configureTypeId);
       if (expandedTypeId !== configureTypeId) setExpandedTypeId(configureTypeId);
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to save report fields.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -183,9 +187,8 @@ export default function OperationsReportingTypesTab({
       setEditingField(null);
       await loadFieldsForType(typeId);
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to save report field.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 

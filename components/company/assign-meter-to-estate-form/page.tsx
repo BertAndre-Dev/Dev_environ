@@ -1,124 +1,72 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import Select from "react-select";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "react-toastify";
 import type { AppDispatch, RootState } from "@/redux/store";
-import { assignCompanyMeterToEstate } from "@/redux/slice/company/meter-mgt/company-meter";
-
-type SelectOption = { label: string; value: string };
+import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
+import ReassignMeterForm from "@/components/meter/ReassignMeterForm";
 
 type Props = {
   meterNumber: string;
+  companyId: string;
+  /** Current estate when reassigning away from an estate. */
+  estateId?: string;
   close: () => void;
   refresh: () => void;
 };
 
+/**
+ * Company: assign meters from company inventory to an estate
+ * (or reassign between estates) via PUT /api/v1/meters/reassign-meter.
+ */
 export default function CompanyAssignMeterToEstateForm({
   meterNumber,
+  companyId,
+  estateId,
   close,
   refresh,
 }: Readonly<Props>) {
   const dispatch = useDispatch<AppDispatch>();
-  const [estateId, setEstateId] = useState("");
 
-  const { estateOptions, estatesLoading, submitting } = useSelector(
+  const { estateOptions, estatesLoading } = useSelector(
     (state: RootState) => {
       const estates = state.companyEstate.allEstates?.data ?? [];
-      const options: SelectOption[] = estates
+      const options = estates
         .map((e) => {
           const value = String(e.id ?? e._id ?? "").trim();
           if (!value) return null;
           return { value, label: e.name ?? "Unnamed estate" };
         })
-        .filter((o): o is SelectOption => Boolean(o))
+        .filter((o): o is { label: string; value: string } => Boolean(o))
         .sort((a, b) => a.label.localeCompare(b.label));
 
       return {
         estateOptions: options,
         estatesLoading: state.companyEstate.getAllEstatesStatus === "isLoading",
-        submitting:
-          state.companyMeter.assignMeterToEstateState === "isLoading",
       };
     },
   );
 
-  const selectedEstate = useMemo(
-    () => estateOptions.find((o) => o.value === estateId) ?? null,
-    [estateOptions, estateId],
+  useEffect(() => {
+    if (estateOptions.length > 0 || estatesLoading) return;
+    dispatch(getCompanyEstates({ page: 1, limit: 500 }));
+  }, [dispatch, estateOptions.length, estatesLoading]);
+
+  const title = useMemo(
+    () => (estateId ? "Reassign to estate" : "Assign to estate"),
+    [estateId],
   );
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!meterNumber.trim() || !estateId) return;
-
-    try {
-      const res = await dispatch(
-        assignCompanyMeterToEstate({
-          meterNumber: meterNumber.trim(),
-          estateId,
-        }),
-      ).unwrap();
-      if (res?.message) toast.success(res.message);
-      refresh();
-      close();
-    } catch (error: unknown) {
-      const message = (error as { message?: string })?.message;
-      if (message) toast.error(message);
-    }
-  };
-
   return (
-    <Card className="max-w-lg mx-auto mt-6">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold">
-          Assign to estate
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <Label>Meter Number</Label>
-            <p className="mt-1 text-sm font-medium font-mono">{meterNumber}</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Estate</Label>
-            <Select
-              options={estateOptions}
-              value={selectedEstate}
-              onChange={(opt) => setEstateId(opt?.value ?? "")}
-              isLoading={estatesLoading}
-              placeholder="Select an estate"
-              isDisabled={estatesLoading || submitting}
-              isSearchable
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              className="flex-1"
-              onClick={close}
-              disabled={submitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={submitting || !meterNumber.trim() || !estateId}
-              className="flex-1"
-            >
-              {submitting ? "Assigning..." : "Assign"}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+    <ReassignMeterForm
+      meterNumber={meterNumber}
+      companyId={companyId}
+      estateId={estateId}
+      estateOptions={estateOptions}
+      estatesLoading={estatesLoading}
+      close={close}
+      refresh={refresh}
+      title={title}
+    />
   );
 }

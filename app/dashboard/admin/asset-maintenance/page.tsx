@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 import Loader from "@/components/ui/Loader";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { parseAdminEstate } from "../asset/lib/estate";
@@ -28,7 +29,7 @@ export default function AdminAssetMaintenancePage() {
         setEstateId(estate.id);
         setEstateName(estate.name);
       } catch (err: unknown) {
-        const message = (err as { message?: string })?.message;
+        const message = getApiErrorMessage(err);
         if (message) toast.error(message);
       } finally {
         setEstateLoading(false);

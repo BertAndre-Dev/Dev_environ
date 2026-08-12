@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import Select from "react-select";
 import {
   Plus,
@@ -17,7 +18,8 @@ import { Button } from "@/components/ui/button";
 import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import Loader from "@/components/ui/Loader";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
+import { isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
@@ -29,8 +31,8 @@ import {
 } from "@/redux/slice/company/user-mgt/company-user";
 import type { CompanyUserDetails } from "@/redux/slice/company/user-mgt/company-user-slice";
 import {
+  selectCompanyUserState,
   selectCompanyUsersList,
-  selectCompanyUsersLoading,
   selectCompanyUsersPagination,
 } from "@/redux/slice/company/user-mgt/company-user-slice";
 import { parseCompanyFromUser } from "../lib/company";
@@ -82,6 +84,8 @@ export default function CompanyUsersPage() {
   const [companyId, setCompanyId] = useState("");
   const [companyName, setCompanyName] = useState("Company");
   const [open, setOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name?: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [selectedEstate, setSelectedEstate] = useState<EstateOption | null>(
     null,
   );
@@ -105,11 +109,13 @@ export default function CompanyUsersPage() {
   const pagination = useSelector((state: RootState) =>
     selectCompanyUsersPagination(state),
   );
-  const usersLoading = useSelector((state: RootState) =>
-    selectCompanyUsersLoading(state),
+  const usersStatus = useSelector(
+    (state: RootState) => selectCompanyUserState(state).getUsersStatus,
   );
 
-  const pageLoading = estatesLoading || usersLoading;
+  const pageLoading =
+    estatesLoading ||
+    (Boolean(selectedEstate?.value) && isPending(usersStatus));
   const pageSize =
     Number(pagination?.pageSize ?? (pagination as { limit?: number })?.limit) ||
     10;
@@ -153,8 +159,9 @@ export default function CompanyUsersPage() {
         }
         setCompanyId(company.id);
         setCompanyName(company.name);
-      } catch {
-        toast.error("Failed to load company information.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     })();
   }, [dispatch]);
@@ -178,8 +185,9 @@ export default function CompanyUsersPage() {
               Boolean(x),
             ) ?? [];
         setEstateOptions(options);
-      } catch {
-        toast.error("Failed to fetch estates");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
         setEstateOptions([]);
       } finally {
         setEstatesLoading(false);
@@ -195,9 +203,10 @@ export default function CompanyUsersPage() {
 
   useEffect(() => {
     if (!selectedEstate?.value) return;
-    fetchUsers(1).catch(() =>
-      toast.error("Failed to fetch users for selected estate"),
-    );
+    fetchUsers(1).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
   }, [selectedEstate, fetchUsers]);
 
   const closeStatusModal = () => {
@@ -236,10 +245,8 @@ export default function CompanyUsersPage() {
       closeStatusModal();
       await fetchUsers(Number(pagination?.currentPage) || 1);
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ??
-          "Failed to update user status.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setStatusSubmitting(false);
     }
@@ -247,14 +254,24 @@ export default function CompanyUsersPage() {
 
   const handleDeleteUser = (id?: string, name?: string) => {
     if (!id) return;
-    confirmDeleteToast({
-      name,
-      onConfirm: async () => {
-        await dispatch(deleteCompanyUser(id)).unwrap();
-        toast.success(`${name ?? "User"} deleted successfully!`);
-        await fetchUsers(1);
-      },
-    });
+    setItemToDelete({ id, name });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete?.id) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteCompanyUser(itemToDelete.id)).unwrap();
+      toast.success(`${itemToDelete.name ?? "User"} deleted successfully!`);
+      setItemToDelete(null);
+      await fetchUsers(1);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const showResidentColumns = roleFilter === "resident";
@@ -496,9 +513,10 @@ export default function CompanyUsersPage() {
               pageSize,
             }}
             onPageChange={(page) => {
-              fetchUsers(page).catch(() =>
-                toast.error("Failed to change page"),
-              );
+              fetchUsers(page).catch((err: unknown) => {
+                const message = getApiErrorMessage(err);
+                if (message) toast.error(message);
+              });
             }}
             enableExport
             exportFileName="company-users"
@@ -543,6 +561,15 @@ export default function CompanyUsersPage() {
           onConfirm={handleConfirmStatus}
         />
       </div>
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={itemToDelete?.name ?? "this user"}
+        title="Delete user"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

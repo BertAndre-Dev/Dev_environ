@@ -4,6 +4,7 @@ import {
   type CompanyEnergyProviderVendsPagination,
 } from "./company-energy-provider-vends";
 import type { EnergyProviderVendRow } from "@/lib/energy-provider-vends";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 type AsyncStatus = "idle" | "isLoading" | "succeeded" | "failed";
 
@@ -47,10 +48,7 @@ const companyEnergyProviderVendsSlice = createSlice({
         state.status = "failed";
         state.list = [];
         state.pagination = null;
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to fetch vend history";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

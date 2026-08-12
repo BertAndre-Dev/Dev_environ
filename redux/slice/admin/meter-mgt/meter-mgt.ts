@@ -1,23 +1,34 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
+import type { ClearTamperTokenResponse } from "@/lib/clear-tamper-token";
+
+export type {
+  ClearTamperTokenData,
+  ClearTamperTokenResponse,
+} from "@/lib/clear-tamper-token";
+export { extractClearTamperToken } from "@/lib/clear-tamper-token";
 
 
-interface AdminMeterData {
+export interface AssignMeterPayload {
     meterNumber: string;
     estateId: string;
-    addressId: string;
-};
-
+    addressId?: string;
+    unassign?: boolean;
+}
 
 export const assignMeterToAddress = createAsyncThunk(
     "meter/assignMeterToAddress",
-    async (data: AdminMeterData, { rejectWithValue }) => {
+    async (data: AssignMeterPayload, { rejectWithValue }) => {
         try {
             const res = await axiosInstance.post("/api/v1/meters/assign-meter-to-address", data);
             return res.data;
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
             return rejectWithValue({
-                message: error.res?.data?.message
+                message:
+                    err?.response?.data?.message ||
+                    "Failed to assign or unassign meter.",
             });
         }
     }
@@ -61,9 +72,11 @@ export const getMeter = createAsyncThunk(
         try {
             const res = await axiosInstance.get(`/api/v1/meters/${meterId}`);
             return res.data;
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const data = (error as { response?: { data?: unknown } })?.response?.data;
+            if (data && typeof data === "object") return rejectWithValue(data);
             return rejectWithValue({
-                message: error.res?.data?.message
+                message: getApiErrorMessage(error) ?? "Failed to fetch meter",
             });
         }
     }
@@ -101,6 +114,87 @@ export const getVendingStatsByEstate = createAsyncThunk(
           err?.response?.data?.message ||
           "Failed to fetch vending statistics.",
       });
+    }
+  },
+);
+
+export interface EstateVendLimitsDefaults {
+  minVendAmount: number;
+  maxVendAmount: number;
+}
+
+export interface EstateVendLimitsData {
+  estateId: string;
+  estateName: string;
+  minVendAmount: number;
+  maxVendAmount: number;
+  isConfigured: boolean;
+  defaults: EstateVendLimitsDefaults;
+}
+
+export interface EstateVendLimitsResponse {
+  success: boolean;
+  message: string;
+  data: EstateVendLimitsData;
+}
+
+/** GET /api/v1/meters/estate/{estateId}/vend-limits */
+export const getEstateVendLimits = createAsyncThunk(
+  "meter-mgt/getEstateVendLimits",
+  async ({ estateId }: { estateId: string }, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.get<EstateVendLimitsResponse>(
+        `/api/v1/meters/estate/${estateId}/vend-limits`,
+      );
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: unknown } };
+      return rejectWithValue(err?.response?.data);
+    }
+  },
+);
+
+/** PUT /api/v1/meters/estate/{estateId}/vend-limits */
+export const setEstateVendLimits = createAsyncThunk(
+  "meter-mgt/setEstateVendLimits",
+  async (
+    {
+      estateId,
+      minVendAmount,
+      maxVendAmount,
+    }: {
+      estateId: string;
+      minVendAmount: number;
+      maxVendAmount: number;
+    },
+    { rejectWithValue },
+  ) => {
+    try {
+      const res = await axiosInstance.put<EstateVendLimitsResponse>(
+        `/api/v1/meters/estate/${estateId}/vend-limits`,
+        { minVendAmount, maxVendAmount },
+      );
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: unknown } };
+      return rejectWithValue(err?.response?.data);
+    }
+  },
+);
+
+/** POST /api/v1/meters/clear-tamper-token — body: { meterNumber } */
+export const clearTamperToken = createAsyncThunk(
+  "admin-meter-mgt/clearTamperToken",
+  async ({ meterNumber }: { meterNumber: string }, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.post<ClearTamperTokenResponse>(
+        "/api/v1/meters/clear-tamper-token",
+        { meterNumber },
+      );
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: unknown } };
+      return rejectWithValue(err?.response?.data);
     }
   },
 );

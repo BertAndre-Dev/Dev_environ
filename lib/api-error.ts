@@ -9,6 +9,20 @@ export function getApiErrorMessage(error: unknown): string | undefined {
 
   if (typeof error !== "object") return undefined;
 
+  // Prefer HTTP response body over Axios/Error.message ("Request failed with status code 403")
+  const responseData = (error as { response?: { data?: unknown } }).response
+    ?.data;
+  if (responseData && responseData !== error) {
+    const fromResponse = getApiErrorMessage(responseData);
+    if (fromResponse) return fromResponse;
+  }
+
+  const nestedData = (error as { data?: unknown }).data;
+  if (nestedData && nestedData !== error && typeof nestedData === "object") {
+    const fromData = getApiErrorMessage(nestedData);
+    if (fromData) return fromData;
+  }
+
   const message = (error as { message?: unknown }).message;
   if (typeof message === "string") {
     const trimmed = message.trim();
@@ -21,12 +35,6 @@ export function getApiErrorMessage(error: unknown): string | undefined {
     return joined || undefined;
   }
 
-  const responseData = (error as { response?: { data?: unknown } }).response
-    ?.data;
-  if (responseData && responseData !== error) {
-    return getApiErrorMessage(responseData);
-  }
-
   return undefined;
 }
 
@@ -35,4 +43,11 @@ export function getApiSuccessMessage(payload: unknown): string | undefined {
   const message = (payload as { message?: unknown }).message;
   if (typeof message === "string" && message.trim()) return message.trim();
   return undefined;
+}
+
+/** Typed rejectWithValue payload from an API/Axios error (no hardcoded fallback). */
+export type ApiErrorRejectValue = { message?: string };
+
+export function apiErrorRejectValue(error: unknown): ApiErrorRejectValue {
+  return { message: getApiErrorMessage(error) };
 }

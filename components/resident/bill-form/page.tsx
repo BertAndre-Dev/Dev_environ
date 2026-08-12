@@ -13,6 +13,7 @@ import { Select } from "@/components/ui/select";
 import SwitchAddress from "@/components/resident/switch-address/page";
 import type { AddressOption } from "@/lib/address";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 interface BillsFormProps {
   billId: string;
@@ -91,8 +92,9 @@ export default function BillsForm({
               : rawEstateId?._id || rawEstateId?.id || "");
           if (resolvedEstateId) setEstateId(resolvedEstateId);
         }
-      } catch (err: any) {
-        toast.error(err?.message || "Failed to load bill or user details");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setLoading(false);
       }
@@ -135,13 +137,9 @@ export default function BillsForm({
       toast.success("Bill payment successful");
       onSubmitSuccess?.();
       onClose?.();
-    } catch (err: any) {
-      const message =
-        err?.message ||
-        err?.response?.data?.message ||
-        (typeof err?.response?.data === "string" ? err.response.data : null) ||
-        "Failed to pay bill";
-      toast.error(message);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSubmitting(false);
     }

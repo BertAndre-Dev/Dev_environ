@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import type { CustomerGrowthResponse } from "@/types/analytics";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 /** GET /api/v1/analytics/commercial/customers/growth */
 export const getCustomerGrowth = createAsyncThunk(
@@ -12,16 +13,7 @@ export const getCustomerGrowth = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return rejectWithValue({
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to fetch customer growth.",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

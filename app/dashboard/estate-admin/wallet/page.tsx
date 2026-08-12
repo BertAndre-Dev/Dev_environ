@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import Modal from "@/components/modal/page";
 import WithdrawFundForm from "@/components/estate-admin/transactions/fund-wallet-form/page";
 import EstateWalletOverviewCard from "@/components/estate-admin/wallet-overview-card/page";
+import SetWithdrawalAccountModal from "@/components/wallet/SetWithdrawalAccountModal";
+import RevenueWithdrawalAccountsCard from "@/components/wallet/RevenueWithdrawalAccountsCard";
 import {
   createWallet,
   getWallet,
@@ -27,6 +29,7 @@ import type { EstateCreditItem } from "@/redux/slice/estate-admin/wallet-mgt/wal
 import { formatDateTime } from "@/lib/format-date";
 import { TransactionsFilterBar } from "@/components/super-admin/transactions-filter-bar";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 
 const LIMIT = 10;
 
@@ -48,6 +51,8 @@ export default function EstateAdminWalletPage() {
   const dispatch = useDispatch<AppDispatch>();
   const [open, setOpen] = useState(false);
   const [createWalletModalOpen, setCreateWalletModalOpen] = useState(false);
+  const [setWithdrawalAccountModalOpen, setSetWithdrawalAccountModalOpen] =
+    useState(false);
   const [createWalletAccountNumber, setCreateWalletAccountNumber] =
     useState("");
   const [createWalletBankCode, setCreateWalletBankCode] = useState("");
@@ -71,17 +76,15 @@ export default function EstateAdminWalletPage() {
   const createWalletState = useSelector(
     (state: RootState) => state.estateAdminWallet?.createWalletState ?? "idle",
   );
-  const walletLoading =
-    getWalletState === "idle" || getWalletState === "isLoading";
+  const walletLoading = isPending(getWalletState);
   const pageLoading = bootstrapping || (!!estateId && walletLoading);
   const estateCredits = useSelector(
     (state: RootState) => state.estateAdminWallet?.estateCredits ?? null,
   );
-  const creditsLoading =
-    useSelector(
-      (state: RootState) =>
-        state.estateAdminWallet?.getEstateCreditsState === "isLoading",
-    ) ?? false;
+  const getEstateCreditsState = useSelector(
+    (state: RootState) => state.estateAdminWallet?.getEstateCreditsState,
+  );
+  const creditsLoading = isPending(getEstateCreditsState);
 
   const creditsData = estateCredits?.data ?? [];
   const creditsPagination = estateCredits?.pagination ?? null;
@@ -392,15 +395,21 @@ export default function EstateAdminWalletPage() {
           pageLoading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
-      <div>
-        <h1 className="font-heading text-3xl font-bold">Wallet Management</h1>
-        <p className="text-muted-foreground mt-1">
-          Welcome back! Here's is an overview on{" "}
-          <span className="text-[18px] font-bold underline uppercase text-black">
-            {estateName}
-          </span>
-          .
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="font-heading text-3xl font-bold">Wallet Management</h1>
+          <p className="text-muted-foreground mt-1">
+            Welcome back! Here's is an overview on{" "}
+            <span className="text-[18px] font-bold underline uppercase text-black">
+              {estateName}
+            </span>
+            .
+          </p>
+        </div>
+        <RevenueWithdrawalAccountsCard
+          role="estateAdmin"
+          className="w-full shrink-0 sm:w-auto"
+        />
       </div>
 
       {/* Wallet overview */}
@@ -408,8 +417,10 @@ export default function EstateAdminWalletPage() {
         wallet={wallet}
         onWithdraw={handleOpenModal}
         onCreateWallet={() => setCreateWalletModalOpen(true)}
+        onSetWithdrawalAccount={() => setSetWithdrawalAccountModalOpen(true)}
         walletLoading={walletLoading}
         createWalletLoading={createWalletState === "isLoading"}
+        revenueSettlementRole="estateAdmin"
         filterExportSlot={
           <div className="space-y-3">
             <TransactionsFilterBar
@@ -577,6 +588,14 @@ export default function EstateAdminWalletPage() {
           </div>
         </div>
       </Modal>
+
+      <SetWithdrawalAccountModal
+        visible={setWithdrawalAccountModalOpen}
+        onClose={() => setSetWithdrawalAccountModalOpen(false)}
+        onSuccess={() => {
+          if (estateId) dispatch(getWallet(estateId));
+        }}
+      />
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consum
 import { TransactionSummaryCard } from "@/components/charts/transaction-summary-card";
 import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
 import type { EnergyConsumptionPeriod } from "@/lib/energy-consumption-chart";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
   getCompanyEnergyConsumptionAddressOptions,
@@ -19,15 +20,6 @@ import { getCompanyTransactionSummary } from "@/redux/slice/company/transaction-
 import type { AppDispatch, RootState } from "@/redux/store";
 
 type EstateOption = { label: string; value: string };
-
-function extractErrorMessage(err: unknown, fallback: string): string {
-  return err &&
-    typeof err === "object" &&
-    "message" in err &&
-    typeof (err as { message?: string }).message === "string"
-    ? (err as { message: string }).message
-    : fallback;
-}
 
 export default function CompanyOverviewPage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -78,8 +70,9 @@ export default function CompanyOverviewPage() {
         }
         setCompanyId(company.id);
         setCompanyName(company.name);
-      } catch {
-        toast.error("Failed to load user.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     })();
   }, [dispatch]);
@@ -106,8 +99,9 @@ export default function CompanyOverviewPage() {
         if (options.length > 0) {
           setSelectedEstate((current) => current ?? options[0]);
         }
-      } catch {
-        toast.error("Failed to fetch estates.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
         setEstateOptions([]);
       } finally {
         setEstatesLoading(false);
@@ -125,9 +119,8 @@ export default function CompanyOverviewPage() {
     if (!selectedEstateId) return;
     dispatch(getCompanyTransactionSummary({ estateId: selectedEstateId })).catch(
       (err: unknown) => {
-        toast.error(
-          extractErrorMessage(err, "Failed to load transaction summary."),
-        );
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       },
     );
   }, [dispatch, selectedEstateId]);
@@ -138,9 +131,8 @@ export default function CompanyOverviewPage() {
     dispatch(
       getCompanyEnergyConsumptionAddressOptions({ estateId: selectedEstateId }),
     ).catch((err: unknown) => {
-      toast.error(
-        extractErrorMessage(err, "Failed to load address options."),
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     });
   }, [dispatch, selectedEstateId]);
 
@@ -153,9 +145,8 @@ export default function CompanyOverviewPage() {
         addressId: selectedAddressId,
       }),
     ).catch((err: unknown) => {
-      toast.error(
-        extractErrorMessage(err, "Failed to load energy consumption chart."),
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     });
   }, [dispatch, selectedEstateId, energyPeriod, selectedAddressId]);
 

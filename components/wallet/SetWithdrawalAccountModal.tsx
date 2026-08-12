@@ -1,0 +1,348 @@
+"use client";
+
+import React, { useEffect, useRef, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Modal from "@/components/modal/page";
+import { toast } from "react-toastify";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "@/redux/store";
+import {
+  getBanks,
+  verifyBankAccount,
+  type BankItem,
+} from "@/redux/slice/estate-admin/fund-wallet/fund-wallet";
+import {
+  clearVerifiedAccount,
+} from "@/redux/slice/estate-admin/fund-wallet/fund-wallet-slice";
+import { setWithdrawalAccount } from "@/redux/slice/wallet-mgt/withdrawal-account";
+import { resetWithdrawalAccountState } from "@/redux/slice/wallet-mgt/withdrawal-account-slice";
+import { ChevronDown, Search } from "lucide-react";
+
+const COUNTRY = "NG";
+
+export interface SetWithdrawalAccountModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+export default function SetWithdrawalAccountModal({
+  visible,
+  onClose,
+  onSuccess,
+}: Readonly<SetWithdrawalAccountModalProps>) {
+  const dispatch = useDispatch<AppDispatch>();
+  const {
+    banks,
+    getBanksState,
+    verifyBankAccountState,
+    verifiedAccountName,
+    error: paymentError,
+  } = useSelector((state: RootState) => state.estateAdminFundWallet);
+  const setState = useSelector(
+    (state: RootState) => state.withdrawalAccount.setWithdrawalAccountState,
+  );
+
+  const [accountNumber, setAccountNumber] = useState("");
+  const [selectedBankCode, setSelectedBankCode] = useState("");
+  const [accountOwnerName, setAccountOwnerName] = useState("");
+  const [bankDropdownOpen, setBankDropdownOpen] = useState(false);
+  const [bankSearchQuery, setBankSearchQuery] = useState("");
+  const bankDropdownRef = useRef<HTMLDivElement>(null);
+  const bankSearchInputRef = useRef<HTMLInputElement>(null);
+
+  const loadingBanks = getBanksState === "isLoading";
+  const submitting = setState === "isLoading";
+  const selectedBank = banks.find((b) => b.code === selectedBankCode);
+  const selectedBankName = selectedBank?.name ?? "";
+  const filteredBanks = bankSearchQuery.trim()
+    ? banks.filter((b) =>
+        b.name.toLowerCase().includes(bankSearchQuery.toLowerCase()),
+      )
+    : banks;
+  const verifyingAccount = verifyBankAccountState === "isLoading";
+  const accountVerified =
+    verifyBankAccountState === "succeeded" && !!verifiedAccountName;
+
+  useEffect(() => {
+    if (!visible) return;
+    dispatch(getBanks({ country: COUNTRY, gatewayType: "flutterwave" }));
+    return () => {
+      dispatch(clearVerifiedAccount());
+      dispatch(resetWithdrawalAccountState());
+    };
+  }, [visible, dispatch]);
+
+  useEffect(() => {
+    if (!visible) {
+      setAccountNumber("");
+      setSelectedBankCode("");
+      setAccountOwnerName("");
+      setBankDropdownOpen(false);
+      setBankSearchQuery("");
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        bankDropdownRef.current &&
+        !bankDropdownRef.current.contains(event.target as Node)
+      ) {
+        setBankDropdownOpen(false);
+      }
+    }
+    if (bankDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [bankDropdownOpen]);
+
+  useEffect(() => {
+    if (bankDropdownOpen) {
+      setBankSearchQuery("");
+      setTimeout(() => bankSearchInputRef.current?.focus(), 0);
+    }
+  }, [bankDropdownOpen]);
+
+  useEffect(() => {
+    if (!visible) return;
+    if (
+      COUNTRY === "NG" &&
+      accountNumber.trim().length >= 10 &&
+      selectedBankCode
+    ) {
+      const timeoutId = setTimeout(() => {
+        dispatch(
+          verifyBankAccount({
+            accountNumber: accountNumber.trim(),
+            bankCode: selectedBankCode,
+            gatewayType: "flutterwave",
+          }),
+        );
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
+    dispatch(clearVerifiedAccount());
+  }, [accountNumber, selectedBankCode, dispatch, visible]);
+
+  useEffect(() => {
+    if (verifiedAccountName?.trim()) {
+      setAccountOwnerName(verifiedAccountName.trim());
+    }
+  }, [verifiedAccountName]);
+
+  useEffect(() => {
+    if (getBanksState === "failed" && paymentError) {
+      toast.error(paymentError);
+    }
+  }, [getBanksState, paymentError]);
+
+  const handleClose = () => {
+    dispatch(clearVerifiedAccount());
+    onClose();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accountVerified) {
+      if (paymentError) toast.error(paymentError);
+      return;
+    }
+    if (!selectedBankCode) {
+      toast.error("Please select a bank.");
+      return;
+    }
+    if (!accountNumber.trim() || accountNumber.trim().length < 10) {
+      toast.error("Please enter a valid 10-digit account number.");
+      return;
+    }
+
+    try {
+      await dispatch(
+        setWithdrawalAccount({
+          bankCode: selectedBankCode,
+          accountNumber: accountNumber.trim(),
+        }),
+      ).unwrap();
+      toast.success("Withdrawal account set successfully.");
+      onSuccess();
+      handleClose();
+    } catch (err: unknown) {
+      const message = (err as { message?: string })?.message;
+      if (message) toast.error(message);
+    }
+  };
+
+  const bankTriggerClassName =
+    "w-full flex items-center justify-between gap-2 border border-input rounded-md bg-transparent px-3 py-2 text-left text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 min-h-9";
+
+  return (
+    <Modal visible={visible} onClose={handleClose}>
+      <Card className="w-full max-w-md mx-auto border-0 shadow-none">
+        <form onSubmit={handleSubmit}>
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">
+              Set Withdrawal Account
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Enter your bank details once. This cannot be changed later.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Bank name</Label>
+              <div ref={bankDropdownRef} className="relative mt-1">
+                <button
+                  type="button"
+                  className={bankTriggerClassName}
+                  onClick={() =>
+                    !loadingBanks && setBankDropdownOpen((o) => !o)
+                  }
+                  disabled={loadingBanks || submitting}
+                  aria-expanded={bankDropdownOpen}
+                  aria-haspopup="listbox"
+                >
+                  <span
+                    className={selectedBankCode ? "" : "text-muted-foreground"}
+                  >
+                    {selectedBankName || "Select bank"}
+                  </span>
+                  <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                </button>
+                {bankDropdownOpen && (
+                  <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-md">
+                    <div className="p-2 border-b border-border">
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          ref={bankSearchInputRef}
+                          type="text"
+                          placeholder="Search banks..."
+                          value={bankSearchQuery}
+                          onChange={(e) => setBankSearchQuery(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Escape") setBankDropdownOpen(false);
+                          }}
+                          className="pl-8 h-9"
+                        />
+                      </div>
+                    </div>
+                    <div
+                      className="max-h-60 overflow-auto py-1"
+                      role="listbox"
+                      aria-label="Banks"
+                    >
+                      {filteredBanks.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                          {loadingBanks
+                            ? "Loading banks..."
+                            : "No banks match your search."}
+                        </div>
+                      ) : (
+                        filteredBanks.map((bank: BankItem) => (
+                          <button
+                            key={bank.id}
+                            type="button"
+                            role="option"
+                            className="w-full cursor-pointer px-3 py-2 text-sm text-left hover:bg-accent focus:bg-accent outline-none rounded-none"
+                            onClick={() => {
+                              setSelectedBankCode(bank.code);
+                              dispatch(clearVerifiedAccount());
+                              setBankDropdownOpen(false);
+                            }}
+                          >
+                            {bank.name}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {loadingBanks && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Loading banks...
+                </p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="withdrawalAccountNumber">Account number</Label>
+              <Input
+                id="withdrawalAccountNumber"
+                type="text"
+                inputMode="numeric"
+                value={accountNumber}
+                onChange={(e) => {
+                  const v = e.target.value.replaceAll(/\D/g, "").slice(0, 10);
+                  setAccountNumber(v);
+                }}
+                placeholder="10 digits"
+                maxLength={10}
+                className="mt-1"
+                disabled={submitting}
+              />
+              {verifyingAccount && accountNumber.trim() && selectedBankCode && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Verifying account...
+                </p>
+              )}
+              {accountVerified && !verifyingAccount && (
+                <p className="text-sm text-green-600 font-medium mt-1">
+                  Account name: {verifiedAccountName}
+                </p>
+              )}
+              {verifyBankAccountState === "failed" &&
+                paymentError &&
+                !verifyingAccount &&
+                accountNumber.trim().length >= 10 &&
+                selectedBankCode && (
+                  <p className="text-sm text-red-600 mt-1">{paymentError}</p>
+                )}
+            </div>
+
+            <div>
+              <Label htmlFor="withdrawalAccountOwnerName">
+                Account owner name
+              </Label>
+              <Input
+                id="withdrawalAccountOwnerName"
+                type="text"
+                value={accountOwnerName}
+                onChange={(e) => setAccountOwnerName(e.target.value)}
+                placeholder="Fills automatically when account is verified"
+                readOnly={!!verifiedAccountName}
+                className="mt-1 bg-muted/50 read-only:cursor-default"
+                disabled={submitting}
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClose}
+                className="flex-1"
+                disabled={submitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={submitting || !accountVerified}
+                className="flex-1"
+              >
+                {submitting ? "Saving..." : "Set account"}
+              </Button>
+            </div>
+          </CardContent>
+        </form>
+      </Card>
+    </Modal>
+  );
+}

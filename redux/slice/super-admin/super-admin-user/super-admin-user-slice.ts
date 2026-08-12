@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
     activateUser,
     suspendUser,
@@ -127,7 +128,7 @@ const superAdminUserSlice = createSlice({
             .addCase(getAllUsersByEstate.rejected, (state, action) => {
                 state.getAllUsersByEstateState = "failed";
                 state.status = "failed";
-                state.error = action.error.message || "Failed to fetch estates user";
+                state.error = getApiErrorMessage(action.payload) ?? null;
             });
 
         builder
@@ -166,7 +167,7 @@ const superAdminUserSlice = createSlice({
             .addCase(getAllUsersByCompany.rejected, (state, action) => {
                 state.getAllUsersByCompanyState = "failed";
                 state.status = "failed";
-                state.error = action.error.message || "Failed to fetch company users";
+                state.error = getApiErrorMessage(action.payload) ?? null;
             });
         
         builder
@@ -179,7 +180,7 @@ const superAdminUserSlice = createSlice({
             })
             .addCase(getUser.rejected, (state, action) => {
             state.getUserState = "failed";
-            state.error = action.error.message || "Failed to fetch estate user";
+            state.error = getApiErrorMessage(action.payload) ?? null;
             });
 
 
@@ -198,7 +199,7 @@ const superAdminUserSlice = createSlice({
             })
             .addCase(activateUser.rejected, (state, action) => {
             state.activateUserState = "failed";
-            state.error = action.error.message || "Failed to activate estate";
+            state.error = getApiErrorMessage(action.payload) ?? null;
             });
 
 
@@ -217,7 +218,7 @@ const superAdminUserSlice = createSlice({
             })
             .addCase(suspendUser.rejected, (state, action) => {
             state.suspendUserState = "failed";
-            state.error = action.error.message || "Failed to suspend estate";
+            state.error = getApiErrorMessage(action.payload) ?? null;
             });
         
 
@@ -237,7 +238,7 @@ const superAdminUserSlice = createSlice({
             })
             .addCase(deleteUser.rejected, (state, action) => {
             state.deleteUserState = "failed";
-            state.error = action.error.message || "Failed to delete estate";
+            state.error = getApiErrorMessage(action.payload) ?? null;
             });
 
         builder
@@ -261,10 +262,7 @@ const superAdminUserSlice = createSlice({
             })
             .addCase(updateUser.rejected, (state, action) => {
               state.updateUserState = "failed";
-              state.error =
-                (action.payload as { message?: string })?.message ||
-                action.error.message ||
-                "Failed to update user";
+              state.error = getApiErrorMessage(action.payload) ?? null;
             });
         
     },

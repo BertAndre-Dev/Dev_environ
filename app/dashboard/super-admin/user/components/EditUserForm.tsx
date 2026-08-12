@@ -14,6 +14,7 @@ import {
   updateUser,
 } from "@/redux/slice/super-admin/super-admin-user/super-admin-user";
 import Loader from "@/components/ui/Loader";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export type EditableUser = {
   id?: string;
@@ -110,9 +111,8 @@ export default function EditUserForm({
         setResidentType(user.residentType);
       } catch (err: unknown) {
         if (cancelled) return;
-        toast.error(
-          (err as { message?: string })?.message || "Failed to load user details",
-        );
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
         close();
       } finally {
         if (!cancelled) setLoadingUser(false);
@@ -169,9 +169,8 @@ export default function EditUserForm({
       onUpdated?.();
       close();
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message || "Failed to update user",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSubmitting(false);
     }

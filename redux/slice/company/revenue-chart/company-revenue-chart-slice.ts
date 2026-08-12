@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 import {
   fetchCompanyRevenueChart,
@@ -56,10 +57,7 @@ const companyRevenueChartSlice = createSlice({
       })
       .addCase(fetchCompanyRevenueChart.rejected, (state, action) => {
         state.fetchState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to fetch revenue chart data.";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

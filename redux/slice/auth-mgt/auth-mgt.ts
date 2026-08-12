@@ -72,8 +72,16 @@ export const getSignedInUser = createAsyncThunk(
     try {
       const res = await axiosInstance.get("/api/v1/auth-mgt/me");
       return res.data;
-    } catch (error: any) {
-      return rejectWithValue(error.res?.data?.message);
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      const message =
+        typeof data === "string"
+          ? data
+          : (error as { message?: string })?.message;
+      return rejectWithValue(
+        message ? { message } : { message: "Failed to fetch user" },
+      );
     }
   },
 );

@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   getEnergyProviderVends,
   type EnergyProviderVendsPagination,
@@ -47,10 +48,7 @@ const energyProviderVendsSlice = createSlice({
         state.status = "failed";
         state.list = [];
         state.pagination = null;
-        state.error =
-          (action.payload as { message?: string })?.message ??
-          action.error.message ??
-          "Failed to fetch vend history";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },
 });

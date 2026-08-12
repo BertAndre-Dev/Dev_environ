@@ -26,6 +26,7 @@ import {
   selectRevenueTrendGranularity,
   selectRevenueTrendLoading,
   selectRevenueTrendSeries,
+  selectRevenueTrendStatus,
   setRevenueTrendGranularity,
 } from "@/redux/slice/super-admin/revenue-trend/revenue-trend-slice";
 import { getAveragePurchaseValue } from "@/redux/slice/super-admin/average-purchase/average-purchase";
@@ -33,6 +34,7 @@ import {
   selectAveragePurchaseData,
   selectAveragePurchaseError,
   selectAveragePurchaseLoading,
+  selectAveragePurchaseStatus,
 } from "@/redux/slice/super-admin/average-purchase/average-purchase-slice";
 import { getTopEstatesEnergy } from "@/redux/slice/super-admin/top-estates-energy/top-estates-energy";
 import {
@@ -40,24 +42,28 @@ import {
   selectTopEstatesEnergyLoading,
   selectTopEstatesEnergyScope,
   selectTopEstatesEnergySeries,
+  selectTopEstatesEnergyStatus,
 } from "@/redux/slice/super-admin/top-estates-energy/top-estates-energy-slice";
 import { getFaultsSummary } from "@/redux/slice/super-admin/faults-summary/faults-summary";
 import {
   selectFaultsSummaryData,
   selectFaultsSummaryError,
   selectFaultsSummaryLoading,
+  selectFaultsSummaryStatus,
 } from "@/redux/slice/super-admin/faults-summary/faults-summary-slice";
 import { getMeterCommunicationStatus } from "@/redux/slice/super-admin/meter-communication-status/meter-communication-status";
 import {
   selectMeterCommunicationStatusData,
   selectMeterCommunicationStatusError,
   selectMeterCommunicationStatusLoading,
+  selectMeterCommunicationStatusStatus,
 } from "@/redux/slice/super-admin/meter-communication-status/meter-communication-status-slice";
 import { getPowerAvailability } from "@/redux/slice/super-admin/power-availability/power-availability";
 import {
   selectPowerAvailabilityData,
   selectPowerAvailabilityError,
   selectPowerAvailabilityLoading,
+  selectPowerAvailabilityStatus,
 } from "@/redux/slice/super-admin/power-availability/power-availability-slice";
 import { getPaymentChannels } from "@/redux/slice/super-admin/payment-channels/payment-channels";
 import {
@@ -65,17 +71,20 @@ import {
   selectPaymentChannelsLoading,
   // selectPaymentChannelsPeriod,
   selectPaymentChannelsSeries,
+  selectPaymentChannelsStatus,
 } from "@/redux/slice/super-admin/payment-channels/payment-channels-slice";
 import { getCollectionEfficiency } from "@/redux/slice/super-admin/collection-efficiency/collection-efficiency";
 import {
   selectCollectionEfficiencyData,
   selectCollectionEfficiencyError,
   selectCollectionEfficiencyLoading,
+  selectCollectionEfficiencyStatus,
 } from "@/redux/slice/super-admin/collection-efficiency/collection-efficiency-slice";
 import { getCustomerGrowth } from "@/redux/slice/super-admin/customer-growth/customer-growth";
 import {
   selectCustomerGrowthData,
   selectCustomerGrowthLoading,
+  selectCustomerGrowthStatus,
 } from "@/redux/slice/super-admin/customer-growth/customer-growth-slice";
 import { getRechargeBehavior } from "@/redux/slice/super-admin/recharge-behavior/recharge-behavior";
 import {
@@ -83,6 +92,7 @@ import {
   selectRechargeBehaviorError,
   selectRechargeBehaviorLoading,
   selectRechargeBehaviorSeries,
+  selectRechargeBehaviorStatus,
   setRechargeBehaviorBucket,
 } from "@/redux/slice/super-admin/recharge-behavior/recharge-behavior-slice";
 import { getConsumptionSnapshot } from "@/redux/slice/super-admin/consumption-snapshot/consumption-snapshot";
@@ -91,6 +101,7 @@ import {
   selectConsumptionSnapshotError,
   selectConsumptionSnapshotLoading,
   selectConsumptionSnapshotScope,
+  selectConsumptionSnapshotStatus,
 } from "@/redux/slice/super-admin/consumption-snapshot/consumption-snapshot-slice";
 import {
   getCustomerMeterSummary,
@@ -103,6 +114,7 @@ import {
   selectCustomerMeterSummaryFilter,
   selectCustomerMeterSummaryLoading,
   selectCustomerMeterSummaryScope,
+  selectCustomerMeterSummaryStatus,
   setFilter,
 } from "@/redux/slice/super-admin/customer-meter-summary/customer-meter-summary-slice";
 import { getCompanies } from "@/redux/slice/super-admin/company-mgt/company";
@@ -111,6 +123,7 @@ import {
   selectCustomerActivationsData,
   selectCustomerActivationsError,
   selectCustomerActivationsLoading,
+  selectCustomerActivationsStatus,
 } from "@/redux/slice/super-admin/customer-activations/customer-activations-slice";
 import type { RootState, AppDispatch } from "@/redux/store";
 import type {
@@ -119,7 +132,9 @@ import type {
   RevenueTrendGranularity,
 } from "@/types/analytics";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 function formatGrowthCount(metric: CustomerGrowthMetric | null): string {
   if (!metric) return "—";
@@ -145,46 +160,63 @@ export default function SuperAdminDashboard() {
   const revenueSeries = useSelector(selectRevenueTrendSeries);
   const revenueGranularity = useSelector(selectRevenueTrendGranularity);
   const revenueLoading = useSelector(selectRevenueTrendLoading);
+  const revenueStatus = useSelector(selectRevenueTrendStatus);
   const revenueError = useSelector(selectRevenueTrendError);
   const averagePurchase = useSelector(selectAveragePurchaseData);
   const averagePurchaseLoading = useSelector(selectAveragePurchaseLoading);
+  const averagePurchaseStatus = useSelector(selectAveragePurchaseStatus);
   const averagePurchaseError = useSelector(selectAveragePurchaseError);
   const topEstatesSeries = useSelector(selectTopEstatesEnergySeries);
   const topEstatesLoading = useSelector(selectTopEstatesEnergyLoading);
+  const topEstatesStatus = useSelector(selectTopEstatesEnergyStatus);
   const topEstatesError = useSelector(selectTopEstatesEnergyError);
   const topEstatesScope = useSelector(selectTopEstatesEnergyScope);
   const faultsSummary = useSelector(selectFaultsSummaryData);
   const faultsSummaryLoading = useSelector(selectFaultsSummaryLoading);
+  const faultsSummaryStatus = useSelector(selectFaultsSummaryStatus);
   const faultsSummaryError = useSelector(selectFaultsSummaryError);
   const meterCommStatus = useSelector(selectMeterCommunicationStatusData);
   const meterCommStatusLoading = useSelector(
     selectMeterCommunicationStatusLoading,
   );
+  const meterCommAsyncStatus = useSelector(
+    selectMeterCommunicationStatusStatus,
+  );
   const meterCommStatusError = useSelector(selectMeterCommunicationStatusError);
   const powerAvailability = useSelector(selectPowerAvailabilityData);
   const powerAvailabilityLoading = useSelector(selectPowerAvailabilityLoading);
+  const powerAvailabilityStatus = useSelector(selectPowerAvailabilityStatus);
   const powerAvailabilityError = useSelector(selectPowerAvailabilityError);
   const paymentChannelsSeries = useSelector(selectPaymentChannelsSeries);
   const paymentChannelsLoading = useSelector(selectPaymentChannelsLoading);
+  const paymentChannelsStatus = useSelector(selectPaymentChannelsStatus);
   // const paymentChannelsError = useSelector(selectPaymentChannelsError);
   // const paymentChannelsPeriod = useSelector(selectPaymentChannelsPeriod);
   const collectionEfficiency = useSelector(selectCollectionEfficiencyData);
   const collectionEfficiencyLoading = useSelector(
     selectCollectionEfficiencyLoading,
   );
+  const collectionEfficiencyStatus = useSelector(
+    selectCollectionEfficiencyStatus,
+  );
   const collectionEfficiencyError = useSelector(
     selectCollectionEfficiencyError,
   );
   const customerGrowth = useSelector(selectCustomerGrowthData);
   const customerGrowthLoading = useSelector(selectCustomerGrowthLoading);
+  const customerGrowthStatus = useSelector(selectCustomerGrowthStatus);
   const rechargeSeries = useSelector(selectRechargeBehaviorSeries);
   const rechargeBucket = useSelector(selectRechargeBehaviorBucket);
   const rechargeLoading = useSelector(selectRechargeBehaviorLoading);
+  const rechargeStatus = useSelector(selectRechargeBehaviorStatus);
   const rechargeError = useSelector(selectRechargeBehaviorError);
   const consumptionSnapshot = useSelector(selectConsumptionSnapshotData);
   const consumptionSnapshotScope = useSelector(selectConsumptionSnapshotScope);
   const consumptionSnapshotLoading = useSelector(
     selectConsumptionSnapshotLoading,
+  );
+  const consumptionSnapshotStatus = useSelector(
+    selectConsumptionSnapshotStatus,
   );
   const consumptionSnapshotError = useSelector(selectConsumptionSnapshotError);
   const customerMeterSummary = useSelector(selectCustomerMeterSummaryData);
@@ -193,6 +225,9 @@ export default function SuperAdminDashboard() {
   );
   const customerMeterSummaryLoading = useSelector(
     selectCustomerMeterSummaryLoading,
+  );
+  const customerMeterSummaryStatus = useSelector(
+    selectCustomerMeterSummaryStatus,
   );
   const customerMeterSummaryError = useSelector(
     selectCustomerMeterSummaryError,
@@ -204,17 +239,20 @@ export default function SuperAdminDashboard() {
   const customerActivationsLoading = useSelector(
     selectCustomerActivationsLoading,
   );
+  const customerActivationsStatus = useSelector(
+    selectCustomerActivationsStatus,
+  );
   const customerActivationsError = useSelector(selectCustomerActivationsError);
 
   const estates = estateState?.allEstates?.data ?? [];
   const estatesPagination = estateState?.allEstates?.pagination ?? null;
-  const estatesLoading = estateState?.getAllEstatesState === "isLoading";
+  const estatesStatus = estateState?.getAllEstatesState as string | undefined;
 
   const companies = useSelector(
     (state: RootState) => state.superAdminCompany.list ?? [],
   );
-  const companiesLoading = useSelector(
-    (state: RootState) => state.superAdminCompany.getListStatus === "isLoading",
+  const companiesStatus = useSelector(
+    (state: RootState) => state.superAdminCompany.getListStatus as string,
   );
 
   const customerMeterEstateOptions = useMemo(() => {
@@ -251,21 +289,15 @@ export default function SuperAdminDashboard() {
 
   useEffect(() => {
     dispatch(getAllEstates({ page: 1, limit: 200 })).catch((err: unknown) => {
-      const message =
-        err && typeof err === "object" && "message" in err
-          ? String((err as { message?: string }).message)
-          : "Failed to fetch estates";
-      toast.error(message);
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     });
   }, [dispatch]);
 
   useEffect(() => {
     dispatch(getCompanies({ page: 1, limit: 200 })).catch((err: unknown) => {
-      const message =
-        err && typeof err === "object" && "message" in err
-          ? String((err as { message?: string }).message)
-          : "Failed to fetch companies";
-      toast.error(message);
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     });
   }, [dispatch]);
 
@@ -441,21 +473,21 @@ export default function SuperAdminDashboard() {
   }, [estatesPagination?.total, customerGrowth]);
 
   const pageLoading =
-    (estatesLoading && estates.length === 0) ||
-    (companiesLoading && companies.length === 0) ||
-    (averagePurchaseLoading && !averagePurchase) ||
-    (powerAvailabilityLoading && !powerAvailability) ||
-    (revenueLoading && revenueSeries.length === 0) ||
-    (topEstatesLoading && topEstatesSeries.length === 0) ||
-    (paymentChannelsLoading && paymentChannelsSeries.length === 0) ||
-    (collectionEfficiencyLoading && !collectionEfficiency) ||
-    (faultsSummaryLoading && !faultsSummary) ||
-    (meterCommStatusLoading && !meterCommStatus) ||
-    (customerGrowthLoading && !customerGrowth) ||
-    (rechargeLoading && rechargeSeries.length === 0) ||
-    (consumptionSnapshotLoading && !consumptionSnapshot) ||
-    (customerMeterSummaryLoading && !customerMeterSummary) ||
-    (customerActivationsLoading && !customerActivations);
+    (isPending(estatesStatus) && estates.length === 0) ||
+    (isPending(companiesStatus) && companies.length === 0) ||
+    (isPending(averagePurchaseStatus) && !averagePurchase) ||
+    (isPending(powerAvailabilityStatus) && !powerAvailability) ||
+    (isPending(revenueStatus) && revenueSeries.length === 0) ||
+    (isPending(topEstatesStatus) && topEstatesSeries.length === 0) ||
+    (isPending(paymentChannelsStatus) && paymentChannelsSeries.length === 0) ||
+    (isPending(collectionEfficiencyStatus) && !collectionEfficiency) ||
+    (isPending(faultsSummaryStatus) && !faultsSummary) ||
+    (isPending(meterCommAsyncStatus) && !meterCommStatus) ||
+    (isPending(customerGrowthStatus) && !customerGrowth) ||
+    (isPending(rechargeStatus) && rechargeSeries.length === 0) ||
+    (isPending(consumptionSnapshotStatus) && !consumptionSnapshot) ||
+    (isPending(customerMeterSummaryStatus) && !customerMeterSummary) ||
+    (isPending(customerActivationsStatus) && !customerActivations);
 
   return (
     <div className="relative">

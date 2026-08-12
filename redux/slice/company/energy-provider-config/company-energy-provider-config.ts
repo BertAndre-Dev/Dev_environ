@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { apiErrorRejectValue } from "@/lib/api-error";
 import {
   mapEnergyProviderConfigList,
   paginateEnergyProviderRows,
@@ -61,12 +62,7 @@ export const getCompanyEnergyProviderConfigs = createAsyncThunk(
 
       return paginateEnergyProviderRows(rows, page, limit);
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message ??
-          "Failed to fetch energy provider configurations",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -87,15 +83,7 @@ export const setCompanyEnergyProviderConfig = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string | string[] } };
-      };
-      const msg = err?.response?.data?.message;
-      return rejectWithValue({
-        message: Array.isArray(msg)
-          ? msg[0]
-          : (msg ?? "Failed to set energy provider commission"),
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

@@ -40,6 +40,8 @@ import { BillPaymentHistoryCard } from "@/components/resident/pay-bills/BillPaym
 import { BillPaymentResultModal } from "@/components/resident/pay-bills/BillPaymentResultModal";
 import type { ResidentBillsPaymentState } from "@/redux/slice/resident/bills-payment/bills-payment-slice";
 import Loader from "@/components/ui/Loader";
+import { isBusy, isPending } from "@/lib/async-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 function pickPaymentReference(payload: unknown): string | undefined {
   if (payload == null || typeof payload !== "object") return undefined;
@@ -113,8 +115,7 @@ export default function PayBillsPage() {
   const createWalletState = useSelector(
     (state: RootState) => state.wallet.createWalletState,
   );
-  const walletLoading =
-    getWalletState === "idle" || getWalletState === "isLoading";
+  const walletLoading = isPending(getWalletState);
 
   const billsPayment = useSelector(
     (state: RootState) => state.residentBillsPayment,
@@ -122,12 +123,12 @@ export default function PayBillsPage() {
 
   const pageLoading =
     walletLoading ||
-    String(createWalletState) === "isLoading" ||
-    billsPayment?.getCategoriesStatus === "isLoading" ||
-    billsPayment?.getBillersStatus === "isLoading" ||
-    billsPayment?.getItemsStatus === "isLoading" ||
-    billsPayment?.payStatus === "isLoading" ||
-    billsPayment?.historyStatus === "isLoading";
+    isBusy(createWalletState) ||
+    isPending(billsPayment?.getCategoriesStatus) ||
+    isBusy(billsPayment?.getBillersStatus) ||
+    isBusy(billsPayment?.getItemsStatus) ||
+    isBusy(billsPayment?.payStatus) ||
+    isPending(billsPayment?.historyStatus);
 
   const isOwner = residentType === "owner";
   const formatNaira = (value: number) => `₦${(value ?? 0).toLocaleString()}`;
@@ -157,8 +158,9 @@ export default function PayBillsPage() {
         setHasBillPaymentPin(hasBillPaymentPin);
 
         await dispatch(getWallet(id)).unwrap();
-      } catch (err: any) {
-        toast.error(err?.message ?? "Failed to load data.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       }
     })();
   }, [dispatch]);
@@ -180,8 +182,9 @@ export default function PayBillsPage() {
     if (!categoryCode) return;
     dispatch(getBillersByCategory({ country, category_code: categoryCode }))
       .unwrap()
-      .catch((e: any) => {
-        toast.error(e?.message ?? "Failed to load billers.");
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       });
     setBillerCode("");
     setItemCode("");
@@ -192,8 +195,9 @@ export default function PayBillsPage() {
     if (!billerCode) return;
     dispatch(getBillItemsByBiller({ country, biller_code: billerCode }))
       .unwrap()
-      .catch((e: any) => {
-        toast.error(e?.message ?? "Failed to load bill items.");
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       });
     setItemCode("");
   }, [dispatch, country, billerCode]);
@@ -207,9 +211,8 @@ export default function PayBillsPage() {
       toast.success("Wallet created successfully.");
       dispatch(getWallet(userId));
     } catch (error: unknown) {
-      const msg =
-        (error as { message?: string })?.message || "Failed to create wallet.";
-      toast.error(msg);
+      const message = getApiErrorMessage(error);
+      if (message) toast.error(message);
     }
   };
 
@@ -271,8 +274,9 @@ export default function PayBillsPage() {
       if (!paymentUrl) throw new Error("Payment URL not received");
 
       globalThis.open(paymentUrl, "_blank", "noopener,noreferrer");
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to fund wallet.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -372,18 +376,12 @@ export default function PayBillsPage() {
       );
       setPin("");
     } catch (e: unknown) {
-      const msg =
-        e &&
-        typeof e === "object" &&
-        "message" in e &&
-        typeof (e as { message?: string }).message === "string"
-          ? (e as { message: string }).message
-          : "Payment failed. Please try again.";
+      const message = getApiErrorMessage(e);
       setPayResultModal({
         open: true,
         success: false,
         title: "Payment unsuccessful",
-        message: msg,
+        message: message ?? "Payment failed. Please try again.",
       });
     }
   };
@@ -398,27 +396,29 @@ export default function PayBillsPage() {
           pageLoading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
-        <h1 className="text-2xl font-bold">Pay Bills</h1>
-        <p className="text-sm text-muted-foreground">
-          Pay your bills securely and conveniently.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ResidentWalletCard
-            wallet={wallet}
-            isOwner={isOwner}
-            formatNaira={formatNaira}
-            variant="fundOnly"
-            walletLoading={walletLoading}
-            createWalletState={String(createWalletState)}
-            createWalletModalOpen={createWalletModalOpen}
-            onFundWalletClick={handleOpenModal}
-            onWithdrawClick={() => {}}
-            onTransferToBalanceClick={() => {}}
-            onCreateWalletClick={handleCreateWalletClick}
-          />
-
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Pay Bills</h1>
+            <p className="text-sm text-muted-foreground">
+              Pay your bills securely and conveniently.
+            </p>
+          </div>
           <UpdatePinCard onSubmitPin={handleUpdateBillPin} />
         </div>
+
+        <ResidentWalletCard
+          wallet={wallet}
+          isOwner={isOwner}
+          formatNaira={formatNaira}
+          variant="fundOnly"
+          walletLoading={walletLoading}
+          createWalletState={String(createWalletState)}
+          createWalletModalOpen={createWalletModalOpen}
+          onFundWalletClick={handleOpenModal}
+          onWithdrawClick={() => {}}
+          onTransferToBalanceClick={() => {}}
+          onCreateWalletClick={handleCreateWalletClick}
+        />
 
         <BillPaymentFormCard
           billsPayment={billsPayment}

@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import DeleteModal from "@/components/resident/delete-modal/page";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch } from "@/redux/store";
 import {
   createOperationsReportingEntry,
@@ -145,7 +146,10 @@ export default function OperationsReportingFillReportPanel({
 
   useEffect(() => {
     if (!estateId) return;
-    loadTypes(typesPage).catch(() => toast.error("Failed to load reporting types."));
+    loadTypes(typesPage).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
   }, [estateId, typesPage, loadTypes]);
 
   useEffect(() => {
@@ -178,8 +182,9 @@ export default function OperationsReportingFillReportPanel({
           ...prev,
           [fieldId]: res?.pagination ?? null,
         }));
-      } catch {
-        toast.error("Failed to load report entries.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
         setEntriesByField((prev) => ({ ...prev, [fieldId]: [] }));
         setEntriesPaginationByField((prev) => ({ ...prev, [fieldId]: null }));
       } finally {
@@ -223,8 +228,9 @@ export default function OperationsReportingFillReportPanel({
             return id ? loadEntriesForField(id, 1) : Promise.resolve();
           }),
         );
-      } catch {
-        toast.error("Failed to load report fields.");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
         setFieldsByType((prev) => ({ ...prev, [typeId]: [] }));
       } finally {
         setFieldsLoadingByType((prev) => ({ ...prev, [typeId]: false }));
@@ -260,8 +266,9 @@ export default function OperationsReportingFillReportPanel({
           const res = await dispatch(action).unwrap();
           fields = res?.data ?? [];
           setFieldsByType((prev) => ({ ...prev, [expandedTypeId]: fields }));
-        } catch {
-          toast.error("Failed to load report fields.");
+        } catch (err: unknown) {
+          const message = getApiErrorMessage(err);
+          if (message) toast.error(message);
           return;
         }
       }
@@ -350,9 +357,8 @@ export default function OperationsReportingFillReportPanel({
       setEditing(null);
       await loadFieldsAndEntriesForType(fillTypeId);
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to save report entry.",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 

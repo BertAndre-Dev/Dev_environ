@@ -4,6 +4,8 @@ export const NAV_ALWAYS_VISIBLE_LABELS = new Set([
   "Settings",
   "Logout",
   "Energy Provider Management",
+  "Notifications",
+  "Map",
 ]);
 
 /** Security role pages that are not estate modules. */
@@ -32,6 +34,11 @@ export function isNavModuleEnabled(
   if (moduleKey === "asset" || moduleKey === "assets") {
     return (
       estateModules.includes("asset") || estateModules.includes("assets")
+    );
+  }
+  if (moduleKey === "request" || moduleKey === "requests") {
+    return (
+      estateModules.includes("request") || estateModules.includes("requests")
     );
   }
   return estateModules.includes(moduleKey);

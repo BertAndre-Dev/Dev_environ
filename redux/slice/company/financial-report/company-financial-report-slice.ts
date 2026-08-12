@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 import {
   fetchCompanyFinancialReportAnalyticsChart,
@@ -68,10 +69,7 @@ const companyFinancialReportSlice = createSlice({
       })
       .addCase(fetchCompanyFinancialReportGenerate.rejected, (state, action) => {
         state.generateState = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ||
-          action.error.message ||
-          "Failed to generate financial report.";
+        state.error = getApiErrorMessage(action.payload) ?? null;
       });
 
     builder
@@ -92,10 +90,7 @@ const companyFinancialReportSlice = createSlice({
         fetchCompanyFinancialReportAnalyticsChart.rejected,
         (state, action) => {
           state.analyticsState = "failed";
-          state.error =
-            (action.payload as { message?: string } | undefined)?.message ||
-            action.error.message ||
-            "Failed to fetch analytics chart data.";
+          state.error = getApiErrorMessage(action.payload) ?? null;
         },
       );
   },

@@ -44,6 +44,7 @@ type Props = {
   onWithdrawClick: () => void;
   onTransferToBalanceClick: () => void;
   onCreateWalletClick: () => void;
+  onSetWithdrawalAccountClick?: () => void;
 };
 
 export function ResidentWalletCard({
@@ -58,9 +59,11 @@ export function ResidentWalletCard({
   onWithdrawClick,
   onTransferToBalanceClick,
   onCreateWalletClick,
+  onSetWithdrawalAccountClick,
 }: Readonly<Props>) {
   const [showBalance, setShowBalance] = useState(true);
   const hasWallet = Boolean(wallet?.id);
+  const hasWithdrawalAccount = Boolean(wallet?.accountNumber?.trim());
 
   return (
     <Card className="p-4 md:p-6 shadow-md">
@@ -177,14 +180,25 @@ export function ResidentWalletCard({
               </Button>
               {variant === "full" && isOwner && (
                 <>
-                  <Button
-                    onClick={onWithdrawClick}
-                    size="lg"
-                    variant="outline"
-                    className="px-6 w-full md:w-1/3"
-                  >
-                    Withdraw
-                  </Button>
+                  {hasWithdrawalAccount ? (
+                    <Button
+                      onClick={onWithdrawClick}
+                      size="lg"
+                      variant="outline"
+                      className="px-6 w-full md:w-1/3"
+                    >
+                      Withdraw
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={onSetWithdrawalAccountClick}
+                      size="lg"
+                      variant="outline"
+                      className="px-6 w-full md:w-1/3"
+                    >
+                      Set Withdrawal Account
+                    </Button>
+                  )}
                   <Button
                     onClick={onTransferToBalanceClick}
                     size="lg"

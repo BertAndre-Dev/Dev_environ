@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import type { FinancialReportData } from "@/lib/financial-report-utils";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 export type CompanyAnalyticsChartPoint = {
   date: string;
@@ -39,11 +40,7 @@ export const fetchCompanyFinancialReportGenerate = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to generate financial report.",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -62,12 +59,7 @@ export const fetchCompanyFinancialReportAnalyticsChart = createAsyncThunk(
         );
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message ||
-          "Failed to fetch analytics chart data.",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

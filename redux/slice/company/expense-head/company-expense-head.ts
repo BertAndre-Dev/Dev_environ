@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 export type CompanyExpenseHead = {
   id?: string;
@@ -33,11 +34,7 @@ export const createCompanyExpenseHead = createAsyncThunk(
       const res = await axiosInstance.post("/api/v1/expense-head", data);
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to create expense head.",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -75,11 +72,7 @@ export const fetchCompanyExpenseHeads = createAsyncThunk(
       );
       return res.data as CompanyExpenseHeadListResponse;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to fetch expense heads.",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -104,11 +97,7 @@ export const fetchCompanyExpenseHeadById = createAsyncThunk(
       });
       return res2.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to fetch expense head.",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -130,11 +119,7 @@ export const updateCompanyExpenseHead = createAsyncThunk(
       });
       return res.data;
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to update expense head.",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );
@@ -148,11 +133,7 @@ export const deleteCompanyExpenseHead = createAsyncThunk(
       });
       return res.data ? { id, ...res.data } : { id };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message || "Failed to delete expense head.",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

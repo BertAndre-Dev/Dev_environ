@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch } from "@/redux/store";
 import { iniviteUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
@@ -68,8 +69,9 @@ export default function CompanyInviteUserForm({
             }))
             .filter((e) => e.id),
         );
-      } catch {
-        toast.error("Failed to load estates");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setLoadingEstates(false);
       }
@@ -129,12 +131,8 @@ export default function CompanyInviteUserForm({
       onSuccess?.();
       onClose();
     } catch (err: unknown) {
-      const message =
-        (err as { message?: string })?.message ??
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ??
-        "Failed to invite user";
-      toast.error(typeof message === "string" ? message : "Failed to invite user");
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSubmitting(false);
     }

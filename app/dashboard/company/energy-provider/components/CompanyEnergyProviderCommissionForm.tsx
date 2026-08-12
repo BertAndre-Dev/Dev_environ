@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch } from "@/redux/store";
 import { getCompanyUsersByEstate } from "@/redux/slice/company/user-mgt/company-user";
 import { setCompanyEnergyProviderConfig } from "@/redux/slice/company/energy-provider-config/company-energy-provider-config";
@@ -90,8 +91,9 @@ export default function CompanyEnergyProviderCommissionForm({
             }))
             .filter((u) => u.value),
         );
-      } catch {
-        toast.error("Failed to load energy providers for this estate");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
         setEnergyProviderOptions([]);
       } finally {
         setLoadingProviders(false);
@@ -153,10 +155,8 @@ export default function CompanyEnergyProviderCommissionForm({
       onSuccess?.();
       onClose?.();
     } catch (err: unknown) {
-      const message =
-        (err as { message?: string })?.message ??
-        "Failed to configure energy provider commission";
-      toast.error(message);
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setSubmitting(false);
     }

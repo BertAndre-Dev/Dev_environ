@@ -3,10 +3,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import Table from "@/components/tables/list/page";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2 } from "lucide-react";
-import { confirmDeleteToast } from "@/lib/confirm-delete-toast";
 import type { RootState, AppDispatch } from "@/redux/store";
 import {
   createAssets,
@@ -18,6 +18,7 @@ import {
   type AssetCategory,
   type CreateAssetItemPayload,
 } from "@/redux/slice/resident/asset-mgt/resident-asset";
+import { getApiErrorMessage } from "@/lib/api-error";
 import AssetFormModal from "./AssetFormModal";
 
 const PAGE_SIZE = 10;
@@ -47,6 +48,7 @@ export default function AssetsTab({ estateId, estateName }: Readonly<Props>) {
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Asset | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<Asset | null>(null);
 
   const { assets, assetsPagination, categories } = useSelector(
     (state: RootState) => {
@@ -83,7 +85,10 @@ export default function AssetsTab({ estateId, estateName }: Readonly<Props>) {
     if (!estateId) return;
     dispatch(getAssets({ estateId, page, limit: PAGE_SIZE, search }))
       .unwrap()
-      .catch(() => toast.error("Failed to load assets."));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId, page, search]);
 
   const columns = useMemo(
@@ -161,14 +166,7 @@ export default function AssetsTab({ estateId, estateName }: Readonly<Props>) {
                 e.stopPropagation();
                 const id = getId(item);
                 if (!id) return;
-                confirmDeleteToast({
-                  name: item.name ?? "this asset",
-                  onConfirm: async () => {
-                    await dispatch(deleteAsset(id)).unwrap();
-                    toast.success("Asset deleted.");
-                    setPage(1);
-                  },
-                });
+                setItemToDelete(item);
               }}
             >
               <Trash2 className="w-4 h-4" />
@@ -179,6 +177,22 @@ export default function AssetsTab({ estateId, estateName }: Readonly<Props>) {
     ],
     [categories, deleteStatus, dispatch],
   );
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
+    const id = getId(itemToDelete);
+    if (!id) return;
+    try {
+      await dispatch(deleteAsset(id)).unwrap();
+      toast.success("Asset deleted.");
+      setItemToDelete(null);
+      setPage(1);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
+    }
+  };
 
   const openCreate = () => {
     if (!categories.length) {
@@ -204,9 +218,8 @@ export default function AssetsTab({ estateId, estateName }: Readonly<Props>) {
       setEditing(null);
       setPage(1);
     } catch (err: unknown) {
-      const message =
-        (err as { message?: string })?.message ?? "Failed to save asset.";
-      toast.error(message);
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -267,6 +280,15 @@ export default function AssetsTab({ estateId, estateName }: Readonly<Props>) {
         estateName={estateName}
         loading={createStatus === "isLoading" || updateStatus === "isLoading"}
         onSubmit={handleSubmit}
+      />
+    
+      <DeleteModal
+        visible={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        itemName={itemToDelete?.name ?? "this asset"}
+        title="Delete asset"
+        loading={deleteStatus === "isLoading"}
+        onConfirm={handleConfirmDelete}
       />
     </div>
   );

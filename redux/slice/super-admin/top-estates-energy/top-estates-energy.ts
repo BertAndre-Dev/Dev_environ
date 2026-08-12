@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import type { TopEstatesEnergyResponse } from "@/types/analytics";
+import { apiErrorRejectValue } from "@/lib/api-error";
 
 /** GET /api/v1/analytics/commercial/vending/top-estates?limit= */
 export const getTopEstatesEnergy = createAsyncThunk(
@@ -17,16 +18,7 @@ export const getTopEstatesEnergy = createAsyncThunk(
       );
       return res.data;
     } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return rejectWithValue({
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to fetch top estates by energy purchased.",
-      });
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

@@ -16,6 +16,7 @@ import {
 import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch, RootState } from "@/redux/store";
 import type { StaffComplaintItem } from "@/redux/slice/staff/maintenance/staff-maintenance-slice";
 import {
@@ -117,11 +118,12 @@ export default function StaffMaintenanceViewModal({
 
   useEffect(() => {
     if (!complaintId) return;
-    dispatch(getStaffComplaintById(complaintId)).catch((err: unknown) =>
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to load request.",
-      ),
-    );
+    dispatch(getStaffComplaintById(complaintId))
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [complaintId, dispatch]);
 
   const handleStatusChange = async (newStatus: string) => {
@@ -133,9 +135,8 @@ export default function StaffMaintenanceViewModal({
       toast.success("Status updated");
       onUpdated?.();
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to update status",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -153,9 +154,8 @@ export default function StaffMaintenanceViewModal({
       setCommentText("");
       toast.success("Comment added");
     } catch (err: unknown) {
-      toast.error(
-        (err as { message?: string })?.message ?? "Failed to add comment",
-      );
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 

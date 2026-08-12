@@ -1,4 +1,4 @@
-import React from "react";
+"use client";
 
 type Props = {
   estateName: string;
@@ -20,4 +20,3 @@ export function TransactionsPageHeader({
     </div>
   );
 }
-

@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import Modal from "@/components/modal/page";
 import Table from "@/components/tables/list/page";
 import EstateWalletOverviewCard from "@/components/estate-admin/wallet-overview-card/page";
+import SetWithdrawalAccountModal from "@/components/wallet/SetWithdrawalAccountModal";
+import RevenueWithdrawalAccountsCard from "@/components/wallet/RevenueWithdrawalAccountsCard";
 import EnergyProviderWithdrawFundForm from "@/components/energy-provider/wallet/EnergyProviderWithdrawFundForm";
 import { formatDateTime } from "@/lib/format-date";
 import {
@@ -32,12 +34,13 @@ import {
 } from "@/redux/slice/energy-provider/wallet-mgt/energy-provider-wallet-mgt";
 import {
   selectEnergyProviderCredits,
-  selectEnergyProviderCreditsLoading,
   selectEnergyProviderCreditsPagination,
   selectEnergyProviderWallet,
 } from "@/redux/slice/energy-provider/wallet-mgt/energy-provider-wallet-mgt-slice";
 import type { EnergyProviderCreditItem } from "@/redux/slice/energy-provider/wallet-mgt/energy-provider-wallet-mgt-slice";
 import type { AppDispatch, RootState } from "@/redux/store";
+import { isPending } from "@/lib/async-status";
+import Loader from "@/components/ui/Loader";
 
 const LIMIT = 10;
 
@@ -57,6 +60,8 @@ export default function EnergyProviderWalletPage() {
   const dispatch = useDispatch<AppDispatch>();
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [createWalletModalOpen, setCreateWalletModalOpen] = useState(false);
+  const [setWithdrawalAccountModalOpen, setSetWithdrawalAccountModalOpen] =
+    useState(false);
   const [createWalletAccountNumber, setCreateWalletAccountNumber] =
     useState("");
   const [createWalletBankCode, setCreateWalletBankCode] = useState("");
@@ -70,11 +75,21 @@ export default function EnergyProviderWalletPage() {
   const wallet = useSelector(selectEnergyProviderWallet);
   const creditsData = useSelector(selectEnergyProviderCredits);
   const creditsPagination = useSelector(selectEnergyProviderCreditsPagination);
-  const creditsLoading = useSelector(selectEnergyProviderCreditsLoading);
+  const getWalletState = useSelector(
+    (state: RootState) =>
+      state.energyProviderWallet?.getWalletState ?? "idle",
+  );
+  const getCreditsState = useSelector(
+    (state: RootState) =>
+      state.energyProviderWallet?.getCreditsState ?? "idle",
+  );
+  const walletLoading = isPending(getWalletState);
+  const creditsLoading = isPending(getCreditsState);
   const createWalletState = useSelector(
     (state: RootState) =>
       state.energyProviderWallet?.createWalletState ?? "idle",
   );
+  const pageLoading = walletLoading || (!!userId && creditsLoading);
 
   const {
     banks,
@@ -282,23 +297,39 @@ export default function EnergyProviderWalletPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-heading text-3xl font-bold">Wallet Management</h1>
-        <p className="text-muted-foreground mt-1">
-          Welcome back! Here is an overview for{" "}
-          <span className="text-[18px] font-bold underline uppercase text-black">
-            {estateName}
-          </span>
-          .
-        </p>
+    <div className="relative space-y-6">
+      {pageLoading && <Loader fullScreen label="Loading wallet..." />}
+
+      <div
+        className={[
+          "space-y-6",
+          pageLoading ? "pointer-events-none select-none" : "",
+        ].join(" ")}
+      >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="font-heading text-3xl font-bold">Wallet Management</h1>
+          <p className="text-muted-foreground mt-1">
+            Welcome back! Here is an overview for{" "}
+            <span className="text-[18px] font-bold underline uppercase text-black">
+              {estateName}
+            </span>
+            .
+          </p>
+        </div>
+        <RevenueWithdrawalAccountsCard
+          role="energyProvider"
+          className="w-full shrink-0 sm:w-auto"
+        />
       </div>
 
       <EstateWalletOverviewCard
         wallet={wallet}
         onWithdraw={handleOpenWithdraw}
         onCreateWallet={() => setCreateWalletModalOpen(true)}
+        onSetWithdrawalAccount={() => setSetWithdrawalAccountModalOpen(true)}
         createWalletLoading={createWalletState === "isLoading"}
+        revenueSettlementRole="energyProvider"
       />
 
       <Card className="p-4 space-y-4">
@@ -499,6 +530,15 @@ export default function EnergyProviderWalletPage() {
           </div>
         </div>
       </Modal>
+
+      <SetWithdrawalAccountModal
+        visible={setWithdrawalAccountModalOpen}
+        onClose={() => setSetWithdrawalAccountModalOpen(false)}
+        onSuccess={() => {
+          if (userId) dispatch(getEnergyProviderWallet(userId));
+        }}
+      />
+      </div>
     </div>
   );
 }

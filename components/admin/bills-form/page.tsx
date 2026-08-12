@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 import {
   formatAmountInput,
   parseFormattedNumber,
@@ -20,6 +21,7 @@ interface BillFormState {
   name: string;
   description: string;
   yearlyAmount: number | string;
+  compulsory: boolean;
   id?: string;
 }
 
@@ -29,6 +31,7 @@ export interface BillSubmitData {
   name: string;
   description: string;
   yearlyAmount: number;
+  compulsory?: boolean;
   id?: string;
 }
 
@@ -44,6 +47,7 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
     name: "",
     description: "",
     yearlyAmount: "",
+    compulsory: false,
   });
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
@@ -67,10 +71,12 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
             yearlyAmount: fetchData.yearlyAmount
               ? formatAmountInput(String(fetchData.yearlyAmount))
               : "",
+            compulsory: Boolean(fetchData.compulsory),
           });
         }
-      } catch (error: any) {
-        toast.error(error?.message || "Failed to load bill");
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setLoading(false);
       }
@@ -79,7 +85,10 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
     fetchExistingBill();
   }, [dispatch, estateId, initialData]);
 
-  const handleChange = (field: keyof BillFormState, value: string | number) => {
+  const handleChange = (
+    field: keyof BillFormState,
+    value: string | number | boolean,
+  ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -90,25 +99,26 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       name: formData.name,
       description: formData.description,
       yearlyAmount: parseFormattedNumber(formData.yearlyAmount),
+      compulsory: formData.compulsory,
     };
     onSubmit(payload);
   };
 
   return (
     <form onSubmit={handleSubmit}>
-      <CardHeader>
-        <CardTitle className="text-lg pb-4 pt-8 font-semibold">
+      <CardHeader className="px-0 md:px-0">
+        <CardTitle className="text-lg pb-2 pt-2 font-semibold">
           {initialData?.id ? "Update Estate Bill" : "Create Estate Bill"}
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4 px-0 md:px-0">
         {loading ? (
           <p className="text-gray-500 italic">Loading...</p>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div>
-              <Label className="text-[20px] font-regular">Name</Label>
+              <Label>Name</Label>
               <Input
                 type="text"
                 value={formData.name}
@@ -118,7 +128,7 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
             </div>
 
             <div>
-              <Label className="text-[20px] font-regular">Description</Label>
+              <Label>Description</Label>
               <Input
                 type="text"
                 value={formData.description}
@@ -140,10 +150,28 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
                 required
               />
             </div>
+
+            <div className="flex items-start gap-3">
+              <input
+                id="estate-bill-compulsory"
+                type="checkbox"
+                checked={formData.compulsory}
+                onChange={(e) => handleChange("compulsory", e.target.checked)}
+                className="mt-1 rounded border-input"
+              />
+              <div>
+                <Label
+                  htmlFor="estate-bill-compulsory"
+                  className="cursor-pointer font-medium"
+                >
+                  Compulsory bill
+                </Label>
+              </div>
+            </div>
           </div>
         )}
 
-        <div className="pt-6">
+        <div className="pt-4">
           <Button type="submit" className="w-full" disabled={!formData.name.trim()}>
             {initialData?.id ? "Update Bill" : "Create Bill"}
           </Button>

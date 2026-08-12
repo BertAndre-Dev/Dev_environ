@@ -5,17 +5,23 @@ import { Button } from "@/components/ui/button";
 import Modal from "@/components/modal/page";
 import Table from "@/components/tables/list/page";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { RootState, AppDispatch } from "@/redux/store";
 import { useCallback, useEffect, useState } from "react";
 import type { EstateEnergyUsageRange } from "@/lib/estate-energy-usage-chart";
 import { useDispatch, useSelector } from "react-redux";
-import { Eye, Link, Search, Zap } from "lucide-react";
+import { ChevronDown, Eye, KeyRound, Link, Search, Unlink, Zap } from "lucide-react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { MeterEnergyUsageSection } from "@/components/charts/meter-energy-usage-section";
+import { ClearTamperTokenModal } from "@/components/meter/ClearTamperTokenModal";
 import {
   getMeterUsage,
   type MeterUsageRange,
 } from "@/redux/slice/resident/meter-mgt/meter-mgt";
 import {
+  assignMeterToAddress,
+  clearTamperToken,
+  extractClearTamperToken,
   getAllEstateMeter,
   getVendingStatsByEstate,
 } from "@/redux/slice/admin/meter-mgt/meter-mgt";
@@ -25,12 +31,16 @@ import { getEstateRealtimeReadings } from "@/redux/slice/admin/estate-realtime-r
 import { formatRealtimeEnergyKwh } from "@/lib/estate-realtime-readings";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import AssignMeterForm from "@/components/admin/meter-form/page";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
 import { EstatePowerUsageSection } from "@/components/charts/estate-power-usage-section";
 import type { EnergyConsumptionPeriod } from "@/lib/energy-consumption-chart";
 import Tab from "@/components/tabs/page";
 import { IoSpeedometerOutline } from "react-icons/io5";
 import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
+import { ViewVendLimitModal } from "./components/ViewVendLimitModal";
+import { SetVendLimitModal } from "./components/SetVendLimitModal";
 
 interface VendorData {
   name: string;
@@ -76,7 +86,6 @@ export default function AdminMeterManagement() {
   const [searchInput, setSearchInput] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [bootstrapping, setBootstrapping] = useState(true);
-  const [initialMetersLoading, setInitialMetersLoading] = useState(false);
   const [usageRange, setUsageRange] = useState<EstateEnergyUsageRange>("weekly");
   const [usageRefreshing, setUsageRefreshing] = useState(false);
   const [energyPeriod, setEnergyPeriod] =
@@ -85,16 +94,37 @@ export default function AdminMeterManagement() {
   const [usageMeterNumber, setUsageMeterNumber] = useState<string | null>(null);
   const [meterUsageRange, setMeterUsageRange] =
     useState<MeterUsageRange>("weekly");
+  const [viewVendLimitOpen, setViewVendLimitOpen] = useState(false);
+  const [setVendLimitOpen, setSetVendLimitOpen] = useState(false);
+  const [meterToUnassign, setMeterToUnassign] = useState<AdminMeterData | null>(
+    null,
+  );
+  const [unassignSubmitting, setUnassignSubmitting] = useState(false);
+  const [clearTamperOpen, setClearTamperOpen] = useState(false);
+  const [clearTamperMeterNumber, setClearTamperMeterNumber] = useState<
+    string | null
+  >(null);
+  const [clearTamperTokenValue, setClearTamperTokenValue] = useState<
+    string | null
+  >(null);
+  const [clearTamperLoadingMeter, setClearTamperLoadingMeter] = useState<
+    string | null
+  >(null);
 
-  const { allAdminMeters, pagination } = useSelector((state: RootState) => {
-    const adminMeterState = state.adminMeter as any;
-    return {
-      allAdminMeters: adminMeterState?.allAdminMeters?.data || [],
-      pagination: adminMeterState?.allAdminMeters?.pagination || {},
-    };
-  });
+  const { allAdminMeters, pagination, getAllEstateMeterState } = useSelector(
+    (state: RootState) => {
+      const adminMeterState = state.adminMeter as any;
+      return {
+        allAdminMeters: adminMeterState?.allAdminMeters?.data || [],
+        pagination: adminMeterState?.allAdminMeters?.pagination || {},
+        getAllEstateMeterState:
+          adminMeterState?.getAllEstateMeterState ?? "idle",
+      };
+    },
+  );
 
-  const pageLoading = bootstrapping || initialMetersLoading;
+  const pageLoading =
+    bootstrapping || (!!estateId && isPending(getAllEstateMeterState));
   
   const { energyConsumptionChart, energyChartLoading } = useSelector(
     (state: RootState) => ({
@@ -157,9 +187,10 @@ export default function AdminMeterManagement() {
   const handleSearchSubmit = () => {
     const term = searchInput.trim();
     setAppliedSearch(term);
-    fetchMeters(1, term).catch((error: { message?: string }) =>
-      toast.error(error?.message ?? "Failed to search meters."),
-    );
+    fetchMeters(1, term).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
   };
 
   const handleClearSearch = () => {
@@ -172,9 +203,12 @@ export default function AdminMeterManagement() {
         page: 1,
         limit: PAGE_LIMIT,
       }),
-    ).catch((error: { message?: string }) =>
-      toast.error(error?.message ?? "Failed to clear search."),
-    );
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   };
 
   // Bootstrap signed-in user and estate only (no meter fetch here).
@@ -207,8 +241,9 @@ export default function AdminMeterManagement() {
         }
 
         setEstateId(estateIdValue);
-      } catch (error: any) {
-        toast.error(error?.message);
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
       } finally {
         setBootstrapping(false);
       }
@@ -220,7 +255,6 @@ export default function AdminMeterManagement() {
     if (!estateId) return;
     setSearchInput("");
     setAppliedSearch("");
-    setInitialMetersLoading(true);
     dispatch(
       getAllEstateMeter({
         estateId,
@@ -229,35 +263,40 @@ export default function AdminMeterManagement() {
       }),
     )
       .unwrap()
-      .catch((error: { message?: string }) => toast.error(error?.message))
-      .finally(() => setInitialMetersLoading(false));
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [estateId, dispatch]);
 
   useEffect(() => {
     if (!estateId) return;
-    dispatch(getVendingStatsByEstate({ estateId })).catch((error: any) =>
-      toast.error(error?.message ?? "Failed to load vending statistics."),
-    );
+    dispatch(getVendingStatsByEstate({ estateId }))
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId]);
 
   useEffect(() => {
     if (!estateId) return;
-    dispatch(getEstateRealtimeReadings({ estateId })).catch(
-      (error: { message?: string }) => {
-        toast.error(
-          error?.message ?? "Failed to load estate realtime usage.",
-        );
-      },
-    );
+    dispatch(getEstateRealtimeReadings({ estateId }))
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId]);
 
   useEffect(() => {
     if (!estateId) return;
-    dispatch(getEstateEnergyUsage({ estateId, range: usageRange })).catch(
-      (error: { message?: string }) => {
-        toast.error(error?.message ?? "Failed to load estate energy usage.");
-      },
-    );
+    dispatch(getEstateEnergyUsage({ estateId, range: usageRange }))
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId, usageRange]);
 
   useEffect(() => {
@@ -267,11 +306,12 @@ export default function AdminMeterManagement() {
         estateId,
         period: energyPeriod,
       }),
-    ).catch((error: { message?: string }) => {
-      toast.error(
-        error?.message ?? "Failed to load energy consumption chart.",
-      );
-    });
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, estateId, energyPeriod]);
 
   const handleRefreshUsage = async () => {
@@ -285,8 +325,9 @@ export default function AdminMeterManagement() {
           refresh: true,
         }),
       ).unwrap();
-    } catch (error: any) {
-      toast.error(error?.message ?? "Failed to refresh estate energy usage.");
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     } finally {
       setUsageRefreshing(false);
     }
@@ -300,8 +341,9 @@ export default function AdminMeterManagement() {
           ? dispatch(getVendingStatsByEstate({ estateId })).unwrap()
           : Promise.resolve(),
       ]);
-    } catch (error: any) {
-      toast.error(error?.message);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
     }
   };
 
@@ -315,6 +357,36 @@ export default function AdminMeterManagement() {
     setOpen(false);
   };
 
+  const openUnassignConfirm = (meter: AdminMeterData) => {
+    setMeterToUnassign(meter);
+  };
+
+  const handleConfirmUnassign = async () => {
+    if (!meterToUnassign || !estateId) {
+      toast.error("Missing estate or meter for unassign.");
+      return;
+    }
+    setUnassignSubmitting(true);
+    try {
+      const res = await dispatch(
+        assignMeterToAddress({
+          meterNumber: meterToUnassign.meterNumber,
+          estateId,
+          unassign: true,
+        }),
+      ).unwrap();
+      toast.success(res?.message || "Meter unassigned successfully.");
+      setMeterToUnassign(null);
+      await handleRefresh();
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
+    } finally {
+      setUnassignSubmitting(false);
+    }
+  };
+
   const handleOpenUsageModal = (meter: AdminMeterData) => {
     setUsageMeterNumber(meter.meterNumber);
     setMeterUsageRange("weekly");
@@ -326,13 +398,52 @@ export default function AdminMeterManagement() {
     setUsageMeterNumber(null);
   };
 
+  const handleCloseClearTamper = () => {
+    setClearTamperOpen(false);
+    setClearTamperMeterNumber(null);
+    setClearTamperTokenValue(null);
+  };
+
+  const handleClearTamper = async (meter: AdminMeterData) => {
+    if (!meter.meterNumber) {
+      toast.warning("Meter number is missing.");
+      return;
+    }
+
+    setClearTamperLoadingMeter(meter.meterNumber);
+    try {
+      const res = await dispatch(
+        clearTamperToken({ meterNumber: meter.meterNumber }),
+      ).unwrap();
+      const token = extractClearTamperToken(res);
+      if (!token) {
+        toast.error("No clear-tamper token was returned.");
+        return;
+      }
+      setClearTamperMeterNumber(meter.meterNumber);
+      setClearTamperTokenValue(token);
+      setClearTamperOpen(true);
+      toast.success(
+        "Clear-tamper token generated. Enter it on the meter keypad.",
+      );
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error);
+      if (message) toast.error(message);
+    } finally {
+      setClearTamperLoadingMeter(null);
+    }
+  };
+
   useEffect(() => {
     if (!usageModalOpen || !usageMeterNumber) return;
     dispatch(
       getMeterUsage({ meterNumber: usageMeterNumber, range: meterUsageRange }),
-    ).catch((error: { message?: string }) => {
-      toast.error(error?.message ?? "Failed to load meter energy usage.");
-    });
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
   }, [dispatch, usageModalOpen, usageMeterNumber, meterUsageRange]);
 
   const getAllAddressKeys = (data: AdminMeterData[]) => {
@@ -394,9 +505,20 @@ export default function AdminMeterManagement() {
     },
     {
       key: "actions",
-      header: "Assign Meter",
+      header: "Assign / Unassign",
       exportable: false,
-      render: (item: AdminMeterData) => (
+      render: (item: AdminMeterData) =>
+        item.isAssigned ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => openUnassignConfirm(item)}
+            className="hover:bg-amber-100"
+            title="Unassign meter"
+          >
+            <Unlink className="w-4 h-4 text-amber-600" />
+          </Button>
+        ) : (
           <Button
             variant="ghost"
             size="sm"
@@ -406,7 +528,7 @@ export default function AdminMeterManagement() {
           >
             <Link className="w-4 h-4 text-blue-600" />
           </Button>
-      ),
+        ),
     },
     {
       key: "energyUsage",
@@ -423,7 +545,24 @@ export default function AdminMeterManagement() {
           <Eye className="w-4 h-4 text-emerald-600" />
         </Button>
       ),
-    }
+    },
+    {
+      key: "clearTamper",
+      header: "Clear Tamper",
+      exportable: false,
+      render: (item: AdminMeterData) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleClearTamper(item)}
+          className="cursor-pointer hover:bg-orange-100"
+          title="Generate clear-tamper token"
+          disabled={clearTamperLoadingMeter === item.meterNumber}
+        >
+          <KeyRound className="w-4 h-4 text-orange-600" />
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -437,15 +576,49 @@ export default function AdminMeterManagement() {
         ].join(" ")}
       >
       {/* Header */}
-      <div>
-        <h1 className="font-heading text-3xl font-bold">Energy Management</h1>
-        <p className="text-muted-foreground mt-1">
-          Monitor energy usage and manage all meters in{" "}
-          <span className="text-[18px] font-bold underline uppercase text-black">
-            {estateName || ""}
-          </span>
-          .
-        </p>
+      <div className="flex flex-col md:flex-row gap-5 md:gap-0 items-start md:items-center justify-between">
+        <div>
+          <h1 className="font-heading text-3xl font-bold">Energy Management</h1>
+          <p className="text-muted-foreground mt-1">
+            Monitor energy usage and manage all meters in{" "}
+            <span className="text-[18px] font-bold underline uppercase text-black">
+              {estateName || ""}
+            </span>
+            .
+          </p>
+        </div>
+
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <Button
+              disabled={!estateId || bootstrapping}
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              Vend Limit
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              align="end"
+              sideOffset={8}
+              className="z-50 min-w-[200px] rounded-md border bg-white p-1 shadow-md"
+            >
+              <DropdownMenu.Item
+                onSelect={() => setViewVendLimitOpen(true)}
+                className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100"
+              >
+                See vend limit
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                onSelect={() => setSetVendLimitOpen(true)}
+                className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100"
+              >
+                Set / update vend limit
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -565,9 +738,10 @@ export default function AdminMeterManagement() {
                         pageSize: Number(pagination?.pageSize) || 10,
                       }}
                       onPageChange={(page) => {
-                        fetchMeters(page).catch(() =>
-                          toast.error("Failed to change page"),
-                        );
+                        fetchMeters(page).catch((err: unknown) => {
+                          const message = getApiErrorMessage(err);
+                          if (message) toast.error(message);
+                        });
                       }}
                       enableExport
                       exportFileName="meters"
@@ -636,6 +810,46 @@ export default function AdminMeterManagement() {
           </div>
         </Modal>
       )}
+
+      {estateId ? (
+        <>
+          <ViewVendLimitModal
+            open={viewVendLimitOpen}
+            estateId={estateId}
+            onClose={() => setViewVendLimitOpen(false)}
+          />
+          <SetVendLimitModal
+            open={setVendLimitOpen}
+            estateId={estateId}
+            onClose={() => setSetVendLimitOpen(false)}
+          />
+        </>
+      ) : null}
+
+      <DeleteModal
+        visible={!!meterToUnassign}
+        onClose={() => setMeterToUnassign(null)}
+        itemName={meterToUnassign?.meterNumber ?? "this meter"}
+        title="Unassign meter"
+        confirmLabel="Unassign"
+        loading={unassignSubmitting}
+        loadingLabel="Unassigning..."
+        message={
+          <p className="text-sm text-muted-foreground mb-4">
+            Unassign meter{" "}
+            <strong>{meterToUnassign?.meterNumber ?? "this meter"}</strong> from
+            its address? The meter will stay on the estate pool.
+          </p>
+        }
+        onConfirm={handleConfirmUnassign}
+      />
+
+      <ClearTamperTokenModal
+        visible={clearTamperOpen}
+        meterNumber={clearTamperMeterNumber}
+        token={clearTamperTokenValue}
+        onClose={handleCloseClearTamper}
+      />
       </div>
     </div>
   );

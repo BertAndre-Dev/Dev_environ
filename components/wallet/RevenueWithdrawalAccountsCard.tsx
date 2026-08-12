@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   Landmark,
-  RefreshCw,
   Sparkles,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +13,10 @@ import { Select } from "@/components/ui/select";
 import Modal from "@/components/modal/page";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/redux/store";
-import type { RevenueWithdrawalRole } from "@/redux/slice/wallet-mgt/create-revenue-withdrawal-module";
+import {
+  canonicalizeRevenueType,
+  type RevenueWithdrawalRole,
+} from "@/redux/slice/wallet-mgt/create-revenue-withdrawal-module";
 import {
   getCompanyRevenueWithdrawalAccounts,
   getCompanyRevenueWithdrawalTypes,
@@ -111,20 +113,15 @@ function useRevenueWithdrawal(
 ) {
   const enabled = options?.enabled ?? true;
   const dispatch = useDispatch<AppDispatch>();
-  const reduceMotion = useReducedMotion();
   const api = ROLE_API[role];
 
   const slice = useSelector(api.selectSlice);
   const accounts = slice?.accounts ?? [];
   const types = slice?.types ?? [];
   const autoSettlementEnabled = slice?.autoSettlementEnabled ?? null;
-  const loading =
-    slice?.getAccountsState === "isLoading" ||
-    slice?.getTypesState === "isLoading";
   const setAutoSettlementState = slice?.setAutoSettlementState ?? "idle";
   const getAccountsState = slice?.getAccountsState ?? "idle";
 
-  const [refreshing, setRefreshing] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [selectedType, setSelectedType] = useState<{
     value: string;
@@ -134,7 +131,7 @@ function useRevenueWithdrawal(
   const accountByType = useMemo(() => {
     const map = new Map<string, (typeof accounts)[number]>();
     for (const account of accounts) {
-      map.set(account.revenueType, account);
+      map.set(canonicalizeRevenueType(account.revenueType), account);
     }
     return map;
   }, [accounts]);
@@ -151,10 +148,14 @@ function useRevenueWithdrawal(
             { value: "default", label: "Default" },
           ];
 
-    return typeList.map((type) => ({
-      ...type,
-      account: accountByType.get(type.value) ?? null,
-    }));
+    return typeList.map((type) => {
+      const value = canonicalizeRevenueType(type.value);
+      return {
+        value,
+        label: type.label,
+        account: accountByType.get(value) ?? null,
+      };
+    });
   }, [types, accountByType]);
 
   const configuredCount = rows.filter((row) => row.account).length;
@@ -186,18 +187,6 @@ function useRevenueWithdrawal(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, role, enabled]);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await loadData();
-      toast.success("Settlement settings refreshed.");
-    } catch {
-      toast.error("Failed to refresh settlement settings.");
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
   const handleToggleAutoSettlement = async (next: boolean) => {
     try {
       await dispatch(api.setAutoSettlement(next)).unwrap();
@@ -216,18 +205,14 @@ function useRevenueWithdrawal(
 
   return {
     dispatch,
-    reduceMotion,
     api,
     rows,
     configuredCount,
     autoEnabled,
     toggling,
     showLoading,
-    loading,
-    refreshing,
     selectedType,
     setSelectedType,
-    handleRefresh,
     handleToggleAutoSettlement,
   };
 }
@@ -462,38 +447,16 @@ export default function RevenueWithdrawalAccountsCard({
         contentClassName="md:w-[520px] lg:w-[560px] xl:w-[560px]"
       >
         <Card className="w-full border-0 shadow-none">
-          <CardHeader className="flex flex-row items-start justify-between space-y-0 px-0 pb-3 pt-0">
-            <div className="min-w-0 pr-3">
-              <div className="flex items-center gap-2">
-                <Landmark
-                  className="size-4 shrink-0 text-muted-foreground"
-                  aria-hidden
-                />
-                <CardTitle className="text-lg font-semibold tracking-tight">
-                  Revenue settlement
-                </CardTitle>
-              </div>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={state.handleRefresh}
-              disabled={state.refreshing || state.loading}
-              className={cn(
-                "shrink-0 text-muted-foreground",
-                "transition-transform duration-100 ease-out active:scale-[0.97]",
-              )}
-            >
-              <RefreshCw
-                className={cn(
-                  "size-3.5",
-                  (state.refreshing || state.loading) && "animate-spin",
-                )}
+          <CardHeader className="space-y-0 px-0 pb-3 pt-0">
+            <div className="flex items-center gap-2">
+              <Landmark
+                className="size-4 shrink-0 text-muted-foreground"
                 aria-hidden
               />
-              {state.refreshing ? "Refreshing…" : "Refresh"}
-            </Button>
+              <CardTitle className="text-lg font-semibold tracking-tight">
+                Revenue settlement
+              </CardTitle>
+            </div>
           </CardHeader>
 
           <CardContent className="space-y-5 px-0 pb-0 pt-1">

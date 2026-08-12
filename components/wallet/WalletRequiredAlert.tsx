@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { AlertBanner } from "@/components/ui/alert-banner";
-import SetWithdrawalAccountModal from "@/components/wallet/SetWithdrawalAccountModal";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { selectUserRole } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 import { getWallet as getResidentWallet } from "@/redux/slice/resident/wallet-mgt/wallet-mgt";
@@ -44,8 +43,6 @@ export function WalletRequiredAlert() {
     (state: RootState) => state.companyWallet.getWalletState,
   );
 
-  const [modalOpen, setModalOpen] = useState(false);
-
   const role = userRole || (user?.role as string | undefined);
   const normalizedRole = normalizeUserRole(role);
   const residentType =
@@ -54,7 +51,7 @@ export function WalletRequiredAlert() {
     null;
   const userId = extractUserId(user);
   const estateId = extractEstateIdFromUser(user);
-  const companyId = user ? parseCompanyFromUser(user)?.id ?? null : null;
+  const companyId = user ? (parseCompanyFromUser(user)?.id ?? null) : null;
 
   const isResidentOwner =
     normalizedRole === "resident" &&
@@ -123,33 +120,13 @@ export function WalletRequiredAlert() {
   const walletRoute = getWalletRouteForRole(role);
   if (!walletRoute) return null;
 
-  const refetchWallet = () => {
-    if (isResidentOwner && userId) {
-      dispatch(getResidentWallet(userId));
-    } else if (isEstateAdmin && estateId) {
-      dispatch(getEstateWallet(estateId));
-    } else if (isCompany && companyId) {
-      dispatch(getCompanyWallet(companyId));
-    }
-  };
-
   return (
-    <>
-      <AlertBanner
-        title="Withdrawal account required"
-        message="Set a bank account so you can withdraw funds from your wallet."
-        actionLabel="Set withdrawal account"
-        onAction={() => setModalOpen(true)}
-        variant="warning"
-      />
-      <SetWithdrawalAccountModal
-        visible={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSuccess={() => {
-          setModalOpen(false);
-          refetchWallet();
-        }}
-      />
-    </>
+    <AlertBanner
+      title="Withdrawal account required"
+      message="Set a bank account so you can withdraw funds from your wallet."
+      actionLabel="Set withdrawal account"
+      actionHref={walletRoute}
+      variant="warning"
+    />
   );
 }

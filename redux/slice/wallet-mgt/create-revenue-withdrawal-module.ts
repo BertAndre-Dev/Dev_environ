@@ -79,34 +79,68 @@ function formatRevenueTypeLabel(value: string): string {
     .join(" ");
 }
 
-export function normalizeRevenueTypes(raw: unknown): RevenueWithdrawalTypeItem[] {
-  let list: unknown[] = [];
-  if (Array.isArray(raw)) {
-    list = raw;
-  } else if (raw && typeof raw === "object") {
-    const data = (raw as { data?: unknown }).data;
-    if (Array.isArray(data)) list = data;
+function asTrimmedString(value: unknown): string {
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return "";
+}
+
+/** Canonical key so "Service Charge" / "service-charge" match "service_charge". */
+export function canonicalizeRevenueType(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_")
+    .replace(/_+/g, "_");
+}
+
+function extractListFromPayload(raw: unknown, nestedKeys: string[]): unknown[] {
+  if (Array.isArray(raw)) return raw;
+  if (!raw || typeof raw !== "object") return [];
+
+  const root = raw as Record<string, unknown>;
+  const candidates: unknown[] = [root, root.data];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate;
+    if (!candidate || typeof candidate !== "object") continue;
+    const obj = candidate as Record<string, unknown>;
+    for (const key of nestedKeys) {
+      if (Array.isArray(obj[key])) return obj[key] as unknown[];
+    }
   }
+
+  return [];
+}
+
+export function normalizeRevenueTypes(raw: unknown): RevenueWithdrawalTypeItem[] {
+  const list = extractListFromPayload(raw, [
+    "revenueWithdrawalTypes",
+    "types",
+    "items",
+  ]);
 
   return list
     .map((item): RevenueWithdrawalTypeItem | null => {
       if (typeof item === "string" && item.trim()) {
-        return { value: item.trim(), label: formatRevenueTypeLabel(item.trim()) };
+        const value = canonicalizeRevenueType(item);
+        return { value, label: formatRevenueTypeLabel(value) };
       }
       if (item && typeof item === "object") {
         const obj = item as Record<string, unknown>;
-        const value =
-          (typeof obj.value === "string" && obj.value) ||
-          (typeof obj.type === "string" && obj.type) ||
-          (typeof obj.revenueType === "string" && obj.revenueType) ||
-          (typeof obj.name === "string" && obj.name) ||
-          "";
-        if (!value.trim()) return null;
+        const rawValue =
+          asTrimmedString(obj.value) ||
+          asTrimmedString(obj.type) ||
+          asTrimmedString(obj.revenueType) ||
+          asTrimmedString(obj.code) ||
+          asTrimmedString(obj.name);
+        if (!rawValue) return null;
+        const value = canonicalizeRevenueType(rawValue);
         const label =
-          (typeof obj.label === "string" && obj.label) ||
-          (typeof obj.displayName === "string" && obj.displayName) ||
-          formatRevenueTypeLabel(value.trim());
-        return { value: value.trim(), label };
+          asTrimmedString(obj.label) ||
+          asTrimmedString(obj.displayName) ||
+          formatRevenueTypeLabel(value);
+        return { value, label };
       }
       return null;
     })
@@ -116,52 +150,46 @@ export function normalizeRevenueTypes(raw: unknown): RevenueWithdrawalTypeItem[]
 export function normalizeRevenueAccounts(
   raw: unknown,
 ): RevenueWithdrawalAccount[] {
-  let list: unknown[] = [];
-  if (Array.isArray(raw)) {
-    list = raw;
-  } else if (raw && typeof raw === "object") {
-    const data = (raw as { data?: unknown }).data;
-    if (Array.isArray(data)) list = data;
-  }
+  const list = extractListFromPayload(raw, [
+    "revenueWithdrawalAccounts",
+    "accounts",
+    "items",
+  ]);
 
   return list
     .map((item): RevenueWithdrawalAccount | null => {
       if (!item || typeof item !== "object") return null;
       const obj = item as Record<string, unknown>;
-      const revenueType =
-        (typeof obj.revenueType === "string" && obj.revenueType) ||
-        (typeof obj.type === "string" && obj.type) ||
-        "";
+      const revenueType = canonicalizeRevenueType(
+        asTrimmedString(obj.revenueType) || asTrimmedString(obj.type),
+      );
       const bankCode =
-        (typeof obj.bankCode === "string" && obj.bankCode) ||
-        (typeof obj.bank_code === "string" && obj.bank_code) ||
-        "";
+        asTrimmedString(obj.bankCode) || asTrimmedString(obj.bank_code);
       const accountNumber =
-        (typeof obj.accountNumber === "string" && obj.accountNumber) ||
-        (typeof obj.account_number === "string" && obj.account_number) ||
-        "";
+        asTrimmedString(obj.accountNumber) ||
+        asTrimmedString(obj.account_number);
       const accountName =
-        (typeof obj.accountName === "string" && obj.accountName) ||
-        (typeof obj.account_name === "string" && obj.account_name) ||
-        "";
+        asTrimmedString(obj.accountName) || asTrimmedString(obj.account_name);
       if (!revenueType || !accountNumber) return null;
 
-      let bankName: string | undefined;
-      if (typeof obj.bankName === "string") bankName = obj.bankName;
-      else if (typeof obj.bank_name === "string") bankName = obj.bank_name;
+      const bankName =
+        asTrimmedString(obj.bankName) ||
+        asTrimmedString(obj.bank_name) ||
+        undefined;
 
       return {
-        id: typeof obj.id === "string" ? obj.id : undefined,
-        _id: typeof obj._id === "string" ? obj._id : undefined,
+        id: asTrimmedString(obj.id) || undefined,
+        _id: asTrimmedString(obj._id) || undefined,
         revenueType,
         bankCode,
         accountNumber,
         accountName,
         bankName,
         createdAt:
-          typeof obj.createdAt === "string" ? obj.createdAt : undefined,
-        updatedAt:
-          typeof obj.updatedAt === "string" ? obj.updatedAt : undefined,
+          asTrimmedString(obj.createdAt) ||
+          asTrimmedString(obj.setAt) ||
+          undefined,
+        updatedAt: asTrimmedString(obj.updatedAt) || undefined,
       };
     })
     .filter((item): item is RevenueWithdrawalAccount => Boolean(item));

@@ -514,6 +514,11 @@ export const residentNav = [
     moduleKey: "chat",
   },
   {
+    label: "Map",
+    icon: FiMapPin,
+    path: "/dashboard/resident/map",
+  },
+  {
     label: "Notifications",
     icon: Inbox,
     path: "/dashboard/resident/notifications",

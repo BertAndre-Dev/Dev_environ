@@ -513,11 +513,11 @@ export const residentNav = [
     path: "/dashboard/resident/community",
     moduleKey: "chat",
   },
-  {
-    label: "Map",
-    icon: FiMapPin,
-    path: "/dashboard/resident/map",
-  },
+  // {
+  //   label: "Map",
+  //   icon: FiMapPin,
+  //   path: "/dashboard/resident/map",
+  // },
   {
     label: "Notifications",
     icon: Inbox,

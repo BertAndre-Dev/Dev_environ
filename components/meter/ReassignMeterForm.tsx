@@ -77,6 +77,15 @@ export default function ReassignMeterForm({
     [selectableEstates, newEstateId],
   );
 
+  const isAssignMode = !estateId;
+  const submitLabel = isAssignMode
+    ? submitting
+      ? "Assigning..."
+      : "Assign"
+    : submitting
+      ? "Reassigning..."
+      : "Reassign";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedMeter = meterNumber.trim();
@@ -101,13 +110,21 @@ export default function ReassignMeterForm({
     try {
       const res = await dispatch(reassignMeter(payload)).unwrap();
       toast.success(
-        getApiSuccessMessage(res) || "Meter reassigned successfully.",
+        getApiSuccessMessage(res) ||
+          (isAssignMode
+            ? "Meter assigned to estate successfully."
+            : "Meter reassigned successfully."),
       );
       refresh();
       close();
     } catch (error: unknown) {
       const message = getApiErrorMessage(error);
-      toast.error(message || "Failed to reassign meter.");
+      toast.error(
+        message ||
+          (isAssignMode
+            ? "Failed to assign meter."
+            : "Failed to reassign meter."),
+      );
     }
   };
 
@@ -124,7 +141,7 @@ export default function ReassignMeterForm({
           </div>
 
           <div className="space-y-2">
-            <Label>Assign to Estate</Label>
+            <Label>{isAssignMode ? "Assign to Estate" : "Reassign to Estate"}</Label>
             <Select
               options={selectableEstates}
               value={selectedEstate}
@@ -151,7 +168,7 @@ export default function ReassignMeterForm({
               disabled={submitting || !meterNumber.trim() || !newEstateId}
               className="flex-1"
             >
-              {submitting ? "Reassigning..." : "Reassign"}
+              {submitLabel}
             </Button>
           </div>
         </form>

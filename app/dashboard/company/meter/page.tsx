@@ -13,13 +13,9 @@ import Select from "react-select";
 import {
   Plus,
   Search,
-  Trash,
-  Eye,
-  Building2,
-  Link,
-  Unlink,
-  ArrowRightLeft,
+  MoreVertical,
 } from "lucide-react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { MeterEnergyUsageSection } from "@/components/charts/meter-energy-usage-section";
 import { EstatePowerUsageSection } from "@/components/charts/estate-power-usage-section";
 import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
@@ -31,7 +27,6 @@ import {
 import { getCompanyEnergyConsumptionChart } from "@/redux/slice/company/energy-consumption/company-energy-consumption";
 import { getCompanyEstateEnergyUsage } from "@/redux/slice/company/estate-energy-usage/company-estate-energy-usage";
 import {
-  assignCompanyMeterToEstate,
   deleteCompanyMeter,
   getCompanyMeterByAddressId,
   getCompanyMeters,
@@ -48,7 +43,6 @@ import {
 } from "@/redux/slice/company/meter-mgt/company-meter-slice";
 import CompanyAssignMeterForm from "@/components/company/meter-form/page";
 import CompanyAssignMeterToEstateForm from "@/components/company/assign-meter-to-estate-form/page";
-import CompanyAssignMeterToAddressForm from "@/components/company/assign-meter-to-address-form/page";
 import { IoSpeedometerOutline } from "react-icons/io5";
 import Loader from "@/components/ui/Loader";
 import { isPending } from "@/lib/async-status";
@@ -149,15 +143,8 @@ const ESTATE_FILTER_FETCH_LIMIT = 500;
 export default function CompanyMeterManagement() {
   const dispatch = useDispatch<AppDispatch>();
   const [assignMeter, setAssignMeter] = useState(false);
-  const [assignToEstateMeter, setAssignToEstateMeter] =
-    useState<CompanyMeterRow | null>(null);
   const [reassignMeterRow, setReassignMeterRow] =
     useState<CompanyMeterRow | null>(null);
-  const [assignToAddressMeter, setAssignToAddressMeter] =
-    useState<CompanyMeterRow | null>(null);
-  const [meterToUnassign, setMeterToUnassign] =
-    useState<CompanyMeterRow | null>(null);
-  const [unassignSubmitting, setUnassignSubmitting] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [detailsAddressId, setDetailsAddressId] = useState<string | null>(null);
   const [detailsMeterNumber, setDetailsMeterNumber] = useState<string | null>(
@@ -391,66 +378,12 @@ export default function CompanyMeterManagement() {
     setAssignMeter((prev) => !prev);
   };
 
-  const handleOpenAssignToEstate = (meter: CompanyMeterRow) => {
-    setAssignToEstateMeter(meter);
-  };
-
-  const handleCloseAssignToEstate = () => {
-    setAssignToEstateMeter(null);
-  };
-
   const handleOpenReassignMeter = (meter: CompanyMeterRow) => {
     setReassignMeterRow(meter);
   };
 
   const handleCloseReassignMeter = () => {
     setReassignMeterRow(null);
-  };
-
-  const handleOpenAssignToAddress = (meter: CompanyMeterRow) => {
-    setAssignToAddressMeter(meter);
-  };
-
-  const handleCloseAssignToAddress = () => {
-    setAssignToAddressMeter(null);
-  };
-
-  const resolveUnassignEstateId = (meter: CompanyMeterRow): string | null => {
-    if (!isAllEstates && selectedEstateId) return selectedEstateId;
-    const fromMeter = meter.estateId?.trim();
-    return fromMeter || null;
-  };
-
-  const openUnassignConfirm = (meter: CompanyMeterRow) => {
-    setMeterToUnassign(meter);
-  };
-
-  const handleConfirmUnassign = async () => {
-    if (!meterToUnassign) return;
-    const estateId = resolveUnassignEstateId(meterToUnassign);
-    if (!estateId) {
-      toast.error("Missing estate for unassign.");
-      return;
-    }
-    setUnassignSubmitting(true);
-    try {
-      const res = await dispatch(
-        assignCompanyMeterToEstate({
-          meterNumber: meterToUnassign.meterNumber,
-          estateId,
-          unassign: true,
-        }),
-      ).unwrap();
-      toast.success(res?.message || "Meter unassigned successfully.");
-      setMeterToUnassign(null);
-      await handleRefresh();
-    } catch (error: unknown) {
-      const message = (error as { message?: string })?.message;
-      toast.error(message || "Failed to unassign meter.");
-      throw error;
-    } finally {
-      setUnassignSubmitting(false);
-    }
   };
 
   const handleViewDetails = (meter: CompanyMeterRow) => {
@@ -563,109 +496,57 @@ export default function CompanyMeterManagement() {
     },
     {
       key: "actions",
-      header: "Assign / Unassign",
-      render: (item: CompanyMeterRow) => (
-        <div className="flex items-center gap-2">
-          {item.isAssigned ? (
-            <div className="relative group/unassign">
+      header: "Actions",
+      exportable: false,
+      render: (item: CompanyMeterRow) => {
+        const canReassign = Boolean(item.estateId?.trim());
+        const canView = Boolean(toAddressIdString(item.addressId));
+
+        return (
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="cursor-pointer gap-1 hover:bg-amber-50"
-                onClick={() => openUnassignConfirm(item)}
-                aria-label="Unassign meter"
-                title="Unassign meter"
+                title="Actions"
+                className="cursor-pointer"
               >
-                <Unlink className="w-4 h-4 text-amber-600" />
+                <MoreVertical className="h-4 w-4" />
               </Button>
-              <span
-                role="tooltip"
-                className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 -translate-x-1/2 whitespace-nowrap rounded bg-foreground px-2 py-1 text-xs text-background opacity-0 shadow transition-opacity group-hover/unassign:opacity-100"
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content
+                align="end"
+                sideOffset={8}
+                className="z-50 min-w-[220px] rounded-md border bg-white p-1 shadow-md"
               >
-                Unassign from address
-              </span>
-            </div>
-          ) : isAllEstates && !item.estateId ? (
-            <div className="relative group/assign">
-              <Button
-                variant="outline"
-                size="sm"
-                className="cursor-pointer gap-1"
-                onClick={() => handleOpenAssignToEstate(item)}
-                aria-label="Assign to estate"
-                title="Assign to estate"
-                disabled={!companyId}
-              >
-                <Building2 className="w-4 h-4 text-blue-600" />
-              </Button>
-              <span
-                role="tooltip"
-                className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 -translate-x-1/2 whitespace-nowrap rounded bg-foreground px-2 py-1 text-xs text-background opacity-0 shadow transition-opacity group-hover/assign:opacity-100"
-              >
-                Assign to estate
-              </span>
-            </div>
-          ) : !isAllEstates ? (
-            <div className="relative group/assign-address">
-              <Button
-                variant="outline"
-                size="sm"
-                className="cursor-pointer gap-1 hover:bg-blue-50"
-                onClick={() => handleOpenAssignToAddress(item)}
-                aria-label="Assign to address"
-                title="Assign to address"
-              >
-                <Link className="w-4 h-4 text-blue-600" />
-              </Button>
-              <span
-                role="tooltip"
-                className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 -translate-x-1/2 whitespace-nowrap rounded bg-foreground px-2 py-1 text-xs text-background opacity-0 shadow transition-opacity group-hover/assign-address:opacity-100"
-              >
-                Assign to address
-              </span>
-            </div>
-          ) : null}
-          {item.estateId ? (
-            <div className="relative group/reassign">
-              <Button
-                variant="outline"
-                size="sm"
-                className="cursor-pointer gap-1"
-                onClick={() => handleOpenReassignMeter(item)}
-                aria-label="Reassign meter"
-                title="Reassign to another estate"
-                disabled={!companyId}
-              >
-                <ArrowRightLeft className="w-4 h-4 text-indigo-600" />
-              </Button>
-              <span
-                role="tooltip"
-                className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 -translate-x-1/2 whitespace-nowrap rounded bg-foreground px-2 py-1 text-xs text-background opacity-0 shadow transition-opacity group-hover/reassign:opacity-100"
-              >
-                Reassign to another estate
-              </span>
-            </div>
-          ) : null}
-          <Button
-            variant="outline"
-            size="sm"
-            className="cursor-pointer gap-1"
-            onClick={() => handleViewDetails(item)}
-            title="View details"
-            disabled={!toAddressIdString(item.addressId)}
-          >
-            <Eye className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="destructive"
-            className="cursor-pointer"
-            size="sm"
-            onClick={() => handleDeleteMeter(item.id!)}
-          >
-            <Trash className="w-4 h-4" />
-          </Button>
-        </div>
-      ),
+                {canReassign ? (
+                  <DropdownMenu.Item
+                    disabled={!companyId}
+                    onSelect={() => handleOpenReassignMeter(item)}
+                    className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                  >
+                    Reassign to estate
+                  </DropdownMenu.Item>
+                ) : null}
+                <DropdownMenu.Item
+                  disabled={!canView}
+                  onSelect={() => handleViewDetails(item)}
+                  className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                >
+                  View details
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  onSelect={() => handleDeleteMeter(item.id!)}
+                  className="cursor-pointer select-none rounded px-3 py-2 text-sm text-red-600 outline-none hover:bg-gray-100 focus:bg-gray-100"
+                >
+                  Delete
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
+        );
+      },
     },
   ];
 
@@ -913,20 +794,6 @@ export default function CompanyMeterManagement() {
         </Modal>
       )}
 
-      {assignToEstateMeter && companyId && (
-        <Modal
-          visible={Boolean(assignToEstateMeter)}
-          onClose={handleCloseAssignToEstate}
-        >
-          <CompanyAssignMeterToEstateForm
-            meterNumber={assignToEstateMeter.meterNumber}
-            companyId={companyId}
-            close={handleCloseAssignToEstate}
-            refresh={handleRefresh}
-          />
-        </Modal>
-      )}
-
       {reassignMeterRow && companyId && (
         <Modal
           visible={Boolean(reassignMeterRow)}
@@ -939,20 +806,6 @@ export default function CompanyMeterManagement() {
             }
             estateId={reassignMeterRow.estateId}
             close={handleCloseReassignMeter}
-            refresh={handleRefresh}
-          />
-        </Modal>
-      )}
-
-      {assignToAddressMeter && !isAllEstates && (
-        <Modal
-          visible={Boolean(assignToAddressMeter)}
-          onClose={handleCloseAssignToAddress}
-        >
-          <CompanyAssignMeterToAddressForm
-            meterNumber={assignToAddressMeter.meterNumber}
-            estateId={selectedEstateId}
-            close={handleCloseAssignToAddress}
             refresh={handleRefresh}
           />
         </Modal>
@@ -1084,24 +937,6 @@ export default function CompanyMeterManagement() {
         title="Delete meter"
         loading={deleting}
         onConfirm={handleConfirmDelete}
-      />
-
-      <DeleteModal
-        visible={!!meterToUnassign}
-        onClose={() => setMeterToUnassign(null)}
-        itemName={meterToUnassign?.meterNumber ?? "this meter"}
-        title="Unassign meter"
-        confirmLabel="Unassign"
-        loading={unassignSubmitting}
-        loadingLabel="Unassigning..."
-        message={
-          <p className="text-sm text-muted-foreground mb-4">
-            Unassign meter{" "}
-            <strong>{meterToUnassign?.meterNumber ?? "this meter"}</strong> from
-            its address? The meter will stay on the estate pool.
-          </p>
-        }
-        onConfirm={handleConfirmUnassign}
       />
     </div>
   );

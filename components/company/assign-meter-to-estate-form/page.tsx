@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
-import { useSelector } from "react-redux";
-import type { RootState } from "@/redux/store";
+import { useEffect, useMemo } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "@/redux/store";
+import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
 import ReassignMeterForm from "@/components/meter/ReassignMeterForm";
 
 type Props = {
@@ -25,6 +26,8 @@ export default function CompanyAssignMeterToEstateForm({
   close,
   refresh,
 }: Readonly<Props>) {
+  const dispatch = useDispatch<AppDispatch>();
+
   const { estateOptions, estatesLoading } = useSelector(
     (state: RootState) => {
       const estates = state.companyEstate.allEstates?.data ?? [];
@@ -43,6 +46,11 @@ export default function CompanyAssignMeterToEstateForm({
       };
     },
   );
+
+  useEffect(() => {
+    if (estateOptions.length > 0 || estatesLoading) return;
+    dispatch(getCompanyEstates({ page: 1, limit: 500 }));
+  }, [dispatch, estateOptions.length, estatesLoading]);
 
   const title = useMemo(
     () => (estateId ? "Reassign to estate" : "Assign to estate"),

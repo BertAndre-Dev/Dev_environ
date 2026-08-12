@@ -5,9 +5,6 @@ export const NAV_ALWAYS_VISIBLE_LABELS = new Set([
   "Logout",
   "Energy Provider Management",
   "Notifications",
-  // Request management is hardcoded for admin / staff / company / estate admin.
-  "Request Management",
-  "Requests Management",
   "Map",
 ]);
 
@@ -37,6 +34,11 @@ export function isNavModuleEnabled(
   if (moduleKey === "asset" || moduleKey === "assets") {
     return (
       estateModules.includes("asset") || estateModules.includes("assets")
+    );
+  }
+  if (moduleKey === "request" || moduleKey === "requests") {
+    return (
+      estateModules.includes("request") || estateModules.includes("requests")
     );
   }
   return estateModules.includes(moduleKey);

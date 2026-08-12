@@ -488,6 +488,8 @@ export default function RevenueWithdrawalAccountsCard({
 
 export type RevenueWithdrawalOverviewSections = {
   autoSettlement: React.ReactNode;
+  /** True when auto-settlement is on — manual Withdraw Funds should be hidden. */
+  autoSettlementEnabled: boolean;
 };
 
 /** Overview-card auto-settlement panel only (revenue accounts stay in the separate card). */
@@ -527,6 +529,7 @@ export function RevenueWithdrawalOverviewProvider({
   return (
     <>
       {children({
+        autoSettlementEnabled: autoEnabled,
         autoSettlement: (
           <AutoSettlementPanel
             autoEnabled={autoEnabled}

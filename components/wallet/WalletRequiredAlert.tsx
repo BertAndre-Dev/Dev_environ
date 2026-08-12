@@ -6,11 +6,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { selectUserRole } from "@/redux/slice/auth-mgt/auth-mgt-slice";
-import { getWallet as getResidentWallet } from "@/redux/slice/resident/wallet-mgt/wallet-mgt";
 import { getWallet as getEstateWallet } from "@/redux/slice/estate-admin/wallet-mgt/wallet-mgt";
 import { getCompanyWallet } from "@/redux/slice/company/wallet-mgt/company-wallet-mgt";
 import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
-import { extractEstateIdFromUser, extractUserId } from "@/lib/user-id";
+import { extractEstateIdFromUser } from "@/lib/user-id";
 import {
   getWalletRouteForRole,
   hasWithdrawalBankAccount,
@@ -26,10 +25,6 @@ export function WalletRequiredAlert() {
     | Record<string, unknown>
     | null;
 
-  const residentWallet = useSelector((state: RootState) => state.wallet.wallet);
-  const residentWalletState = useSelector(
-    (state: RootState) => state.wallet.getWalletState,
-  );
   const estateWallet = useSelector(
     (state: RootState) => state.estateAdminWallet.wallet,
   );
@@ -45,29 +40,17 @@ export function WalletRequiredAlert() {
 
   const role = userRole || (user?.role as string | undefined);
   const normalizedRole = normalizeUserRole(role);
-  const residentType =
-    (user?.residentType as string | null | undefined) ??
-    (user?.resident_type as string | null | undefined) ??
-    null;
-  const userId = extractUserId(user);
   const estateId = extractEstateIdFromUser(user);
   const companyId = user ? (parseCompanyFromUser(user)?.id ?? null) : null;
 
-  const isResidentOwner =
-    normalizedRole === "resident" &&
-    (residentType ?? "").toString().toLowerCase().trim() === "owner";
   const isEstateAdmin =
     normalizedRole === "estate admin" || normalizedRole === "estate-admin";
   const isCompany = normalizedRole === "company";
-  const isEligibleRole = isResidentOwner || isEstateAdmin || isCompany;
+  const isEligibleRole = isEstateAdmin || isCompany;
 
   useEffect(() => {
     if (!isEligibleRole) return;
 
-    if (isResidentOwner && userId && residentWalletState === "idle") {
-      dispatch(getResidentWallet(userId));
-      return;
-    }
     if (isEstateAdmin && estateId && estateWalletState === "idle") {
       dispatch(getEstateWallet(estateId));
       return;
@@ -78,32 +61,25 @@ export function WalletRequiredAlert() {
   }, [
     dispatch,
     isEligibleRole,
-    isResidentOwner,
     isEstateAdmin,
     isCompany,
-    userId,
     estateId,
     companyId,
-    residentWalletState,
     estateWalletState,
     companyWalletState,
   ]);
 
-  const activeWallet = isResidentOwner
-    ? residentWallet
-    : isEstateAdmin
-      ? estateWallet
-      : isCompany
-        ? companyWallet
-        : null;
+  const activeWallet = isEstateAdmin
+    ? estateWallet
+    : isCompany
+      ? companyWallet
+      : null;
 
-  const walletFetchState = isResidentOwner
-    ? residentWalletState
-    : isEstateAdmin
-      ? estateWalletState
-      : isCompany
-        ? companyWalletState
-        : "idle";
+  const walletFetchState = isEstateAdmin
+    ? estateWalletState
+    : isCompany
+      ? companyWalletState
+      : "idle";
 
   const hasBank = hasWithdrawalBankAccount(activeWallet?.accountNumber);
   const walletSettled =
@@ -111,9 +87,7 @@ export function WalletRequiredAlert() {
 
   if (!isEligibleRole || !walletSettled) return null;
 
-  if (
-    !shouldShowWithdrawalAccountAlert(role, residentType, hasBank, pathname)
-  ) {
+  if (!shouldShowWithdrawalAccountAlert(role, null, hasBank, pathname)) {
     return null;
   }
 

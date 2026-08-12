@@ -8,7 +8,6 @@ const WALLET_ROUTES: Record<string, string> = {
 /** Roles that need a payout bank (withdrawal account) on their wallet. */
 const WITHDRAWAL_ACCOUNT_ROLES = new Set([
   "company",
-  "resident",
   "estate admin",
   "estate-admin",
 ]);
@@ -30,23 +29,18 @@ export function hasWithdrawalBankAccount(
 }
 
 /**
- * Show the “set withdrawal account” banner when company / estate admin /
- * resident owner have no bank on their payout wallet.
- * Hidden on the role’s wallet page itself.
+ * Show the “set withdrawal account” banner when company / estate admin
+ * have no bank on their payout wallet.
+ * Hidden on the role’s wallet page itself. Never shown for residents.
  */
 export function shouldShowWithdrawalAccountAlert(
   role: string | null | undefined,
-  residentType: string | null | undefined,
+  _residentType: string | null | undefined,
   hasBankAccount: boolean,
   pathname: string,
 ): boolean {
   const normalizedRole = normalizeUserRole(role);
   if (!WITHDRAWAL_ACCOUNT_ROLES.has(normalizedRole)) return false;
-
-  if (normalizedRole === "resident") {
-    const rt = (residentType ?? "").toString().toLowerCase().trim();
-    if (rt !== "owner") return false;
-  }
 
   if (hasBankAccount) return false;
 

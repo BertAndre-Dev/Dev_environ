@@ -42,13 +42,18 @@ function WalletBalancesAndActions({
   onWithdraw,
   onSetWithdrawalAccount,
   autoSettlement,
+  autoSettlementEnabled = false,
 }: Readonly<{
   wallet: WalletOverviewWallet;
   onWithdraw: () => void;
   onSetWithdrawalAccount?: () => void;
   autoSettlement?: React.ReactNode;
+  autoSettlementEnabled?: boolean;
 }>) {
   const hasWithdrawalAccount = Boolean(wallet.accountNumber?.trim());
+  const showWithdrawFunds = hasWithdrawalAccount && !autoSettlementEnabled;
+  const showSetWithdrawalAccount = !hasWithdrawalAccount;
+  const showActions = showWithdrawFunds || showSetWithdrawalAccount;
 
   return (
     <div className="space-y-6">
@@ -77,25 +82,27 @@ function WalletBalancesAndActions({
         </div>
       </div>
 
-      <div className="flex items-center justify-center rounded-lg bg-[#D0DFF233] p-4">
-        {hasWithdrawalAccount ? (
-          <Button
-            onClick={onWithdraw}
-            size="lg"
-            className="w-full max-w-md px-8"
-          >
-            Withdraw Funds
-          </Button>
-        ) : (
-          <Button
-            onClick={onSetWithdrawalAccount}
-            size="lg"
-            className="w-full max-w-md px-8"
-          >
-            Set Withdrawal Account
-          </Button>
-        )}
-      </div>
+      {showActions ? (
+        <div className="flex items-center justify-center rounded-lg bg-[#D0DFF233] p-4">
+          {showWithdrawFunds ? (
+            <Button
+              onClick={onWithdraw}
+              size="lg"
+              className="w-full max-w-md px-8"
+            >
+              Withdraw Funds
+            </Button>
+          ) : (
+            <Button
+              onClick={onSetWithdrawalAccount}
+              size="lg"
+              className="w-full max-w-md px-8"
+            >
+              Set Withdrawal Account
+            </Button>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -123,6 +130,7 @@ export default function EstateWalletOverviewCard({
                     onWithdraw={onWithdraw}
                     onSetWithdrawalAccount={onSetWithdrawalAccount}
                     autoSettlement={sections.autoSettlement}
+                    autoSettlementEnabled={sections.autoSettlementEnabled}
                   />
                 )}
               </RevenueWithdrawalOverviewProvider>

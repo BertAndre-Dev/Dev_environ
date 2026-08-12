@@ -46,7 +46,7 @@ function FeatureCard({ title, description }: FeatureItem) {
 
   return (
     <motion.article
-      className="flex flex-col gap-4 rounded-[24px] bg-[#FFFFFF14] p-7 sm:p-8 shadow-[0_1px_2px_rgba(16,24,40,0.04)] will-change-transform"
+      className="flex flex-col gap-4 rounded-[20px] bg-[#B1D5FF1A] border-[#FFFFFF14] p-7 sm:p-8 shadow-[0_1px_2px_rgba(16,24,40,0.04)] will-change-transform"
       whileHover={
         reduceMotion
           ? undefined

@@ -395,15 +395,21 @@ export default function EstateAdminWalletPage() {
           pageLoading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
-      <div>
-        <h1 className="font-heading text-3xl font-bold">Wallet Management</h1>
-        <p className="text-muted-foreground mt-1">
-          Welcome back! Here's is an overview on{" "}
-          <span className="text-[18px] font-bold underline uppercase text-black">
-            {estateName}
-          </span>
-          .
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="font-heading text-3xl font-bold">Wallet Management</h1>
+          <p className="text-muted-foreground mt-1">
+            Welcome back! Here's is an overview on{" "}
+            <span className="text-[18px] font-bold underline uppercase text-black">
+              {estateName}
+            </span>
+            .
+          </p>
+        </div>
+        <RevenueWithdrawalAccountsCard
+          role="estateAdmin"
+          className="w-full shrink-0 sm:w-auto"
+        />
       </div>
 
       {/* Wallet overview */}
@@ -414,6 +420,7 @@ export default function EstateAdminWalletPage() {
         onSetWithdrawalAccount={() => setSetWithdrawalAccountModalOpen(true)}
         walletLoading={walletLoading}
         createWalletLoading={createWalletState === "isLoading"}
+        revenueSettlementRole="estateAdmin"
         filterExportSlot={
           <div className="space-y-3">
             <TransactionsFilterBar
@@ -428,8 +435,6 @@ export default function EstateAdminWalletPage() {
           </div>
         }
       />
-
-      <RevenueWithdrawalAccountsCard role="estateAdmin" />
 
       {/* Estate Credits Table */}
       <Card className="p-4">

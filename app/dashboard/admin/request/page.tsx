@@ -118,16 +118,16 @@ export default function AdminRequestPage() {
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-[#D0DFF280]">
+              <div className="p-2.5 rounded-2xl bg-[#D0DFF280]">
                 <ClipboardList className="w-5 h-5 text-[#0150AC]" />
               </div>
-              <h1 className="font-heading text-3xl font-bold">
+              <h1 className="font-heading text-3xl font-bold tracking-[-0.02em]">
                 Request Management
               </h1>
             </div>
-            <p className="text-muted-foreground mt-2">
-              Manage the approval workflow for{" "}
-              <span className="font-bold uppercase underline text-foreground">
+            <p className="text-muted-foreground mt-2 leading-snug">
+              Configure the approval workflow for{" "}
+              <span className="font-semibold uppercase underline text-foreground">
                 {estateName}
               </span>
               .
@@ -136,7 +136,7 @@ export default function AdminRequestPage() {
           <Button
             onClick={() => setModalOpen(true)}
             disabled={!estateId}
-            className="shrink-0"
+            className="shrink-0 rounded-full active:scale-[0.97] transition-transform duration-100 ease-out"
           >
             {hasWorkflow ? (
               <>
@@ -152,10 +152,12 @@ export default function AdminRequestPage() {
           </Button>
         </div>
 
-        <Card className="p-5 sm:p-6">
+        <Card className="p-5 sm:p-6 rounded-2xl border-black/5 shadow-sm">
           {!hasWorkflow ? (
-            <div className="py-10 text-center space-y-3">
-              <Settings2 className="w-10 h-10 mx-auto text-muted-foreground" />
+            <div className="py-12 text-center space-y-3">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#F7F8FA]">
+                <Settings2 className="w-6 h-6 text-muted-foreground" />
+              </div>
               <p className="text-muted-foreground">
                 No approval workflow configured yet.
               </p>
@@ -163,20 +165,21 @@ export default function AdminRequestPage() {
                 variant="outline"
                 onClick={() => setModalOpen(true)}
                 disabled={!estateId}
+                className="rounded-full active:scale-[0.97] transition-transform duration-100 ease-out"
               >
                 <Settings2 className="w-4 h-4 mr-2" />
                 Configure workflow
               </Button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div>
-                  <h2 className="font-heading text-xl font-semibold">
+                  <h2 className="font-heading text-xl font-semibold tracking-[-0.01em]">
                     {workflow?.name}
                   </h2>
                   {workflow?.description ? (
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-sm text-muted-foreground mt-1 leading-snug">
                       {workflow.description}
                     </p>
                   ) : null}
@@ -185,6 +188,7 @@ export default function AdminRequestPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setModalOpen(true)}
+                  className="rounded-full active:scale-[0.97] transition-transform duration-100 ease-out"
                 >
                   <Pencil className="w-4 h-4 mr-2" />
                   Edit
@@ -199,17 +203,27 @@ export default function AdminRequestPage() {
                   {(workflow?.steps ?? []).map((step) => (
                     <li
                       key={`${step.order}-${step.name}`}
-                      className="rounded-lg border border-border px-4 py-3"
+                      className="rounded-2xl border border-black/5 bg-[#F7F8FA] px-4 py-3"
                     >
                       <div className="flex flex-wrap items-center gap-2 text-sm">
-                        <span className="font-semibold text-muted-foreground">
-                          {step.order}.
+                        <span className="flex size-7 items-center justify-center rounded-full bg-[#0150AC]/10 text-xs font-semibold text-[#0150AC] tabular-nums">
+                          {step.order}
                         </span>
                         <span className="font-medium">{step.name}</span>
                         <span className="text-muted-foreground">·</span>
                         <span>{formatApproverType(step.approverType)}</span>
                         <span className="text-muted-foreground">·</span>
                         <span className="capitalize">{step.approvalMode}</span>
+                        {step.approverType === "user" &&
+                          (step.userIds?.length ?? 0) > 0 && (
+                            <>
+                              <span className="text-muted-foreground">·</span>
+                              <span className="text-muted-foreground">
+                                {step.userIds?.length} user
+                                {(step.userIds?.length ?? 0) === 1 ? "" : "s"}
+                              </span>
+                            </>
+                          )}
                       </div>
                     </li>
                   ))}
@@ -223,6 +237,7 @@ export default function AdminRequestPage() {
       {modalOpen && (
         <WorkflowConfigModal
           visible={modalOpen}
+          estateId={estateId}
           workflow={workflow}
           saving={saving}
           onClose={() => setModalOpen(false)}

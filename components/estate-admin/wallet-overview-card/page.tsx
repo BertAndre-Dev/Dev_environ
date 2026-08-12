@@ -1,8 +1,10 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
+import type { RevenueWithdrawalRole } from "@/redux/slice/wallet-mgt/create-revenue-withdrawal-module";
+import { RevenueWithdrawalOverviewProvider } from "@/components/wallet/RevenueWithdrawalAccountsCard";
 
 export interface WalletOverviewWallet {
   balance?: number;
@@ -29,9 +31,78 @@ interface EstateWalletOverviewCardProps {
   walletLoading?: boolean;
   createWalletLoading?: boolean;
   filterExportSlot?: React.ReactNode;
+  /** When set, embeds auto-settlement beside balance cards. */
+  revenueSettlementRole?: RevenueWithdrawalRole;
 }
 
 const formatNaira = (value: number) => `₦${(value ?? 0).toLocaleString()}`;
+
+function WalletBalancesAndActions({
+  wallet,
+  onWithdraw,
+  onSetWithdrawalAccount,
+  autoSettlement,
+}: Readonly<{
+  wallet: WalletOverviewWallet;
+  onWithdraw: () => void;
+  onSetWithdrawalAccount?: () => void;
+  autoSettlement?: React.ReactNode;
+}>) {
+  const hasWithdrawalAccount = Boolean(wallet.accountNumber?.trim());
+
+  return (
+    <div className="space-y-6">
+      <div
+        className={[
+          "grid grid-cols-1 gap-2 lg:gap-6",
+          autoSettlement ? "md:grid-cols-2 xl:grid-cols-3" : "md:grid-cols-2",
+        ].join(" ")}
+      >
+        <div className="flex h-[150px] w-full flex-col items-center justify-center rounded-lg border border-[#CCCCCC] lg:px-4 lg:py-4">
+          <p className="text-sm text-muted-foreground">Available Balance</p>
+          <p className="mt-1 text-3xl font-bold md:text-4xl">
+            {formatNaira(wallet.availableBalance ?? 0)}
+          </p>
+        </div>
+        <div className="flex h-[150px] w-full flex-col items-center justify-center rounded-lg border border-[#CCCCCC] lg:px-4 lg:py-4">
+          <p className="flex items-center gap-1 text-sm text-muted-foreground">
+            Withdrawable Balance
+            <span
+              className="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full bg-muted text-xs text-muted-foreground"
+              title="You can only withdraw from this balance."
+            >
+              i
+            </span>
+          </p>
+          <p className="mt-1 text-3xl font-bold text-primary md:text-4xl">
+            {formatNaira(wallet.withdrawableBalance ?? 0)}
+          </p>
+        </div>
+        {autoSettlement}
+      </div>
+
+      <div className="flex items-center justify-center rounded-lg bg-[#D0DFF233] p-4">
+        {hasWithdrawalAccount ? (
+          <Button
+            onClick={onWithdraw}
+            size="lg"
+            className="w-full max-w-md px-8"
+          >
+            Withdraw Funds
+          </Button>
+        ) : (
+          <Button
+            onClick={onSetWithdrawalAccount}
+            size="lg"
+            className="w-full max-w-md px-8"
+          >
+            Set Withdrawal Account
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function EstateWalletOverviewCard({
   wallet,
@@ -41,63 +112,33 @@ export default function EstateWalletOverviewCard({
   walletLoading = false,
   createWalletLoading = false,
   filterExportSlot,
+  revenueSettlementRole,
 }: EstateWalletOverviewCardProps) {
-  const hasWithdrawalAccount = Boolean(wallet?.accountNumber?.trim());
-
   return (
     <div className="space-y-4">
-      <Card className="p-4 md:p-6 shadow-md">
-        <div className="p-0 space-y-6">
+      <Card className="p-4 shadow-md md:p-6">
+        <div className="space-y-6 p-0">
           {wallet ? (
-            <>
-              {/* Top: Available balance | Withdrawable balance */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 lg:gap-6">
-                <div className="flex flex-col justify-center items-center w-full h-[150px] border border-[#CCCCCC] rounded-lg lg:px-4 lg:py-4">
-                  <p className="text-sm text-muted-foreground">
-                    Available Balance
-                  </p>
-                  <p className="text-3xl md:text-4xl font-bold mt-1">
-                    {formatNaira(wallet.availableBalance ?? 0)}
-                  </p>
-                </div>
-                <div className="flex flex-col justify-center items-center w-full h-[150px] border border-[#CCCCCC] rounded-lg lg:px-4 lg:py-4">
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    Withdrawable Balance
-                    <span
-                      className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-muted text-muted-foreground text-xs cursor-help"
-                      title="You can only withdraw from this balance."
-                    >
-                      i
-                    </span>
-                  </p>
-                  <p className="text-3xl md:text-4xl font-bold mt-1 text-primary">
-                    {formatNaira(wallet.withdrawableBalance ?? 0)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-[#D0DFF233] rounded-lg p-4 flex justify-center items-center">
-                {hasWithdrawalAccount ? (
-                  <Button
-                    onClick={onWithdraw}
-                    size="lg"
-                    className="px-8 w-full max-w-md"
-                  >
-                    Withdraw Funds
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={onSetWithdrawalAccount}
-                    size="lg"
-                    className="px-8 w-full max-w-md"
-                  >
-                    Set Withdrawal Account
-                  </Button>
+            revenueSettlementRole ? (
+              <RevenueWithdrawalOverviewProvider role={revenueSettlementRole}>
+                {(sections) => (
+                  <WalletBalancesAndActions
+                    wallet={wallet}
+                    onWithdraw={onWithdraw}
+                    onSetWithdrawalAccount={onSetWithdrawalAccount}
+                    autoSettlement={sections.autoSettlement}
+                  />
                 )}
-              </div>
-            </>
+              </RevenueWithdrawalOverviewProvider>
+            ) : (
+              <WalletBalancesAndActions
+                wallet={wallet}
+                onWithdraw={onWithdraw}
+                onSetWithdrawalAccount={onSetWithdrawalAccount}
+              />
+            )
           ) : walletLoading ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
+            <p className="py-4 text-center text-sm text-muted-foreground">
               Loading wallet...
             </p>
           ) : (
@@ -115,7 +156,6 @@ export default function EstateWalletOverviewCard({
         </div>
       </Card>
 
-      {/* Filter / Export bar (Figma: Filter by Ref, Filter by Status, Export) */}
       {filterExportSlot && (
         <div className="flex flex-wrap items-center gap-2">
           {filterExportSlot}
@@ -146,23 +186,23 @@ export function WalletFilterExportBar({
       <button
         type="button"
         onClick={onFilterByRef}
-        className="inline-flex items-center gap-1 px-4 py-2 rounded-md border border-border bg-background text-sm font-medium text-foreground hover:bg-muted/50"
+        className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
       >
         {filterByRefLabel}
-        <ChevronDown className="w-4 h-4" />
+        <ChevronDown className="h-4 w-4" />
       </button>
       <button
         type="button"
         onClick={onFilterByStatus}
-        className="inline-flex items-center gap-1 px-4 py-2 rounded-md border border-border bg-background text-sm font-medium text-foreground hover:bg-muted/50"
+        className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
       >
         {filterByStatusLabel}
-        <ChevronDown className="w-4 h-4" />
+        <ChevronDown className="h-4 w-4" />
       </button>
       <button
         type="button"
         onClick={onExport}
-        className="inline-flex items-center px-4 py-2 rounded-md border border-border bg-background text-sm font-medium text-foreground hover:bg-muted/50"
+        className="inline-flex items-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
       >
         {exportLabel}
       </button>

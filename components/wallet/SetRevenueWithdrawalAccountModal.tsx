@@ -38,19 +38,19 @@ const ROLE_API = {
     setAccount: setCompanyRevenueWithdrawalAccount,
     resetSetState: resetCompanySetState,
     selectSetState: (state: RootState) =>
-      state.companyRevenueWithdrawalAccount.setAccountState,
+      state.companyRevenueWithdrawalAccount?.setAccountState ?? "idle",
   },
   estateAdmin: {
     setAccount: setEstateAdminRevenueWithdrawalAccount,
     resetSetState: resetEstateAdminSetState,
     selectSetState: (state: RootState) =>
-      state.estateAdminRevenueWithdrawalAccount.setAccountState,
+      state.estateAdminRevenueWithdrawalAccount?.setAccountState ?? "idle",
   },
   energyProvider: {
     setAccount: setEnergyProviderRevenueWithdrawalAccount,
     resetSetState: resetEnergyProviderSetState,
     selectSetState: (state: RootState) =>
-      state.energyProviderRevenueWithdrawalAccount.setAccountState,
+      state.energyProviderRevenueWithdrawalAccount?.setAccountState ?? "idle",
   },
 } as const;
 

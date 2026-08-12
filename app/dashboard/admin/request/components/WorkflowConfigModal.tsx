@@ -15,6 +15,7 @@ import WorkflowStepsEditor from "./WorkflowStepsEditor";
 
 interface WorkflowConfigModalProps {
   readonly visible: boolean;
+  readonly estateId?: string | null;
   readonly workflow: RequestWorkflow | null;
   readonly loading?: boolean;
   readonly saving?: boolean;
@@ -28,6 +29,7 @@ interface WorkflowConfigModalProps {
 
 export default function WorkflowConfigModal({
   visible,
+  estateId,
   workflow,
   loading = false,
   saving = false,
@@ -82,71 +84,85 @@ export default function WorkflowConfigModal({
     <Modal
       visible={visible}
       onClose={handleClose}
-      contentClassName="max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+      contentClassName="max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col p-0"
     >
-      <div className="p-5 sm:p-6">
-        <h2 className="font-heading text-xl font-semibold mb-1">
-          Configure approval workflow
-        </h2>
-        <p className="text-sm text-muted-foreground mb-5">
-          Create or replace the estate&apos;s active request approval path.
-        </p>
-
-        {loading ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">
-            Loading workflow...
+      <div className="flex flex-col min-h-0 max-h-[90vh]">
+        <div className="shrink-0 px-5 sm:px-6 pt-5 sm:pt-6 pb-4 border-b border-black/5 bg-white/80 backdrop-blur-xl">
+          <h2 className="font-heading text-xl font-semibold tracking-[-0.02em]">
+            Configure approval workflow
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1 leading-snug">
+            Create or replace the estate&apos;s active request approval path.
           </p>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <Label htmlFor="workflow-name">Workflow name</Label>
-              <Input
-                id="workflow-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Standard estate request approval"
-                className="mt-1"
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-5">
+          {loading ? (
+            <p className="text-sm text-muted-foreground py-10 text-center">
+              Loading workflow...
+            </p>
+          ) : (
+            <form
+              id="workflow-config-form"
+              onSubmit={handleSubmit}
+              className="space-y-5"
+            >
+              <div>
+                <Label htmlFor="workflow-name">Workflow name</Label>
+                <Input
+                  id="workflow-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Standard estate request approval"
+                  className="mt-1.5 rounded-xl"
+                  disabled={busy}
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="workflow-description">Description</Label>
+                <textarea
+                  id="workflow-description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Optional notes about this approval path..."
+                  className="mt-1.5 w-full min-h-[88px] rounded-xl border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  disabled={busy}
+                />
+              </div>
+
+              <WorkflowStepsEditor
+                steps={steps}
+                onChange={setSteps}
+                estateId={estateId}
                 disabled={busy}
-                required
               />
-            </div>
+            </form>
+          )}
+        </div>
 
-            <div>
-              <Label htmlFor="workflow-description">Description</Label>
-              <textarea
-                id="workflow-description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Optional notes about this approval path..."
-                className="mt-1 w-full min-h-[90px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                disabled={busy}
-              />
-            </div>
-
-            <WorkflowStepsEditor
-              steps={steps}
-              onChange={setSteps}
-              disabled={busy}
-            />
-
-            <div className="flex gap-2 pt-2 justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={saving}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={busy || !name.trim() || steps.length === 0}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {saving ? "Saving..." : "Save workflow"}
-              </Button>
-            </div>
-          </form>
+        {!loading && (
+          <div className="shrink-0 flex gap-2 justify-end px-5 sm:px-6 py-4 border-t border-black/5 bg-white/80 backdrop-blur-xl">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={saving}
+              className="rounded-full active:scale-[0.97] transition-transform duration-100 ease-out"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="workflow-config-form"
+              disabled={busy || !name.trim() || steps.length === 0}
+              className="rounded-full active:scale-[0.97] transition-transform duration-100 ease-out"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {saving ? "Saving..." : "Save workflow"}
+            </Button>
+          </div>
         )}
       </div>
     </Modal>

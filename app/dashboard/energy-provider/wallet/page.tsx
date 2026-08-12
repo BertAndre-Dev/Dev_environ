@@ -306,15 +306,21 @@ export default function EnergyProviderWalletPage() {
           pageLoading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
-      <div>
-        <h1 className="font-heading text-3xl font-bold">Wallet Management</h1>
-        <p className="text-muted-foreground mt-1">
-          Welcome back! Here is an overview for{" "}
-          <span className="text-[18px] font-bold underline uppercase text-black">
-            {estateName}
-          </span>
-          .
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="font-heading text-3xl font-bold">Wallet Management</h1>
+          <p className="text-muted-foreground mt-1">
+            Welcome back! Here is an overview for{" "}
+            <span className="text-[18px] font-bold underline uppercase text-black">
+              {estateName}
+            </span>
+            .
+          </p>
+        </div>
+        <RevenueWithdrawalAccountsCard
+          role="energyProvider"
+          className="w-full shrink-0 sm:w-auto"
+        />
       </div>
 
       <EstateWalletOverviewCard
@@ -323,9 +329,8 @@ export default function EnergyProviderWalletPage() {
         onCreateWallet={() => setCreateWalletModalOpen(true)}
         onSetWithdrawalAccount={() => setSetWithdrawalAccountModalOpen(true)}
         createWalletLoading={createWalletState === "isLoading"}
+        revenueSettlementRole="energyProvider"
       />
-
-      <RevenueWithdrawalAccountsCard role="energyProvider" />
 
       <Card className="p-4 space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">

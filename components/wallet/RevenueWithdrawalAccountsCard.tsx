@@ -80,7 +80,7 @@ function AutoSettlementToggle({
       disabled={pending}
       onClick={() => onChange(!enabled)}
       className={cn(
-        "relative inline-flex h-8 w-[52px] shrink-0 items-center rounded-full p-0.5",
+        "relative inline-flex h-8 w-[52px] shrink-0 cursor-pointer items-center rounded-full p-0.5",
         "transition-[background-color,transform] duration-100 ease-out active:scale-[0.97]",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         "disabled:cursor-wait disabled:opacity-70",
@@ -346,7 +346,7 @@ export default function RevenueWithdrawalAccountsCard({
                             })
                           }
                           className={cn(
-                            "flex w-full items-center gap-3 px-4 py-3.5 text-left",
+                            "flex w-full cursor-pointer items-center gap-3 px-4 py-3.5 text-left",
                             "transition-[background-color,transform] duration-100 ease-out",
                             "hover:bg-slate-50/80 active:scale-[0.995] active:bg-slate-50",
                             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",

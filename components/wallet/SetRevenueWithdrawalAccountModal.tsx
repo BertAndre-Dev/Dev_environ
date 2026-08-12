@@ -240,7 +240,7 @@ export default function SetRevenueWithdrawalAccountModal({
                 <button
                   type="button"
                   className={cn(
-                    "flex min-h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-left text-sm shadow-xs outline-none",
+                    "flex min-h-9 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-left text-sm shadow-xs outline-none",
                     "transition-transform duration-100 ease-out active:scale-[0.99]",
                     "focus-visible:ring-2 focus-visible:ring-ring",
                     "disabled:pointer-events-none disabled:opacity-50",

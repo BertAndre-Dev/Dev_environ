@@ -7,7 +7,7 @@ import {
 } from "@/lib/api-error";
 import { extractEstateId } from "@/lib/user-id";
 
-/** GET /api/v1/analytics/meters/summary?estateId= */
+/** GET /analytics/meters/summary?estateId= */
 export const getMeterSummary = createAsyncThunk<
   MeterSummaryResponse,
   { estateId: string },
@@ -19,7 +19,7 @@ export const getMeterSummary = createAsyncThunk<
   }
   try {
     const res = await axiosInstance.get<MeterSummaryResponse>(
-      "/api/v1/analytics/meters/summary",
+      "/analytics/meters/summary",
       { params: { estateId: id } },
     );
     return res.data;

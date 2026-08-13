@@ -211,6 +211,7 @@ export default function EstateAdminDashboard() {
 
         {!bootstrapping && (
           <>
+            <TransactionSummarySection estateId={estateId} />
             <UserSummaryCard
               data={userSummary}
               loading={userSummaryLoading}
@@ -224,7 +225,6 @@ export default function EstateAdminDashboard() {
               onRetry={handleMeterSummaryRetry}
               estateName={estateName}
             />
-            <TransactionSummarySection estateId={estateId} />
             <TransactionAnalyticsDashboard estateId={estateId} />
             <ComplaintsDashboardCard
               data={complaintsDashboard}

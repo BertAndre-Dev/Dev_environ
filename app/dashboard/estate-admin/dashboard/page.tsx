@@ -37,16 +37,21 @@ import {
   selectEstateAdminMeterSummaryLoading,
   selectEstateAdminMeterSummaryStatus,
 } from "@/redux/slice/estate-admin/meter-summary/meter-summary-slice";
+import { getEstateAdminTransactionSummary } from "@/redux/slice/estate-admin/transaction-summary/estate-admin-transaction-summary";
+import { selectTransactionSummaryStatus } from "@/redux/slice/estate-admin/transaction-summary/estate-admin-transaction-summary-slice";
+import { getTransactionAnalyticsDashboard } from "@/redux/slice/estate-admin/transaction-analytics/transaction-analytics";
+import { selectTransactionAnalyticsStatus } from "@/redux/slice/estate-admin/transaction-analytics/transaction-analytics-slice";
 import { extractEstateIdFromUser, extractEstateNameFromUser } from "@/lib/user-id";
 import type { AppDispatch, RootState } from "@/redux/store";
 import Loader from "@/components/ui/Loader";
-import { isPending } from "@/lib/async-status";
+import { areSettled, isPending } from "@/lib/async-status";
 
 export default function EstateAdminDashboard() {
   const dispatch = useDispatch<AppDispatch>();
   const [estateId, setEstateId] = useState<string | null>(null);
   const [estateName, setEstateName] = useState("Estate");
   const [bootstrapping, setBootstrapping] = useState(true);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [energyPeriod, setEnergyPeriod] =
     useState<EnergyConsumptionPeriod>("weekly");
   const [usageRange, setUsageRange] = useState<EstateEnergyUsageRange>("weekly");
@@ -97,6 +102,10 @@ export default function EstateAdminDashboard() {
   const meterSummaryLoading = useSelector(selectEstateAdminMeterSummaryLoading);
   const meterSummaryStatus = useSelector(selectEstateAdminMeterSummaryStatus);
   const meterSummaryError = useSelector(selectEstateAdminMeterSummaryError);
+  const transactionSummaryStatus = useSelector(selectTransactionSummaryStatus);
+  const transactionAnalyticsStatus = useSelector(
+    selectTransactionAnalyticsStatus,
+  );
 
   useEffect(() => {
     (async () => {
@@ -108,6 +117,7 @@ export default function EstateAdminDashboard() {
         if (id) {
           setEstateId(id);
           setEstateName(name);
+          setInitialLoadDone(false);
         }
       } catch (err: unknown) {
         const message = getApiErrorMessage(err);
@@ -123,6 +133,8 @@ export default function EstateAdminDashboard() {
     void dispatch(getEstateAdminUserSummary({ estateId }));
     void dispatch(getEstateAdminComplaintsDashboard({ estateId }));
     void dispatch(getEstateAdminMeterSummary({ estateId }));
+    void dispatch(getEstateAdminTransactionSummary({ estateId }));
+    void dispatch(getTransactionAnalyticsDashboard({ estateId }));
   }, [dispatch, estateId]);
 
   useEffect(() => {
@@ -182,14 +194,24 @@ export default function EstateAdminDashboard() {
     void dispatch(getEstateAdminMeterSummary({ estateId }));
   };
 
+  const dashboardSettled =
+    Boolean(estateId) &&
+    areSettled([
+      userSummaryStatus,
+      meterSummaryStatus,
+      complaintsDashboardStatus,
+      transactionSummaryStatus,
+      transactionAnalyticsStatus,
+      estateEnergyUsageStatus,
+      energyChartStatus,
+    ]);
+
+  useEffect(() => {
+    if (dashboardSettled) setInitialLoadDone(true);
+  }, [dashboardSettled]);
+
   const pageLoading =
-    bootstrapping ||
-    (!!estateId &&
-      (estateEnergyUsageLoading ||
-        energyChartLoading ||
-        (isPending(userSummaryStatus) && !userSummary) ||
-        (isPending(complaintsDashboardStatus) && !complaintsDashboard) ||
-        (isPending(meterSummaryStatus) && !meterSummary)));
+    bootstrapping || (Boolean(estateId) && !initialLoadDone);
 
   return (
     <div className="relative">

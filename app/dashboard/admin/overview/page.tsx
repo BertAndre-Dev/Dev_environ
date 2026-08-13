@@ -10,7 +10,7 @@ import { BillsSummaryChart } from "@/components/charts/BillsSummaryChart";
 import { ComplaintsSummaryStatCard } from "@/components/charts/ComplaintsSummaryStatCard";
 import { ComplaintsDashboardCard } from "@/components/charts/ComplaintsDashboardCard";
 import Loader from "@/components/ui/Loader";
-import { isPending } from "@/lib/async-status";
+import { areSettled } from "@/lib/async-status";
 import { getApiErrorMessage } from "@/lib/api-error";
 import {
   extractEstateIdFromUser,
@@ -66,6 +66,7 @@ export default function AdminOverview() {
   const [estateId, setEstateId] = useState<string | null>(null);
   const [estateName, setEstateName] = useState("Estate");
   const [resolvingEstate, setResolvingEstate] = useState(true);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   const userSummary = useSelector(selectUserSummaryData);
   const userSummaryLoading = useSelector(selectUserSummaryLoading);
@@ -111,6 +112,7 @@ export default function AdminOverview() {
         if (id) {
           setEstateId(id);
           setEstateName(name);
+          setInitialLoadDone(false);
         }
       } catch (err: unknown) {
         const message = getApiErrorMessage(err);
@@ -161,15 +163,23 @@ export default function AdminOverview() {
     void dispatch(getComplaintsDashboard({ estateId }));
   };
 
+  const dashboardSettled =
+    Boolean(estateId) &&
+    areSettled([
+      userSummaryStatus,
+      roleBreakdownStatus,
+      meterSummaryStatus,
+      billsSummaryStatus,
+      complaintsSummaryStatus,
+      complaintsDashboardStatus,
+    ]);
+
+  useEffect(() => {
+    if (dashboardSettled) setInitialLoadDone(true);
+  }, [dashboardSettled]);
+
   const pageLoading =
-    resolvingEstate ||
-    (Boolean(estateId) &&
-      ((isPending(userSummaryStatus) && !userSummary) ||
-        (isPending(roleBreakdownStatus) && !roleBreakdown) ||
-        (isPending(meterSummaryStatus) && !meterSummary) ||
-        (isPending(billsSummaryStatus) && !billsSummary) ||
-        (isPending(complaintsSummaryStatus) && !complaintsSummary) ||
-        (isPending(complaintsDashboardStatus) && !complaintsDashboard)));
+    resolvingEstate || (Boolean(estateId) && !initialLoadDone);
 
   return (
     <div className="relative">

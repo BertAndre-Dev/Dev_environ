@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { TransactionSummaryCard } from "@/components/charts/transaction-summary-card";
+// import { TransactionSummaryCard } from "@/components/charts/transaction-summary-card";
 import { UserSummaryCard } from "@/components/charts/UserSummaryCard";
 import { RoleBreakdownChart } from "@/components/charts/RoleBreakdownChart";
 import { MeterSummaryCard } from "@/components/charts/MeterSummaryCard";
@@ -137,7 +137,7 @@ export default function AdminOverview() {
           error={roleBreakdownError}
           onRetry={handleRoleBreakdownRetry}
         />
-        <TransactionSummaryCard
+        {/* <TransactionSummaryCard
           data={transactionSummary}
           loading={transactionSummaryLoading}
           emptyMessage={
@@ -145,7 +145,7 @@ export default function AdminOverview() {
               ? "No estate linked to your account."
               : "No transaction data to display."
           }
-        />
+        /> */}
       </div>
     </div>
   );

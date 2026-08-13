@@ -165,6 +165,9 @@ export function ResidentVirtualAccountCard() {
           <p className="mt-1.5 text-sm text-muted-foreground">
             Bank transfer details for wallet funding.
           </p>
+          <p className="mt-1.5 text-sm text-red-500 font-medium">
+            For every transaction, a <span className="font-bold">₦230</span> fee will be deducted.
+          </p>
         </div>
         <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-500/15">
           <ShieldCheck className="size-3" aria-hidden />

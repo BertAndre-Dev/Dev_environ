@@ -3,17 +3,18 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-// import { TransactionSummaryCard } from "@/components/charts/transaction-summary-card";
 import { UserSummaryCard } from "@/components/charts/UserSummaryCard";
 import { RoleBreakdownChart } from "@/components/charts/RoleBreakdownChart";
 import { MeterSummaryCard } from "@/components/charts/MeterSummaryCard";
+import { BillsSummaryChart } from "@/components/charts/BillsSummaryChart";
+import { ComplaintsSummaryStatCard } from "@/components/charts/ComplaintsSummaryStatCard";
+import { ComplaintsDashboardCard } from "@/components/charts/ComplaintsDashboardCard";
 import { getApiErrorMessage } from "@/lib/api-error";
 import {
   extractEstateIdFromUser,
   extractEstateNameFromUser,
 } from "@/lib/user-id";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
-import { getAdminTransactionSummary } from "@/redux/slice/admin/transaction-summary/admin-transaction-summary";
 import {
   getUserRoleBreakdown,
   getUserSummary,
@@ -32,7 +33,25 @@ import {
   selectMeterSummaryError,
   selectMeterSummaryLoading,
 } from "@/redux/slice/admin/meter-summary/meter-summary-slice";
-import type { AppDispatch, RootState } from "@/redux/store";
+import { getBillsSummary } from "@/redux/slice/admin/bills-summary/bills-summary";
+import {
+  selectBillsSummaryData,
+  selectBillsSummaryError,
+  selectBillsSummaryLoading,
+} from "@/redux/slice/admin/bills-summary/bills-summary-slice";
+import { getComplaintsSummary } from "@/redux/slice/admin/complaints-summary/complaints-summary";
+import {
+  selectComplaintsSummaryData,
+  selectComplaintsSummaryError,
+  selectComplaintsSummaryLoading,
+} from "@/redux/slice/admin/complaints-summary/complaints-summary-slice";
+import { getComplaintsDashboard } from "@/redux/slice/admin/complaints-dashboard/complaints-dashboard";
+import {
+  selectComplaintsDashboardData,
+  selectComplaintsDashboardError,
+  selectComplaintsDashboardLoading,
+} from "@/redux/slice/admin/complaints-dashboard/complaints-dashboard-slice";
+import type { AppDispatch } from "@/redux/store";
 
 export default function AdminOverview() {
   const dispatch = useDispatch<AppDispatch>();
@@ -51,13 +70,19 @@ export default function AdminOverview() {
   const meterSummaryLoading = useSelector(selectMeterSummaryLoading);
   const meterSummaryError = useSelector(selectMeterSummaryError);
 
-  const { transactionSummary, transactionSummaryLoading } = useSelector(
-    (state: RootState) => ({
-      transactionSummary: state.adminTransactionSummary.summary,
-      transactionSummaryLoading:
-        state.adminTransactionSummary.status === "isLoading",
-    }),
+  const billsSummary = useSelector(selectBillsSummaryData);
+  const billsSummaryLoading = useSelector(selectBillsSummaryLoading);
+  const billsSummaryError = useSelector(selectBillsSummaryError);
+
+  const complaintsSummary = useSelector(selectComplaintsSummaryData);
+  const complaintsSummaryLoading = useSelector(selectComplaintsSummaryLoading);
+  const complaintsSummaryError = useSelector(selectComplaintsSummaryError);
+
+  const complaintsDashboard = useSelector(selectComplaintsDashboardData);
+  const complaintsDashboardLoading = useSelector(
+    selectComplaintsDashboardLoading,
   );
+  const complaintsDashboardError = useSelector(selectComplaintsDashboardError);
 
   useEffect(() => {
     (async () => {
@@ -82,12 +107,9 @@ export default function AdminOverview() {
     void dispatch(getUserSummary({ estateId }));
     void dispatch(getUserRoleBreakdown({ estateId }));
     void dispatch(getMeterSummary({ estateId }));
-    dispatch(getAdminTransactionSummary({ estateId }))
-      .unwrap()
-      .catch((err: unknown) => {
-        const message = getApiErrorMessage(err);
-        if (message) toast.error(message);
-      });
+    void dispatch(getBillsSummary({ estateId }));
+    void dispatch(getComplaintsSummary({ estateId }));
+    void dispatch(getComplaintsDashboard({ estateId }));
   }, [dispatch, estateId]);
 
   const handleUserSummaryRetry = () => {
@@ -105,6 +127,21 @@ export default function AdminOverview() {
     void dispatch(getMeterSummary({ estateId }));
   };
 
+  const handleBillsSummaryRetry = () => {
+    if (!estateId) return;
+    void dispatch(getBillsSummary({ estateId }));
+  };
+
+  const handleComplaintsSummaryRetry = () => {
+    if (!estateId) return;
+    void dispatch(getComplaintsSummary({ estateId }));
+  };
+
+  const handleComplaintsDashboardRetry = () => {
+    if (!estateId) return;
+    void dispatch(getComplaintsDashboard({ estateId }));
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -113,6 +150,15 @@ export default function AdminOverview() {
           Welcome back! Here&apos;s an overview of{" "}
           <span className="font-bold uppercase">{estateName}</span>
         </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ComplaintsSummaryStatCard
+          data={complaintsSummary}
+          loading={complaintsSummaryLoading}
+          error={complaintsSummaryError}
+          onRetry={handleComplaintsSummaryRetry}
+        />
       </div>
 
       <UserSummaryCard
@@ -130,6 +176,14 @@ export default function AdminOverview() {
         estateName={estateName}
       />
 
+      <ComplaintsDashboardCard
+        data={complaintsDashboard}
+        loading={complaintsDashboardLoading}
+        error={complaintsDashboardError}
+        onRetry={handleComplaintsDashboardRetry}
+        estateName={estateName}
+      />
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
         <RoleBreakdownChart
           data={roleBreakdown}
@@ -137,15 +191,12 @@ export default function AdminOverview() {
           error={roleBreakdownError}
           onRetry={handleRoleBreakdownRetry}
         />
-        {/* <TransactionSummaryCard
-          data={transactionSummary}
-          loading={transactionSummaryLoading}
-          emptyMessage={
-            !estateId
-              ? "No estate linked to your account."
-              : "No transaction data to display."
-          }
-        /> */}
+        <BillsSummaryChart
+          data={billsSummary}
+          loading={billsSummaryLoading}
+          error={billsSummaryError}
+          onRetry={handleBillsSummaryRetry}
+        />
       </div>
     </div>
   );

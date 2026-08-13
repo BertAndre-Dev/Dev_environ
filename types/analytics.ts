@@ -272,3 +272,72 @@ export interface MeterSummaryResponse {
   message: string;
   data: MeterSummaryData;
 }
+
+export interface BillsSummaryData {
+  totalBills: number;
+  activeBills: number;
+  suspendedBills: number;
+}
+
+export interface BillsSummaryResponse {
+  success: boolean;
+  message: string;
+  data: BillsSummaryData;
+}
+
+export interface ComplaintsSummaryData {
+  totalComplaints: number;
+}
+
+export interface ComplaintsSummaryResponse {
+  success: boolean;
+  message: string;
+  data: ComplaintsSummaryData;
+}
+
+export interface ComplaintListItem {
+  _id: string;
+  title: string;
+  description?: string;
+  category: string;
+  status: string;
+  createdAt: string;
+  daysOpen: number;
+}
+
+export interface ComplaintCategoryBreakdownEntry {
+  category: string;
+  count: number;
+}
+
+export interface ComplaintAverageResolutionTime {
+  averageResolutionDays: number;
+  minResolutionDays: number;
+  maxResolutionDays: number;
+  resolvedCount: number;
+}
+
+export interface ComplaintResolutionRate {
+  totalComplaints: number;
+  resolvedComplaints: number;
+  pendingComplaints: number;
+  resolutionRate: number;
+}
+
+export interface ComplaintsDashboardData {
+  summary: { totalComplaints: number };
+  statusBreakdown: Record<string, number>;
+  categoryBreakdown: ComplaintCategoryBreakdownEntry[];
+  complaintsByResident: unknown[];
+  creationTrend: unknown[];
+  pendingComplaints: ComplaintListItem[];
+  averageResolutionTime: ComplaintAverageResolutionTime;
+  oldestUnresolvedComplaints: ComplaintListItem[];
+  resolutionRate: ComplaintResolutionRate;
+}
+
+export interface ComplaintsDashboardResponse {
+  success: boolean;
+  message: string;
+  data: ComplaintsDashboardData;
+}

@@ -236,8 +236,7 @@ function CardBody({
         </div>
       ) : (
         <p className="rounded-xl border border-border bg-muted/30 px-3.5 py-3 text-center text-xs text-muted-foreground">
-          Assignment is heavily skewed ({Math.round(maxShare * 100)}% in one
-          segment), so the donut is hidden. KPI cards above show the counts.
+       
         </p>
       )}
     </div>

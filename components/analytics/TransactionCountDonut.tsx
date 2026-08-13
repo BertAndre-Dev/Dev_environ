@@ -83,13 +83,13 @@ export function TransactionCountDonut({
     const slices: ChartSlice[] = [
       {
         key: "credit",
-        name: "Credits",
+        name: "Inflow",
         value: creditCount,
         fill: CREDIT_FILL,
       },
       {
         key: "debit",
-        name: "Debits",
+        name: "Outflow",
         value: debitCount,
         fill: DEBIT_FILL,
       },
@@ -119,7 +119,7 @@ export function TransactionCountDonut({
           Transaction count
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Credit vs debit transactions
+          Inflow vs outflow transactions
         </p>
       </div>
 
@@ -157,12 +157,12 @@ export function TransactionCountDonut({
         <div className="mt-4 flex w-full flex-col gap-2 sm:flex-row sm:gap-3">
           <LegendPill
             color={CREDIT_FILL}
-            label="Credits"
+            label="Inflow"
             value={creditCount}
           />
           <LegendPill
             color={DEBIT_FILL}
-            label="Debits"
+            label="Outflow"
             value={debitCount}
           />
         </div>

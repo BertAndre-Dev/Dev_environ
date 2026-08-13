@@ -8,6 +8,7 @@ import { EstatePowerUsageSection } from "@/components/charts/estate-power-usage-
 import { TransactionSummarySection } from "@/components/analytics/TransactionSummarySection";
 import { TransactionAnalyticsDashboard } from "@/components/analytics/TransactionAnalyticsDashboard";
 import { UserSummaryCard } from "@/components/charts/UserSummaryCard";
+import { MeterSummaryCard } from "@/components/charts/MeterSummaryCard";
 import { ComplaintsDashboardCard } from "@/components/charts/ComplaintsDashboardCard";
 import type { EnergyConsumptionPeriod } from "@/lib/energy-consumption-chart";
 import type { EstateEnergyUsageRange } from "@/lib/estate-energy-usage-chart";
@@ -29,6 +30,13 @@ import {
   selectEstateAdminComplaintsDashboardLoading,
   selectEstateAdminComplaintsDashboardStatus,
 } from "@/redux/slice/estate-admin/complaints-dashboard/complaints-dashboard-slice";
+import { getEstateAdminMeterSummary } from "@/redux/slice/estate-admin/meter-summary/meter-summary";
+import {
+  selectEstateAdminMeterSummaryData,
+  selectEstateAdminMeterSummaryError,
+  selectEstateAdminMeterSummaryLoading,
+  selectEstateAdminMeterSummaryStatus,
+} from "@/redux/slice/estate-admin/meter-summary/meter-summary-slice";
 import { extractEstateIdFromUser, extractEstateNameFromUser } from "@/lib/user-id";
 import type { AppDispatch, RootState } from "@/redux/store";
 import Loader from "@/components/ui/Loader";
@@ -85,6 +93,11 @@ export default function EstateAdminDashboard() {
     selectEstateAdminComplaintsDashboardError,
   );
 
+  const meterSummary = useSelector(selectEstateAdminMeterSummaryData);
+  const meterSummaryLoading = useSelector(selectEstateAdminMeterSummaryLoading);
+  const meterSummaryStatus = useSelector(selectEstateAdminMeterSummaryStatus);
+  const meterSummaryError = useSelector(selectEstateAdminMeterSummaryError);
+
   useEffect(() => {
     (async () => {
       try {
@@ -109,6 +122,7 @@ export default function EstateAdminDashboard() {
     if (!estateId) return;
     void dispatch(getEstateAdminUserSummary({ estateId }));
     void dispatch(getEstateAdminComplaintsDashboard({ estateId }));
+    void dispatch(getEstateAdminMeterSummary({ estateId }));
   }, [dispatch, estateId]);
 
   useEffect(() => {
@@ -163,13 +177,19 @@ export default function EstateAdminDashboard() {
     void dispatch(getEstateAdminComplaintsDashboard({ estateId }));
   };
 
+  const handleMeterSummaryRetry = () => {
+    if (!estateId) return;
+    void dispatch(getEstateAdminMeterSummary({ estateId }));
+  };
+
   const pageLoading =
     bootstrapping ||
     (!!estateId &&
       (estateEnergyUsageLoading ||
         energyChartLoading ||
         (isPending(userSummaryStatus) && !userSummary) ||
-        (isPending(complaintsDashboardStatus) && !complaintsDashboard)));
+        (isPending(complaintsDashboardStatus) && !complaintsDashboard) ||
+        (isPending(meterSummaryStatus) && !meterSummary)));
 
   return (
     <div className="relative">
@@ -196,6 +216,13 @@ export default function EstateAdminDashboard() {
               loading={userSummaryLoading}
               error={userSummaryError}
               onRetry={handleUserSummaryRetry}
+            />
+            <MeterSummaryCard
+              data={meterSummary}
+              loading={meterSummaryLoading}
+              error={meterSummaryError}
+              onRetry={handleMeterSummaryRetry}
+              estateName={estateName}
             />
             <TransactionSummarySection estateId={estateId} />
             <TransactionAnalyticsDashboard estateId={estateId} />

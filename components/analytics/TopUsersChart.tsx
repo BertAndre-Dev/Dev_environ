@@ -88,11 +88,11 @@ function ChartTooltip({ active, payload }: TooltipProps) {
           value={row.transactionCount.toLocaleString()}
         />
         <TooltipRow
-          label="Credits"
+          label="Inflow"
           value={formatTransactionAmount(row.creditAmount)}
         />
         <TooltipRow
-          label="Debits"
+          label="Outflow"
           value={formatTransactionAmount(row.debitAmount)}
         />
       </div>

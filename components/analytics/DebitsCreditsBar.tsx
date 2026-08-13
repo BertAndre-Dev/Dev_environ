@@ -67,7 +67,7 @@ export function DebitsCreditsBar({ data, className }: DebitsCreditsBarProps) {
     >
       <div className="border-b border-border px-6 py-5">
         <h2 className="font-heading text-lg font-bold text-foreground sm:text-xl">
-          Credits vs Debits
+          Inflow vs Outflow
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Amounts scaled to the larger of the two
@@ -75,13 +75,13 @@ export function DebitsCreditsBar({ data, className }: DebitsCreditsBarProps) {
       </div>
       <div className="space-y-5 px-6 py-6">
         <BarRow
-          label="Credits"
+          label="Inflow"
           amount={credits}
           widthPercent={creditWidth}
           color={CREDIT_BAR_COLOR}
         />
         <BarRow
-          label="Debits"
+          label="Outflow"
           amount={debits}
           widthPercent={debitWidth}
           color={DEBIT_BAR_COLOR}

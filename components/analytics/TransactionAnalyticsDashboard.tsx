@@ -100,11 +100,11 @@ export function TransactionAnalyticsDashboard({
   return (
     <div className={cn("space-y-6", className)}>
       <TransactionTrendChart series={dashboard.trend ?? []} />
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6">
         <TopUsersChart users={dashboard.topUsers ?? []} />
-        <ChargeBreakdownChart
+        {/* <ChargeBreakdownChart
           breakdown={dashboard.chargeAnalytics?.summary?.breakdown ?? []}
-        />
+        /> */}
       </div>
       {showStatusNote ? (
         <></>

@@ -1,130 +1,174 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
-export default function FeaturesSection() {
-  const [activeTab, setActiveTab] = useState<"owners" | "residents">("owners");
+type AudienceId = "owners" | "residents";
+
+type FeatureItem = Readonly<{
+  title: string;
+  description: string;
+}>;
+
+const FEATURE_COPY =
+  "Our mission is to design, deploy, and manage modern energy infrastructure that combines conventional energy.";
+
+const AUDIENCES = {
+  owners: {
+    id: "owners" as const,
+    label: "Property Owners & Operators",
+    image: "/assets/ft/man.svg",
+    imageAlt: "Property operator reviewing estate data on a computer",
+    features: [
+      { title: "Insight", description: FEATURE_COPY },
+      { title: "Insight", description: FEATURE_COPY },
+      { title: "Insight", description: FEATURE_COPY },
+      { title: "Insight", description: FEATURE_COPY },
+    ] satisfies readonly FeatureItem[],
+  },
+  residents: {
+    id: "residents" as const,
+    label: "Home owners & Residents",
+    image: "/assets/ft/woman.svg",
+    imageAlt: "Residents enjoying community living at home",
+    features: [
+      { title: "Insight", description: FEATURE_COPY },
+      { title: "Insight", description: FEATURE_COPY },
+      { title: "Insight", description: FEATURE_COPY },
+      { title: "Insight", description: FEATURE_COPY },
+    ] satisfies readonly FeatureItem[],
+  },
+} as const;
+
+const spring = { type: "spring" as const, bounce: 0, duration: 0.35 };
+
+function FeatureIcon() {
+  return (
+    <div className="flex size-11 shrink-0 items-center justify-center rounded-full border border-[#0150AC]/20 bg-[#E8F1FB]/60">
+      <Image
+        src="/assets/energy.svg"
+        alt=""
+        width={22}
+        height={22}
+        className="size-[22px]"
+        aria-hidden="true"
+      />
+    </div>
+  );
+}
+
+function FeatureCard({ title, description }: FeatureItem) {
+  const reduceMotion = useReducedMotion();
 
   return (
-    <section className="bg-[#F5F7FB] py-8 lg:py-16 my-16 lg:my-24">
-      <div className="container mx-auto px-6 md:px-8 lg:px-10 xl:px-20 max-w-[1320px] xl:max-w-[1440px]">
-        <div className="flex flex-col lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-8 lg:gap-10 items-stretch">
-          {/* Image (mobile first) */}
-          <div className="relative order-1 lg:order-2 rounded-3xl overflow-hidden border border-[#D0DFF2] h-[280px] sm:h-[360px] lg:h-auto lg:min-h-[500px]">
-            <Image
-              src={
-                activeTab === "owners"
-                  ? "/assets/Frame%202147227113.svg"
-                  : "/assets/home.svg"
-              }
-              alt={
-                activeTab === "owners"
-                  ? "Estate manager working at a computer"
-                  : "Two residents having a conversation at home"
-              }
-              fill
-              className="object-cover"
-              priority={false}
-            />
-          </div>
+    <motion.article
+      className="flex items-start gap-4 rounded-2xl bg-white p-5 shadow-[0_1px_3px_rgba(16,24,40,0.06),0_8px_24px_rgba(16,24,40,0.04)] sm:p-6 will-change-transform"
+      whileHover={
+        reduceMotion
+          ? undefined
+          : { y: -2, boxShadow: "0 8px 28px rgba(16,24,40,0.08)" }
+      }
+      whileTap={reduceMotion ? undefined : { scale: 0.985 }}
+      transition={spring}
+    >
+      <FeatureIcon />
+      <div className="min-w-0">
+        <h3 className="text-base font-bold tracking-[-0.01em] text-black sm:text-lg">
+          {title}
+        </h3>
+        <p className="mt-1.5 text-sm leading-relaxed text-[#4B5563] sm:text-[15px]">
+          {description}
+        </p>
+      </div>
+    </motion.article>
+  );
+}
 
-          {/* Tabs + card */}
-          <div className="order-2 lg:order-1 flex flex-col gap-4">
-            {/* Tab group sitting above the card */}
-            <div className="inline-flex rounded-full bg-[#111827] p-1 gap-1 max-w-full">
+export default function FeaturesSection() {
+  const [activeTab, setActiveTab] = useState<AudienceId>("owners");
+  const reduceMotion = useReducedMotion();
+  const audience = AUDIENCES[activeTab];
+
+  return (
+    <section
+      id="features"
+      className="scroll-mt-28 bg-[#F8F8F8] py-14 sm:py-16 lg:py-20"
+    >
+      <div className="container mx-auto max-w-[1320px] px-6 md:px-8 lg:px-10 xl:max-w-[1440px] xl:px-16">
+        <div className="mx-auto max-w-3xl text-center">
+          <h2 className="text-[32px] font-semibold leading-tight tracking-[-0.02em] text-black sm:text-[36px] lg:text-[40px]">
+            Built for Teams Across Industries
+          </h2>
+          <p className="mx-auto mt-3 max-w-2xl text-base leading-relaxed text-[#6B7280] sm:text-lg">
+            Manage your property and energy operations, payments, and residents
+            all in one powerful platform.
+          </p>
+        </div>
+
+        <div
+          className="mx-auto mt-8 flex w-full max-w-xl rounded-full bg-[#ECECEC] p-1 shadow-[inset_0_1px_2px_rgba(16,24,40,0.04)] sm:mt-10"
+          role="group"
+          aria-label="Audience"
+        >
+          {(Object.keys(AUDIENCES) as AudienceId[]).map((id) => {
+            const isActive = activeTab === id;
+            return (
               <button
+                key={id}
                 type="button"
-                onClick={() => setActiveTab("owners")}
-                className={`flex-1 min-w-[140px] rounded-full px-4 py-2 text-xs sm:text-sm font-medium cursor-pointer transition-colors ${
-                  activeTab === "owners"
-                    ? "bg-[#1560BD] text-white"
-                    : "bg-transparent text-white/80"
-                }`}
+                aria-pressed={isActive}
+                onClick={() => setActiveTab(id)}
+                className={[
+                  "min-w-0 flex-1 cursor-pointer rounded-full px-3 py-2.5 text-center text-xs font-medium transition-colors sm:px-5 sm:text-sm",
+                  "active:scale-[0.98]",
+                  isActive
+                    ? "bg-white text-[#0150AC] shadow-[0_1px_3px_rgba(16,24,40,0.08)]"
+                    : "bg-transparent text-[#6B7280] hover:text-[#374151]",
+                ].join(" ")}
               >
-                Property Owners &amp; Operators
+                {AUDIENCES[id].label}
               </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("residents")}
-                className={`flex-1 min-w-[140px] rounded-full px-4 sm:px-6 py-2 text-xs sm:text-sm font-medium transition-colors ${
-                  activeTab === "residents"
-                    ? "bg-[#1560BD] text-white cursor-pointer"
-                    : "bg-transparent text-white/80 cursor-pointer"
-                }`}
-              >
-                Home owners &amp; Residents
-              </button>
+            );
+          })}
+        </div>
+
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={activeTab}
+            className="mt-10 grid items-stretch gap-8 lg:mt-12 lg:grid-cols-2 lg:gap-12"
+            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+            transition={
+              reduceMotion
+                ? { duration: 0.2 }
+                : { type: "spring", bounce: 0, duration: 0.4 }
+            }
+          >
+            <div className="relative mx-auto w-full max-w-[560px] overflow-hidden rounded-[28px] lg:mx-0 lg:max-w-none">
+              <div className="relative aspect-600/687 w-full">
+                <Image
+                  src={audience.image}
+                  alt={audience.imageAlt}
+                  fill
+                  className="object-cover object-center"
+                  sizes="(max-width: 1024px) 100vw, 560px"
+                  priority={false}
+                />
+              </div>
             </div>
 
-            <article className="bg-white rounded-3xl shadow-sm border border-[#D0DFF2] px-6 md:px-8 py-7 sm:py-8 flex flex-col gap-6 h-[420px] sm:h-[430px] lg:h-[440px]">
-              {/* Text content */}
-              <div
-                className={`space-y-4 sm:space-y-5 flex-1 ${
-                  activeTab === "owners" ? "overflow-y-auto pr-1" : ""
-                }`}
-              >
-                <div>
-                  <h2 className="text-[#171717] text-[20px] font-bold mb-2 cursor-pointer">
-                    {activeTab === "owners"
-                      ? "Property Management"
-                      : "Resident Management"}
-                  </h2>
-                  <div className="mt-2 h-[3px] w-20 rounded-full bg-[#FA8128] mb-6" />
-                  {activeTab === "owners" ? (
-                    <p className="text-[#4C4C4C] text-sm sm:text-base leading-relaxed">
-                      A powerful web-based management suite designed for
-                      clarity, efficiency, and scale.
-                    </p>
-                  ) : (
-                    <p className="text-[#4C4C4C] text-sm sm:text-base leading-relaxed">
-                      Berta Hub gives homeowners and residents a simple,
-                      reliable way to manage everyday living within their
-                      community. Residents can submit maintenance requests,
-                      track payments, receive updates from property management,
-                      and stay connected with their community.
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  {activeTab === "owners" ? (
-                    <>
-                      <p className="text-[#171717] text-sm sm:text-base font-normal mb-2">
-                        You can:
-                      </p>
-                      <ul className="list-disc pl-5 space-y-2 text-[#4C4C4C] text-sm sm:text-base leading-relaxed">
-                        <li>Get insights on energy consumption</li>
-                        <li>
-                          Create and manage properties, units, and occupants
-                        </li>
-                        <li>Automate recurring charges and utility billing</li>
-                        <li>Track collections in real time</li>
-                        <li>
-                          Instantly reconcile payments and generate reports
-                        </li>
-                        <li>
-                          Monitor service delivery and maintenance performance
-                        </li>
-                        <li>
-                          Gain actionable insights into operations and revenue
-                        </li>
-                      </ul>
-                    </>
-                  ) : (
-                    <p className="text-[#4C4C4C] text-sm sm:text-base leading-relaxed">
-                      Homeowners can invite tenants, monitor property-related
-                      transactions, and maintain better oversight of their
-                      properties. With Berta Hub, managing your home and staying
-                      informed becomes faster, more transparent, and
-                      stress-free.
-                    </p>
-                  )}
-                </div>
-              </div>
-            </article>
-          </div>
-        </div>
+            <div className="flex flex-col gap-4 sm:gap-5">
+              {audience.features.map((feature, index) => (
+                <FeatureCard
+                  key={`${activeTab}-${feature.title}-${index}`}
+                  {...feature}
+                />
+              ))}
+            </div>
+          </motion.div>
+        </AnimatePresence>
       </div>
     </section>
   );

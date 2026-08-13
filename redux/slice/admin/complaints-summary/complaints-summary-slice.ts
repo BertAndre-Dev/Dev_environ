@@ -52,4 +52,8 @@ export const selectComplaintsSummaryLoading = (state: RootState): boolean =>
 export const selectComplaintsSummaryError = (state: RootState): string | null =>
   state.adminComplaintsSummary.error;
 
+export const selectComplaintsSummaryStatus = (
+  state: RootState,
+): ComplaintsSummaryState["status"] => state.adminComplaintsSummary.status;
+
 export default complaintsSummarySlice.reducer;

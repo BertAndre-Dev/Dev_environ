@@ -51,4 +51,8 @@ export const selectBillsSummaryLoading = (state: RootState): boolean =>
 export const selectBillsSummaryError = (state: RootState): string | null =>
   state.adminBillsSummary.error;
 
+export const selectBillsSummaryStatus = (
+  state: RootState,
+): BillsSummaryState["status"] => state.adminBillsSummary.status;
+
 export default billsSummarySlice.reducer;

@@ -53,4 +53,8 @@ export const selectComplaintsDashboardError = (
   state: RootState,
 ): string | null => state.adminComplaintsDashboard.error;
 
+export const selectComplaintsDashboardStatus = (
+  state: RootState,
+): ComplaintsDashboardState["status"] => state.adminComplaintsDashboard.status;
+
 export default complaintsDashboardSlice.reducer;

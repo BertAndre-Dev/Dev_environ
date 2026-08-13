@@ -243,7 +243,6 @@ export default function SuperAdminDashboard() {
     selectCustomerActivationsStatus,
   );
   const customerActivationsError = useSelector(selectCustomerActivationsError);
-
   const estates = estateState?.allEstates?.data ?? [];
   const estatesPagination = estateState?.allEstates?.pagination ?? null;
   const estatesStatus = estateState?.getAllEstatesState as string | undefined;
@@ -544,6 +543,7 @@ export default function SuperAdminDashboard() {
             estateOptions={customerMeterEstateOptions}
             companyOptions={customerMeterCompanyOptions}
           />
+
 
         <RevenueTrendChart
           series={revenueSeries}

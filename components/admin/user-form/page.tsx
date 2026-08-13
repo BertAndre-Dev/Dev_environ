@@ -12,6 +12,7 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import { getFieldByEstate } from "@/redux/slice/admin/address-mgt/fields/fields";
 import { getEntriesByField } from "@/redux/slice/admin/address-mgt/entry/entry";
 import { iniviteUser, getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
+import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
 import type { AppDispatch } from "@/redux/store";
 
 type InviteUserFormProps = {
@@ -25,6 +26,7 @@ interface InviteUserFormData {
   firstName: string;
   lastName: string;
   email: string;
+  phoneNumber: string;
   role: "resident" | "security" | "staff" | "company" | "";
   residentType: string | null;
   addressIds: string[];
@@ -46,6 +48,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
     firstName: "",
     lastName: "",
     email: "",
+    phoneNumber: "",
     role: "",
     residentType: null,
     addressIds: [],
@@ -145,6 +148,10 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
       return toast.error("Please select a role");
     }
 
+    if (!formData.phoneNumber.trim()) {
+      return toast.error("Please provide a phone number.");
+    }
+
     if (formData.role === "resident") {
       if (!formData.addressIds?.length) {
         return toast.error("Please select at least one address");
@@ -161,6 +168,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
       firstName: formData.firstName,
       lastName: formData.lastName,
       email: formData.email,
+      phoneNumber: formData.phoneNumber.trim(),
       role: formData.role,
       residentType: formData.role === "resident" ? "owner" : "owner",
       // Guard against accidental empty ids (prevents backend ObjectId cast errors)
@@ -212,6 +220,12 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
               />
             </div>
           ))}
+
+          <InvitePhoneNumberField
+            id="phoneNumber"
+            value={formData.phoneNumber}
+            onChange={handleInput}
+          />
 
           {/* Role */}
           <div>

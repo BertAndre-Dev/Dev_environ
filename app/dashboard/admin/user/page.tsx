@@ -53,6 +53,7 @@ interface AdminUserData {
   lastName: string;
   createdAt: string;
   email: string;
+  phoneNumber?: string;
   // Single primary address id from backend (kept for backwards compatibility)
   addressId?: string;
   // Full address objects with metadata like block & apartment
@@ -326,6 +327,11 @@ export default function AdminUserPage() {
     { key: "firstName", header: "First Name" },
     { key: "lastName", header: "Last Name" },
     { key: "email", header: "Email" },
+    {
+      key: "phoneNumber",
+      header: "Phone",
+      render: (item: AdminUserData) => item.phoneNumber?.trim() || "—",
+    },
     ...getAddressColumns(allAdminUsers),
     // { key: "role", header: "Role" },
     ...(showResidentColumns

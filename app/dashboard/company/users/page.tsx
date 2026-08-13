@@ -288,6 +288,12 @@ export default function CompanyUsersPage() {
       { key: "firstName" as const, header: "First Name" },
       { key: "lastName" as const, header: "Last Name" },
       { key: "email" as const, header: "Email" },
+      {
+        key: "phoneNumber" as const,
+        header: "Phone",
+        render: (item: CompanyUserDetails) => item.phoneNumber?.trim() || "—",
+        exportValue: (item: CompanyUserDetails) => item.phoneNumber?.trim() || "",
+      },
       { key: "role" as const, header: "Role" },
       ...(showResidentColumns
         ? [

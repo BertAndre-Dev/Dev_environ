@@ -17,6 +17,7 @@ import {
   SUPER_ADMIN_ESTATE_INVITE_ROLE_OPTIONS,
   validateEnergyProviderInviteScope,
 } from "@/lib/invite-user-roles";
+import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
 import { toast } from "react-toastify";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch, RootState } from "@/redux/store";
@@ -31,6 +32,7 @@ interface InviteUserFormData {
   firstName: string;
   lastName: string;
   email: string;
+  phoneNumber: string;
   role: string;
 }
 
@@ -44,6 +46,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
     firstName: "",
     lastName: "",
     email: "",
+    phoneNumber: "",
     role: "",
   });
 
@@ -139,6 +142,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
       firstName: "",
       lastName: "",
       email: "",
+      phoneNumber: "",
       role: "",
     });
 
@@ -147,6 +151,9 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
 
     if (!formData.role) return toast.error("Please select a role.");
     if (!formData.email) return toast.error("Please provide an email.");
+    if (!formData.phoneNumber.trim()) {
+      return toast.error("Please provide a phone number.");
+    }
     if (!formData.firstName) return toast.error("Please provide first name.");
     if (!formData.lastName) return toast.error("Please provide last name.");
     if (inviteScope === "estate" && !formData.estateId?.trim()) {
@@ -170,6 +177,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
+        phoneNumber: formData.phoneNumber,
         role: formData.role,
         inviteContext: inviteScope,
         estateId: formData.estateId,
@@ -230,6 +238,15 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
         </div>,
       );
     }
+    nodes.push(
+      <InvitePhoneNumberField
+        key="phoneNumber"
+        id="phoneNumber"
+        value={formData.phoneNumber}
+        onChange={handleInputChange}
+        className="mb-2"
+      />,
+    );
     return nodes;
   };
 

@@ -28,6 +28,7 @@ export function buildEnergyProviderInviteHomeOwnerPayload(params: {
   firstName: string;
   lastName: string;
   email: string;
+  phoneNumber: string;
   estateId: string;
   companyId?: string;
   addressIds: string[];
@@ -39,6 +40,7 @@ export function buildEnergyProviderInviteHomeOwnerPayload(params: {
     firstName: params.firstName.trim(),
     lastName: params.lastName.trim(),
     email: params.email.trim(),
+    phoneNumber: params.phoneNumber.trim(),
     role: "resident",
     residentType: "owner",
     estateId,
@@ -78,6 +80,7 @@ export function buildInviteUserPayload(params: {
   firstName: string;
   lastName: string;
   email: string;
+  phoneNumber: string;
   role: string;
   inviteContext: "estate" | "company";
   estateId?: string;
@@ -90,6 +93,7 @@ export function buildInviteUserPayload(params: {
     firstName: params.firstName.trim(),
     lastName: params.lastName.trim(),
     email: params.email.trim(),
+    phoneNumber: params.phoneNumber.trim(),
     role: params.role,
     residentType: null,
     addressIds: [],

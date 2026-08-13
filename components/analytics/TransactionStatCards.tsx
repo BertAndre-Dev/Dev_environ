@@ -41,12 +41,12 @@ export function TransactionStatCards({ data }: TransactionStatCardsProps) {
               : undefined
         }
       />
-      <KpiCard
+      {/* <KpiCard
         label="Paid transactions"
         value={data.paidTransactions.toLocaleString()}
         icon={BadgeCheck}
         iconBgClassName="bg-[#E6F4EA] text-[#007A4D]"
-      />
+      /> */}
     </div>
   );
 }

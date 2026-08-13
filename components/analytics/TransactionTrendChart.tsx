@@ -132,7 +132,7 @@ export function TransactionTrendChart({
         </p>
       </div>
 
-      <div className="px-5 py-5 sm:px-6 sm:pb-6">
+      <div className="py-5 sm:pb-6">
         {rows.length === 0 ? (
           <EmptyState />
         ) : (

@@ -245,7 +245,7 @@ function AutoSettlementPanel({
                 aria-hidden
               />
               <p className="text-sm font-medium text-foreground">
-                Auto-settlement
+                Auto-settlement (<span className="text-emerald-700">Toggle to enable/disable auto-settlement</span>)
               </p>
             </div>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">

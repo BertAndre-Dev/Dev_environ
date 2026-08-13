@@ -467,6 +467,12 @@ export default function SuperAdminUserPage() {
     { key: "firstName", header: "First Name" },
     { key: "lastName", header: "Last Name" },
     { key: "email", header: "Email" },
+    {
+      key: "phoneNumber",
+      header: "Phone",
+      render: (item: SuperAdminUserData) => item.phoneNumber?.trim() || "—",
+      exportValue: (item: SuperAdminUserData) => item.phoneNumber?.trim() || "",
+    },
     ...(showResidentColumns
       ? [
           {

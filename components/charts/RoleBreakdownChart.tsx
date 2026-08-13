@@ -67,14 +67,14 @@ function buildChartSlices(data: RoleBreakdownData): ChartSlice[] {
 }
 
 function totalUsers(data: RoleBreakdownData): number {
-  return Object.values(data).reduce(
+  return Object.values(data).reduce<number>(
     (sum, entry) => sum + normalizeRoleStats(entry).total,
     0,
   );
 }
 
 function totalActive(data: RoleBreakdownData): number {
-  return Object.values(data).reduce(
+  return Object.values(data).reduce<number>(
     (sum, entry) => sum + normalizeRoleStats(entry).active,
     0,
   );

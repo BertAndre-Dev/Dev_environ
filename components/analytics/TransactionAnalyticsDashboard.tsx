@@ -107,9 +107,7 @@ export function TransactionAnalyticsDashboard({
         />
       </div>
       {showStatusNote ? (
-        <p className="text-sm text-muted-foreground">
-          No paid/pending/failed status data yet
-        </p>
+        <></>
       ) : null}
     </div>
   );

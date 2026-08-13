@@ -250,7 +250,7 @@ function AutoSettlementPanel({
             </div>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
               {autoEnabled
-                ? "On — configured revenue settles to the matching bank account after T+1."
+                ? "On — Auto-settlement enabled. Earnings are sent to your bank automatically."
                 : "Off — revenue stays in your wallet until you withdraw."}
             </p>
           </div>

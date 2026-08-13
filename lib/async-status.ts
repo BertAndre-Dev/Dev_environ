@@ -29,3 +29,10 @@ export function isBusy(status: AsyncUiStatus | null | undefined): boolean {
 export function isSettled(status: AsyncUiStatus | null | undefined): boolean {
   return status === "succeeded" || status === "failed";
 }
+
+/** True when every listed request has finished (success or failure). */
+export function areSettled(
+  statuses: ReadonlyArray<AsyncUiStatus | null | undefined>,
+): boolean {
+  return statuses.length > 0 && statuses.every(isSettled);
+}

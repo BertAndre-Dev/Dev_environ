@@ -13,11 +13,9 @@ import {
   selectTransactionAnalyticsStatus,
 } from "@/redux/slice/estate-admin/transaction-analytics/transaction-analytics-slice";
 import type { AppDispatch } from "@/redux/store";
-import { TransactionKpiRow } from "@/components/analytics/TransactionKpiRow";
 import { TransactionTrendChart } from "@/components/analytics/TransactionTrendChart";
 import { TopUsersChart } from "@/components/analytics/TopUsersChart";
 import { ChargeBreakdownChart } from "@/components/analytics/ChargeBreakdownChart";
-import { RecentChargesTable } from "@/components/analytics/RecentChargesTable";
 
 type TransactionAnalyticsDashboardProps = Readonly<{
   estateId: string | null;
@@ -101,7 +99,6 @@ export function TransactionAnalyticsDashboard({
 
   return (
     <div className={cn("space-y-6", className)}>
-      <TransactionKpiRow data={dashboard} />
       <TransactionTrendChart series={dashboard.trend ?? []} />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <TopUsersChart users={dashboard.topUsers ?? []} />
@@ -114,9 +111,6 @@ export function TransactionAnalyticsDashboard({
           No paid/pending/failed status data yet
         </p>
       ) : null}
-      <RecentChargesTable
-        charges={dashboard.chargeAnalytics?.recentCharges ?? []}
-      />
     </div>
   );
 }
@@ -124,24 +118,11 @@ export function TransactionAnalyticsDashboard({
 function SectionSkeleton({ className }: Readonly<{ className?: string }>) {
   return (
     <div className={cn("space-y-6", className)} aria-hidden>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => (
-          <div
-            key={`tx-dash-kpi-sk-${i}`}
-            className="min-h-[140px] animate-pulse rounded-xl border border-border bg-muted/50 p-4 sm:p-5 md:p-6"
-          >
-            <div className="h-10 w-10 rounded-full bg-muted" />
-            <div className="mt-4 h-4 w-24 rounded bg-muted" />
-            <div className="mt-2 h-8 w-16 rounded bg-muted" />
-          </div>
-        ))}
-      </div>
       <div className="h-[300px] animate-pulse rounded-xl border border-border bg-muted/50" />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="h-60 animate-pulse rounded-xl border border-border bg-muted/50" />
         <div className="h-60 animate-pulse rounded-xl border border-border bg-muted/50" />
       </div>
-      <div className="h-48 animate-pulse rounded-xl border border-border bg-muted/50" />
     </div>
   );
 }

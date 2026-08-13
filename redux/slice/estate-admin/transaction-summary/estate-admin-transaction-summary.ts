@@ -1,12 +1,11 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
-import type { TransactionSummaryData } from "@/lib/transaction-summary-chart";
+import type { TransactionSummaryResponse } from "@/types/analytics";
 
-export interface TransactionSummaryResponse {
-  success: boolean;
-  message: string;
-  data: TransactionSummaryData;
-}
+export type {
+  TransactionSummary,
+  TransactionSummaryResponse,
+} from "@/types/analytics";
 
 /** GET /api/v1/analytics/transactions/summary (estate admin overview) */
 export const getEstateAdminTransactionSummary = createAsyncThunk(

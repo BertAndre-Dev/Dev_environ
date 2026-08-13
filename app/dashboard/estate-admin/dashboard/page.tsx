@@ -13,6 +13,8 @@ import BillsOverview from "@/components/charts/bills-overview";
 import OccupancyDistribution from "@/components/charts/occupancy-distribution";
 import { BillsStatusDonutCard } from "@/components/charts/bills-status-donut-card";
 import { TransactionSummaryCard } from "@/components/charts/transaction-summary-card";
+import { TransactionSummarySection } from "@/components/analytics/TransactionSummarySection";
+import { TransactionAnalyticsDashboard } from "@/components/analytics/TransactionAnalyticsDashboard";
 import MeterStatusPie from "@/components/charts/meter-status-pie";
 import MeterTrendChart from "@/components/charts/meter-trend-chart";
 import MeterCreditSummary from "@/components/charts/meter-credit-summary";
@@ -21,7 +23,6 @@ import type { EstateEnergyUsageRange } from "@/lib/estate-energy-usage-chart";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getEstateAdminEnergyConsumptionChart } from "@/redux/slice/estate-admin/energy-consumption/estate-admin-energy-consumption";
 import { getEstateAdminEstateEnergyUsage } from "@/redux/slice/estate-admin/estate-energy-usage/estate-admin-estate-energy-usage";
-import { getEstateAdminTransactionSummary } from "@/redux/slice/estate-admin/transaction-summary/estate-admin-transaction-summary";
 import { extractEstateIdFromUser, extractEstateNameFromUser } from "@/lib/user-id";
 import type { AppDispatch, RootState } from "@/redux/store";
 import Loader from "@/components/ui/Loader";
@@ -40,14 +41,6 @@ export default function DummyDashboard() {
     useState<EnergyConsumptionPeriod>("weekly");
   const [usageRange, setUsageRange] = useState<EstateEnergyUsageRange>("weekly");
   const [usageRefreshing, setUsageRefreshing] = useState(false);
-
-  const { transactionSummary, transactionSummaryStatus } = useSelector(
-    (state: RootState) => ({
-      transactionSummary: state.estateAdminTransactionSummary.summary,
-      transactionSummaryStatus: state.estateAdminTransactionSummary.status,
-    }),
-  );
-  const transactionSummaryLoading = isPending(transactionSummaryStatus);
 
   const { energyConsumptionChart, energyChartStatus } = useSelector(
     (state: RootState) => ({
@@ -97,22 +90,6 @@ export default function DummyDashboard() {
       }
     })();
   }, [dispatch]);
-
-  useEffect(() => {
-    if (!estateId) return;
-    dispatch(getEstateAdminTransactionSummary({ estateId })).catch(
-      (err: unknown) => {
-        const msg =
-          err &&
-          typeof err === "object" &&
-          "message" in err &&
-          typeof (err as { message?: string }).message === "string"
-            ? (err as { message: string }).message
-            : "Failed to load transaction summary.";
-        toast.error(msg);
-      },
-    );
-  }, [dispatch, estateId]);
 
   useEffect(() => {
     if (!estateId) return;
@@ -232,6 +209,13 @@ export default function DummyDashboard() {
           <span className="font-bold uppercase">{estateName}</span>
         </p>
       </div>
+
+      {!bootstrapping && (
+        <>
+          <TransactionSummarySection estateId={estateId} />
+          <TransactionAnalyticsDashboard estateId={estateId} />
+        </>
+      )}
 
       {/* KPI */}
       {/* <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">

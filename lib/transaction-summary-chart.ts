@@ -1,12 +1,6 @@
-export interface TransactionSummaryData {
-  totalTransactions: number;
-  totalDebits: number;
-  totalCredits: number;
-  netFlow: number;
-  creditTransactions: number;
-  debitTransactions: number;
-  paidTransactions: number;
-}
+import type { TransactionSummary } from "@/types/analytics";
+
+export type TransactionSummaryData = TransactionSummary;
 
 export interface TransactionSummaryBarPoint {
   label: string;

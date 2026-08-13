@@ -341,3 +341,95 @@ export interface ComplaintsDashboardResponse {
   message: string;
   data: ComplaintsDashboardData;
 }
+
+export interface TransactionSummary {
+  totalTransactions: number;
+  totalDebits: number;
+  totalCredits: number;
+  netFlow: number;
+  creditTransactions: number;
+  debitTransactions: number;
+  paidTransactions: number;
+}
+
+export interface TransactionSummaryResponse {
+  success: boolean;
+  message: string;
+  data: TransactionSummary;
+}
+
+export interface StatusBreakdown {
+  paid: number;
+  pending: number;
+  failed: number;
+}
+
+export interface TopUser {
+  walletId: string;
+  userName: string;
+  totalAmount: number;
+  transactionCount: number;
+  creditAmount: number;
+  debitAmount: number;
+}
+
+export interface TrendPoint {
+  period: string;
+  transactionCount: number;
+  totalAmount: number;
+  creditCount: number;
+  debitCount: number;
+}
+
+export interface TransactionMetrics {
+  averageAmount: number;
+  maxAmount: number;
+  minAmount: number;
+}
+
+export interface RecentCharge {
+  _id: string;
+  walletId: string;
+  type: "debit" | "credit";
+  amount: number;
+  tx_ref: string;
+  serviceCharge: number;
+  description: string;
+  createdAt: string;
+  chargeType: string;
+}
+
+export interface ChargeBreakdownItem {
+  totalAmount: number;
+  chargeType: string;
+  transactionCount: number;
+}
+
+export interface ChargeAnalyticsSummary {
+  totalCharges: number;
+  totalTransactions: number;
+  averageCharge: number;
+  maxCharge: number;
+  minCharge: number;
+  breakdown: ChargeBreakdownItem[];
+}
+
+export interface ChargeAnalytics {
+  recentCharges: RecentCharge[];
+  summary: ChargeAnalyticsSummary;
+}
+
+export interface TransactionAnalyticsDashboard {
+  summary: TransactionSummary;
+  statusBreakdown: StatusBreakdown;
+  topUsers: TopUser[];
+  trend: TrendPoint[];
+  metrics: TransactionMetrics;
+  chargeAnalytics: ChargeAnalytics;
+}
+
+export interface TransactionAnalyticsResponse {
+  success: boolean;
+  message: string;
+  data: TransactionAnalyticsDashboard;
+}

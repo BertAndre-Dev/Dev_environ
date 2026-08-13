@@ -261,6 +261,7 @@ import { toast } from "react-toastify";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getOwnerAddressesByEstate } from "@/redux/slice/resident/address-options/resident-address-options";
 import { inviteTenant } from "@/redux/slice/resident/invite-tenant/invite-tenant";
+import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { useDispatch, useSelector } from "react-redux";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -282,6 +283,7 @@ interface FormData {
   firstName: string;
   lastName: string;
   email: string;
+  phoneNumber: string;
   addressId: string;
 }
 
@@ -292,6 +294,7 @@ export default function InviteTenantForm({ close }: InviteTenantFormProps) {
     firstName: "",
     lastName: "",
     email: "",
+    phoneNumber: "",
     addressId: "",
   });
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -372,6 +375,9 @@ export default function InviteTenantForm({ close }: InviteTenantFormProps) {
     if (!formData.firstName?.trim()) return toast.error("Please enter first name.");
     if (!formData.lastName?.trim()) return toast.error("Please enter last name.");
     if (!formData.email?.trim()) return toast.error("Please enter email.");
+    if (!formData.phoneNumber?.trim()) {
+      return toast.error("Please enter a phone number.");
+    }
     if (!formData.addressId) return toast.error("Please select an address.");
 
     setSubmitLoading(true);
@@ -382,6 +388,7 @@ export default function InviteTenantForm({ close }: InviteTenantFormProps) {
           firstName: formData.firstName.trim(),
           lastName: formData.lastName.trim(),
           email: formData.email.trim(),
+          phoneNumber: formData.phoneNumber.trim(),
           addressIds: [formData.addressId],
         })
       ).unwrap();
@@ -441,6 +448,12 @@ export default function InviteTenantForm({ close }: InviteTenantFormProps) {
               className="mt-1"
             />
           </div>
+
+          <InvitePhoneNumberField
+            id="phoneNumber"
+            value={formData.phoneNumber}
+            onChange={handleInput}
+          />
 
           {entryOptions.length > 1 && (
             <div className="space-y-2">

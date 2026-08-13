@@ -1,11 +1,10 @@
 import { createSlice } from "@reduxjs/toolkit";
-import {
-  getTransactionAnalyticsDashboard,
-  type TransactionAnalyticsData,
-} from "./transaction-analytics";
+import type { RootState } from "@/redux/store";
+import type { TransactionAnalyticsDashboard } from "@/types/analytics";
+import { getTransactionAnalyticsDashboard } from "./transaction-analytics";
 
 export interface TransactionAnalyticsState {
-  dashboard: TransactionAnalyticsData | null;
+  dashboard: TransactionAnalyticsDashboard | null;
   status: "idle" | "isLoading" | "succeeded" | "failed";
   error: string | null;
 }
@@ -34,13 +33,13 @@ const transactionAnalyticsSlice = createSlice({
       })
       .addCase(getTransactionAnalyticsDashboard.fulfilled, (state, action) => {
         state.status = "succeeded";
-        state.dashboard = action.payload?.data ?? null;
+        state.dashboard = action.payload ?? null;
         state.error = null;
       })
       .addCase(getTransactionAnalyticsDashboard.rejected, (state, action) => {
         state.status = "failed";
         state.error =
-          (action.payload as { message?: string })?.message ||
+          (action.payload as { message?: string } | undefined)?.message ||
           action.error.message ||
           "Failed to fetch transaction analytics";
       });
@@ -48,4 +47,19 @@ const transactionAnalyticsSlice = createSlice({
 });
 
 export const { clearTransactionAnalytics } = transactionAnalyticsSlice.actions;
+
+export const selectTransactionAnalyticsDashboard = (
+  state: RootState,
+): TransactionAnalyticsDashboard | null =>
+  state.estateAdminTransactionAnalytics.dashboard;
+
+export const selectTransactionAnalyticsStatus = (
+  state: RootState,
+): TransactionAnalyticsState["status"] =>
+  state.estateAdminTransactionAnalytics.status;
+
+export const selectTransactionAnalyticsError = (
+  state: RootState,
+): string | null => state.estateAdminTransactionAnalytics.error;
+
 export default transactionAnalyticsSlice.reducer;

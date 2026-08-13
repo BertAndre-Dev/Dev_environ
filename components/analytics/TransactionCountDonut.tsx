@@ -93,9 +93,9 @@ export function TransactionCountDonut({
         value: debitCount,
         fill: DEBIT_FILL,
       },
-    ].filter((slice) => slice.value > 0);
-
-    if (slices.length > 0) return slices;
+    ];
+    const visible = slices.filter((slice) => slice.value > 0);
+    if (visible.length > 0) return visible;
 
     return [
       {

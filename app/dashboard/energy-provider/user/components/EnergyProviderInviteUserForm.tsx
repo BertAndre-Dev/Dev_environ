@@ -14,6 +14,7 @@ import { getEnergyProviderEstates } from "@/redux/slice/energy-provider/estate-m
 import { getEnergyProviderFieldByEstate } from "@/redux/slice/energy-provider/address-mgt/fields/energy-provider-fields";
 import { getEnergyProviderEntriesByField } from "@/redux/slice/energy-provider/address-mgt/entry/energy-provider-entry";
 import { buildEnergyProviderInviteHomeOwnerPayload } from "@/lib/invite-user-roles";
+import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
 
 type Props = {
   companyId?: string;
@@ -27,6 +28,7 @@ type FormState = {
   firstName: string;
   lastName: string;
   email: string;
+  phoneNumber: string;
   addressIds: string[];
 };
 
@@ -47,6 +49,7 @@ export default function EnergyProviderInviteUserForm({
     firstName: "",
     lastName: "",
     email: "",
+    phoneNumber: "",
     addressIds: [],
   });
   const [estates, setEstates] = useState<{ id: string; name: string }[]>([]);
@@ -167,6 +170,9 @@ export default function EnergyProviderInviteUserForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.email.trim()) return toast.error("Please provide an email.");
+    if (!formData.phoneNumber.trim()) {
+      return toast.error("Please provide a phone number.");
+    }
     if (!formData.firstName.trim()) return toast.error("Please provide first name.");
     if (!formData.lastName.trim()) return toast.error("Please provide last name.");
     if (!formData.estateId.trim()) return toast.error("Please select an estate.");
@@ -182,6 +188,7 @@ export default function EnergyProviderInviteUserForm({
             firstName: formData.firstName,
             lastName: formData.lastName,
             email: formData.email,
+            phoneNumber: formData.phoneNumber,
             estateId: formData.estateId,
             companyId,
             addressIds: formData.addressIds,
@@ -196,6 +203,7 @@ export default function EnergyProviderInviteUserForm({
         firstName: "",
         lastName: "",
         email: "",
+        phoneNumber: "",
         addressIds: [],
       });
       onSuccess?.();
@@ -253,6 +261,11 @@ export default function EnergyProviderInviteUserForm({
               required
             />
           </div>
+          <InvitePhoneNumberField
+            id="ep-invite-phone"
+            value={formData.phoneNumber}
+            onChange={handleInputChange}
+          />
           <div>
             <Label>Estate</Label>
             <Select

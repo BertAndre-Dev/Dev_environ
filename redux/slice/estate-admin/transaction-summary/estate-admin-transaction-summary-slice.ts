@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import type { RootState } from "@/redux/store";
 import {
   EMPTY_TRANSACTION_SUMMARY,
   type TransactionSummaryData,
@@ -51,4 +52,17 @@ const estateAdminTransactionSummarySlice = createSlice({
 
 export const { clearEstateAdminTransactionSummary } =
   estateAdminTransactionSummarySlice.actions;
+
+export const selectTransactionSummaryData = (
+  state: RootState,
+): TransactionSummaryData => state.estateAdminTransactionSummary.summary;
+
+export const selectTransactionSummaryStatus = (
+  state: RootState,
+): EstateAdminTransactionSummaryState["status"] =>
+  state.estateAdminTransactionSummary.status;
+
+export const selectTransactionSummaryError = (state: RootState): string | null =>
+  state.estateAdminTransactionSummary.error;
+
 export default estateAdminTransactionSummarySlice.reducer;

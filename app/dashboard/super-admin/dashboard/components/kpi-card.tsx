@@ -11,6 +11,7 @@ export interface KpiCardProps {
   readonly trendUp?: boolean
   readonly icon: LucideIcon
   readonly iconBgClassName?: string
+  readonly valueClassName?: string
   readonly className?: string
 }
 
@@ -23,6 +24,7 @@ export function KpiCard({
   trendUp = true,
   icon: Icon,
   iconBgClassName = defaultIconBg,
+  valueClassName,
   className,
 }: KpiCardProps) {
   return (
@@ -43,7 +45,12 @@ export function KpiCard({
           </div>
         <div className="min-w-0">
           <p className="text-muted-foreground text-sm">{label}</p>
-          <p className="mt-1 truncate font-heading text-xl font-bold tabular-nums sm:text-2xl md:text-3xl">
+          <p
+            className={cn(
+              "mt-1 truncate font-heading text-xl font-bold tabular-nums sm:text-2xl md:text-3xl",
+              valueClassName
+            )}
+          >
             {value}
           </p>
         </div>

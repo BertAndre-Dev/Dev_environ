@@ -8,6 +8,7 @@ import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
+import { getDashboardPathForRole } from "@/lib/auth-dashboard-path";
 import { signIn } from "@/redux/slice/auth-mgt/auth-mgt";
 import type { AppDispatch, RootState } from "@/redux/store";
 
@@ -53,34 +54,13 @@ export default function LoginPage() {
       // ✅ Login success
       if (res?.accessToken && res?.data) {
         const user = res.data;
-        const token = res.accessToken;
 
         // Store user per-tab so multiple logins in different tabs don't mix.
         sessionStorage.setItem("user", JSON.stringify(user));
 
         toast.success(res.message || "Signed in successfully");
 
-        // ✅ Redirect based on role
-        const role = user.role?.toLowerCase();
-        if (role === "super admin") {
-          router.push("/dashboard/super-admin/dashboard");
-        } else if (role === "admin") {
-          router.push("/dashboard/admin/overview");
-        } else if (role === "security") {
-          router.push("/dashboard/security/visitor-management");
-        } else if (role === "estate admin") {
-          router.push("/dashboard/estate-admin/transactions");
-        } else if (role === "resident") {
-          router.push("/dashboard/resident/bills");
-        } else if (role === "company") {
-          router.push("/dashboard/company/asset");
-        } else if (role === "energy provider") {
-          router.push("/dashboard/energy-provider/wallet");
-        } else if (role === "staff") {
-          router.push("/dashboard/staff/maintenance");
-        } else {
-          router.push("/dashboard/resident/bills");
-        }
+        router.push(getDashboardPathForRole(user.role));
       } else {
         toast.error(res?.message || "Login failed. Please try again.");
         setError(res?.message || "Login failed. Please try again.");

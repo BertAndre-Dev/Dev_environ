@@ -278,10 +278,7 @@ function CardBody({
           </div>
         </div>
       ) : statusTotal > 0 ? (
-        <p className="rounded-xl border border-border bg-muted/30 px-3.5 py-3 text-center text-xs text-muted-foreground">
-          Status is heavily skewed ({Math.round(maxShare * 100)}% in one
-          segment), so the donut is hidden. KPI cards above show the counts.
-        </p>
+        <></>
       ) : null}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

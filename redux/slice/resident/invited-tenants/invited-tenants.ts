@@ -13,6 +13,7 @@ export interface InvitedTenantItem {
   firstName?: string;
   lastName?: string;
   email?: string;
+  phoneNumber?: string;
   invitationStatus?: string;
   isVerified?: boolean;
   isActive?: boolean;

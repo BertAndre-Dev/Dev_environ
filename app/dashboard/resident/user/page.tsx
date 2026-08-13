@@ -162,6 +162,11 @@ export default function ResidentUserPage() {
     },
     { key: "email", header: "Email", render: (t: InvitedTenantItem) => t.email ?? "—" },
     {
+      key: "phoneNumber",
+      header: "Phone",
+      render: (t: InvitedTenantItem) => t.phoneNumber?.trim() || "—",
+    },
+    {
       key: "invitationStatus",
       header: "Invitation Status",
       render: (t: InvitedTenantItem) => t.invitationStatus ?? "—",

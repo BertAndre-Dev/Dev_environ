@@ -17,6 +17,7 @@ import {
   COMPANY_INVITE_ROLE_OPTIONS,
   validateEnergyProviderInviteScope,
 } from "@/lib/invite-user-roles";
+import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
 
 type Props = {
   companyId: string;
@@ -29,6 +30,7 @@ type FormState = {
   firstName: string;
   lastName: string;
   email: string;
+  phoneNumber: string;
   role: string;
 };
 
@@ -43,6 +45,7 @@ export default function CompanyInviteUserForm({
     firstName: "",
     lastName: "",
     email: "",
+    phoneNumber: "",
     role: "",
   });
   const [estates, setEstates] = useState<{ id: string; name: string }[]>([]);
@@ -93,6 +96,9 @@ export default function CompanyInviteUserForm({
     e.preventDefault();
     if (!formData.role) return toast.error("Please select a role.");
     if (!formData.email.trim()) return toast.error("Please provide an email.");
+    if (!formData.phoneNumber.trim()) {
+      return toast.error("Please provide a phone number.");
+    }
     if (!formData.firstName.trim()) return toast.error("Please provide first name.");
     if (!formData.lastName.trim()) return toast.error("Please provide last name.");
     if (!formData.estateId.trim()) return toast.error("Please select an estate.");
@@ -113,6 +119,7 @@ export default function CompanyInviteUserForm({
             firstName: formData.firstName,
             lastName: formData.lastName,
             email: formData.email,
+            phoneNumber: formData.phoneNumber,
             role: formData.role,
             inviteContext: "company",
             estateId: formData.estateId,
@@ -126,6 +133,7 @@ export default function CompanyInviteUserForm({
         firstName: "",
         lastName: "",
         email: "",
+        phoneNumber: "",
         role: "",
       });
       onSuccess?.();
@@ -179,6 +187,11 @@ export default function CompanyInviteUserForm({
               required
             />
           </div>
+          <InvitePhoneNumberField
+            id="invite-phone"
+            value={formData.phoneNumber}
+            onChange={handleInputChange}
+          />
           <div>
             <Label>Estate</Label>
             <Select

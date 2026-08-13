@@ -13,6 +13,7 @@ export interface InviteTenantPayload {
   firstName: string;
   lastName: string;
   email: string;
+  phoneNumber: string;
   addressIds: string[];
 }
 

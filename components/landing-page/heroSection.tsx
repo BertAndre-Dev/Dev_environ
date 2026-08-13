@@ -1,127 +1,193 @@
 "use client";
 
 import Image from "next/image";
-import { useBookDemo } from "@/components/landing-page/book-demo-provider";
+import Link from "next/link";
+
+const FEATURE_CARDS = [
+  {
+    src: "/assets/hero/buy%20power.svg",
+    alt: "Buy Energy",
+    // Higher left — level with first line of subheadline
+    className:
+      "left-2 top-[22%] xl:left-6 2xl:left-12",
+  },
+  {
+    src: "/assets/hero/pay%20bills.svg",
+    alt: "Pay Bills",
+    // Lower left — beside store buttons
+    className:
+      "left-10 top-[55%] xl:left-16 2xl:left-24",
+  },
+  {
+    src: "/assets/hero/invite.svg",
+    alt: "Invite Guests",
+    // Mid-right — lower than Buy Energy (per Figma stagger)
+    className:
+      "right-2 top-[34%] xl:right-6 2xl:right-12",
+  },
+  {
+    src: "/assets/hero/analytics.svg",
+    alt: "Analytics",
+    // Lower right — beside users row
+    className:
+      "right-10 top-[58%] xl:right-16 2xl:right-24",
+  },
+] as const;
+
+function FeatureCard({
+  src,
+  alt,
+  delay,
+  className,
+}: Readonly<{
+  src: string;
+  alt: string;
+  delay: string;
+  className: string;
+}>) {
+  return (
+    <div
+      className={`pointer-events-none absolute z-10 hidden lg:block ${className}`}
+    >
+      <Image
+        src={src}
+        alt={alt}
+        width={108}
+        height={88}
+        className="hero-float h-auto w-24 xl:w-[108px]"
+        style={{ animationDelay: delay }}
+      />
+    </div>
+  );
+}
 
 export default function HeroSection() {
-  const { openBookDemo } = useBookDemo();
   return (
-    <section className="relative bg-[#050816] text-white pt-2 overflow-hidden"
->
-  {/* Background image — positioned absolutely so it doesn't push content */}
-  <div
-    className="absolute inset-0 z-0"
-    style={{
-      backgroundImage: "url(/assets/bg.svg)",
-      backgroundRepeat: "no-repeat",
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-      opacity: 0.4, // dim it so text is readable like Figma
-    }}
-  />
+      <section className="relative bg-white">
+        <div className="relative px-5 sm:px-8 lg:px-10">
+          {/* Staggered floats — Invite Guests sits higher than Buy Energy (per Figma) */}
+          {FEATURE_CARDS.map((card, index) => (
+            <FeatureCard
+              key={card.alt}
+              src={card.src}
+              alt={card.alt}
+              className={card.className}
+              delay={`${index * 0.6}s`}
+            />
+          ))}
 
-  {/* HERO */}
-  <div className="relative z-10 container mx-auto px-6 md:px-8 lg:px-10 xl:px-20 max-w-[1320px] xl:max-w-[1440px] pt-6 sm:pt-8 lg:pt-10 pb-20 lg:h-[600px]">
-    <div className="grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)] items-start mt-12 xl:mt-16">
-      {/* Left: Copy */}
-      <div className="space-y-6 md:space-y-5 pt-4 lg:pt-8">
-        <h1 className="text-3xl sm:text-4xl lg:text-[44px] leading-tight font-semibold">
-          DIGITAL COMPANION FOR
-          <br className="hidden sm:block" /> SMART LIVING.
-        </h1>
-        <p className="text-sm sm:text-base text-white/85 max-w-lg leading-relaxed">
-          Manage your property and energy operations, payments, and
-          residents all in one powerful platform. Deliver a modern,
-          connected living experience for your communities.
-        </p>
+          {/* Center copy */}
+          <div className="relative z-20 mx-auto flex max-w-3xl flex-col items-center pt-4 text-center sm:pt-6">
+            <span className="inline-flex items-center rounded-lg border border-[#0150AC]/35 px-4 py-1.5 text-xs font-medium text-[#0150AC] sm:text-sm">
+              The Best Real Estate Operating System
+            </span>
 
-        <div>
-          <button
-            type="button"
-            onClick={openBookDemo}
-            className="inline-flex items-center justify-center rounded-full bg-[#0150AC] hover:bg-[#124ea0] text-base font-medium sm:px-9 px-10 py-2 transition-colors cursor-pointer"
-          >
-            Book a demo
-          </button>
-        </div>
-      </div>
+            <h1 className="mt-6 text-[36px] font-bold leading-[1.1] tracking-[-0.03em] text-black sm:text-[48px] lg:text-[56px]">
+              Your Digital{" "}
+              <span className="text-[#0150AC]">Companion</span>
+              <br className="hidden sm:block" /> For{" "}
+              <span className="text-[#0150AC]">Smart</span> Living.
+            </h1>
 
-      {/* Right: Hero image */}
-      <div className="relative z-10 translate-y-24 md:translate-y-20 lg:translate-y-18 xl:translate-y-16">
-        <div className="relative mx-auto max-w-[980px]">
-          <Image
-            src="/assets/hero.svg"
-            alt="Berta Hub dashboard and mobile app"
-            width={1100}
-            height={1000}
-            className="w-full h-auto object-cover"
-            priority
-          />
-        </div>
-      </div>
-    </div>
-  </div>
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-[#4C4C4C] sm:text-lg">
+              Manage your property and energy operations, payments, and
+              residents all in one powerful platform.
+            </p>
 
-  {/* All-in-one section */}
-  <div
-    id="about"
-    className="relative z-10 scroll-mt-28 -mt-4 sm:-mt-8 lg:-mt-12 bg-white pb-10"
-  >
-    <div className="container mx-auto px-6 md:px-8 lg:px-10 max-w-[1320px] xl:max-w-[1440px]">
-      <div className="pt-6">
-        <div className="relative overflow-hidden rounded-3xl bg-[#111827]">
-          <Image
-            src="/assets/all-in-one.svg"
-            alt="Modern apartment building background"
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, 1320px"
-            priority={false}
-          />
-
-          <div className="relative flex flex-col lg:flex-row items-stretch gap-8 lg:gap-0 p-6 md:p-8">
-            <div className="w-full lg:w-1/2 flex items-center justify-center">
-              <Image
-                src="/assets/phone.svg"
-                alt="Berta Hub mobile app"
-                width={260}
-                height={920}
-                className="max-h-full w-auto object-contain drop-shadow-[0_18px_40px_rgba(0,0,0,0.55)]"
-                loading="lazy"
-              />
+            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
+              <Link
+                href="https://apps.apple.com/ng/app/berta-hub/id6756385415"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex cursor-pointer transition-transform duration-150 ease-out active:scale-[0.97]"
+              >
+                <Image
+                  src="/assets/hero/appstore.svg"
+                  alt="Download on the App Store"
+                  width={204}
+                  height={60}
+                  className="h-[52px] w-auto sm:h-14"
+                  priority
+                />
+              </Link>
+              <Link
+                href="https://play.google.com/store/apps/details?id=com.bertahub.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex cursor-pointer transition-transform duration-150 ease-out active:scale-[0.97]"
+              >
+                <Image
+                  src="/assets/hero/playstore.svg"
+                  alt="Get it on Google Play"
+                  width={204}
+                  height={60}
+                  className="h-[52px] w-auto sm:h-14"
+                  priority
+                />
+              </Link>
             </div>
 
-            <div className="w-full lg:w-1/2 text-white flex flex-col justify-center">
-              <h2 className="text-2xl md:text-[42px] font-semibold leading-tight">
-                All-in-one Property and Energy
-                <br className="hidden sm:block" /> Management Solution
-              </h2>
-              <div className="mt-2 h-[3px] w-24 rounded-full bg-[#FA8128]" />
-              <p className="mt-5 text-base md:text-[20px] xl:text-[24px] text-white/90 max-w-2xl leading-relaxed">
-                Berta Hub is built for forward-thinking property operators,
-                community managers, homeowners, and developers who want to
-                deliver exceptional experiences at scale.
+            <div className="mt-6 hidden items-center gap-3 sm:flex">
+              <Image
+                src="/assets/hero/users.svg"
+                alt=""
+                width={192}
+                height={40}
+                className="h-9 w-auto sm:h-10"
+                aria-hidden="true"
+              />
+              <p className="text-sm font-medium text-[#374151] sm:text-base">
+                <span className="font-bold text-black">250+</span> Worldwide
+                Users
               </p>
-              <div className="mt-4 sm:mt-5">
-                <p className="text-base md:text-[20px] xl:text-[24px] font-semibold mb-2">
-                  With BertaHub, you can:
-                </p>
-                <ul className="space-y-1.5 sm:space-y-2 text-base md:text-[20px] xl:text-[24px] text-white/90 leading-relaxed list-disc pl-5">
-                  <li>Get insights on energy consumption</li>
-                  <li>Automate billing, collections, and utilities</li>
-                  <li>Simplify payments and financial tracking</li>
-                  <li>Centralize operations across properties and communities</li>
-                  <li>Manage service requests and maintenance effortlessly</li>
-                  <li>Enhance transparency, accountability, and trust</li>
-                  <li>Deliver a modern, connected living experience</li>
-                </ul>
-              </div>
+            </div>
+
+            <div className="mt-10 grid w-full max-w-md grid-cols-2 gap-3 lg:hidden">
+              {FEATURE_CARDS.map((card) => (
+                <Image
+                  key={`mobile-${card.alt}`}
+                  src={card.src}
+                  alt={card.alt}
+                  width={108}
+                  height={88}
+                  className="mx-auto h-auto w-full max-w-[140px]"
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Hero visual */}
+          <div className="relative z-20 mx-auto mt-10 max-w-5xl sm:mt-12 lg:mt-14">
+            <div className="overflow-hidden">
+              <Image
+                src="/assets/hero/hero.svg"
+                alt="Berta Hub — energy usage and meter balance for modern living"
+                width={1200}
+                height={640}
+                className="h-auto w-full object-cover"
+                priority
+                sizes="(max-width: 1024px) 100vw, 1100px"
+              />
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
-</section>
+
+        <style>{`
+          @keyframes heroFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+          }
+
+          .hero-float {
+            animation: heroFloat 5s ease-in-out infinite;
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            .hero-float {
+              animation: none;
+            }
+          }
+        `}</style>
+      </section>
   );
 }

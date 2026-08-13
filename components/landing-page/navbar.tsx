@@ -7,7 +7,12 @@ import Image from "next/image";
 import Button from "@/components/landing-page/atom/button";
 import { useBookDemo } from "@/components/landing-page/book-demo-provider";
 
-export default function Navbar() {
+type NavbarProps = Readonly<{
+  /** When true, nav is not sticky/fixed and has no bottom border (landing hero frame). */
+  embedded?: boolean;
+}>;
+
+export default function Navbar({ embedded = false }: NavbarProps) {
   const { openBookDemo } = useBookDemo();
   const pathname = usePathname();
   const [activeLink, setActiveLink] = useState("/");
@@ -17,8 +22,8 @@ export default function Navbar() {
     { href: "/", label: "Home" },
     { href: "/#about", label: "About" },
     { href: "/#features", label: "Features" },
-    { href: "/blog", label: "Blog" },
     { href: "/#faq", label: "FAQ" },
+    { href: "/blog", label: "Blog" },
   ];
 
   const isLinkActive = (href: string) => {
@@ -37,49 +42,47 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="w-full fixed top-0 z-50 bg-black/40 backdrop-blur-md border-b border-white/10 shadow-[0_2px_24px_0_rgba(0,0,0,0.18)]">
-      <div className="container mx-auto px-6 md:px-8 lg:px-10 xl:px-20 max-w-[1320px] xl:max-w-[1440px] py-4 flex items-center justify-between gap-4">
-        {/* Logo */}
-        <Link href="/" className="flex items-center cursor-pointer">
+    <nav
+      className={`z-50 w-full bg-white ${
+        embedded ? "relative" : "sticky top-0 border-b border-[#E8EEF6] bg-white/90 backdrop-blur-xl"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-4 px-5 py-4 sm:px-8 lg:px-10">
+        <Link href="/" className="flex shrink-0 items-center cursor-pointer">
           <Image
-            src="/assets/Logo.svg"
-            alt="Berta logo"
+            src="/assets/hero/logo.svg"
+            alt="Berta"
             width={96}
             height={32}
             priority
-            className="cursor-pointer"
+            className="h-8 w-auto"
           />
         </Link>
 
-        {/* Center pill nav (desktop) */}
-        <div className="hidden lg:flex items-center justify-center flex-1">
-          <div className="inline-flex items-center gap-10 rounded-full bg-[#FA812880] px-10 py-3">
+        <div className="hidden flex-1 items-center justify-center lg:flex">
+          <div className="inline-flex items-center gap-1">
             {navLinks.map((link) => {
               const isActive = isLinkActive(link.href);
 
               return (
-                <div key={link.href} className="relative group">
-                  <Link
-                    href={link.href}
-                    onClick={() => setActiveLink(link.href)}
-                    className="text-sm sm:text-base font-medium text-white hover:text-white/80 transition-colors duration-200"
-                  >
-                    {link.label}
-                  </Link>
-
-                  {/* Shows on active OR hover */}
-                  <span
-                    className={`absolute -bottom-2 left-1/2 h-[3px] w-8 -translate-x-1/2 rounded-full bg-white transition-opacity duration-200
-                      ${isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
-                  />
-                </div>
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setActiveLink(link.href)}
+                  className={`rounded-full px-4 py-2 text-sm font-medium transition-colors duration-150 ease-out cursor-pointer active:scale-[0.97] ${
+                    isActive
+                      ? "bg-[#E8F1FB] text-[#0150AC]"
+                      : "text-[#0150AC]/80 hover:bg-[#F3F7FC] hover:text-[#0150AC]"
+                  }`}
+                >
+                  {link.label}
+                </Link>
               );
             })}
           </div>
         </div>
 
-        {/* Right buttons */}
-        <div className="hidden lg:flex items-center gap-3">
+        <div className="hidden items-center gap-3 lg:flex">
           <Link
             href="https://www.bertahub.com/auth/login"
             className="cursor-pointer"
@@ -87,35 +90,34 @@ export default function Navbar() {
             rel="noopener noreferrer"
           >
             <Button
-              bg="bg-transparent"
-              text="text-white"
+              bg="bg-white"
+              text="text-[#0150AC]"
               rounded="rounded-full"
-              padding="px-6 py-2.5"
-              className="border border-white/60 hover:bg-white hover:text-[#1560BD] hover:border-white transition-all duration-300 cursor-pointer"
+              padding="px-5 py-2.5"
+              className="border border-[#C5D4E8] transition-colors duration-150 ease-out hover:bg-[#E8F1FB] cursor-pointer active:scale-[0.97]"
             >
-              Sign in
+              Login / Sign up
             </Button>
           </Link>
 
           <Button
             type="button"
             onClick={openBookDemo}
-            bg="bg-white"
-            text="text-[#1560BD]"
+            bg="bg-[#0150AC]"
+            text="text-white"
             rounded="rounded-full"
-            padding="px-6 py-2.5"
-            className="hover:bg-[#e8f0fb] hover:-translate-y-px transition-all duration-300 cursor-pointer"
+            padding="px-5 py-2.5"
+            className="transition-colors duration-150 ease-out hover:bg-[#124ea0] cursor-pointer active:scale-[0.97]"
           >
             Book a Demo
           </Button>
         </div>
 
-        {/* Mobile: logo + hamburger only */}
-        <div className="flex lg:hidden items-center">
+        <div className="flex items-center lg:hidden">
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-white cursor-pointer"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#0150AC] cursor-pointer active:scale-[0.97]"
             aria-label="Open menu"
           >
             <svg
@@ -137,17 +139,16 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile menu overlay */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden bg-[#050816] inset-0 z-50">
+        <div className="fixed inset-0 z-50 lg:hidden">
           <button
             type="button"
-            className="absolute inset-0 bg-black/60 cursor-pointer"
+            className="absolute inset-0 bg-black/40 cursor-pointer"
             aria-label="Close menu"
             onClick={() => setIsMobileMenuOpen(false)}
           />
 
-          <div className="absolute right-0 top-0 h-full w-[88%] max-w-sm bg-[#050816] border-l border-white/10 p-6">
+          <div className="absolute right-0 top-0 h-full w-[88%] max-w-sm border-l border-[#E8EEF6] bg-white p-6 shadow-xl">
             <div className="flex items-center justify-between">
               <Link
                 href="/"
@@ -155,18 +156,17 @@ export default function Navbar() {
                 className="cursor-pointer"
               >
                 <Image
-                  src="/assets/Logo.svg"
-                  alt="Berta logo"
+                  src="/assets/hero/logo.svg"
+                  alt="Berta"
                   width={96}
                   height={32}
-                  priority={false}
-                  className="cursor-pointer"
+                  className="h-8 w-auto"
                 />
               </Link>
               <button
                 type="button"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="inline-flex h-10 w-10 items-center justify-center text-white cursor-pointer"
+                className="inline-flex h-10 w-10 items-center justify-center text-[#0150AC] cursor-pointer"
                 aria-label="Close menu"
               >
                 <svg
@@ -187,27 +187,34 @@ export default function Navbar() {
               </button>
             </div>
 
-            <div className="mt-6 flex flex-col gap-6 p-4 rounded-xl bg-black border border-white/10">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => handleMobileNavClick(link.href)}
-                  className="text-white text-lg font-medium cursor-pointer"
-                >
-                  {link.label}
-                </Link>
-              ))}
+            <div className="mt-8 flex flex-col gap-2">
+              {navLinks.map((link) => {
+                const isActive = isLinkActive(link.href);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => handleMobileNavClick(link.href)}
+                    className={`rounded-xl px-4 py-3 text-base font-medium cursor-pointer ${
+                      isActive
+                        ? "bg-[#E8F1FB] text-[#0150AC]"
+                        : "text-[#0150AC]/90 hover:bg-[#F3F7FC]"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
 
-              <div className="mt-5 grid gap-3 p-4 ">
+              <div className="mt-4 grid gap-3">
                 <Button
                   type="button"
                   onClick={() => {
                     setIsMobileMenuOpen(false);
                     openBookDemo();
                   }}
-                  bg="bg-white"
-                  text="text-[#1560BD]"
+                  bg="bg-[#0150AC]"
+                  text="text-white"
                   rounded="rounded-full"
                   padding="px-6 py-3"
                   className="w-full cursor-pointer"
@@ -221,13 +228,13 @@ export default function Navbar() {
                   rel="noopener noreferrer"
                 >
                   <Button
-                    bg="bg-transparent"
-                    text="text-white"
+                    bg="bg-white"
+                    text="text-[#0150AC]"
                     rounded="rounded-full"
                     padding="px-6 py-3"
-                    className="w-full border border-white/50 cursor-pointer"
+                    className="w-full border border-[#C5D4E8] cursor-pointer"
                   >
-                    Sign in
+                    Login / Sign up
                   </Button>
                 </Link>
               </div>

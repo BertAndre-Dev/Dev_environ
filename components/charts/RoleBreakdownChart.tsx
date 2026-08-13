@@ -50,8 +50,19 @@ function formatRoleLabel(role: string): string {
     .join(" ");
 }
 
+/** Super admin is estate-scoped noise for admin UI — never show it. */
+function isHiddenRole(role: string): boolean {
+  return role.toLowerCase().trim() === "super admin";
+}
+
+function withoutHiddenRoles(data: RoleBreakdownData): RoleBreakdownData {
+  return Object.fromEntries(
+    Object.entries(data).filter(([role]) => !isHiddenRole(role)),
+  );
+}
+
 function buildChartSlices(data: RoleBreakdownData): ChartSlice[] {
-  return Object.entries(data)
+  return Object.entries(withoutHiddenRoles(data))
     .map(([role, entry], index) => {
       const stats = normalizeRoleStats(entry);
       return {
@@ -67,14 +78,14 @@ function buildChartSlices(data: RoleBreakdownData): ChartSlice[] {
 }
 
 function totalUsers(data: RoleBreakdownData): number {
-  return Object.values(data).reduce<number>(
+  return Object.values(withoutHiddenRoles(data)).reduce<number>(
     (sum, entry) => sum + normalizeRoleStats(entry).total,
     0,
   );
 }
 
 function totalActive(data: RoleBreakdownData): number {
-  return Object.values(data).reduce<number>(
+  return Object.values(withoutHiddenRoles(data)).reduce<number>(
     (sum, entry) => sum + normalizeRoleStats(entry).active,
     0,
   );
@@ -215,7 +226,7 @@ function ChartBody({
     return <EmptyState />;
   }
 
-  const legendRows = Object.entries(data)
+  const legendRows = Object.entries(withoutHiddenRoles(data))
     .map(([role, entry]) => {
       const stats = normalizeRoleStats(entry);
       const slice = slices.find((s) => s.key === role);

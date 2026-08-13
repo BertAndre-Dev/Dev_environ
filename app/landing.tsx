@@ -27,11 +27,11 @@ export default function Home() {
         {/* <AboutSection />
         <FeaturesShowcaseSection /> */}
         <TrustedBySection />
-        {/* <EverythingYouNeedSection />
+        <EverythingYouNeedSection />
         <EstateManagementShowcase />
         <BertaShowcaseSection />
 
-        <FeaturesSection /> */}
+        <FeaturesSection />
         <TestimonialsSection />
         <FAQSection />
         <BlogSection />

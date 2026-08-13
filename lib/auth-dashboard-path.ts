@@ -7,7 +7,7 @@ export function getDashboardPathForRole(
     case "super admin":
       return "/dashboard/super-admin/dashboard";
     case "admin":
-      return "/dashboard/admin/user";
+      return "/dashboard/admin/overview";
     case "security":
       return "/dashboard/security/visitor-management";
     case "estate admin":

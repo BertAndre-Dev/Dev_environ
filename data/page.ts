@@ -305,7 +305,11 @@ export const companyNav = [
 ];
 
 export const adminNav = [
-  // { label: "Overview", icon: FiHome, path: "/dashboard/admin/overview" },
+  {
+    label: "Overview",
+    icon: FiHome,
+    path: "/dashboard/admin/overview",
+  },
   {
     label: "Address Management",
     icon: FiMapPin,

@@ -259,3 +259,16 @@ export interface CustomerActivationsResponse {
   data: CustomerActivationsData;
   scope: AnalyticsScope;
 }
+
+export interface MeterSummaryData {
+  totalMeters: number;
+  activeMeters: number;
+  assignedMeters: number;
+  unassignedMeters: number;
+}
+
+export interface MeterSummaryResponse {
+  success: boolean;
+  message: string;
+  data: MeterSummaryData;
+}

@@ -49,7 +49,7 @@ function StarRow() {
 
 function TestimonialCard({ name, role, quote }: Testimonial) {
   return (
-    <article className="flex h-full flex-col gap-4 rounded-3xl bg-[#F5F5F5] p-6 sm:p-7 transition-transform duration-150 ease-out hover:-translate-y-0.5 active:scale-[0.99]">
+    <article className="flex h-full cursor-pointer flex-col gap-4 rounded-3xl bg-[#F5F5F5] p-6 sm:p-7 transition-transform duration-150 ease-out hover:-translate-y-0.5 active:scale-[0.99]">
       <div className="flex items-center gap-3">
         <div className="relative size-12 shrink-0 overflow-hidden rounded-full bg-[#E8F1FB]">
           <Image

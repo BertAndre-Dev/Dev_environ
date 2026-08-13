@@ -11,6 +11,7 @@ import FeaturesSection from "@/components/landing-page/featuresSection";
 import Footer from "@/components/landing-page/footer";
 import TrustedBySection from "@/components/landing-page/trustedBy";
 import EverythingYouNeedSection from "@/components/landing-page/everythingYouNeedSection";
+import TestimonialsSection from "@/components/landing-page/testimonialsSection";
 
 export default function Home() {
   return (
@@ -25,9 +26,10 @@ export default function Home() {
         {/* <AboutSection />
         <FeaturesShowcaseSection /> */}
         <TrustedBySection />
-          <EverythingYouNeedSection />
+        <EverythingYouNeedSection />
         <BertaShowcaseSection />
         <FeaturesSection />
+        <TestimonialsSection />
         <FAQSection />
         <BlogSection />
       </main>

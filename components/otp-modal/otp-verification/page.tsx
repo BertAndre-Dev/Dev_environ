@@ -119,7 +119,7 @@ export const OtpVerification: React.FC<OtpVerificationProps> = ({
         </p>
       </div>
 
-      <div className="flex justify-center gap-3 pt-4 mx-4">
+      <div className="mx-4 flex justify-center gap-2 pt-4 xl:gap-3">
         {digits.map((digit, index) => (
           <Input
             key={index}
@@ -132,7 +132,7 @@ export const OtpVerification: React.FC<OtpVerificationProps> = ({
             value={digit}
             onChange={(e) => handleChange(index, e.target.value)}
             onKeyDown={(e) => handleKeyDown(index, e)}
-            className="w-12 h-12 text-center text-xl rounded-lg border border-[#0072CE]"
+            className="h-9 w-9 px-0 text-center text-base rounded-lg border border-[#0072CE] xl:h-12 xl:w-12 xl:text-xl"
           />
         ))}
       </div>

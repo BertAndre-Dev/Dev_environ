@@ -20,7 +20,6 @@ import {
 import {
   getWallet,
   getEstateCredits,
-  getEstateT1Breakdown,
 } from "@/redux/slice/estate-admin/wallet-mgt/wallet-mgt";
 import { getWallet as getResidentWallet } from "@/redux/slice/resident/wallet-mgt/wallet-mgt";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
@@ -40,7 +39,7 @@ interface FundWalletFormProps {
   defaultAccountNumber?: string;
   bankCode?: string;
   bankName?: string;
-  /** Max amount that can be withdrawn (T+1 withdrawableBalance). */
+  /** Max amount that can be withdrawn (wallet.withdrawableBalance). */
   maxWithdrawableAmount?: number;
   /** Flat service charge for estate admin (resident owner uses 1.5% instead). */
   serviceFee?: number;
@@ -114,9 +113,6 @@ export default function FundWalletForm({
     if (!estateId) return;
     await dispatch(getWallet(estateId));
     await dispatch(getEstateCredits({ estateId, page: 1, limit: 10 }));
-    if (userId) {
-      await dispatch(getEstateT1Breakdown({ estateId, userId }));
-    }
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {

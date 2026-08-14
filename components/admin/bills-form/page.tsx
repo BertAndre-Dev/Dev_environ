@@ -20,6 +20,7 @@ import {
   formatAmountInput,
   parseFormattedNumber,
 } from "@/lib/format-number";
+import { cn } from "@/lib/utils";
 
 /** Form state: yearlyAmount can be string (empty input) or number */
 interface BillFormState {
@@ -28,7 +29,6 @@ interface BillFormState {
   description: string;
   yearlyAmount: number | string;
   frequency: BillFrequency;
-  isServiceCharge: boolean;
   compulsory: boolean;
   id?: string;
 }
@@ -40,7 +40,6 @@ export interface BillSubmitData {
   description: string;
   yearlyAmount: number;
   frequency: BillFrequency;
-  isServiceCharge?: boolean;
   compulsory?: boolean;
   id?: string;
 }
@@ -62,7 +61,6 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
     description: "",
     yearlyAmount: "",
     frequency: "yearly",
-    isServiceCharge: false,
     compulsory: false,
   });
   const [loading, setLoading] = useState(false);
@@ -88,7 +86,6 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
               ? formatAmountInput(String(fetchData.yearlyAmount))
               : "",
             frequency: normalizeBillFrequency(fetchData.frequency, "yearly"),
-            isServiceCharge: Boolean(fetchData.isServiceCharge),
             compulsory: Boolean(fetchData.compulsory),
           });
         }
@@ -118,7 +115,6 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       description: formData.description,
       yearlyAmount: parseFormattedNumber(formData.yearlyAmount),
       frequency: formData.frequency,
-      isServiceCharge: formData.isServiceCharge,
       compulsory: formData.compulsory,
     };
     onSubmit(payload);
@@ -158,8 +154,9 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
             </div>
 
             <div>
-              <Label>Yearly Amount (₦)</Label>
+              <Label htmlFor="estate-bill-amount">Amount (₦)</Label>
               <Input
+                id="estate-bill-amount"
                 type="text"
                 inputMode="numeric"
                 value={formData.yearlyAmount}
@@ -183,42 +180,31 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
               />
             </div>
 
-            <div className="flex items-start gap-3">
-              <input
-                id="estate-bill-service-charge"
-                type="checkbox"
-                checked={formData.isServiceCharge}
-                onChange={(e) =>
-                  handleChange("isServiceCharge", e.target.checked)
-                }
-                className="mt-1 rounded border-input"
-              />
-              <div>
-                <Label
-                  htmlFor="estate-bill-service-charge"
-                  className="cursor-pointer font-medium"
-                >
-                  Service charge
-                </Label>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <input
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="estate-bill-compulsory" className="font-medium">
+                Compulsory bill
+              </Label>
+              <button
                 id="estate-bill-compulsory"
-                type="checkbox"
-                checked={formData.compulsory}
-                onChange={(e) => handleChange("compulsory", e.target.checked)}
-                className="mt-1 rounded border-input"
-              />
-              <div>
-                <Label
-                  htmlFor="estate-bill-compulsory"
-                  className="cursor-pointer font-medium"
-                >
-                  Compulsory bill
-                </Label>
-              </div>
+                type="button"
+                role="switch"
+                aria-checked={formData.compulsory}
+                aria-label="Compulsory bill"
+                onClick={() => handleChange("compulsory", !formData.compulsory)}
+                className={cn(
+                  "relative inline-flex h-7 w-[44px] shrink-0 cursor-pointer items-center rounded-full p-0.5",
+                  "transition-colors duration-150 ease-out active:scale-[0.97]",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0150AC]/40",
+                  formData.compulsory ? "bg-[#0150AC]" : "bg-black/15",
+                )}
+              >
+                <span
+                  className={cn(
+                    "block size-6 rounded-full bg-white shadow-sm transition-transform duration-150",
+                    formData.compulsory ? "translate-x-4" : "translate-x-0",
+                  )}
+                />
+              </button>
             </div>
           </div>
         )}

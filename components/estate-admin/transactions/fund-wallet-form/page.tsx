@@ -321,13 +321,15 @@ export default function FundWalletForm({
                   placeholder="Enter amount"
                   required
                 />
-                {enteredAmount > 0 && appliedFee > 0 && (
-                  <p className="text-red-600 text-sm mt-1.5">
-                    {isResidentOwner
+                <p className="text-red-600 text-sm mt-1.5">
+                  {isResidentOwner
+                    ? enteredAmount > 0
                       ? `A 1.5% service charge of ₦${appliedFee.toLocaleString()} will be applied. Total debit: ₦${totalDebit.toLocaleString()}.`
-                      : `A service charge of ₦${appliedFee.toLocaleString()} will be applied. You will receive ₦${enteredAmount.toLocaleString()}. Total debit: ₦${totalDebit.toLocaleString()}.`}
-                  </p>
-                )}
+                      : "A 1.5% service charge will be applied to this withdrawal."
+                    : enteredAmount > 0
+                      ? `A service charge of ₦${appliedFee.toLocaleString()} will be applied. You will receive ₦${enteredAmount.toLocaleString()}. Total debit: ₦${totalDebit.toLocaleString()}.`
+                      : `A service charge of ₦${serviceFee.toLocaleString()} will be applied. You need this amount plus the fee in your withdrawable balance.`}
+                </p>
               </div>
 
               <div>

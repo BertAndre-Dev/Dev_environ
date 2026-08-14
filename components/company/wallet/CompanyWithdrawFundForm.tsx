@@ -264,11 +264,11 @@ export default function CompanyWithdrawFundForm({
                   placeholder="Enter amount"
                   required
                 />
-                {enteredAmount > 0 && serviceFee > 0 && (
+                {serviceFee > 0 && (
                   <p className="text-red-600 text-sm mt-1.5">
-                    A service charge of ₦{serviceFee.toLocaleString()} will be
-                    applied. You will receive ₦{enteredAmount.toLocaleString()}.
-                    Total debit: ₦{totalDebit.toLocaleString()}.
+                    {enteredAmount > 0
+                      ? `A service charge of ₦${serviceFee.toLocaleString()} will be applied. You will receive ₦${enteredAmount.toLocaleString()}. Total debit: ₦${totalDebit.toLocaleString()}.`
+                      : `A service charge of ₦${serviceFee.toLocaleString()} will be applied. You need this amount plus the fee in your withdrawable balance.`}
                   </p>
                 )}
               </div>

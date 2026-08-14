@@ -327,8 +327,8 @@ export default function FundWalletForm({
                       ? `A 1.5% service charge of ₦${appliedFee.toLocaleString()} will be applied. Total debit: ₦${totalDebit.toLocaleString()}.`
                       : "A 1.5% service charge will be applied to this withdrawal."
                     : enteredAmount > 0
-                      ? `A service charge of ₦${appliedFee.toLocaleString()} will be applied. You will receive ₦${enteredAmount.toLocaleString()}. Total debit: ₦${totalDebit.toLocaleString()}.`
-                      : `A service charge of ₦${serviceFee.toLocaleString()} will be applied. You need this amount plus the fee in your withdrawable balance.`}
+                      ? `A service charge of ₦${appliedFee.toLocaleString()} will be applied}.`
+                      : `A service charge of ₦${serviceFee.toLocaleString()} will be applied.`}
                 </p>
               </div>
 

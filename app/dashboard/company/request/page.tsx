@@ -3,10 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
-import { Settings2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import RequestManagementView from "@/components/request-mgt/RequestManagementView";
-import RequestWorkflowConfigPanel from "@/components/request-mgt/RequestWorkflowConfigPanel";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
@@ -27,7 +24,6 @@ export default function CompanyRequestPage() {
   const [selectedEstate, setSelectedEstate] =
     useState<EstateSelectOption | null>(null);
   const [estatesLoading, setEstatesLoading] = useState(true);
-  const [workflowModalOpen, setWorkflowModalOpen] = useState(false);
 
   const estateOptions = useMemo<EstateSelectOption[]>(
     () => estates.map((e) => ({ label: e.name, value: e.id })),
@@ -79,7 +75,7 @@ export default function CompanyRequestPage() {
       scope="company"
       description={
         <span>
-          Configure approval workflows and review estate requests for{" "}
+          Review, approve, or cancel estate requests for{" "}
           <span className="font-bold uppercase underline text-foreground">
             {companyName}
           </span>
@@ -89,35 +85,9 @@ export default function CompanyRequestPage() {
       estateId={estateId}
       estateOptions={estateOptions}
       selectedEstate={selectedEstate}
-      onEstateChange={(next) => {
-        setWorkflowModalOpen(false);
-        setSelectedEstate(next);
-      }}
+      onEstateChange={setSelectedEstate}
       estatesLoading={estatesLoading}
       emptyHint="No requests found for this estate."
-      headerActions={
-        <Button
-          onClick={() => setWorkflowModalOpen(true)}
-          disabled={!estateId}
-          className="shrink-0 rounded-full active:scale-[0.97] transition-transform duration-100 ease-out"
-        >
-          <Settings2 className="w-4 h-4 mr-2" />
-          Set workflow
-        </Button>
-      }
-      beforeList={
-        estateId ? (
-          <RequestWorkflowConfigPanel
-            estateId={estateId}
-            enabled={!estatesLoading}
-            compact
-            estateLabel={selectedEstate?.label}
-            hideHeaderButton
-            open={workflowModalOpen}
-            onOpenChange={setWorkflowModalOpen}
-          />
-        ) : null
-      }
     />
   );
 }

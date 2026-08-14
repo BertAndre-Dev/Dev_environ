@@ -14,6 +14,7 @@ import {
   createWallet,
   getWallet,
   getEstateCredits,
+  getEstateT1Breakdown,
 } from "@/redux/slice/estate-admin/wallet-mgt/wallet-mgt";
 import { getBanks, verifyBankAccount } from "@/redux/slice/estate-admin/fund-wallet/fund-wallet";
 import type { BankItem } from "@/redux/slice/estate-admin/fund-wallet/fund-wallet";
@@ -70,6 +71,13 @@ export default function EstateAdminWalletPage() {
   const wallet = useSelector(
     (state: RootState) => state.estateAdminWallet?.wallet ?? null,
   );
+  const t1Breakdown = useSelector(
+    (state: RootState) => state.estateAdminWallet?.t1Breakdown ?? null,
+  );
+  const withdrawableBalance =
+    typeof t1Breakdown?.withdrawableBalance === "number"
+      ? t1Breakdown.withdrawableBalance
+      : (wallet?.withdrawableBalance ?? 0);
   const getWalletState = useSelector(
     (state: RootState) => state.estateAdminWallet?.getWalletState ?? "idle",
   );
@@ -145,6 +153,14 @@ export default function EstateAdminWalletPage() {
               limit: LIMIT,
             }),
           ),
+          id
+            ? dispatch(
+                getEstateT1Breakdown({
+                  estateId: estateIdFromUser,
+                  userId: id,
+                }),
+              )
+            : Promise.resolve(),
         ]);
       } catch (err: any) {
         // When user does not have a wallet, do not show error toast
@@ -230,6 +246,9 @@ export default function EstateAdminWalletPage() {
       toast.success("Wallet created successfully.");
       handleCloseCreateWalletModal();
       await dispatch(getWallet(estateId));
+      if (userId) {
+        await dispatch(getEstateT1Breakdown({ estateId, userId }));
+      }
     } catch (error: any) {
       toast.error(error?.message || "Failed to create wallet.");
     }
@@ -275,6 +294,14 @@ export default function EstateAdminWalletPage() {
             limit: LIMIT,
           }),
         );
+        if (currentUserId) {
+          await dispatch(
+            getEstateT1Breakdown({
+              estateId: currentEstateId,
+              userId: currentUserId,
+            }),
+          );
+        }
 
         const url = new URL(window.location.href);
         ["tx_ref", "trx_ref", "transaction_id", "status"].forEach((key) =>
@@ -414,7 +441,11 @@ export default function EstateAdminWalletPage() {
 
       {/* Wallet overview */}
       <EstateWalletOverviewCard
-        wallet={wallet}
+        wallet={
+          wallet
+            ? { ...wallet, withdrawableBalance }
+            : wallet
+        }
         onWithdraw={handleOpenModal}
         onCreateWallet={() => setCreateWalletModalOpen(true)}
         onSetWithdrawalAccount={() => setSetWithdrawalAccountModalOpen(true)}
@@ -481,9 +512,7 @@ export default function EstateAdminWalletPage() {
               defaultAccountNumber={wallet.accountNumber ?? ""}
               bankCode={wallet.bankCode ?? ""}
               bankName={walletBankName}
-              maxWithdrawableAmount={
-                wallet.withdrawableBalance ?? wallet.temporaryBalance ?? 0
-              }
+              maxWithdrawableAmount={withdrawableBalance}
               onClose={handleOpenModal}
             />
           ) : (
@@ -594,6 +623,9 @@ export default function EstateAdminWalletPage() {
         onClose={() => setSetWithdrawalAccountModalOpen(false)}
         onSuccess={() => {
           if (estateId) dispatch(getWallet(estateId));
+          if (estateId && userId) {
+            dispatch(getEstateT1Breakdown({ estateId, userId }));
+          }
         }}
       />
       </div>

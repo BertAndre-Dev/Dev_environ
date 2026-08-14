@@ -9,6 +9,7 @@ import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "@/redux/store";
 import {
+  generateTxRef,
   getEnergyProviderCredits,
   getEnergyProviderWallet,
   requestEnergyProviderWithdrawOtp,
@@ -16,17 +17,12 @@ import {
 } from "@/redux/slice/energy-provider/wallet-mgt/energy-provider-wallet-mgt";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import OtpVerification from "@/components/otp-modal/otp-verification/page";
-import PaymentGatewaySelect from "@/components/payment/PaymentGatewaySelect";
 
 const DEFAULT_CURRENCY = "NGN";
+const WITHDRAWAL_GATEWAY = "flutterwave";
 const CREDITS_LIMIT = 10;
-
-function createTxRef(): string {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return `tx-${crypto.randomUUID()}`;
-  }
-  return `tx-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-}
+const SUCCESS_TOAST =
+  "Withdrawal submitted. Balance updates after bank confirmation.";
 
 interface EnergyProviderWithdrawFundFormProps {
   userId: string;
@@ -60,7 +56,6 @@ export default function EnergyProviderWithdrawFundForm({
   const [accountNumber, setAccountNumber] =
     useState<string>(defaultAccountNumber);
   const [description, setDescription] = useState<string>("");
-  const [gatewayType, setGatewayType] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [otpRequested, setOtpRequested] = useState(false);
   const [txRef, setTxRef] = useState<string | null>(null);
@@ -143,15 +138,10 @@ export default function EnergyProviderWithdrawFundForm({
       return;
     }
 
-    if (!gatewayType) {
-      toast.error("Please select a payment gateway.");
-      return;
-    }
-
     setSubmitting(true);
 
     try {
-      const tx_ref = createTxRef();
+      const { tx_ref } = await dispatch(generateTxRef()).unwrap();
       setTxRef(tx_ref);
 
       await dispatch(
@@ -163,7 +153,7 @@ export default function EnergyProviderWithdrawFundForm({
           accountNumber,
           narration: buildNarration(amount),
           tx_ref,
-          gatewayType,
+          gatewayType: WITHDRAWAL_GATEWAY,
         }),
       ).unwrap();
 
@@ -203,12 +193,12 @@ export default function EnergyProviderWithdrawFundForm({
           accountNumber,
           narration: buildNarration(amount ?? 0),
           tx_ref: txRef,
-          gatewayType,
+          gatewayType: WITHDRAWAL_GATEWAY,
           otp: code,
         }),
       ).unwrap();
 
-      toast.success("Withdrawal successful!");
+      toast.success(SUCCESS_TOAST);
       await refreshWalletData();
       onClose?.();
     } catch (err: unknown) {
@@ -240,7 +230,7 @@ export default function EnergyProviderWithdrawFundForm({
           accountNumber,
           narration: buildNarration(amount ?? 0),
           tx_ref: txRef,
-          gatewayType,
+          gatewayType: WITHDRAWAL_GATEWAY,
         }),
       ).unwrap();
     } catch (err: unknown) {
@@ -308,17 +298,10 @@ export default function EnergyProviderWithdrawFundForm({
                 />
               </div>
 
-              <PaymentGatewaySelect
-                id="energy-provider-withdraw-payment-gateway"
-                value={gatewayType}
-                onChange={setGatewayType}
-                disabled={submitting}
-              />
-
               <Button
                 type="submit"
                 className="w-full mt-4"
-                disabled={submitting || !gatewayType}
+                disabled={submitting}
               >
                 {submitting ? "Processing..." : "Request OTP"}
               </Button>

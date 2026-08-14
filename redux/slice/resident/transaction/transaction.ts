@@ -156,16 +156,34 @@ export const verifyTransaction = createAsyncThunk(
   }
 );
 
-/** Generate tx_ref for resident withdrawal (same API as estate admin). */
+function extractTxRef(payload: unknown): string {
+  if (!payload || typeof payload !== "object") return "";
+  const body = payload as Record<string, unknown>;
+  const nested = body.data;
+  const fromData =
+    nested && typeof nested === "object"
+      ? (nested as Record<string, unknown>).tx_ref
+      : undefined;
+  const value = fromData ?? body.tx_ref;
+  return typeof value === "string" ? value : "";
+}
+
+/** GET /api/v1/payment-mgt/generate-tx-ref?prefix=tx */
 export const generateTxRef = createAsyncThunk(
   "resident-transaction/generateTxRef",
   async (_, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.post(
+      const res = await axiosInstance.get(
         "/api/v1/payment-mgt/generate-tx-ref",
-        {},
+        { params: { prefix: "tx" } },
       );
-      return res.data;
+      const tx_ref = extractTxRef(res.data);
+      if (!tx_ref) {
+        return rejectWithValue({
+          message: "Failed to generate transaction reference.",
+        });
+      }
+      return { tx_ref };
     } catch (error: any) {
       return rejectWithValue({
         message:

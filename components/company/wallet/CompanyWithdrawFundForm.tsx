@@ -10,6 +10,7 @@ import { useDispatch } from "react-redux";
 import type { AppDispatch } from "@/redux/store";
 import { getApiErrorMessage } from "@/lib/api-error";
 import {
+  generateTxRef,
   getCompanyCredits,
   getCompanyWallet,
   requestCompanyWithdrawOtp,
@@ -17,17 +18,12 @@ import {
 } from "@/redux/slice/company/wallet-mgt/company-wallet-mgt";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import OtpVerification from "@/components/otp-modal/otp-verification/page";
-import PaymentGatewaySelect from "@/components/payment/PaymentGatewaySelect";
 
 const DEFAULT_CURRENCY = "NGN";
+const WITHDRAWAL_GATEWAY = "flutterwave";
 const CREDITS_LIMIT = 10;
-
-function createTxRef(): string {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return `tx-${crypto.randomUUID()}`;
-  }
-  return `tx-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-}
+const SUCCESS_TOAST =
+  "Withdrawal submitted. Balance updates after bank confirmation.";
 
 interface CompanyWithdrawFundFormProps {
   userId: string;
@@ -62,12 +58,14 @@ export default function CompanyWithdrawFundForm({
   const [accountNumber, setAccountNumber] =
     useState<string>(defaultAccountNumber);
   const [description, setDescription] = useState<string>("");
-  const [gatewayType, setGatewayType] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [otpRequested, setOtpRequested] = useState(false);
   const [txRef, setTxRef] = useState<string | null>(null);
   const [otpError, setOtpError] = useState<string | null>(null);
   const [emailHint, setEmailHint] = useState<string | undefined>(undefined);
+
+  const enteredAmount = Number(amount) || 0;
+  const totalDebit = enteredAmount + (serviceFee > 0 ? serviceFee : 0);
 
   useEffect(() => {
     if (defaultAccountNumber) setAccountNumber(defaultAccountNumber);
@@ -121,10 +119,10 @@ export default function CompanyWithdrawFundForm({
 
     if (
       typeof maxWithdrawableAmount === "number" &&
-      amount > maxWithdrawableAmount
+      totalDebit > maxWithdrawableAmount
     ) {
       toast.error(
-        `Amount cannot exceed withdrawable balance (₦${maxWithdrawableAmount.toLocaleString()}).`,
+        `You need ₦${totalDebit.toLocaleString()} in withdrawable balance (amount + fee). Available: ₦${maxWithdrawableAmount.toLocaleString()}.`,
       );
       return;
     }
@@ -139,15 +137,10 @@ export default function CompanyWithdrawFundForm({
       return;
     }
 
-    if (!gatewayType) {
-      toast.error("Please select a payment gateway.");
-      return;
-    }
-
     setSubmitting(true);
 
     try {
-      const tx_ref = createTxRef();
+      const { tx_ref } = await dispatch(generateTxRef()).unwrap();
       setTxRef(tx_ref);
 
       await dispatch(
@@ -161,7 +154,7 @@ export default function CompanyWithdrawFundForm({
             description ||
             `Withdrawal of ${DEFAULT_CURRENCY} ${amount.toLocaleString()}`,
           tx_ref,
-          gatewayType,
+          gatewayType: WITHDRAWAL_GATEWAY,
         }),
       ).unwrap();
 
@@ -202,12 +195,12 @@ export default function CompanyWithdrawFundForm({
             description ||
             `Withdrawal of ${DEFAULT_CURRENCY} ${(amount ?? 0).toLocaleString()}`,
           tx_ref: txRef,
-          gatewayType,
+          gatewayType: WITHDRAWAL_GATEWAY,
           otp: code,
         }),
       ).unwrap();
 
-      toast.success("Withdrawal successful!");
+      toast.success(SUCCESS_TOAST);
       await refreshWalletData();
       onClose?.();
     } catch (err: unknown) {
@@ -239,7 +232,7 @@ export default function CompanyWithdrawFundForm({
             description ||
             `Withdrawal of ${DEFAULT_CURRENCY} ${(amount ?? 0).toLocaleString()}`,
           tx_ref: txRef,
-          gatewayType,
+          gatewayType: WITHDRAWAL_GATEWAY,
         }),
       ).unwrap();
     } catch (err: unknown) {
@@ -271,10 +264,11 @@ export default function CompanyWithdrawFundForm({
                   placeholder="Enter amount"
                   required
                 />
-                {Number(amount) > 0 && serviceFee > 0 && (
+                {enteredAmount > 0 && serviceFee > 0 && (
                   <p className="text-red-600 text-sm mt-1.5">
                     A service charge of ₦{serviceFee.toLocaleString()} will be
-                    applied.
+                    applied. You will receive ₦{enteredAmount.toLocaleString()}.
+                    Total debit: ₦{totalDebit.toLocaleString()}.
                   </p>
                 )}
               </div>
@@ -311,17 +305,10 @@ export default function CompanyWithdrawFundForm({
                 />
               </div>
 
-              <PaymentGatewaySelect
-                id="company-withdraw-payment-gateway"
-                value={gatewayType}
-                onChange={setGatewayType}
-                disabled={submitting}
-              />
-
               <Button
                 type="submit"
                 className="w-full mt-4"
-                disabled={submitting || !gatewayType}
+                disabled={submitting}
               >
                 {submitting ? "Processing..." : "Request OTP"}
               </Button>

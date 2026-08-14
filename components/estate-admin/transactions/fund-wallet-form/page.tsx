@@ -9,7 +9,7 @@ import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "@/redux/store";
 import {
-  createTransaction,
+  generateTxRef,
   requestEstateAdminOtp,
   transferFunds,
 } from "@/redux/slice/estate-admin/transaction/transaction";
@@ -17,13 +17,21 @@ import {
   requestResidentOwnerWithdrawalOtp,
   transferFundsResident,
 } from "@/redux/slice/resident/transaction/transaction";
-import { getWallet, getEstateCredits } from "@/redux/slice/estate-admin/wallet-mgt/wallet-mgt";
+import {
+  getWallet,
+  getEstateCredits,
+  getEstateT1Breakdown,
+} from "@/redux/slice/estate-admin/wallet-mgt/wallet-mgt";
+import { getWallet as getResidentWallet } from "@/redux/slice/resident/wallet-mgt/wallet-mgt";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import OtpVerification from "@/components/otp-modal/otp-verification/page";
-// import PaymentGatewaySelect from "@/components/payment/PaymentGatewaySelect";
 
-const DEFAULT_COUNTRY = "NG";
 const DEFAULT_CURRENCY = "NGN";
+const WITHDRAWAL_GATEWAY = "flutterwave";
+const ESTATE_FLAT_FEE = 2000;
+const RESIDENT_FEE_RATE = 0.015;
+const SUCCESS_TOAST =
+  "Withdrawal submitted. Balance updates after bank confirmation.";
 
 interface FundWalletFormProps {
   userId: string;
@@ -32,9 +40,9 @@ interface FundWalletFormProps {
   defaultAccountNumber?: string;
   bankCode?: string;
   bankName?: string;
-  /** Max amount that can be withdrawn (e.g. estate wallet temporaryBalance). */
+  /** Max amount that can be withdrawn (T+1 withdrawableBalance). */
   maxWithdrawableAmount?: number;
-  /** Service charge applied on withdrawal. */
+  /** Flat service charge for estate admin (resident owner uses 1.5% instead). */
   serviceFee?: number;
   onClose?: () => void;
   /** When true, use resident-owner withdrawal APIs instead of estate-admin ones. */
@@ -49,7 +57,7 @@ export default function FundWalletForm({
   bankCode,
   bankName,
   maxWithdrawableAmount,
-  serviceFee = 2000,
+  serviceFee = ESTATE_FLAT_FEE,
   onClose,
   isResidentOwner = false,
 }: FundWalletFormProps) {
@@ -62,15 +70,17 @@ export default function FundWalletForm({
     if (defaultAccountNumber) setAccountNumber(defaultAccountNumber);
   }, [defaultAccountNumber]);
   const [description, setDescription] = useState<string>("");
-  const [currency] = useState<string>(DEFAULT_CURRENCY);
-  const [country] = useState<string>(DEFAULT_COUNTRY);
-  const [gatewayType] = useState<string>("");
-  // Payment gateway UI temporarily disabled — gatewayType kept for API payloads.
   const [submitting, setSubmitting] = useState(false);
   const [otpRequested, setOtpRequested] = useState(false);
   const [txRef, setTxRef] = useState<string | null>(null);
   const [otpError, setOtpError] = useState<string | null>(null);
   const [emailHint, setEmailHint] = useState<string | undefined>(undefined);
+
+  const enteredAmount = Number(amount) || 0;
+  const appliedFee = isResidentOwner
+    ? Math.round(enteredAmount * RESIDENT_FEE_RATE)
+    : serviceFee;
+  const totalDebit = enteredAmount + (appliedFee > 0 ? appliedFee : 0);
 
   useEffect(() => {
     (async () => {
@@ -93,6 +103,22 @@ export default function FundWalletForm({
     })();
   }, [dispatch]);
 
+  const buildNarration = (value: number) =>
+    description || `Withdrawal of ${DEFAULT_CURRENCY} ${value.toLocaleString()}`;
+
+  const refreshAfterWithdraw = async () => {
+    if (isResidentOwner) {
+      if (userId) await dispatch(getResidentWallet(userId));
+      return;
+    }
+    if (!estateId) return;
+    await dispatch(getWallet(estateId));
+    await dispatch(getEstateCredits({ estateId, page: 1, limit: 10 }));
+    if (userId) {
+      await dispatch(getEstateT1Breakdown({ estateId, userId }));
+    }
+  };
+
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
 
@@ -108,10 +134,10 @@ export default function FundWalletForm({
 
     if (
       typeof maxWithdrawableAmount === "number" &&
-      amount > maxWithdrawableAmount
+      totalDebit > maxWithdrawableAmount
     ) {
       toast.error(
-        `Amount cannot exceed withdrawable balance (₦${maxWithdrawableAmount.toLocaleString()}).`,
+        `You need ₦${totalDebit.toLocaleString()} in withdrawable balance (amount + fee). Available: ₦${maxWithdrawableAmount.toLocaleString()}.`,
       );
       return;
     }
@@ -126,68 +152,25 @@ export default function FundWalletForm({
       return;
     }
 
-    // if (!gatewayType) {
-    //   toast.error("Please select a payment gateway.");
-    //   return;
-    // }
-
-    // const MAX_AMOUNT = 200_000;
-    // if (amount > MAX_AMOUNT) {
-    //   toast.error(`You cannot fund more than ${MAX_AMOUNT.toLocaleString()}`);
-    //   return;
-    // }
-
     setSubmitting(true);
 
     try {
       if (!otpRequested) {
-        // First-time click on "Request OTP"
-        let tx_ref = "";
-
-        // 1) Create audit-only transaction; backend returns tx_ref in response
-        const createRes = await dispatch(
-          createTransaction({
-            walletId,
-            type: "debit",
-            amount,
-            description,
-            userId,
-            role: isResidentOwner ? "resident" : "estate admin",
-            residentType: isResidentOwner ? "owner" : null,
-            balanceType: "withdrawableBalance",
-            isAuditOnly: true,
-          }),
-        ).unwrap();
-
-        const resBody = createRes as Record<string, unknown> | undefined;
-        const resData = resBody?.data as Record<string, unknown> | undefined;
-        tx_ref =
-          (resData?.tx_ref as string) ?? (resBody?.tx_ref as string) ?? "";
-        if (!tx_ref && typeof crypto !== "undefined" && crypto.randomUUID) {
-          tx_ref = `tx-${crypto.randomUUID()}`;
-        }
-        if (!tx_ref) {
-          tx_ref = `tx-${Date.now()}-${Math.random()
-            .toString(36)
-            .slice(2, 11)}`;
-        }
+        const { tx_ref } = await dispatch(generateTxRef()).unwrap();
         setTxRef(tx_ref);
 
-        // 2) Request OTP using correct endpoint for the role
         if (isResidentOwner) {
           await dispatch(
             requestResidentOwnerWithdrawalOtp({
               userId,
               estateId,
-              amount: amount ?? 0,
-              currency,
+              amount,
+              currency: DEFAULT_CURRENCY,
               bankCode: bankCode ?? "",
               accountNumber,
-              narration:
-                description ||
-                `Withdrawal of ${currency} ${(amount ?? 0).toLocaleString()}`,
+              narration: buildNarration(amount),
               tx_ref,
-              gatewayType,
+              gatewayType: WITHDRAWAL_GATEWAY,
             }),
           ).unwrap();
         } else {
@@ -195,14 +178,12 @@ export default function FundWalletForm({
             requestEstateAdminOtp({
               estateId,
               amount,
-              currency,
+              currency: DEFAULT_CURRENCY,
               bankCode,
               accountNumber,
-              narration:
-                description ||
-                `Withdrawal of ${currency} ${amount.toLocaleString()}`,
+              narration: buildNarration(amount),
               tx_ref,
-              ...(gatewayType ? { gatewayType } : {}),
+              gatewayType: WITHDRAWAL_GATEWAY,
             }),
           ).unwrap();
         }
@@ -239,14 +220,12 @@ export default function FundWalletForm({
             userId,
             estateId,
             amount: amount ?? 0,
-            currency,
+            currency: DEFAULT_CURRENCY,
             bankCode: bankCode ?? "",
             accountNumber,
-            narration:
-              description ||
-              `Withdrawal of ${currency} ${(amount ?? 0).toLocaleString()}`,
+            narration: buildNarration(amount ?? 0),
             tx_ref: txRef,
-            gatewayType,
+            gatewayType: WITHDRAWAL_GATEWAY,
             otp: code,
           }),
         ).unwrap();
@@ -255,31 +234,19 @@ export default function FundWalletForm({
           transferFunds({
             estateId,
             amount: amount ?? 0,
-            currency,
+            currency: DEFAULT_CURRENCY,
             bankCode: bankCode ?? "",
             accountNumber,
-            narration:
-              description ||
-              `Withdrawal of ${currency} ${(amount ?? 0).toLocaleString()}`,
+            narration: buildNarration(amount ?? 0),
             tx_ref: txRef,
-            ...(gatewayType ? { gatewayType } : {}),
+            gatewayType: WITHDRAWAL_GATEWAY,
             otp: code,
           }),
         ).unwrap();
       }
 
-      toast.success("Withdrawal successful!");
-
-      // Refresh wallet + credits
-      await dispatch(getWallet(estateId));
-      await dispatch(
-        getEstateCredits({
-          estateId,
-          page: 1,
-          limit: 10,
-        }),
-      );
-
+      toast.success(SUCCESS_TOAST);
+      await refreshAfterWithdraw();
       onClose?.();
     } catch (err: any) {
       setOtpError(err?.message || "Failed to verify OTP. Please try again.");
@@ -304,14 +271,12 @@ export default function FundWalletForm({
             userId,
             estateId,
             amount: amount ?? 0,
-            currency,
+            currency: DEFAULT_CURRENCY,
             bankCode: bankCode ?? "",
             accountNumber,
-            narration:
-              description ||
-              `Withdrawal of ${currency} ${(amount ?? 0).toLocaleString()}`,
+            narration: buildNarration(amount ?? 0),
             tx_ref: txRef,
-            gatewayType,
+            gatewayType: WITHDRAWAL_GATEWAY,
           }),
         ).unwrap();
       } else {
@@ -319,14 +284,12 @@ export default function FundWalletForm({
           requestEstateAdminOtp({
             estateId,
             amount: amount ?? 0,
-            currency,
+            currency: DEFAULT_CURRENCY,
             bankCode: bankCode ?? "",
             accountNumber,
-            narration:
-              description ||
-              `Withdrawal of ${currency} ${(amount ?? 0).toLocaleString()}`,
+            narration: buildNarration(amount ?? 0),
             tx_ref: txRef,
-            ...(gatewayType ? { gatewayType } : {}),
+            gatewayType: WITHDRAWAL_GATEWAY,
           }),
         ).unwrap();
       }
@@ -358,10 +321,11 @@ export default function FundWalletForm({
                   placeholder="Enter amount"
                   required
                 />
-                {Number(amount) > 0 && serviceFee > 0 && !isResidentOwner && (
+                {enteredAmount > 0 && appliedFee > 0 && (
                   <p className="text-red-600 text-sm mt-1.5">
-                    A service charge of ₦{serviceFee.toLocaleString()} will be
-                    applied.
+                    {isResidentOwner
+                      ? `A 1.5% service charge of ₦${appliedFee.toLocaleString()} will be applied. Total debit: ₦${totalDebit.toLocaleString()}.`
+                      : `A service charge of ₦${appliedFee.toLocaleString()} will be applied. You will receive ₦${enteredAmount.toLocaleString()}. Total debit: ₦${totalDebit.toLocaleString()}.`}
                   </p>
                 )}
               </div>
@@ -397,13 +361,6 @@ export default function FundWalletForm({
                   placeholder="Enter description"
                 />
               </div>
-
-              {/* <PaymentGatewaySelect
-                id="withdraw-payment-gateway"
-                value={gatewayType}
-                onChange={setGatewayType}
-                disabled={submitting}
-              /> */}
 
               <Button
                 type="submit"

@@ -48,17 +48,6 @@ export interface CompanyTransferPayload extends CompanyWithdrawOtpPayload {
   otp: string;
 }
 
-export interface CompanyWithdrawAuditPayload {
-  walletId: string;
-  type: "debit";
-  amount: number;
-  description: string;
-  userId: string;
-  role: "company";
-  balanceType: "withdrawableBalance";
-  isAuditOnly: true;
-}
-
 /** POST /api/v1/wallet-mgt */
 export const createCompanyWallet = createAsyncThunk(
   "company-wallet-mgt/createCompanyWallet",
@@ -172,13 +161,34 @@ export const getCompanyT1Pending = createAsyncThunk(
   },
 );
 
-/** POST /api/v1/transaction-mgt — audit-only withdrawal record */
-export const createCompanyWithdrawAudit = createAsyncThunk(
-  "company-wallet-mgt/createCompanyWithdrawAudit",
-  async (data: CompanyWithdrawAuditPayload, { rejectWithValue }) => {
+function extractTxRef(payload: unknown): string {
+  if (!payload || typeof payload !== "object") return "";
+  const body = payload as Record<string, unknown>;
+  const nested = body.data;
+  const fromData =
+    nested && typeof nested === "object"
+      ? (nested as Record<string, unknown>).tx_ref
+      : undefined;
+  const value = fromData ?? body.tx_ref;
+  return typeof value === "string" ? value : "";
+}
+
+/** GET /api/v1/payment-mgt/generate-tx-ref?prefix=tx */
+export const generateTxRef = createAsyncThunk(
+  "company-wallet-mgt/generateTxRef",
+  async (_, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.post("/api/v1/transaction-mgt", data);
-      return res.data;
+      const res = await axiosInstance.get(
+        "/api/v1/payment-mgt/generate-tx-ref",
+        { params: { prefix: "tx" } },
+      );
+      const tx_ref = extractTxRef(res.data);
+      if (!tx_ref) {
+        return rejectWithValue({
+          message: "Failed to generate transaction reference.",
+        });
+      }
+      return { tx_ref };
     } catch (error: unknown) {
       return rejectWithValue(apiErrorRejectValue(error));
     }

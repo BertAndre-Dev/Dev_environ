@@ -193,7 +193,7 @@ export default function TransactionPage() {
     setTransferToBalanceLoading(false);
   };
 
-  // Withdraw (owner only) now handled via OTP flow inside WithdrawFundForm (createTransaction + request OTP + withdraw)
+  // Withdraw (owner only) handled via OTP flow inside WithdrawFundForm (generate-tx-ref + request OTP + withdraw)
 
   const handleTransferToMainBalance = async (payload: {
     amount: number;

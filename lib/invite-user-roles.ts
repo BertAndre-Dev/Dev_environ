@@ -28,7 +28,6 @@ export function buildEnergyProviderInviteHomeOwnerPayload(params: {
   firstName: string;
   lastName: string;
   email: string;
-  phoneNumber: string;
   estateId: string;
   companyId?: string;
   addressIds: string[];
@@ -40,7 +39,6 @@ export function buildEnergyProviderInviteHomeOwnerPayload(params: {
     firstName: params.firstName.trim(),
     lastName: params.lastName.trim(),
     email: params.email.trim(),
-    phoneNumber: params.phoneNumber.trim(),
     role: "resident",
     residentType: "owner",
     estateId,
@@ -53,6 +51,17 @@ export function buildEnergyProviderInviteHomeOwnerPayload(params: {
 
 export function isEnergyProviderRole(role: string): boolean {
   return role.trim().toLowerCase() === ENERGY_PROVIDER_ROLE;
+}
+
+/** Phone is collected only when inviting staff, admin, company, or estate admin. */
+export function inviteRoleRequiresPhoneNumber(role?: string): boolean {
+  const normalized = (role ?? "").trim().toLowerCase();
+  return (
+    normalized === "staff" ||
+    normalized === "admin" ||
+    normalized === "company" ||
+    normalized === "estate admin"
+  );
 }
 
 export function validateEnergyProviderInviteScope(params: {
@@ -80,7 +89,7 @@ export function buildInviteUserPayload(params: {
   firstName: string;
   lastName: string;
   email: string;
-  phoneNumber: string;
+  phoneNumber?: string;
   role: string;
   inviteContext: "estate" | "company";
   estateId?: string;
@@ -88,15 +97,18 @@ export function buildInviteUserPayload(params: {
 }): InvitedUserData {
   const estateId = params.estateId?.trim();
   const companyId = params.companyId?.trim();
+  const phoneNumber = params.phoneNumber?.trim();
 
   const base: InvitedUserData = {
     firstName: params.firstName.trim(),
     lastName: params.lastName.trim(),
     email: params.email.trim(),
-    phoneNumber: params.phoneNumber.trim(),
     role: params.role,
     residentType: null,
     addressIds: [],
+    ...(inviteRoleRequiresPhoneNumber(params.role) && phoneNumber
+      ? { phoneNumber }
+      : {}),
   };
 
   if (isEnergyProviderRole(params.role)) {

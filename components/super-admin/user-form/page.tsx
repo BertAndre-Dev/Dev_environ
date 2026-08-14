@@ -12,6 +12,7 @@ import { iniviteUser } from "@/redux/slice/auth-mgt/auth-mgt"; // keep name you 
 import { getCompanies } from "@/redux/slice/super-admin/company-mgt/company";
 import {
   buildInviteUserPayload,
+  inviteRoleRequiresPhoneNumber,
   isEnergyProviderRole,
   SUPER_ADMIN_COMPANY_INVITE_ROLE_OPTIONS,
   SUPER_ADMIN_ESTATE_INVITE_ROLE_OPTIONS,
@@ -132,7 +133,19 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
   };
 
   const handleSelectChange = (field: keyof InviteUserFormData, option: any) => {
-    setFormData((prev) => ({ ...prev, [field]: option?.value ?? "" }));
+    setFormData((prev) => {
+      const nextValue = option?.value ?? "";
+      if (field === "role") {
+        return {
+          ...prev,
+          role: nextValue,
+          phoneNumber: inviteRoleRequiresPhoneNumber(nextValue)
+            ? prev.phoneNumber
+            : "",
+        };
+      }
+      return { ...prev, [field]: nextValue };
+    });
   };
 
   const resetForm = () =>
@@ -151,7 +164,10 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
 
     if (!formData.role) return toast.error("Please select a role.");
     if (!formData.email) return toast.error("Please provide an email.");
-    if (!formData.phoneNumber.trim()) {
+    if (
+      inviteRoleRequiresPhoneNumber(formData.role) &&
+      !formData.phoneNumber.trim()
+    ) {
       return toast.error("Please provide a phone number.");
     }
     if (!formData.firstName) return toast.error("Please provide first name.");
@@ -238,15 +254,6 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
         </div>,
       );
     }
-    nodes.push(
-      <InvitePhoneNumberField
-        key="phoneNumber"
-        id="phoneNumber"
-        value={formData.phoneNumber}
-        onChange={handleInputChange}
-        className="mb-2"
-      />,
-    );
     return nodes;
   };
 
@@ -356,6 +363,14 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
               isClearable
             />
           </div>
+
+          {inviteRoleRequiresPhoneNumber(formData.role) && (
+            <InvitePhoneNumberField
+              id="phoneNumber"
+              value={formData.phoneNumber}
+              onChange={handleInputChange}
+            />
+          )}
 
           <Button
             type="submit"

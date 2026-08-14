@@ -13,6 +13,7 @@ import { getFieldByEstate } from "@/redux/slice/admin/address-mgt/fields/fields"
 import { getEntriesByField } from "@/redux/slice/admin/address-mgt/entry/entry";
 import { iniviteUser, getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
+import { inviteRoleRequiresPhoneNumber } from "@/lib/invite-user-roles";
 import type { AppDispatch } from "@/redux/store";
 
 type InviteUserFormProps = {
@@ -148,7 +149,10 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
       return toast.error("Please select a role");
     }
 
-    if (!formData.phoneNumber.trim()) {
+    if (
+      inviteRoleRequiresPhoneNumber(formData.role) &&
+      !formData.phoneNumber.trim()
+    ) {
       return toast.error("Please provide a phone number.");
     }
 
@@ -168,7 +172,9 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
       firstName: formData.firstName,
       lastName: formData.lastName,
       email: formData.email,
-      phoneNumber: formData.phoneNumber.trim(),
+      ...(inviteRoleRequiresPhoneNumber(formData.role)
+        ? { phoneNumber: formData.phoneNumber.trim() }
+        : {}),
       role: formData.role,
       residentType: formData.role === "resident" ? "owner" : "owner",
       // Guard against accidental empty ids (prevents backend ObjectId cast errors)
@@ -221,12 +227,6 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
             </div>
           ))}
 
-          <InvitePhoneNumberField
-            id="phoneNumber"
-            value={formData.phoneNumber}
-            onChange={handleInput}
-          />
-
           {/* Role */}
           <div>
             <Label>Role</Label>
@@ -238,6 +238,9 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
                 setFormData((prev) => ({
                   ...prev,
                   role,
+                  phoneNumber: inviteRoleRequiresPhoneNumber(role)
+                    ? prev.phoneNumber
+                    : "",
                   residentType: role === "resident" ? prev.residentType ?? "owner" : null,
                   addressIds: role === "resident" ? prev.addressIds : [],
                 }));
@@ -245,6 +248,14 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
               placeholder="Select role"
             />
           </div>
+
+          {inviteRoleRequiresPhoneNumber(formData.role) && (
+            <InvitePhoneNumberField
+              id="phoneNumber"
+              value={formData.phoneNumber}
+              onChange={handleInput}
+            />
+          )}
 
           {/* Address(es) – checkboxes for Resident (one email, multiple apartments) */}
           {formData.role === "resident" && (

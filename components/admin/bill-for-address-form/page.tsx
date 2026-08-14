@@ -19,14 +19,12 @@ import {
 } from "@/lib/format-number";
 import { formatAddressEntryLabel, normalizeAddresses } from "@/lib/address";
 
-export type BillForAddressFrequency = "quarterly" | "yearly" | "oneOff";
-
 export interface BillForAddressFormData {
   addressId: string;
   name: string;
   description: string;
   amount: number;
-  frequency: BillForAddressFrequency;
+  frequency: "oneoff";
   isServiceCharge: boolean;
   compulsory: boolean;
 }
@@ -38,7 +36,7 @@ export interface BillForAddressInitialData {
   name?: string;
   description?: string;
   amount?: number;
-  frequency?: string;
+  isServiceCharge?: boolean;
   compulsory?: boolean;
 }
 
@@ -99,6 +97,7 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
       initialData?.amount != null
         ? formatAmountInput(String(initialData.amount))
         : "",
+    isServiceCharge: Boolean(initialData?.isServiceCharge),
     compulsory: Boolean(initialData?.compulsory),
   });
 
@@ -209,6 +208,11 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
                 0,
             ),
           ),
+          isServiceCharge: Boolean(
+            fetchData.isServiceCharge ??
+              initialData?.isServiceCharge ??
+              prev.isServiceCharge,
+          ),
           compulsory: Boolean(
             fetchData.compulsory ?? initialData?.compulsory ?? prev.compulsory,
           ),
@@ -261,8 +265,8 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
         name: form.name.trim(),
         description: form.description.trim(),
         amount,
-        frequency: "oneOff",
-        isServiceCharge: false,
+        frequency: "oneoff",
+        isServiceCharge: form.isServiceCharge,
         compulsory: form.compulsory,
       });
     } finally {
@@ -362,6 +366,26 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
                 }
                 placeholder="25,000"
               />
+            </div>
+
+            <div className="flex items-start gap-2">
+              <input
+                id="address-bill-service-charge"
+                type="checkbox"
+                checked={form.isServiceCharge}
+                onChange={(e) =>
+                  handleChange("isServiceCharge", e.target.checked)
+                }
+                className="mt-1 rounded border-input"
+              />
+              <div>
+                <Label
+                  htmlFor="address-bill-service-charge"
+                  className="cursor-pointer font-medium"
+                >
+                  Service charge
+                </Label>
+              </div>
             </div>
 
             <div className="flex items-start gap-2">

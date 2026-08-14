@@ -59,8 +59,12 @@ const ROLE_API = {
   },
 } as const;
 
-function formatAccountNumber(value: string) {
-  return value.replace(/\s/g, "").replace(/(\d{4})(?=\d)/g, "$1 ");
+function isAutoSettlementOn(
+  sliceValue: boolean | null | undefined,
+  walletValue?: boolean | null,
+): boolean {
+  if (typeof sliceValue === "boolean") return sliceValue;
+  return walletValue === true;
 }
 
 function AutoSettlementToggle({
@@ -121,6 +125,11 @@ function useRevenueWithdrawal(
   const autoSettlementEnabled = slice?.autoSettlementEnabled ?? null;
   const setAutoSettlementState = slice?.setAutoSettlementState ?? "idle";
   const getAccountsState = slice?.getAccountsState ?? "idle";
+  const walletAutoSettlementEnabled = useSelector((state: RootState) =>
+    role === "estateAdmin"
+      ? state.estateAdminWallet?.wallet?.autoSettlementEnabled
+      : undefined,
+  );
 
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [selectedType, setSelectedType] = useState<{
@@ -159,7 +168,10 @@ function useRevenueWithdrawal(
   }, [types, accountByType]);
 
   const configuredCount = rows.filter((row) => row.account).length;
-  const autoEnabled = autoSettlementEnabled === true;
+  const autoEnabled = isAutoSettlementOn(
+    autoSettlementEnabled,
+    walletAutoSettlementEnabled,
+  );
   const toggling = setAutoSettlementState === "isLoading";
   const showLoading = !initialLoadDone && getAccountsState === "isLoading";
 
@@ -322,6 +334,9 @@ function RevenueTypeDropdown({
   onSelectedValueChange: (value: string) => void;
   onConfigure: (type: { value: string; label: string }) => void;
 }>) {
+  const formatAccountNumber = (value: string) =>
+    value.replace(/\s/g, "").replace(/(\d{4})(?=\d)/g, "$1 ");
+
   const selectedRow =
     rows.find((row) => row.value === selectedValue) ?? rows[0] ?? null;
   const options = rows.map((row) => ({
@@ -503,7 +518,15 @@ export function RevenueWithdrawalOverviewProvider({
   const dispatch = useDispatch<AppDispatch>();
   const api = ROLE_API[role];
   const slice = useSelector(api.selectSlice);
-  const autoEnabled = slice?.autoSettlementEnabled === true;
+  const walletAutoSettlementEnabled = useSelector((state: RootState) =>
+    role === "estateAdmin"
+      ? state.estateAdminWallet?.wallet?.autoSettlementEnabled
+      : undefined,
+  );
+  const autoEnabled = isAutoSettlementOn(
+    slice?.autoSettlementEnabled,
+    walletAutoSettlementEnabled,
+  );
   const toggling = slice?.setAutoSettlementState === "isLoading";
 
   useEffect(() => {

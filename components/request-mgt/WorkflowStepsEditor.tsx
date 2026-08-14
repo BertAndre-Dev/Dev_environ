@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
+import { motion, useReducedMotion } from "framer-motion";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import {
   APPROVAL_MODE_OPTIONS,
   APPROVER_TYPE_OPTIONS,
@@ -29,6 +31,52 @@ interface WorkflowStepsEditorProps {
   readonly onChange: (steps: WorkflowStep[]) => void;
   readonly estateId?: string | null;
   readonly disabled?: boolean;
+}
+
+function SettingToggle({
+  checked,
+  disabled,
+  label,
+  onCheckedChange,
+}: Readonly<{
+  checked: boolean;
+  disabled?: boolean;
+  label: string;
+  onCheckedChange: (next: boolean) => void;
+}>) {
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl bg-white/70 border border-black/5 px-3.5 py-2.5 min-w-[180px] flex-1">
+      <span className="text-sm">{label}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        disabled={disabled}
+        onClick={() => onCheckedChange(!checked)}
+        className={cn(
+          "relative inline-flex h-7 w-[44px] shrink-0 cursor-pointer items-center rounded-full p-0.5",
+          "transition-[background-color,transform] duration-100 ease-out active:scale-[0.97]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0150AC]/40",
+          "disabled:opacity-40 disabled:pointer-events-none",
+          checked ? "bg-[#0150AC]" : "bg-black/15",
+        )}
+      >
+        <motion.span
+          layout
+          className="block size-6 rounded-full bg-white shadow-sm"
+          animate={{ x: checked ? 16 : 0 }}
+          transition={
+            reduceMotion
+              ? { duration: 0.15 }
+              : { type: "spring", bounce: 0, duration: 0.32 }
+          }
+        />
+      </button>
+    </div>
+  );
 }
 
 function renumber(steps: WorkflowStep[]): WorkflowStep[] {
@@ -285,31 +333,23 @@ export default function WorkflowStepsEditor({
               )}
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <label className="inline-flex items-center gap-2 rounded-full bg-white/70 border border-black/5 px-3 py-1.5 text-sm cursor-pointer select-none active:scale-[0.98] transition-transform duration-100 ease-out">
-                <input
-                  type="checkbox"
-                  checked={step.allowReject}
-                  onChange={(e) =>
-                    updateStep(index, { allowReject: e.target.checked })
-                  }
-                  disabled={disabled}
-                  className="size-4 rounded border-input accent-[#0150AC]"
-                />
-                Allow reject
-              </label>
-              <label className="inline-flex items-center gap-2 rounded-full bg-white/70 border border-black/5 px-3 py-1.5 text-sm cursor-pointer select-none active:scale-[0.98] transition-transform duration-100 ease-out">
-                <input
-                  type="checkbox"
-                  checked={step.reminderEnabled}
-                  onChange={(e) =>
-                    updateStep(index, { reminderEnabled: e.target.checked })
-                  }
-                  disabled={disabled}
-                  className="size-4 rounded border-input accent-[#0150AC]"
-                />
-                Enable reminders
-              </label>
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              <SettingToggle
+                label="Allow reject"
+                checked={step.allowReject}
+                disabled={disabled}
+                onCheckedChange={(next) =>
+                  updateStep(index, { allowReject: next })
+                }
+              />
+              <SettingToggle
+                label="Enable reminders"
+                checked={step.reminderEnabled}
+                disabled={disabled}
+                onCheckedChange={(next) =>
+                  updateStep(index, { reminderEnabled: next })
+                }
+              />
             </div>
 
             {step.reminderEnabled && (

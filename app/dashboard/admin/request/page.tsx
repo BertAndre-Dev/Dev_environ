@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
-import { ClipboardList, Settings2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { motion, useReducedMotion } from "framer-motion";
+import { ClipboardList } from "lucide-react";
 import Loader from "@/components/ui/Loader";
+import Tab from "@/components/tabs/page";
 import RequestSubmitView from "@/components/request-mgt/RequestSubmitView";
 import RequestWorkflowConfigPanel from "@/components/request-mgt/RequestWorkflowConfigPanel";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -17,13 +18,15 @@ import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import type { AppDispatch } from "@/redux/store";
 
+const ADMIN_REQUEST_TABS = ["Requests", "Workflow"];
+
 export default function AdminRequestPage() {
   const dispatch = useDispatch<AppDispatch>();
+  const reduceMotion = useReducedMotion();
   const [estateId, setEstateId] = useState<string | null>(null);
   const [estateName, setEstateName] = useState("Estate");
   const [hasCompanyId, setHasCompanyId] = useState<boolean | null>(null);
   const [bootstrapping, setBootstrapping] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -79,41 +82,54 @@ export default function AdminRequestPage() {
 
   return (
     <div className="relative space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-[#D0DFF280]">
-              <ClipboardList className="w-5 h-5 text-[#0150AC]" />
-            </div>
-            <h1 className="font-heading text-3xl font-bold tracking-[-0.02em]">
-              Request Management
-            </h1>
+      <div>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-2xl bg-[#D0DFF280]">
+            <ClipboardList className="w-5 h-5 text-[#0150AC]" />
           </div>
-          <p className="text-muted-foreground mt-2 leading-snug">
-            Configure the approval workflow for{" "}
-            <span className="font-semibold uppercase underline text-foreground">
-              {estateName}
-            </span>
-            .
-          </p>
+          <h1 className="font-heading text-3xl font-bold tracking-[-0.02em]">
+            Request Management
+          </h1>
         </div>
-        <Button
-          onClick={() => setModalOpen(true)}
-          disabled={!estateId}
-          className="shrink-0 rounded-full active:scale-[0.97] transition-transform duration-100 ease-out"
-        >
-          <Settings2 className="w-4 h-4 mr-2" />
-          Set workflow
-        </Button>
+        <p className="text-muted-foreground mt-2 leading-snug">
+          Submit requests or configure the approval workflow for{" "}
+          <span className="font-semibold uppercase underline text-foreground">
+            {estateName}
+          </span>
+          .
+        </p>
       </div>
 
-      <RequestWorkflowConfigPanel
-        estateId={estateId}
-        enabled={!bootstrapping && Boolean(estateId)}
-        estateLabel={estateName}
-        hideHeaderButton
-        open={modalOpen}
-        onOpenChange={setModalOpen}
+      <Tab
+        titles={ADMIN_REQUEST_TABS}
+        renderContent={(tab) => (
+          <motion.div
+            key={tab}
+            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={
+              reduceMotion
+                ? { duration: 0.15 }
+                : { type: "spring", bounce: 0, duration: 0.35 }
+            }
+          >
+            {tab === "Workflow" ? (
+              <RequestWorkflowConfigPanel
+                estateId={estateId}
+                enabled={Boolean(estateId)}
+                estateLabel={estateName}
+              />
+            ) : (
+              <RequestSubmitView
+                estateId={estateId}
+                estateName={estateName}
+                bootstrapping={false}
+                embedded
+                hideHeading
+              />
+            )}
+          </motion.div>
+        )}
       />
     </div>
   );

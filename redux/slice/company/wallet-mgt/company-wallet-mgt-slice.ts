@@ -7,7 +7,6 @@ import {
   getCompanyCredits,
   getCompanyT1Breakdown,
   getCompanyT1Pending,
-  createCompanyWithdrawAudit,
   requestCompanyWithdrawOtp,
   transferCompanyFunds,
 } from "./company-wallet-mgt";
@@ -185,10 +184,6 @@ const companyWalletSlice = createSlice({
       })
       .addCase(transferCompanyFunds.rejected, (state, action) => {
         state.transferFundsState = "failed";
-        state.error = getApiErrorMessage(action.payload) ?? null;
-      })
-
-      .addCase(createCompanyWithdrawAudit.rejected, (state, action) => {
         state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },

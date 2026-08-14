@@ -195,7 +195,7 @@ export const getAdminRequestWorkflow = createAsyncThunk(
   },
 );
 
-/** POST /api/v1/requests/workflows — create or replace active workflow */
+/** PUT /api/v1/requests/workflows — create or replace active workflow */
 export const upsertAdminRequestWorkflow = createAsyncThunk(
   "adminRequest/upsertWorkflow",
   async (payload: UpsertRequestWorkflowPayload, { rejectWithValue }) => {
@@ -253,7 +253,7 @@ export const upsertAdminRequestWorkflow = createAsyncThunk(
         })),
       };
 
-      const res = await axiosInstance.post("/api/v1/requests/workflows", body);
+      const res = await axiosInstance.put("/api/v1/requests/workflows", body);
       return (
         extractWorkflowPayload(res.data) ??
         normalizeRequestWorkflow({

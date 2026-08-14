@@ -79,3 +79,40 @@ export const getEstateCredits = createAsyncThunk(
     }
   },
 );
+
+export interface GetEstateT1BreakdownParams {
+  estateId: string;
+  userId: string;
+}
+
+/** GET /api/v1/wallet-mgt/t1/breakdown/{estateId}?estateId=&userId= */
+export const getEstateT1Breakdown = createAsyncThunk(
+  "estate-admin-wallet/getT1Breakdown",
+  async (
+    { estateId, userId }: GetEstateT1BreakdownParams,
+    { rejectWithValue },
+  ) => {
+    try {
+      if (!estateId) {
+        return rejectWithValue({
+          message: "Estate ID is required to fetch T+1 breakdown",
+        });
+      }
+      if (!userId) {
+        return rejectWithValue({
+          message: "User ID is required to fetch T+1 breakdown",
+        });
+      }
+      const res = await axiosInstance.get(
+        `/api/v1/wallet-mgt/t1/breakdown/${estateId}`,
+        { params: { estateId, userId } },
+      );
+      return res.data;
+    } catch (error: any) {
+      return rejectWithValue({
+        message:
+          error.response?.data?.message || "Failed to fetch T+1 breakdown",
+      });
+    }
+  },
+);

@@ -48,7 +48,7 @@ export interface CreateBillForAddressPayload {
   description: string;
   amount: number;
   frequency: BillFrequency;
-  isServiceCharge: boolean;
+  isServiceCharge?: boolean;
   compulsory?: boolean;
 }
 
@@ -67,7 +67,7 @@ export interface UpdateBillForAddressPayload {
   description: string;
   amount: number;
   frequency?: BillFrequency;
-  isServiceCharge: boolean;
+  isServiceCharge?: boolean;
   compulsory?: boolean;
 }
 
@@ -126,7 +126,9 @@ export const updateBillForAddress = createAsyncThunk(
           description: data.description,
           amount: data.amount,
           ...(data.frequency ? { frequency: data.frequency } : {}),
-          isServiceCharge: data.isServiceCharge,
+          ...(data.isServiceCharge != null
+            ? { isServiceCharge: data.isServiceCharge }
+            : {}),
           compulsory: data.compulsory ?? false,
         },
       );

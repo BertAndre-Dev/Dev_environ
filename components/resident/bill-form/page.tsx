@@ -5,6 +5,11 @@ import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import { getBill, payBill } from "@/redux/slice/resident/bill-mgt/bills-mgt";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
+import {
+  BILL_FREQUENCY_OPTIONS,
+  normalizeBillFrequency,
+  type BillFrequency,
+} from "@/redux/slice/admin/bills-mgt/bills";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -25,7 +30,76 @@ interface BillsFormProps {
   onClose?: () => void;
 }
 
-type FrequencyOption = "monthly" | "quarterly" | "yearly";
+function uniqueFrequencies(values: BillFrequency[]): BillFrequency[] {
+  return values.filter((value, index, list) => list.indexOf(value) === index);
+}
+
+function frequencyLabel(value: BillFrequency): string {
+  return (
+    BILL_FREQUENCY_OPTIONS.find((option) => option.value === value)?.label ??
+    value
+  );
+}
+
+function resolvePaymentFrequencies(
+  billFrequency?: string,
+  allowedFrequencies?: string[],
+): { options: BillFrequency[]; editable: boolean; value: BillFrequency } {
+  const allowed = uniqueFrequencies(
+    (allowedFrequencies ?? []).map((item) => normalizeBillFrequency(item)),
+  );
+  const frequency = billFrequency
+    ? normalizeBillFrequency(billFrequency)
+    : undefined;
+
+  if (frequency === "yearly") {
+    const fromAllowed = allowed.filter(
+      (item) => item === "quarterly" || item === "yearly",
+    );
+    const options =
+      fromAllowed.length > 0
+        ? fromAllowed
+        : (["quarterly", "yearly"] as BillFrequency[]);
+    return {
+      options,
+      editable: options.length > 1,
+      value: options.includes("yearly") ? "yearly" : options[0],
+    };
+  }
+
+  if (
+    frequency === "oneoff" ||
+    frequency === "monthly" ||
+    frequency === "quarterly"
+  ) {
+    const locked = allowed[0] ?? frequency;
+    return { options: [locked], editable: false, value: locked };
+  }
+
+  if (allowed.length > 1) {
+    return {
+      options: allowed,
+      editable: true,
+      value: allowed.includes("yearly") ? "yearly" : allowed[0],
+    };
+  }
+
+  const fallback = allowed[0] ?? "yearly";
+  return { options: [fallback], editable: false, value: fallback };
+}
+
+function lookupAmountByFrequency(
+  amounts: Record<string, number> | undefined,
+  frequency: BillFrequency,
+): number | undefined {
+  if (!amounts) return undefined;
+  for (const [key, raw] of Object.entries(amounts)) {
+    if (normalizeBillFrequency(key) !== frequency) continue;
+    const value = Number(raw);
+    if (Number.isFinite(value)) return value;
+  }
+  return undefined;
+}
 
 export default function BillsForm({
   billId,
@@ -42,27 +116,30 @@ export default function BillsForm({
   const [submitting, setSubmitting] = useState(false);
   const [billName, setBillName] = useState("");
   const [yearlyAmount, setYearlyAmount] = useState<number>(0);
+  const [amountPayable, setAmountPayable] = useState<number | undefined>();
+  const [amountPayableByFrequency, setAmountPayableByFrequency] = useState<
+    Record<string, number>
+  >({});
   const [userId, setUserId] = useState("");
   const [walletId, setWalletId] = useState("");
   const [estateId, setEstateId] = useState(estateIdProp ?? "");
-  const [frequency, setFrequency] = useState<FrequencyOption>("yearly");
+  const [frequency, setFrequency] = useState<BillFrequency>("yearly");
+  const [frequencyOptions, setFrequencyOptions] = useState<
+    { label: string; value: BillFrequency }[]
+  >([]);
+  const [frequencyEditable, setFrequencyEditable] = useState(false);
 
-  const frequencyOptions = [
-    // { label: "Monthly", value: "monthly" },
-    { label: "Quarterly", value: "quarterly" },
-    { label: "Yearly", value: "yearly" }
-  ];
+  const amountToPay = useMemo(() => {
+    const fromFrequency = lookupAmountByFrequency(
+      amountPayableByFrequency,
+      frequency,
+    );
+    if (fromFrequency != null) return fromFrequency;
+    if (amountPayable != null) return amountPayable;
+    return yearlyAmount;
+  }, [amountPayable, amountPayableByFrequency, frequency, yearlyAmount]);
 
-  const proratedAmount = useMemo(() => {
-    switch (frequency) {
-      case "monthly":
-        return (yearlyAmount / 12).toFixed(2);
-      case "quarterly":
-        return (yearlyAmount / 4).toFixed(2);
-      default:
-        return yearlyAmount.toFixed(2);
-    }
-  }, [yearlyAmount, frequency]);
+  const amountToPayDisplay = amountToPay.toFixed(2);
 
   useEffect(() => {
     const load = async () => {
@@ -73,6 +150,31 @@ export default function BillsForm({
         if (billData) {
           setBillName(billData.name || "");
           setYearlyAmount(Number(billData.yearlyAmount ?? 0));
+          setAmountPayable(
+            billData.amountPayable != null
+              ? Number(billData.amountPayable)
+              : billData.amount != null
+                ? Number(billData.amount)
+                : undefined,
+          );
+          setAmountPayableByFrequency(
+            billData.amountPayableByFrequency &&
+              typeof billData.amountPayableByFrequency === "object"
+              ? billData.amountPayableByFrequency
+              : {},
+          );
+          const resolved = resolvePaymentFrequencies(
+            billData.frequency,
+            billData.allowedFrequencies,
+          );
+          setFrequency(resolved.value);
+          setFrequencyEditable(resolved.editable);
+          setFrequencyOptions(
+            resolved.options.map((value) => ({
+              label: frequencyLabel(value),
+              value,
+            })),
+          );
         }
 
         const userRes = await dispatch(getSignedInUser()).unwrap();
@@ -130,7 +232,7 @@ export default function BillsForm({
           estateId,
           addressId: selectedAddressId ?? undefined,
           frequency,
-          amountPaid: Number(proratedAmount),
+          amountPaid: amountToPay,
         })
       ).unwrap();
 
@@ -168,28 +270,42 @@ export default function BillsForm({
         ) : (
           <div className="space-y-4">
             <div>
-              <Label>Payment Frequency</Label>
-              <Select
-                options={frequencyOptions}
-                value={frequency}
-                onChange={(e) => setFrequency(e.target.value as FrequencyOption)}
-              />
+              <Label htmlFor="payment-frequency">Payment Frequency</Label>
+              {frequencyEditable ? (
+                <Select
+                  id="payment-frequency"
+                  aria-label="Select payment frequency"
+                  options={frequencyOptions}
+                  value={frequency}
+                  onChange={(e) =>
+                    setFrequency(normalizeBillFrequency(e.target.value))
+                  }
+                />
+              ) : (
+                <Input
+                  id="payment-frequency"
+                  readOnly
+                  value={frequencyLabel(frequency)}
+                  className="bg-muted/50 cursor-not-allowed"
+                />
+              )}
             </div>
-
 
             <div>
               <Label>Amount to Pay</Label>
-              <Input readOnly type="number" value={proratedAmount} />
-              <p className="text-sm text-muted-foreground mt-1">
-                Yearly total is ₦{yearlyAmount.toLocaleString()}. Prorated based on selected period.
-              </p>
+              <Input readOnly type="number" value={amountToPayDisplay} />
+              {frequencyEditable && yearlyAmount > 0 ? (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Yearly total is ₦{yearlyAmount.toLocaleString()}.
+                </p>
+              ) : null}
             </div>
           </div>
         )}
 
         <div className="pt-6">
           <Button type="submit" className="w-full" disabled={loading || submitting}>
-            {submitting ? "Processing..." : `Pay ₦${proratedAmount}`}
+            {submitting ? "Processing..." : `Pay ₦${amountToPayDisplay}`}
           </Button>
         </div>
       </CardContent>

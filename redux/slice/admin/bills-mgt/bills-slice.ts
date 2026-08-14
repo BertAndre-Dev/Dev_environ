@@ -18,10 +18,12 @@ interface BillData {
   name: string;
   description: string;
   yearlyAmount: number;
+  frequency?: string;
   createdAt?: string;
   updatedAt?: string;
   id?: string;
   isActive?: boolean;
+  isServiceCharge?: boolean;
   compulsory?: boolean;
 }
 
@@ -291,6 +293,8 @@ const billSlice = createSlice({
                                     updated?.amount ??
                                     updated?.amountPaid ??
                                     bill.amountPaid,
+                                frequency:
+                                    updated?.frequency ?? bill.frequency,
                                 isServiceCharge:
                                     updated?.isServiceCharge ??
                                     bill.isServiceCharge,

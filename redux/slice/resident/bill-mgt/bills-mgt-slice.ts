@@ -14,7 +14,14 @@ export interface EstateBillData {
   name?: string;
   description?: string;
   yearlyAmount?: number;
+  frequency?: string;
+  allowedFrequencies?: string[];
+  amount?: number;
+  amountPayable?: number;
+  amountPayableByFrequency?: Record<string, number>;
   isActive?: boolean;
+  isServiceCharge?: boolean;
+  compulsory?: boolean;
   createdAt?: string;
 }
 

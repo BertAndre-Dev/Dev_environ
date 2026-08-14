@@ -50,7 +50,9 @@ interface BillData {
   name: string;
   description: string;
   yearlyAmount: number;
+  frequency?: string;
   isActive?: boolean;
+  isServiceCharge?: boolean;
   compulsory?: boolean;
 }
 
@@ -64,6 +66,7 @@ const TABS: { id: BillsTab; label: string }[] = [
 function formatFrequencyLabel(frequency?: string): string {
   if (!frequency) return "-";
   const map: Record<string, string> = {
+    oneoff: "One-off",
     oneOff: "One-off",
     quarterly: "Quarterly",
     yearly: "Yearly",
@@ -305,7 +308,7 @@ export default function BillPage() {
       addressId: assignedAddressId || undefined,
       name: item.billName,
       amount: item.amountDue ?? item.amount ?? item.amountPaid,
-      frequency: item.frequency,
+      isServiceCharge: item.isServiceCharge,
       compulsory: item.compulsory,
     });
     setAssignModalOpen(true);
@@ -448,6 +451,7 @@ export default function BillPage() {
               name: data.name,
               description: data.description,
               amount: data.amount,
+              frequency: "oneoff",
               isServiceCharge: data.isServiceCharge,
               compulsory: data.compulsory,
             },
@@ -462,7 +466,7 @@ export default function BillPage() {
             name: data.name,
             description: data.description,
             amount: data.amount,
-            frequency: data.frequency,
+            frequency: "oneoff",
             isServiceCharge: data.isServiceCharge,
             compulsory: data.compulsory,
           }),
@@ -508,6 +512,11 @@ export default function BillPage() {
       key: "yearlyAmount",
       header: "Amount (₦)",
       render: (item: BillData) => formatAmountDisplay(item.yearlyAmount),
+    },
+    {
+      key: "frequency",
+      header: "Frequency",
+      render: (item: BillData) => formatFrequencyLabel(item.frequency),
     },
     {
       key: "compulsory",

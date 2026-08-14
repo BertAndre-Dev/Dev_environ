@@ -43,12 +43,24 @@ const TABS: { id: BillsTab; label: string }[] = [
 function formatFrequencyLabel(frequency?: string): string {
   if (!frequency) return "";
   const map: Record<string, string> = {
+    oneoff: "One-off",
     oneOff: "One-off",
     quarterly: "Quarterly",
     yearly: "Yearly",
     monthly: "Monthly",
   };
   return map[frequency] || frequency;
+}
+
+function formatAmountPeriod(frequency?: string): string {
+  const normalized = (frequency ?? "").toLowerCase().replace(/[_-]/g, "");
+  const map: Record<string, string> = {
+    yearly: "annum",
+    monthly: "month",
+    quarterly: "quarter",
+    oneoff: "one-off",
+  };
+  return map[normalized] ?? "";
 }
 
 function formatDateTime(value?: string | null): string | null {
@@ -440,7 +452,9 @@ export default function BillPage() {
                 No payable bills for this estate.
               </p>
             ) : (
-              estateBills.map((b) => (
+              estateBills.map((b) => {
+                const period = formatAmountPeriod(b.frequency);
+                return (
                 <Card
                   key={b.id}
                   className="p-4 cursor-pointer hover:shadow-md"
@@ -450,12 +464,18 @@ export default function BillPage() {
                     <h3 className="text-sm font-semibold capitalize text-blue-600">
                       {b.name}
                     </h3>
-                    <p className="text-md font-bold mt-1 capitalize">
-                      ₦{Number(b.yearlyAmount ?? 0).toLocaleString()}/annum
+                    <p className="text-md font-bold mt-1">
+                      ₦{Number(b.yearlyAmount ?? 0).toLocaleString()}
+                      {period ? (
+                        <span className="text-sm font-medium text-muted-foreground">
+                          /{period}
+                        </span>
+                      ) : null}
                     </p>
                   </div>
                 </Card>
-              ))
+                );
+              })
             )}
           </div>
         ) : (

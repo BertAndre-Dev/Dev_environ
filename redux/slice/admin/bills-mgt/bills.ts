@@ -2,11 +2,42 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import { getApiErrorMessage } from "@/lib/api-error";
 
+export const BILL_FREQUENCY_VALUES = [
+  "oneoff",
+  "monthly",
+  "quarterly",
+  "yearly",
+] as const;
+
+export type BillFrequency = (typeof BILL_FREQUENCY_VALUES)[number];
+
+export const BILL_FREQUENCY_OPTIONS: { label: string; value: BillFrequency }[] =
+  [
+    { label: "One-off", value: "oneoff" },
+    { label: "Monthly", value: "monthly" },
+    { label: "Quarterly", value: "quarterly" },
+    { label: "Yearly", value: "yearly" },
+  ];
+
+export function normalizeBillFrequency(
+  value?: string,
+  fallback: BillFrequency = "yearly",
+): BillFrequency {
+  const normalized = (value ?? "").toLowerCase().replace(/[_-]/g, "");
+  if (normalized === "oneoff") return "oneoff";
+  if (normalized === "monthly") return "monthly";
+  if (normalized === "quarterly") return "quarterly";
+  if (normalized === "yearly") return "yearly";
+  return fallback;
+}
+
 interface BillData {
   estateId: string;
   name: string;
   description: string;
   yearlyAmount: number;
+  frequency: BillFrequency;
+  isServiceCharge?: boolean;
   compulsory?: boolean;
 }
 
@@ -16,7 +47,7 @@ export interface CreateBillForAddressPayload {
   name: string;
   description: string;
   amount: number;
-  frequency: "quarterly" | "yearly" | "oneOff";
+  frequency: BillFrequency;
   isServiceCharge: boolean;
   compulsory?: boolean;
 }
@@ -26,6 +57,8 @@ export interface UpdateBillPayload {
   name: string;
   description: string;
   yearlyAmount: number;
+  frequency: BillFrequency;
+  isServiceCharge?: boolean;
   compulsory?: boolean;
 }
 
@@ -33,6 +66,7 @@ export interface UpdateBillForAddressPayload {
   name: string;
   description: string;
   amount: number;
+  frequency?: BillFrequency;
   isServiceCharge: boolean;
   compulsory?: boolean;
 }
@@ -91,6 +125,7 @@ export const updateBillForAddress = createAsyncThunk(
           name: data.name,
           description: data.description,
           amount: data.amount,
+          ...(data.frequency ? { frequency: data.frequency } : {}),
           isServiceCharge: data.isServiceCharge,
           compulsory: data.compulsory ?? false,
         },

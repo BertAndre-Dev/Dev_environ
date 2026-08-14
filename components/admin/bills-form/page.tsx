@@ -3,10 +3,16 @@
 import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
-import { getBill } from "@/redux/slice/admin/bills-mgt/bills";
+import {
+  BILL_FREQUENCY_OPTIONS,
+  getBill,
+  normalizeBillFrequency,
+  type BillFrequency,
+} from "@/redux/slice/admin/bills-mgt/bills";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-toastify";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -21,6 +27,8 @@ interface BillFormState {
   name: string;
   description: string;
   yearlyAmount: number | string;
+  frequency: BillFrequency;
+  isServiceCharge: boolean;
   compulsory: boolean;
   id?: string;
 }
@@ -31,13 +39,19 @@ export interface BillSubmitData {
   name: string;
   description: string;
   yearlyAmount: number;
+  frequency: BillFrequency;
+  isServiceCharge?: boolean;
   compulsory?: boolean;
   id?: string;
 }
 
 interface BillsFormProps {
   estateId: string;
-  initialData?: BillSubmitData | null;
+  initialData?:
+    | (Partial<Omit<BillSubmitData, "frequency">> & {
+        frequency?: string;
+      })
+    | null;
   onSubmit: (data: BillSubmitData) => void | Promise<void>;
 }
 
@@ -47,6 +61,8 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
     name: "",
     description: "",
     yearlyAmount: "",
+    frequency: "yearly",
+    isServiceCharge: false,
     compulsory: false,
   });
   const [loading, setLoading] = useState(false);
@@ -71,6 +87,8 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
             yearlyAmount: fetchData.yearlyAmount
               ? formatAmountInput(String(fetchData.yearlyAmount))
               : "",
+            frequency: normalizeBillFrequency(fetchData.frequency, "yearly"),
+            isServiceCharge: Boolean(fetchData.isServiceCharge),
             compulsory: Boolean(fetchData.compulsory),
           });
         }
@@ -99,6 +117,8 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       name: formData.name,
       description: formData.description,
       yearlyAmount: parseFormattedNumber(formData.yearlyAmount),
+      frequency: formData.frequency,
+      isServiceCharge: formData.isServiceCharge,
       compulsory: formData.compulsory,
     };
     onSubmit(payload);
@@ -149,6 +169,38 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
                 placeholder="1,200,000"
                 required
               />
+            </div>
+
+            <div>
+              <Label htmlFor="estate-bill-frequency">Frequency</Label>
+              <Select
+                id="estate-bill-frequency"
+                aria-label="Select frequency"
+                value={formData.frequency}
+                onChange={(e) => handleChange("frequency", e.target.value)}
+                options={BILL_FREQUENCY_OPTIONS}
+                required
+              />
+            </div>
+
+            <div className="flex items-start gap-3">
+              <input
+                id="estate-bill-service-charge"
+                type="checkbox"
+                checked={formData.isServiceCharge}
+                onChange={(e) =>
+                  handleChange("isServiceCharge", e.target.checked)
+                }
+                className="mt-1 rounded border-input"
+              />
+              <div>
+                <Label
+                  htmlFor="estate-bill-service-charge"
+                  className="cursor-pointer font-medium"
+                >
+                  Service charge
+                </Label>
+              </div>
             </div>
 
             <div className="flex items-start gap-3">

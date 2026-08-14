@@ -98,6 +98,8 @@ export interface RequestSubmitViewProps {
   description?: ReactNode;
   /** Nested under another page header — no full-screen overlay, section heading. */
   embedded?: boolean;
+  /** Hide the section title/description (e.g. when a parent tab already labels the view). */
+  hideHeading?: boolean;
 }
 
 export default function RequestSubmitView({
@@ -107,6 +109,7 @@ export default function RequestSubmitView({
   title = "Requests Management",
   description,
   embedded = false,
+  hideHeading = false,
 }: RequestSubmitViewProps) {
   const dispatch = useDispatch<AppDispatch>();
   const [createOpen, setCreateOpen] = useState(false);
@@ -313,16 +316,29 @@ export default function RequestSubmitView({
         ].join(" ")}
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            {embedded ? (
-              <h2 className="font-heading text-2xl font-bold">{title}</h2>
-            ) : (
-              <h1 className="font-heading text-3xl font-bold">{title}</h1>
-            )}
-            <p className="text-muted-foreground mt-1">{resolvedDescription}</p>
-          </div>
+          {hideHeading ? null : (
+            <div>
+              {embedded ? (
+                <h2 className="font-heading text-2xl font-bold tracking-[-0.02em]">
+                  {title}
+                </h2>
+              ) : (
+                <h1 className="font-heading text-3xl font-bold tracking-[-0.02em]">
+                  {title}
+                </h1>
+              )}
+              <p className="text-muted-foreground mt-1 leading-snug">
+                {resolvedDescription}
+              </p>
+            </div>
+          )}
           {canCreate && (
-            <Button onClick={() => setCreateOpen(true)} className="shrink-0">
+            <Button
+              onClick={() => setCreateOpen(true)}
+              className={`shrink-0 rounded-full active:scale-[0.97] transition-transform duration-100 ease-out ${
+                hideHeading ? "ml-auto" : ""
+              }`}
+            >
               <Plus className="w-4 h-4 mr-2" />
               New request
             </Button>

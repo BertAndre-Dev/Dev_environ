@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
+import { motion, useReducedMotion } from "framer-motion";
 import { ClipboardList } from "lucide-react";
 import Loader from "@/components/ui/Loader";
+import Tab from "@/components/tabs/page";
 import RequestSubmitView from "@/components/request-mgt/RequestSubmitView";
 import RequestWorkflowConfigPanel from "@/components/request-mgt/RequestWorkflowConfigPanel";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -16,8 +18,11 @@ import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import type { AppDispatch } from "@/redux/store";
 
+const ADMIN_REQUEST_TABS = ["Requests", "Workflow"];
+
 export default function AdminRequestPage() {
   const dispatch = useDispatch<AppDispatch>();
+  const reduceMotion = useReducedMotion();
   const [estateId, setEstateId] = useState<string | null>(null);
   const [estateName, setEstateName] = useState("Estate");
   const [hasCompanyId, setHasCompanyId] = useState<boolean | null>(null);
@@ -87,7 +92,7 @@ export default function AdminRequestPage() {
           </h1>
         </div>
         <p className="text-muted-foreground mt-2 leading-snug">
-          Configure the approval workflow and submit requests for{" "}
+          Submit requests or configure the approval workflow for{" "}
           <span className="font-semibold uppercase underline text-foreground">
             {estateName}
           </span>
@@ -95,27 +100,36 @@ export default function AdminRequestPage() {
         </p>
       </div>
 
-      <RequestWorkflowConfigPanel
-        estateId={estateId}
-        enabled={!bootstrapping && Boolean(estateId)}
-        estateLabel={estateName}
-      />
-
-      <RequestSubmitView
-        estateId={estateId}
-        estateName={estateName}
-        bootstrapping={false}
-        embedded
-        title="Requests"
-        description={
-          <span>
-            Create and track approval requests for{" "}
-            <span className="font-bold uppercase underline text-foreground">
-              {estateName}
-            </span>
-            .
-          </span>
-        }
+      <Tab
+        titles={ADMIN_REQUEST_TABS}
+        renderContent={(tab) => (
+          <motion.div
+            key={tab}
+            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={
+              reduceMotion
+                ? { duration: 0.15 }
+                : { type: "spring", bounce: 0, duration: 0.35 }
+            }
+          >
+            {tab === "Workflow" ? (
+              <RequestWorkflowConfigPanel
+                estateId={estateId}
+                enabled={Boolean(estateId)}
+                estateLabel={estateName}
+              />
+            ) : (
+              <RequestSubmitView
+                estateId={estateId}
+                estateName={estateName}
+                bootstrapping={false}
+                embedded
+                hideHeading
+              />
+            )}
+          </motion.div>
+        )}
       />
     </div>
   );

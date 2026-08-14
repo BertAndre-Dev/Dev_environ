@@ -308,7 +308,6 @@ export default function BillPage() {
       addressId: assignedAddressId || undefined,
       name: item.billName,
       amount: item.amountDue ?? item.amount ?? item.amountPaid,
-      isServiceCharge: item.isServiceCharge,
       compulsory: item.compulsory,
     });
     setAssignModalOpen(true);
@@ -452,7 +451,6 @@ export default function BillPage() {
               description: data.description,
               amount: data.amount,
               frequency: "oneoff",
-              isServiceCharge: data.isServiceCharge,
               compulsory: data.compulsory,
             },
           }),
@@ -467,7 +465,6 @@ export default function BillPage() {
             description: data.description,
             amount: data.amount,
             frequency: "oneoff",
-            isServiceCharge: data.isServiceCharge,
             compulsory: data.compulsory,
           }),
         ).unwrap();

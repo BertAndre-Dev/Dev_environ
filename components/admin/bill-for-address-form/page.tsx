@@ -18,6 +18,7 @@ import {
   parseFormattedNumber,
 } from "@/lib/format-number";
 import { formatAddressEntryLabel, normalizeAddresses } from "@/lib/address";
+import { cn } from "@/lib/utils";
 
 export interface BillForAddressFormData {
   addressId: string;
@@ -25,7 +26,6 @@ export interface BillForAddressFormData {
   description: string;
   amount: number;
   frequency: "oneoff";
-  isServiceCharge: boolean;
   compulsory: boolean;
 }
 
@@ -36,7 +36,6 @@ export interface BillForAddressInitialData {
   name?: string;
   description?: string;
   amount?: number;
-  isServiceCharge?: boolean;
   compulsory?: boolean;
 }
 
@@ -97,7 +96,6 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
       initialData?.amount != null
         ? formatAmountInput(String(initialData.amount))
         : "",
-    isServiceCharge: Boolean(initialData?.isServiceCharge),
     compulsory: Boolean(initialData?.compulsory),
   });
 
@@ -208,11 +206,6 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
                 0,
             ),
           ),
-          isServiceCharge: Boolean(
-            fetchData.isServiceCharge ??
-              initialData?.isServiceCharge ??
-              prev.isServiceCharge,
-          ),
           compulsory: Boolean(
             fetchData.compulsory ?? initialData?.compulsory ?? prev.compulsory,
           ),
@@ -266,7 +259,6 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
         description: form.description.trim(),
         amount,
         frequency: "oneoff",
-        isServiceCharge: form.isServiceCharge,
         compulsory: form.compulsory,
       });
     } finally {
@@ -368,42 +360,31 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
               />
             </div>
 
-            <div className="flex items-start gap-2">
-              <input
-                id="address-bill-service-charge"
-                type="checkbox"
-                checked={form.isServiceCharge}
-                onChange={(e) =>
-                  handleChange("isServiceCharge", e.target.checked)
-                }
-                className="mt-1 rounded border-input"
-              />
-              <div>
-                <Label
-                  htmlFor="address-bill-service-charge"
-                  className="cursor-pointer font-medium"
-                >
-                  Service charge
-                </Label>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2">
-              <input
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="address-bill-compulsory" className="font-medium">
+                Compulsory bill
+              </Label>
+              <button
                 id="address-bill-compulsory"
-                type="checkbox"
-                checked={form.compulsory}
-                onChange={(e) => handleChange("compulsory", e.target.checked)}
-                className="mt-1 rounded border-input"
-              />
-              <div>
-                <Label
-                  htmlFor="address-bill-compulsory"
-                  className="cursor-pointer font-medium"
-                >
-                  Compulsory bill
-                </Label>
-              </div>
+                type="button"
+                role="switch"
+                aria-checked={form.compulsory}
+                aria-label="Compulsory bill"
+                onClick={() => handleChange("compulsory", !form.compulsory)}
+                className={cn(
+                  "relative inline-flex h-7 w-[44px] shrink-0 cursor-pointer items-center rounded-full p-0.5",
+                  "transition-colors duration-150 ease-out active:scale-[0.97]",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0150AC]/40",
+                  form.compulsory ? "bg-[#0150AC]" : "bg-black/15",
+                )}
+              >
+                <span
+                  className={cn(
+                    "block size-6 rounded-full bg-white shadow-sm transition-transform duration-150",
+                    form.compulsory ? "translate-x-4" : "translate-x-0",
+                  )}
+                />
+              </button>
             </div>
           </>
         )}

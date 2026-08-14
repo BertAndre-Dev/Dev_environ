@@ -1,4 +1,8 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import {
+  createAsyncThunk,
+  createSlice,
+  type ActionReducerMapBuilder,
+} from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 
 export type RevenueWithdrawalRole =
@@ -234,7 +238,14 @@ const initialState: RevenueWithdrawalAccountState = {
  * Builds an isolated Redux module (unique action types + slice) per role.
  * Company / estate admin / energy provider each get their own store key.
  */
-export function createRevenueWithdrawalModule(role: RevenueWithdrawalRole) {
+export function createRevenueWithdrawalModule(
+  role: RevenueWithdrawalRole,
+  options?: {
+    extraReducers?: (
+      builder: ActionReducerMapBuilder<RevenueWithdrawalAccountState>,
+    ) => void;
+  },
+) {
   const prefix = `${role}/wallet-mgt`;
 
   const setRevenueWithdrawalAccount = createAsyncThunk(
@@ -396,6 +407,8 @@ export function createRevenueWithdrawalModule(role: RevenueWithdrawalRole) {
           state.setAutoSettlementState = "failed";
           state.error = rejectMessage(action);
         });
+
+      options?.extraReducers?.(builder);
     },
   });
 

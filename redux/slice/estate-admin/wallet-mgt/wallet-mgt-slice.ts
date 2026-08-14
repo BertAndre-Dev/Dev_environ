@@ -1,10 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import {
-  createWallet,
-  getWallet,
-  getEstateCredits,
-  getEstateT1Breakdown,
-} from "./wallet-mgt";
+import { createWallet, getWallet, getEstateCredits } from "./wallet-mgt";
 
 interface WalletData {
   id?: string;
@@ -19,6 +14,8 @@ interface WalletData {
   bankCode?: string;
   createdAt?: string;
   updatedAt?: string;
+  autoSettlementEnabled?: boolean;
+  revenueWithdrawalAccounts?: unknown[];
 }
 
 export interface Pagination {
@@ -59,22 +56,14 @@ export interface EstateCreditsResponse {
   };
 }
 
-export interface EstateT1Breakdown {
-  withdrawableBalance?: number;
-  availableBalance?: number;
-  [key: string]: unknown;
-}
-
 export interface WalletState {
   createWalletState: "idle" | "isLoading" | "succeeded" | "failed";
   getWalletState: "idle" | "isLoading" | "succeeded" | "failed";
   getEstateCreditsState: "idle" | "isLoading" | "succeeded" | "failed";
-  getT1BreakdownState: "idle" | "isLoading" | "succeeded" | "failed";
   status: "idle" | "isLoading" | "succeeded" | "failed";
   wallet: WalletData | null;
   allWallets: WalletResponse | null;
   estateCredits: EstateCreditsResponse | null;
-  t1Breakdown: EstateT1Breakdown | null;
   error: string | null;
 }
 
@@ -82,12 +71,10 @@ const initialState: WalletState = {
   createWalletState: "idle",
   getWalletState: "idle",
   getEstateCreditsState: "idle",
-  getT1BreakdownState: "idle",
   status: "idle",
   wallet: null,
   allWallets: null,
   estateCredits: null,
-  t1Breakdown: null,
   error: null,
 };
 
@@ -171,21 +158,6 @@ const walletSlice = createSlice({
       .addCase(getEstateCredits.rejected, (state, action) => {
         state.getEstateCreditsState = "failed";
         state.error = action.error.message || "Failed to fetch estate credits";
-      });
-
-    builder
-      .addCase(getEstateT1Breakdown.pending, (state) => {
-        state.getT1BreakdownState = "isLoading";
-      })
-      .addCase(getEstateT1Breakdown.fulfilled, (state, action) => {
-        state.getT1BreakdownState = "succeeded";
-        const raw = action.payload?.data ?? action.payload ?? null;
-        state.t1Breakdown =
-          raw && typeof raw === "object" ? (raw as EstateT1Breakdown) : null;
-      })
-      .addCase(getEstateT1Breakdown.rejected, (state, action) => {
-        state.getT1BreakdownState = "failed";
-        state.error = action.error.message || "Failed to fetch T+1 breakdown";
       });
   },
 });

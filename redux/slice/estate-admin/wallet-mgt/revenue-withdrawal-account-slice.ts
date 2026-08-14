@@ -1,8 +1,23 @@
-import { createRevenueWithdrawalModule } from "@/redux/slice/wallet-mgt/create-revenue-withdrawal-module";
-import type { RevenueWithdrawalAccountState } from "@/redux/slice/wallet-mgt/create-revenue-withdrawal-module";
+import {
+  createRevenueWithdrawalModule,
+  extractAutoSettlementEnabled,
+  type RevenueWithdrawalAccountState,
+} from "@/redux/slice/wallet-mgt/create-revenue-withdrawal-module";
+import { getWallet } from "@/redux/slice/estate-admin/wallet-mgt/wallet-mgt";
 
-const estateAdminRevenueWithdrawal =
-  createRevenueWithdrawalModule("estateAdmin");
+const estateAdminRevenueWithdrawal = createRevenueWithdrawalModule(
+  "estateAdmin",
+  {
+    extraReducers: (builder) => {
+      builder.addCase(getWallet.fulfilled, (state, action) => {
+        const enabled = extractAutoSettlementEnabled(action.payload);
+        if (enabled !== null) {
+          state.autoSettlementEnabled = enabled;
+        }
+      });
+    },
+  },
+);
 
 export const setEstateAdminRevenueWithdrawalAccount =
   estateAdminRevenueWithdrawal.setRevenueWithdrawalAccount;

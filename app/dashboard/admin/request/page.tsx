@@ -87,7 +87,7 @@ export default function AdminRequestPage() {
           </h1>
         </div>
         <p className="text-muted-foreground mt-2 leading-snug">
-          Configure the approval workflow for{" "}
+          Configure the approval workflow and submit requests for{" "}
           <span className="font-semibold uppercase underline text-foreground">
             {estateName}
           </span>
@@ -99,6 +99,23 @@ export default function AdminRequestPage() {
         estateId={estateId}
         enabled={!bootstrapping && Boolean(estateId)}
         estateLabel={estateName}
+      />
+
+      <RequestSubmitView
+        estateId={estateId}
+        estateName={estateName}
+        bootstrapping={false}
+        embedded
+        title="Requests"
+        description={
+          <span>
+            Create and track approval requests for{" "}
+            <span className="font-bold uppercase underline text-foreground">
+              {estateName}
+            </span>
+            .
+          </span>
+        }
       />
     </div>
   );

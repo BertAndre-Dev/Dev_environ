@@ -96,6 +96,8 @@ export interface RequestSubmitViewProps {
   bootstrapping?: boolean;
   title?: string;
   description?: ReactNode;
+  /** Nested under another page header — no full-screen overlay, section heading. */
+  embedded?: boolean;
 }
 
 export default function RequestSubmitView({
@@ -104,6 +106,7 @@ export default function RequestSubmitView({
   bootstrapping = false,
   title = "Requests Management",
   description,
+  embedded = false,
 }: RequestSubmitViewProps) {
   const dispatch = useDispatch<AppDispatch>();
   const [createOpen, setCreateOpen] = useState(false);
@@ -125,6 +128,8 @@ export default function RequestSubmitView({
   const categoriesLoading = isBusy(getCategoriesStatus);
   const creating = isBusy(createStatus);
   const fullPageLoading = bootstrapping || listLoading;
+  const showOverlayLoader = fullPageLoading && !embedded;
+  const showSectionLoader = fullPageLoading && embedded;
 
   const loadRequests = useCallback(() => {
     if (!estateId) return Promise.resolve();
@@ -292,7 +297,14 @@ export default function RequestSubmitView({
 
   return (
     <div className="relative">
-      {fullPageLoading && <Loader fullScreen label="Loading requests..." />}
+      {showOverlayLoader ? (
+        <Loader fullScreen label="Loading requests..." />
+      ) : null}
+      {showSectionLoader ? (
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-background/40 backdrop-blur-sm">
+          <Loader label="Loading requests..." />
+        </div>
+      ) : null}
 
       <div
         className={[
@@ -302,7 +314,11 @@ export default function RequestSubmitView({
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="font-heading text-3xl font-bold">{title}</h1>
+            {embedded ? (
+              <h2 className="font-heading text-2xl font-bold">{title}</h2>
+            ) : (
+              <h1 className="font-heading text-3xl font-bold">{title}</h1>
+            )}
             <p className="text-muted-foreground mt-1">{resolvedDescription}</p>
           </div>
           {canCreate && (

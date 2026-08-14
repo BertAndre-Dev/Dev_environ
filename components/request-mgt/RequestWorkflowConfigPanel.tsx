@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { Settings2 } from "lucide-react";
+import { Pencil, Settings2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -32,10 +32,6 @@ export interface RequestWorkflowConfigPanelProps {
   compact?: boolean;
   /** Optional label for empty / header context. */
   estateLabel?: string;
-  /** Expose Set workflow as an external button (parent renders it). */
-  hideHeaderButton?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  open?: boolean;
 }
 
 export default function RequestWorkflowConfigPanel({
@@ -43,17 +39,9 @@ export default function RequestWorkflowConfigPanel({
   enabled = true,
   compact = false,
   estateLabel,
-  hideHeaderButton = false,
-  open: controlledOpen,
-  onOpenChange,
 }: RequestWorkflowConfigPanelProps) {
   const dispatch = useDispatch<AppDispatch>();
-  const [internalOpen, setInternalOpen] = useState(false);
-  const modalOpen = controlledOpen ?? internalOpen;
-  const setModalOpen = (next: boolean) => {
-    onOpenChange?.(next);
-    if (controlledOpen === undefined) setInternalOpen(next);
-  };
+  const [modalOpen, setModalOpen] = useState(false);
 
   const { workflow, getWorkflowStatus, upsertWorkflowStatus } = useSelector(
     (state: RootState) => state.adminRequest,
@@ -98,25 +86,21 @@ export default function RequestWorkflowConfigPanel({
     }
   };
 
-  const setWorkflowButton = (
+  const editWorkflowButton = (
     <Button
       onClick={() => setModalOpen(true)}
       disabled={!estateId}
       size={compact ? "sm" : "default"}
-      variant={compact && hasWorkflow ? "outline" : "default"}
+      variant="outline"
       className="shrink-0 rounded-full active:scale-[0.97] transition-transform duration-100 ease-out"
     >
-      <Settings2 className="w-4 h-4 mr-2" />
-      Set workflow
+      <Pencil className="w-4 h-4 mr-2" />
+      Edit workflow
     </Button>
   );
 
   return (
     <>
-      {!hideHeaderButton && !compact ? (
-        <div className="flex justify-end">{setWorkflowButton}</div>
-      ) : null}
-
       <Card
         className={
           compact
@@ -169,7 +153,7 @@ export default function RequestWorkflowConfigPanel({
                   </p>
                 ) : null}
               </div>
-              {setWorkflowButton}
+              {editWorkflowButton}
             </div>
 
             <div className="space-y-3">
@@ -214,6 +198,7 @@ export default function RequestWorkflowConfigPanel({
         <WorkflowConfigModal
           visible={modalOpen}
           estateId={estateId}
+          workflow={workflow}
           saving={saving}
           onClose={() => setModalOpen(false)}
           onSave={handleSave}

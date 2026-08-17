@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { ClipboardList, Paperclip } from "lucide-react";
+import { ClipboardList } from "lucide-react";
 import Select from "react-select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -185,21 +185,6 @@ export default function RequestManagementView({
         header: "Created by",
         render: (item: ScopedRequestItem) => getActorName(item.createdBy),
         exportValue: (item: ScopedRequestItem) => getActorName(item.createdBy),
-      },
-      {
-        key: "attachments",
-        header: "Files",
-        render: (item: ScopedRequestItem) =>
-          item.attachments && item.attachments.length > 0 ? (
-            <span className="inline-flex items-center gap-1 text-xs text-[#2563EB]">
-              <Paperclip className="h-3.5 w-3.5" />
-              {item.attachments.length}
-            </span>
-          ) : (
-            "—"
-          ),
-        exportValue: (item: ScopedRequestItem) =>
-          String(item.attachments?.length ?? 0),
       },
       {
         key: "actions",

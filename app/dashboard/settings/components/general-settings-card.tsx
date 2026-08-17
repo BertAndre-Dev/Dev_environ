@@ -36,6 +36,11 @@ function extractUserId(raw: unknown): string | null {
   return null;
 }
 
+function formatResidentType(value?: string) {
+  if (!value) return "—";
+  return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+}
+
 export function GeneralSettingsCard() {
   const dispatch = useDispatch<AppDispatch>();
 
@@ -132,7 +137,6 @@ export function GeneralSettingsCard() {
             gender: formData.gender,
             phoneNumber: formData.phoneNumber,
             role: formData.role || undefined,
-            residentType: formData.residentType || "owner",
           },
         }),
       ).unwrap();
@@ -237,17 +241,15 @@ export function GeneralSettingsCard() {
 
           {(formData.role === "resident" || formData.role === "Resident") && (
             <div>
-              <label className="text-sm font-medium" htmlFor="resident-type">Resident Type</label>
-              <select
+              <label className="text-sm font-medium" htmlFor="resident-type">
+                Resident Type
+              </label>
+              <Input
                 id="resident-type"
-                value={formData.residentType}
-                onChange={(e) => setFormData((prev) => ({ ...prev, residentType: e.target.value }))}
-                className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm mt-2"
-                disabled={isLoading}
-              >
-                <option value="owner">Owner</option>
-                <option value="tenant">Tenant</option>
-              </select>
+                value={formatResidentType(formData.residentType)}
+                className="mt-2 h-10"
+                disabled
+              />
             </div>
           )}
 

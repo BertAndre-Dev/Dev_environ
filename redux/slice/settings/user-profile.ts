@@ -15,7 +15,7 @@ export type UpdateUserProfilePayload = {
     image?: string;
     address?: string;
     addressIds?: string[];
-    residentType: string;
+    residentType?: string;
   };
 };
 

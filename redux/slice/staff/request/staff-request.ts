@@ -1,7 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import {
   enrichRequestItemsWithActorNames,
-  normalizeRequestActor,
   resolveCreatedByFromRaw,
   type RequestActor,
 } from "@/lib/request-actor";
@@ -32,6 +31,7 @@ export const STAFF_REQUEST_STATUS_OPTIONS: {
 export interface StaffRequestItem {
   id: string;
   _id?: string;
+  code?: string;
   title: string;
   description?: string;
   category?: string;
@@ -122,6 +122,7 @@ export function normalizeStaffRequest(
   return {
     id,
     _id: id,
+    code: raw.code != null ? String(raw.code).trim() || undefined : undefined,
     title: String(raw.title ?? ""),
     description: raw.description as string | undefined,
     category: raw.category as string | undefined,

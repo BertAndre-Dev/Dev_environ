@@ -51,6 +51,7 @@ export interface EstateAdminRequestWorkflowStepSnapshot {
 export interface EstateAdminRequestItem {
   id: string;
   _id?: string;
+  code?: string;
   title: string;
   description?: string;
   category?: string;
@@ -182,6 +183,7 @@ export function normalizeEstateAdminRequestItem(
   return {
     id,
     _id: id,
+    code: raw.code != null ? String(raw.code).trim() || undefined : undefined,
     title: String(raw.title ?? ""),
     description:
       raw.description != null ? String(raw.description) : undefined,

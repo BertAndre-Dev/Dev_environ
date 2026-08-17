@@ -196,6 +196,16 @@ export default function RequestSubmitView({
   const columns = useMemo(
     () => [
       {
+        key: "code",
+        header: "Code",
+        render: (item: StaffRequestItem) => (
+          <span className="font-medium tracking-[0.02em] text-foreground">
+            {item.code?.trim() || "—"}
+          </span>
+        ),
+        exportValue: (item: StaffRequestItem) => item.code?.trim() || "—",
+      },
+      {
         key: "createdAt",
         header: "Submitted",
         render: (item: StaffRequestItem) =>
@@ -416,6 +426,11 @@ export default function RequestSubmitView({
                 <h2 className="font-heading text-xl font-semibold">
                   {viewing.title || "Request"}
                 </h2>
+                {viewing.code ? (
+                  <p className="mt-1 text-sm font-medium tracking-[0.02em] text-muted-foreground">
+                    {viewing.code}
+                  </p>
+                ) : null}
                 <p className="text-sm text-muted-foreground mt-1">
                   {formatDate(viewing.createdAt || viewing.updatedAt)}
                 </p>

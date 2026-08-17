@@ -130,24 +130,36 @@ export function normalizeRequestWorkflow(
   };
 }
 
-function extractWorkflowPayload(data: unknown): RequestWorkflow | null {
-  if (!data || typeof data !== "object") return null;
+/** Parse GET /api/v1/requests/workflows — one object or a list. */
+export function extractWorkflowList(data: unknown): RequestWorkflow[] {
+  if (!data || typeof data !== "object") return [];
   const root = data as Record<string, unknown>;
-  const nested = root.data;
+  const nested = "data" in root ? root.data : root;
+  if (nested == null) return [];
 
-  if (nested == null) return null;
+  let candidates: unknown[] = [];
   if (Array.isArray(nested)) {
-    const first = nested[0];
-    return normalizeRequestWorkflow(
-      first && typeof first === "object"
-        ? (first as Record<string, unknown>)
-        : null,
-    );
+    candidates = nested;
+  } else if (typeof nested === "object") {
+    const obj = nested as Record<string, unknown>;
+    if (Array.isArray(obj.items)) candidates = obj.items;
+    else if (Array.isArray(obj.workflows)) candidates = obj.workflows;
+    else candidates = [obj];
   }
-  if (typeof nested === "object") {
-    return normalizeRequestWorkflow(nested as Record<string, unknown>);
-  }
-  return normalizeRequestWorkflow(root);
+
+  return candidates
+    .map((item) =>
+      normalizeRequestWorkflow(
+        item && typeof item === "object"
+          ? (item as Record<string, unknown>)
+          : null,
+      ),
+    )
+    .filter((workflow): workflow is RequestWorkflow => Boolean(workflow?.name));
+}
+
+function extractWorkflowPayload(data: unknown): RequestWorkflow | null {
+  return extractWorkflowList(data)[0] ?? null;
 }
 
 export function createEmptyWorkflowStep(order = 1): WorkflowStep {

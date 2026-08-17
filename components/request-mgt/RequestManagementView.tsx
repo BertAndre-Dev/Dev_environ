@@ -16,6 +16,7 @@ import type { AppDispatch } from "@/redux/store";
 import RequestDetailModal, {
   formatCategory,
   formatDate,
+  formatRequestCode,
   formatStatusLabel,
   getActorName,
   getStatusStyle,
@@ -117,6 +118,16 @@ export default function RequestManagementView({
 
   const columns = useMemo(
     () => [
+      {
+        key: "code",
+        header: "Code",
+        render: (item: ScopedRequestItem) => (
+          <span className="font-medium tracking-[0.02em] text-foreground">
+            {formatRequestCode(item.code)}
+          </span>
+        ),
+        exportValue: (item: ScopedRequestItem) => formatRequestCode(item.code),
+      },
       {
         key: "createdAt",
         header: "Submitted",

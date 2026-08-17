@@ -51,6 +51,7 @@ export interface CompanyRequestWorkflowStepSnapshot {
 export interface CompanyRequestItem {
   id: string;
   _id?: string;
+  code?: string;
   title: string;
   description?: string;
   category?: string;
@@ -182,6 +183,7 @@ export function normalizeCompanyRequestItem(
   return {
     id,
     _id: id,
+    code: raw.code != null ? String(raw.code).trim() || undefined : undefined,
     title: String(raw.title ?? ""),
     description:
       raw.description != null ? String(raw.description) : undefined,

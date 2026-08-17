@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Paperclip, X } from "lucide-react";
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,11 @@ import { Select } from "@/components/ui/select";
 import Modal from "@/components/modal/page";
 import { fileToBase64 } from "@/lib/file-to-base64";
 import { getApiErrorMessage } from "@/lib/api-error";
+import axiosInstance from "@/utils/axiosInstance";
+import {
+  extractWorkflowList,
+  type RequestWorkflow,
+} from "@/redux/slice/admin/request/admin-request";
 import type {
   CreateStaffRequestPayload,
   StaffRequestCategory,
@@ -46,6 +51,8 @@ export default function StaffRequestFormModal({
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [workflowId, setWorkflowId] = useState("");
+  const [workflows, setWorkflows] = useState<RequestWorkflow[]>([]);
+  const [workflowsLoading, setWorkflowsLoading] = useState(false);
   const [attachments, setAttachments] = useState<
     { name: string; dataUrl: string }[]
   >([]);
@@ -56,6 +63,32 @@ export default function StaffRequestFormModal({
     label: c.label,
   }));
 
+  const workflowOptions = useMemo(() => {
+    const named = workflows
+      .map((workflow) => {
+        const value = (workflow.id ?? workflow._id ?? "").trim();
+        const label = workflow.name.trim();
+        if (!value || !label) return null;
+        return { value, label };
+      })
+      .filter((option): option is { value: string; label: string } =>
+        Boolean(option),
+      );
+
+    if (named.length === 0) {
+      return [
+        {
+          value: "",
+          label: workflowsLoading
+            ? "Loading workflows..."
+            : "No workflow configured",
+        },
+      ];
+    }
+
+    return [{ value: "", label: "Use estate default" }, ...named];
+  }, [workflows, workflowsLoading]);
+
   useEffect(() => {
     if (!categories.length) {
       setCategory("");
@@ -65,6 +98,48 @@ export default function StaffRequestFormModal({
       categories.some((c) => c.value === prev) ? prev : categories[0].value,
     );
   }, [categories]);
+
+  useEffect(() => {
+    if (!visible || !estateId) return;
+
+    let cancelled = false;
+    setWorkflowsLoading(true);
+
+    axiosInstance
+      .get("/api/v1/requests/workflows", { params: { estateId } })
+      .then((res) => {
+        if (cancelled) return;
+        const list = extractWorkflowList(res.data);
+        setWorkflows(list);
+        setWorkflowId((prev) => {
+          const ids = list
+            .map((workflow) => (workflow.id ?? workflow._id ?? "").trim())
+            .filter(Boolean);
+          if (prev && ids.includes(prev)) return prev;
+          return ids[0] ?? "";
+        });
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const status = (err as { response?: { status?: number } })?.response
+          ?.status;
+        if (status === 404) {
+          setWorkflows([]);
+          setWorkflowId("");
+          return;
+        }
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+        setWorkflows([]);
+      })
+      .finally(() => {
+        if (!cancelled) setWorkflowsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, estateId]);
 
   const resetForm = () => {
     setTitle("");
@@ -209,19 +284,14 @@ export default function StaffRequestFormModal({
           </div>
 
           <div>
-            <Label htmlFor="staff-request-workflow">
-              Workflow ID{" "}
-              <span className="text-muted-foreground font-normal">
-                (optional)
-              </span>
-            </Label>
-            <Input
+            <Label htmlFor="staff-request-workflow">Workflow</Label>
+            <Select
               id="staff-request-workflow"
+              options={workflowOptions}
               value={workflowId}
               onChange={(e) => setWorkflowId(e.target.value)}
-              placeholder="Leave blank to use estate default"
-              className="mt-1"
-              disabled={busy}
+              className="mt-1 w-full"
+              disabled={busy || workflowsLoading || workflows.length === 0}
             />
           </div>
 

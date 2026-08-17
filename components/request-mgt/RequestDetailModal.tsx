@@ -55,6 +55,11 @@ function formatStatusLabel(status?: ScopedRequestStatus) {
   return STATUS_LABELS[status] ?? status;
 }
 
+function formatRequestCode(code?: string) {
+  const trimmed = code?.trim();
+  return trimmed || "—";
+}
+
 function getStatusStyle(status?: ScopedRequestStatus) {
   if (status === "approved") return "bg-[#DCFCE7] text-[#16A34A]";
   if (status === "rejected" || status === "cancelled")
@@ -191,6 +196,11 @@ export default function RequestDetailModal({
                 <h2 className="font-heading text-xl font-semibold">
                   {item.title || "Request"}
                 </h2>
+                {item.code ? (
+                  <p className="mt-1 text-sm font-medium tracking-[0.02em] text-muted-foreground">
+                    {formatRequestCode(item.code)}
+                  </p>
+                ) : null}
                 <p className="text-sm text-muted-foreground mt-1">
                   {formatDate(item.createdAt || item.updatedAt)}
                 </p>
@@ -403,6 +413,7 @@ export default function RequestDetailModal({
 export {
   formatCategory,
   formatDate,
+  formatRequestCode,
   formatStatusLabel,
   getActorName,
   getStatusStyle,

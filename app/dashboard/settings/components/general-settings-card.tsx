@@ -8,6 +8,7 @@ import { Save } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CountryCodeSelect } from "@/components/ui/country-code-select";
 import { IsoDatePicker } from "@/components/ui/iso-date-picker";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { resetUserProfileState } from "@/redux/slice/resident/user-profile/user-profile-slice";
@@ -209,7 +210,15 @@ export function GeneralSettingsCard() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium" htmlFor="country-code">Country Code</label>
-              <Input id="country-code" name="countryCode" placeholder="+234" value={formData.countryCode} onChange={handleChange} className="mt-2 h-10" disabled={isLoading} />
+              <CountryCodeSelect
+                id="country-code"
+                value={formData.countryCode}
+                onChange={(countryCode) =>
+                  setFormData((prev) => ({ ...prev, countryCode }))
+                }
+                disabled={isLoading}
+                placeholder="+234"
+              />
             </div>
             <div>
               <label className="text-sm font-medium" htmlFor="phone-number">Phone</label>

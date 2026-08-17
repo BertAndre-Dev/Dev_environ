@@ -8,18 +8,33 @@ import {
 type AsyncStatus = "idle" | "isLoading" | "succeeded" | "failed";
 
 interface AdminRequestState {
-  workflow: RequestWorkflow | null;
+  workflows: RequestWorkflow[];
   getWorkflowStatus: AsyncStatus;
   upsertWorkflowStatus: AsyncStatus;
   error: string | null;
 }
 
 const initialState: AdminRequestState = {
-  workflow: null,
+  workflows: [],
   getWorkflowStatus: "idle",
   upsertWorkflowStatus: "idle",
   error: null,
 };
+
+function mergeWorkflow(
+  list: RequestWorkflow[],
+  saved: RequestWorkflow,
+): RequestWorkflow[] {
+  const savedName = saved.name.trim().toLowerCase();
+  const savedId = (saved.id ?? saved._id ?? "").trim();
+  const index = list.findIndex((item) => {
+    const id = (item.id ?? item._id ?? "").trim();
+    if (savedId && id && savedId === id) return true;
+    return item.name.trim().toLowerCase() === savedName;
+  });
+  if (index < 0) return [...list, saved];
+  return list.map((item, i) => (i === index ? { ...item, ...saved } : item));
+}
 
 const adminRequestSlice = createSlice({
   name: "adminRequest",
@@ -32,7 +47,7 @@ const adminRequestSlice = createSlice({
       state.upsertWorkflowStatus = "idle";
     },
     clearAdminRequestWorkflow: (state) => {
-      state.workflow = null;
+      state.workflows = [];
       state.getWorkflowStatus = "idle";
       state.upsertWorkflowStatus = "idle";
       state.error = null;
@@ -46,11 +61,11 @@ const adminRequestSlice = createSlice({
       })
       .addCase(getAdminRequestWorkflow.fulfilled, (state, action) => {
         state.getWorkflowStatus = "succeeded";
-        state.workflow = action.payload;
+        state.workflows = Array.isArray(action.payload) ? action.payload : [];
       })
       .addCase(getAdminRequestWorkflow.rejected, (state, action) => {
         state.getWorkflowStatus = "failed";
-        state.workflow = null;
+        state.workflows = [];
         state.error =
           (action.payload as { message?: string })?.message ??
           action.error.message ??
@@ -63,7 +78,7 @@ const adminRequestSlice = createSlice({
       .addCase(upsertAdminRequestWorkflow.fulfilled, (state, action) => {
         state.upsertWorkflowStatus = "succeeded";
         if (action.payload) {
-          state.workflow = action.payload;
+          state.workflows = mergeWorkflow(state.workflows, action.payload);
         }
       })
       .addCase(upsertAdminRequestWorkflow.rejected, (state, action) => {

@@ -54,6 +54,7 @@ export interface UpsertRequestWorkflowPayload {
   description?: string;
   estateId: string;
   steps: WorkflowStep[];
+  isActive?: boolean;
 }
 
 function normalizeApproverType(raw: unknown): ApproverType {
@@ -176,7 +177,7 @@ export function createEmptyWorkflowStep(order = 1): WorkflowStep {
   };
 }
 
-/** GET /api/v1/requests/workflows?estateId= — active workflow for an estate */
+/** GET /api/v1/requests/workflows?estateId= — workflows for an estate */
 export const getAdminRequestWorkflow = createAsyncThunk(
   "adminRequest/getWorkflow",
   async (estateId: string, { rejectWithValue }) => {
@@ -189,14 +190,13 @@ export const getAdminRequestWorkflow = createAsyncThunk(
       const res = await axiosInstance.get("/api/v1/requests/workflows", {
         params: { estateId: trimmed },
       });
-      return extractWorkflowPayload(res.data);
+      return extractWorkflowList(res.data);
     } catch (error: unknown) {
       const err = error as {
         response?: { status?: number; data?: { message?: string } };
       };
-      // No workflow configured yet
       if (err?.response?.status === 404) {
-        return null;
+        return [] as RequestWorkflow[];
       }
       return rejectWithValue({
         message:
@@ -207,7 +207,7 @@ export const getAdminRequestWorkflow = createAsyncThunk(
   },
 );
 
-/** PUT /api/v1/requests/workflows — create or replace active workflow */
+/** PUT /api/v1/requests/workflows — upsert by name (same name updates, new name creates) */
 export const upsertAdminRequestWorkflow = createAsyncThunk(
   "adminRequest/upsertWorkflow",
   async (payload: UpsertRequestWorkflowPayload, { rejectWithValue }) => {
@@ -263,6 +263,7 @@ export const upsertAdminRequestWorkflow = createAsyncThunk(
             ? Number(step.reminderMaxCount) || 3
             : undefined,
         })),
+        isActive: payload.isActive ?? true,
       };
 
       const res = await axiosInstance.put("/api/v1/requests/workflows", body);

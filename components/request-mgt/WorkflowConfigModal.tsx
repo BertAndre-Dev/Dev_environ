@@ -1,21 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Save } from "lucide-react";
 import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type {
-  RequestWorkflow,
-  WorkflowStep,
-} from "@/redux/slice/admin/request/admin-request";
+import type { WorkflowStep } from "@/redux/slice/admin/request/admin-request";
 import WorkflowStepsEditor from "@/components/request-mgt/WorkflowStepsEditor";
 
 interface WorkflowConfigModalProps {
   readonly visible: boolean;
   readonly estateId?: string | null;
-  readonly workflow?: RequestWorkflow | null;
   readonly loading?: boolean;
   readonly saving?: boolean;
   readonly onClose: () => void;
@@ -26,40 +22,20 @@ interface WorkflowConfigModalProps {
   }) => Promise<void>;
 }
 
-function cloneSteps(steps: WorkflowStep[]): WorkflowStep[] {
-  return steps.map((step) => ({
-    ...step,
-    userIds: [...(step.userIds ?? [])],
-  }));
-}
-
 export default function WorkflowConfigModal({
   visible,
   estateId,
-  workflow = null,
   loading = false,
   saving = false,
   onClose,
   onSave,
 }: WorkflowConfigModalProps) {
-  const [name, setName] = useState(workflow?.name ?? "");
-  const [description, setDescription] = useState(workflow?.description ?? "");
-  const [steps, setSteps] = useState<WorkflowStep[]>(() =>
-    workflow?.steps?.length ? cloneSteps(workflow.steps) : [],
-  );
-  const isEditing = Boolean(workflow?.name);
-
-  useEffect(() => {
-    if (!visible) return;
-    setName(workflow?.name ?? "");
-    setDescription(workflow?.description ?? "");
-    setSteps(workflow?.steps?.length ? cloneSteps(workflow.steps) : []);
-  }, [visible, workflow]);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [steps, setSteps] = useState<WorkflowStep[]>([]);
 
   const busy = loading || saving;
-  let saveLabel = "Save workflow";
-  if (saving) saveLabel = "Saving...";
-  else if (isEditing) saveLabel = "Update workflow";
+  const saveLabel = saving ? "Saving..." : "Save workflow";
 
   const handleClose = () => {
     if (saving) return;
@@ -89,12 +65,11 @@ export default function WorkflowConfigModal({
       <div className="flex flex-col min-h-0 max-h-[90vh]">
         <div className="shrink-0 px-5 sm:px-6 pt-5 sm:pt-6 pb-4 border-b border-black/5 bg-white/80 backdrop-blur-xl">
           <h2 className="font-heading text-xl font-semibold tracking-[-0.02em]">
-            {isEditing ? "Edit approval workflow" : "Set approval workflow"}
+            Set approval workflow
           </h2>
           <p className="text-sm text-muted-foreground mt-1 leading-snug">
-            {isEditing
-              ? "Update the estate's active request approval path."
-              : "Create the estate's active request approval path."}
+            Use an existing workflow name to update it, or a new name to create
+            another workflow.
           </p>
         </div>
 

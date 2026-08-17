@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { Pencil, Settings2 } from "lucide-react";
+import { Settings2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -43,13 +43,13 @@ export default function RequestWorkflowConfigPanel({
   const dispatch = useDispatch<AppDispatch>();
   const [modalOpen, setModalOpen] = useState(false);
 
-  const { workflow, getWorkflowStatus, upsertWorkflowStatus } = useSelector(
+  const { workflows, getWorkflowStatus, upsertWorkflowStatus } = useSelector(
     (state: RootState) => state.adminRequest,
   );
 
   const loadingWorkflow = isPending(getWorkflowStatus);
   const saving = isBusy(upsertWorkflowStatus);
-  const hasWorkflow = Boolean(workflow?.name);
+  const hasWorkflows = workflows.length > 0;
 
   useEffect(() => {
     if (!estateId || !enabled) return;
@@ -75,10 +75,12 @@ export default function RequestWorkflowConfigPanel({
         upsertAdminRequestWorkflow({
           ...payload,
           estateId,
+          isActive: true,
         }),
       ).unwrap();
       toast.success("Request workflow saved.");
       setModalOpen(false);
+      await dispatch(getAdminRequestWorkflow(estateId)).unwrap();
     } catch (err: unknown) {
       const message = getApiErrorMessage(err);
       if (message) toast.error(message);
@@ -86,7 +88,7 @@ export default function RequestWorkflowConfigPanel({
     }
   };
 
-  const editWorkflowButton = (
+  const setWorkflowButton = (
     <Button
       onClick={() => setModalOpen(true)}
       disabled={!estateId}
@@ -94,8 +96,8 @@ export default function RequestWorkflowConfigPanel({
       variant="outline"
       className="shrink-0 rounded-full active:scale-[0.97] transition-transform duration-100 ease-out"
     >
-      <Pencil className="w-4 h-4 mr-2" />
-      Edit workflow
+      <Settings2 className="w-4 h-4 mr-2" />
+      Set workflow
     </Button>
   );
 
@@ -112,7 +114,7 @@ export default function RequestWorkflowConfigPanel({
           <p className="text-sm text-muted-foreground py-6 text-center">
             Loading workflow...
           </p>
-        ) : !hasWorkflow ? (
+        ) : !hasWorkflows ? (
           <div className="py-8 text-center space-y-3">
             <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#F7F8FA]">
               <Settings2 className="w-6 h-6 text-muted-foreground" />
@@ -130,65 +132,87 @@ export default function RequestWorkflowConfigPanel({
               ) : null}
               .
             </p>
-            <Button
-              variant="outline"
-              onClick={() => setModalOpen(true)}
-              disabled={!estateId}
-              className="rounded-full active:scale-[0.97] transition-transform duration-100 ease-out"
-            >
-              <Settings2 className="w-4 h-4 mr-2" />
-              Set workflow
-            </Button>
+            {setWorkflowButton}
           </div>
         ) : (
-          <div className="space-y-5">
+          <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
               <div>
                 <h2 className="font-heading text-xl font-semibold tracking-[-0.01em]">
-                  {workflow?.name}
+                  Approval workflows
                 </h2>
-                {workflow?.description ? (
-                  <p className="text-sm text-muted-foreground mt-1 leading-snug">
-                    {workflow.description}
-                  </p>
-                ) : null}
+                <p className="text-sm text-muted-foreground mt-1 leading-snug">
+                  Same name updates an existing workflow. A new name creates
+                  another.
+                </p>
               </div>
-              {editWorkflowButton}
+              {setWorkflowButton}
             </div>
 
-            <div className="space-y-3">
-              <p className="text-sm font-medium text-muted-foreground">
-                Approval steps ({workflow?.steps.length ?? 0})
-              </p>
-              <ol className="space-y-2">
-                {(workflow?.steps ?? []).map((step) => (
-                  <li
-                    key={`${step.order}-${step.name}`}
-                    className="rounded-2xl border border-black/5 bg-[#F7F8FA] px-4 py-3"
-                  >
-                    <div className="flex flex-wrap items-center gap-2 text-sm">
-                      <span className="flex size-7 items-center justify-center rounded-full bg-[#0150AC]/10 text-xs font-semibold text-[#0150AC] tabular-nums">
-                        {step.order}
-                      </span>
-                      <span className="font-medium">{step.name}</span>
-                      <span className="text-muted-foreground">·</span>
-                      <span>{formatApproverType(step.approverType)}</span>
-                      <span className="text-muted-foreground">·</span>
-                      <span className="capitalize">{step.approvalMode}</span>
-                      {step.approverType === "user" &&
-                        (step.userIds?.length ?? 0) > 0 && (
-                          <>
-                            <span className="text-muted-foreground">·</span>
-                            <span className="text-muted-foreground">
-                              {step.userIds?.length} user
-                              {(step.userIds?.length ?? 0) === 1 ? "" : "s"}
+            <div className="space-y-4">
+              {workflows.map((workflow) => (
+                <div
+                  key={
+                    workflow.id ??
+                    workflow._id ??
+                    `${workflow.name}-${workflow.createdAt ?? ""}`
+                  }
+                  className="space-y-3 rounded-2xl border border-black/5 bg-white p-4"
+                >
+                  <div>
+                    <h3 className="font-heading text-lg font-semibold tracking-[-0.01em]">
+                      {workflow.name}
+                    </h3>
+                    {workflow.description ? (
+                      <p className="text-sm text-muted-foreground mt-1 leading-snug">
+                        {workflow.description}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Approval steps ({workflow.steps.length})
+                    </p>
+                    <ol className="space-y-2">
+                      {workflow.steps.map((step) => (
+                        <li
+                          key={`${step.order}-${step.name}`}
+                          className="rounded-2xl border border-black/5 bg-[#F7F8FA] px-4 py-3"
+                        >
+                          <div className="flex flex-wrap items-center gap-2 text-sm">
+                            <span className="flex size-7 items-center justify-center rounded-full bg-[#0150AC]/10 text-xs font-semibold text-[#0150AC] tabular-nums">
+                              {step.order}
                             </span>
-                          </>
-                        )}
-                    </div>
-                  </li>
-                ))}
-              </ol>
+                            <span className="font-medium">{step.name}</span>
+                            <span className="text-muted-foreground">·</span>
+                            <span>
+                              {formatApproverType(step.approverType)}
+                            </span>
+                            <span className="text-muted-foreground">·</span>
+                            <span className="capitalize">
+                              {step.approvalMode}
+                            </span>
+                            {step.approverType === "user" &&
+                              (step.userIds?.length ?? 0) > 0 && (
+                                <>
+                                  <span className="text-muted-foreground">
+                                    ·
+                                  </span>
+                                  <span className="text-muted-foreground">
+                                    {step.userIds?.length} user
+                                    {(step.userIds?.length ?? 0) === 1
+                                      ? ""
+                                      : "s"}
+                                  </span>
+                                </>
+                              )}
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -198,7 +222,6 @@ export default function RequestWorkflowConfigPanel({
         <WorkflowConfigModal
           visible={modalOpen}
           estateId={estateId}
-          workflow={workflow}
           saving={saving}
           onClose={() => setModalOpen(false)}
           onSave={handleSave}

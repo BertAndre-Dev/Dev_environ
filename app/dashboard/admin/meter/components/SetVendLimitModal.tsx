@@ -98,11 +98,7 @@ export function SetVendLimitModal({
   };
 
   return (
-    <Modal
-      visible={open}
-      onClose={onClose}
-      contentClassName="max-w-lg"
-    >
+    <Modal visible={open} onClose={onClose} contentClassName="max-w-lg">
       <form onSubmit={handleSubmit} className="space-y-5 pr-6">
         <div>
           <h2 className="font-heading text-lg font-bold text-foreground">

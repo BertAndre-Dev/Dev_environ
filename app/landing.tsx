@@ -27,9 +27,9 @@ export default function Home() {
         {/* <AboutSection />
         <FeaturesShowcaseSection /> */}
         <TrustedBySection />
-        {/* <EverythingYouNeedSection />
+        <EverythingYouNeedSection />
         <EstateManagementShowcase />
-        <BertaShowcaseSection /> */}
+        <BertaShowcaseSection />
 
         <FeaturesSection />
         <TestimonialsSection />

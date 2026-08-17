@@ -15,8 +15,6 @@ import {
   setEstateVendLimits,
 } from "@/redux/slice/admin/meter-mgt/meter-mgt";
 
-const FALLBACK_MAX = 250000;
-
 type Props = Readonly<{
   open: boolean;
   estateId: string;
@@ -35,7 +33,7 @@ export function SetVendLimitModal({
   const [submitting, setSubmitting] = useState(false);
   const [minVendAmount, setMinVendAmount] = useState("");
   const [maxVendAmount, setMaxVendAmount] = useState("");
-  const [defaultMax, setDefaultMax] = useState(FALLBACK_MAX);
+  const [defaultMax, setDefaultMax] = useState<number | null>(null);
 
   useEffect(() => {
     if (!open || !estateId) return;
@@ -44,14 +42,18 @@ export function SetVendLimitModal({
     (async () => {
       try {
         setLoadingInitial(true);
+        setDefaultMax(null);
         const res = await dispatch(getEstateVendLimits({ estateId })).unwrap();
         if (cancelled) return;
         const data = res?.data;
         if (data) {
           setMinVendAmount(String(data.minVendAmount ?? ""));
           setMaxVendAmount(String(data.maxVendAmount ?? ""));
+          const apiMax = data.defaults?.maxVendAmount;
           setDefaultMax(
-            data.defaults?.maxVendAmount ?? FALLBACK_MAX,
+            typeof apiMax === "number" && Number.isFinite(apiMax)
+              ? apiMax
+              : null,
           );
         }
       } catch (err: unknown) {
@@ -138,17 +140,23 @@ export function SetVendLimitModal({
                 id="max-vend-amount"
                 type="number"
                 min={1}
-                max={defaultMax}
+                max={defaultMax ?? undefined}
                 step={1}
                 value={maxVendAmount}
                 onChange={(e) => setMaxVendAmount(e.target.value)}
                 disabled={submitting}
-                placeholder={`e.g. ${defaultMax.toLocaleString()}`}
+                placeholder={
+                  defaultMax != null
+                    ? `e.g. ${defaultMax.toLocaleString()}`
+                    : "Enter maximum amount"
+                }
                 required
               />
-              <p className="text-xs text-muted-foreground">
-                Maximum cannot exceed ₦{defaultMax.toLocaleString()}.
-              </p>
+              {defaultMax != null ? (
+                <p className="text-xs text-muted-foreground">
+                  Maximum cannot exceed ₦{defaultMax.toLocaleString()}.
+                </p>
+              ) : null}
             </div>
           </>
         )}

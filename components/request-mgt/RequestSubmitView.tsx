@@ -28,6 +28,11 @@ import {
   setStaffRequestStatusFilter,
 } from "@/redux/slice/staff/request/staff-request-slice";
 import type { AppDispatch, RootState } from "@/redux/store";
+import { getRequestActorDisplayName } from "@/lib/request-actor";
+import {
+  downloadAttachment,
+  getAttachmentFilename,
+} from "@/lib/download-attachment";
 import StaffRequestFormModal from "./StaffRequestFormModal";
 
 function formatDate(dateStr?: string) {
@@ -80,14 +85,7 @@ function getStatusStyle(status?: StaffRequestStatus) {
 }
 
 function getCreatedByName(item: StaffRequestItem) {
-  const createdBy = item.createdBy;
-  if (!createdBy) return "—";
-  if (typeof createdBy === "string") return createdBy;
-  const name = [createdBy.firstName, createdBy.lastName]
-    .filter(Boolean)
-    .join(" ")
-    .trim();
-  return name || "—";
+  return getRequestActorDisplayName(item.createdBy);
 }
 
 export interface RequestSubmitViewProps {
@@ -202,6 +200,16 @@ export default function RequestSubmitView({
   const columns = useMemo(
     () => [
       {
+        key: "code",
+        header: "Code",
+        render: (item: StaffRequestItem) => (
+          <span className="font-medium tracking-[0.02em] text-foreground">
+            {item.code?.trim() || "—"}
+          </span>
+        ),
+        exportValue: (item: StaffRequestItem) => item.code?.trim() || "—",
+      },
+      {
         key: "createdAt",
         header: "Submitted",
         render: (item: StaffRequestItem) =>
@@ -250,21 +258,6 @@ export default function RequestSubmitView({
         header: "Created by",
         render: (item: StaffRequestItem) => getCreatedByName(item),
         exportValue: (item: StaffRequestItem) => getCreatedByName(item),
-      },
-      {
-        key: "attachments",
-        header: "Files",
-        render: (item: StaffRequestItem) =>
-          item.attachments && item.attachments.length > 0 ? (
-            <span className="inline-flex items-center gap-1 text-xs text-[#2563EB]">
-              <Paperclip className="h-3.5 w-3.5" />
-              {item.attachments.length}
-            </span>
-          ) : (
-            "—"
-          ),
-        exportValue: (item: StaffRequestItem) =>
-          String(item.attachments?.length ?? 0),
       },
       {
         key: "actions",
@@ -422,6 +415,11 @@ export default function RequestSubmitView({
                 <h2 className="font-heading text-xl font-semibold">
                   {viewing.title || "Request"}
                 </h2>
+                {viewing.code ? (
+                  <p className="mt-1 text-sm font-medium tracking-[0.02em] text-muted-foreground">
+                    {viewing.code}
+                  </p>
+                ) : null}
                 <p className="text-sm text-muted-foreground mt-1">
                   {formatDate(viewing.createdAt || viewing.updatedAt)}
                 </p>
@@ -459,15 +457,19 @@ export default function RequestSubmitView({
                 <ul className="space-y-1.5">
                   {viewing.attachments.map((url, index) => (
                     <li key={`${url.slice(0, 24)}-${index}`}>
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-sm text-[#2563EB] hover:underline"
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void downloadAttachment(
+                            url,
+                            getAttachmentFilename(url, index),
+                          )
+                        }
+                        className="inline-flex items-center gap-2 text-sm text-[#2563EB] hover:underline cursor-pointer"
                       >
                         <Paperclip className="h-3.5 w-3.5" />
                         Attachment {index + 1}
-                      </a>
+                      </button>
                     </li>
                   ))}
                 </ul>

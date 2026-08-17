@@ -12,6 +12,7 @@ import {
   Trash2,
   UsersRound,
   Search,
+  Edit,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,8 +27,10 @@ import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-esta
 import {
   activateCompanyUser,
   deleteCompanyUser,
+  getCompanyUser,
   getCompanyUsersByEstate,
   suspendCompanyUser,
+  updateCompanyUser,
 } from "@/redux/slice/company/user-mgt/company-user";
 import type { CompanyUserDetails } from "@/redux/slice/company/user-mgt/company-user-slice";
 import {
@@ -38,6 +41,7 @@ import {
 import { parseCompanyFromUser } from "../lib/company";
 import CompanyInviteUserForm from "./components/CompanyInviteUserForm";
 import { UserStatusModal } from "./components/UserStatusModal";
+import EditUserForm from "@/components/user-mgt/edit-user-form";
 import {
   DEFAULT_ESTATE_USER_ROLE,
   ESTATE_USER_ROLE_FILTER_OPTIONS,
@@ -100,6 +104,7 @@ export default function CompanyUsersPage() {
     "suspend",
   );
   const [statusSubmitting, setStatusSubmitting] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [estatesLoading, setEstatesLoading] = useState(true);
   const [estateOptions, setEstateOptions] = useState<EstateOption[]>([]);
 
@@ -257,6 +262,15 @@ export default function CompanyUsersPage() {
     setItemToDelete({ id, name });
   };
 
+  const handleEditUser = (user: CompanyUserDetails) => {
+    const id = userRowId(user);
+    if (!id) {
+      toast.error("User id is missing");
+      return;
+    }
+    setEditingUserId(id);
+  };
+
   const handleConfirmDelete = async () => {
     if (!itemToDelete?.id) return;
     setDeleting(true);
@@ -336,6 +350,15 @@ export default function CompanyUsersPage() {
         exportable: false,
         render: (item: CompanyUserDetails) => (
           <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="cursor-pointer"
+              onClick={() => handleEditUser(item)}
+              title="Edit user details"
+            >
+              <Edit className="w-4 h-4 text-blue-600" />
+            </Button>
             {item.isActive ? (
               <Button
                 variant="ghost"
@@ -554,6 +577,30 @@ export default function CompanyUsersPage() {
               companyId={companyId}
               onClose={() => setOpen(false)}
               onSuccess={() => fetchUsers(1)}
+            />
+          </Modal>
+        )}
+
+        {editingUserId && (
+          <Modal
+            visible={Boolean(editingUserId)}
+            onClose={() => setEditingUserId(null)}
+          >
+            <EditUserForm
+              userId={editingUserId}
+              close={() => setEditingUserId(null)}
+              fetchUser={(id) => dispatch(getCompanyUser(id)).unwrap()}
+              saveUser={(id, data) =>
+                dispatch(updateCompanyUser({ id, data })).unwrap()
+              }
+              onUpdated={() => {
+                fetchUsers(Number(pagination?.currentPage) || 1).catch(
+                  (err: unknown) => {
+                    const message = getApiErrorMessage(err);
+                    if (message) toast.error(message);
+                  },
+                );
+              }}
             />
           </Modal>
         )}

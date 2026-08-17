@@ -20,6 +20,7 @@ import {
   formatAmountInput,
   parseFormattedNumber,
 } from "@/lib/format-number";
+import { AccrueInterestFields } from "@/components/admin/bills-form/accrue-interest-fields";
 import { cn } from "@/lib/utils";
 
 /** Form state: yearlyAmount can be string (empty input) or number */
@@ -30,6 +31,8 @@ interface BillFormState {
   yearlyAmount: number | string;
   frequency: BillFrequency;
   compulsory: boolean;
+  accrueInterest: boolean;
+  interestRatePercent: string;
   id?: string;
 }
 
@@ -41,6 +44,8 @@ export interface BillSubmitData {
   yearlyAmount: number;
   frequency: BillFrequency;
   compulsory?: boolean;
+  accrueInterest?: boolean;
+  interestRatePercent?: number;
   id?: string;
 }
 
@@ -49,19 +54,37 @@ interface BillsFormProps {
   initialData?:
     | (Partial<Omit<BillSubmitData, "frequency">> & {
         frequency?: string;
+        amount?: number;
       })
     | null;
   onSubmit: (data: BillSubmitData) => void | Promise<void>;
 }
 
+function amountFromBill(data?: {
+  yearlyAmount?: number;
+  amount?: number;
+} | null) {
+  if (data?.amount != null) return data.amount;
+  if (data?.yearlyAmount != null) return data.yearlyAmount;
+  return null;
+}
+
 export default function BillsForm({ estateId, initialData, onSubmit }: BillsFormProps) {
+  const seededAmount = amountFromBill(initialData);
   const [formData, setFormData] = useState<BillFormState>({
     estateId,
-    name: "",
-    description: "",
-    yearlyAmount: "",
-    frequency: "yearly",
-    compulsory: false,
+    id: initialData?.id,
+    name: initialData?.name ?? "",
+    description: initialData?.description ?? "",
+    yearlyAmount:
+      seededAmount != null ? formatAmountInput(String(seededAmount)) : "",
+    frequency: normalizeBillFrequency(initialData?.frequency, "yearly"),
+    compulsory: Boolean(initialData?.compulsory),
+    accrueInterest: Boolean(initialData?.accrueInterest),
+    interestRatePercent:
+      initialData?.interestRatePercent != null
+        ? String(initialData.interestRatePercent)
+        : "",
   });
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
@@ -82,11 +105,19 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
             id: fetchData.id,
             name: fetchData.name || "",
             description: fetchData.description || "",
-            yearlyAmount: fetchData.yearlyAmount
-              ? formatAmountInput(String(fetchData.yearlyAmount))
-              : "",
+            yearlyAmount:
+              fetchData.amount != null || fetchData.yearlyAmount != null
+                ? formatAmountInput(
+                    String(fetchData.amount ?? fetchData.yearlyAmount),
+                  )
+                : "",
             frequency: normalizeBillFrequency(fetchData.frequency, "yearly"),
             compulsory: Boolean(fetchData.compulsory),
+            accrueInterest: Boolean(fetchData.accrueInterest),
+            interestRatePercent:
+              fetchData.interestRatePercent != null
+                ? String(fetchData.interestRatePercent)
+                : "",
           });
         }
       } catch (err: unknown) {
@@ -109,6 +140,16 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const interestRate = formData.accrueInterest
+      ? Number(formData.interestRatePercent)
+      : 0;
+    if (
+      formData.accrueInterest &&
+      (!Number.isFinite(interestRate) || interestRate < 0)
+    ) {
+      toast.error("Please enter a valid interest rate.");
+      return;
+    }
     const payload: BillSubmitData = {
       estateId: formData.estateId,
       name: formData.name,
@@ -116,6 +157,8 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       yearlyAmount: parseFormattedNumber(formData.yearlyAmount),
       frequency: formData.frequency,
       compulsory: formData.compulsory,
+      accrueInterest: formData.accrueInterest,
+      interestRatePercent: interestRate,
     };
     onSubmit(payload);
   };
@@ -133,6 +176,18 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
           <p className="text-gray-500 italic">Loading...</p>
         ) : (
           <div className="space-y-4">
+            <AccrueInterestFields
+              idPrefix="estate-bill"
+              accrueInterest={formData.accrueInterest}
+              interestRatePercent={formData.interestRatePercent}
+              onAccrueInterestChange={(value) =>
+                handleChange("accrueInterest", value)
+              }
+              onInterestRateChange={(value) =>
+                handleChange("interestRatePercent", value)
+              }
+            />
+
             <div>
               <Label>Name</Label>
               <Input

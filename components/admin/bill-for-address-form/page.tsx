@@ -18,6 +18,7 @@ import {
   parseFormattedNumber,
 } from "@/lib/format-number";
 import { formatAddressEntryLabel, normalizeAddresses } from "@/lib/address";
+import { AccrueInterestFields } from "@/components/admin/bills-form/accrue-interest-fields";
 import { cn } from "@/lib/utils";
 
 export interface BillForAddressFormData {
@@ -27,6 +28,8 @@ export interface BillForAddressFormData {
   amount: number;
   frequency: "oneoff";
   compulsory: boolean;
+  accrueInterest: boolean;
+  interestRatePercent: number;
 }
 
 export interface BillForAddressInitialData {
@@ -37,6 +40,8 @@ export interface BillForAddressInitialData {
   description?: string;
   amount?: number;
   compulsory?: boolean;
+  accrueInterest?: boolean;
+  interestRatePercent?: number;
 }
 
 interface ResidentRecord {
@@ -97,6 +102,11 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
         ? formatAmountInput(String(initialData.amount))
         : "",
     compulsory: Boolean(initialData?.compulsory),
+    accrueInterest: Boolean(initialData?.accrueInterest),
+    interestRatePercent:
+      initialData?.interestRatePercent != null
+        ? String(initialData.interestRatePercent)
+        : "",
   });
 
   const attachedResidentName = useMemo(() => {
@@ -209,6 +219,17 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
           compulsory: Boolean(
             fetchData.compulsory ?? initialData?.compulsory ?? prev.compulsory,
           ),
+          accrueInterest: Boolean(
+            fetchData.accrueInterest ??
+              initialData?.accrueInterest ??
+              prev.accrueInterest,
+          ),
+          interestRatePercent:
+            fetchData.interestRatePercent != null
+              ? String(fetchData.interestRatePercent)
+              : initialData?.interestRatePercent != null
+                ? String(initialData.interestRatePercent)
+                : prev.interestRatePercent,
         }));
       } catch (err: unknown) {
         const message = getApiErrorMessage(err);
@@ -250,6 +271,16 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
       toast.error("Please enter a valid amount.");
       return;
     }
+    const interestRate = form.accrueInterest
+      ? Number(form.interestRatePercent)
+      : 0;
+    if (
+      form.accrueInterest &&
+      (!Number.isFinite(interestRate) || interestRate < 0)
+    ) {
+      toast.error("Please enter a valid interest rate.");
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -260,6 +291,8 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
         amount,
         frequency: "oneoff",
         compulsory: form.compulsory,
+        accrueInterest: form.accrueInterest,
+        interestRatePercent: interestRate,
       });
     } finally {
       setSubmitting(false);
@@ -278,6 +311,18 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
           <p className="text-gray-500 italic">Loading bill...</p>
         ) : (
           <>
+            <AccrueInterestFields
+              idPrefix="address-bill"
+              accrueInterest={form.accrueInterest}
+              interestRatePercent={form.interestRatePercent}
+              onAccrueInterestChange={(value) =>
+                handleChange("accrueInterest", value)
+              }
+              onInterestRateChange={(value) =>
+                handleChange("interestRatePercent", value)
+              }
+            />
+
             <div className="space-y-2">
               <Label htmlFor="addressId">Address</Label>
               <select

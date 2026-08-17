@@ -12,6 +12,7 @@ import {
   deleteUser,
   getUser,
   suspendUser,
+  updateUser,
 } from "@/redux/slice/admin/user-mgt/user";
 import UserDetailView from "@/app/dashboard/admin/user/components/AdminUserDetailView";
 
@@ -20,6 +21,7 @@ const ADMIN_USER_ACTIONS = {
   activateUser,
   suspendUser,
   deleteUser,
+  updateUser,
 };
 
 export default function AdminUserDetailPage() {

@@ -15,7 +15,6 @@ import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-esta
 import {
   buildInviteUserPayload,
   COMPANY_INVITE_ROLE_OPTIONS,
-  inviteRoleRequiresPhoneNumber,
   validateEnergyProviderInviteScope,
 } from "@/lib/invite-user-roles";
 import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
@@ -97,10 +96,7 @@ export default function CompanyInviteUserForm({
     e.preventDefault();
     if (!formData.role) return toast.error("Please select a role.");
     if (!formData.email.trim()) return toast.error("Please provide an email.");
-    if (
-      inviteRoleRequiresPhoneNumber(formData.role) &&
-      !formData.phoneNumber.trim()
-    ) {
+    if (!formData.phoneNumber.trim()) {
       return toast.error("Please provide a phone number.");
     }
     if (!formData.firstName.trim()) return toast.error("Please provide first name.");
@@ -213,21 +209,16 @@ export default function CompanyInviteUserForm({
                 setFormData((prev) => ({
                   ...prev,
                   role: opt?.value ?? "",
-                  phoneNumber: inviteRoleRequiresPhoneNumber(opt?.value)
-                    ? prev.phoneNumber
-                    : "",
                 }))
               }
               placeholder="Select role"
             />
           </div>
-          {inviteRoleRequiresPhoneNumber(formData.role) && (
-            <InvitePhoneNumberField
-              id="invite-phone"
-              value={formData.phoneNumber}
-              onChange={handleInputChange}
-            />
-          )}
+          <InvitePhoneNumberField
+            id="invite-phone"
+            value={formData.phoneNumber}
+            onChange={handleInputChange}
+          />
           <Button type="submit" className="w-full cursor-pointer" disabled={submitting}>
             {submitting ? "Inviting..." : "Invite user"}
           </Button>

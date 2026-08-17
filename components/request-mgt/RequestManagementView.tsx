@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { ClipboardList, Paperclip } from "lucide-react";
+import { ClipboardList } from "lucide-react";
 import Select from "react-select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import type { AppDispatch } from "@/redux/store";
 import RequestDetailModal, {
   formatCategory,
   formatDate,
+  formatRequestCode,
   formatStatusLabel,
   getActorName,
   getStatusStyle,
@@ -44,6 +45,10 @@ export interface RequestManagementViewProps {
   beforeList?: ReactNode;
   /** Optional actions rendered next to the page title. */
   headerActions?: ReactNode;
+  /** Nested under another page header — use a section loader instead of a full-screen overlay. */
+  embedded?: boolean;
+  /** Hide the section title/description (e.g. when a parent tab already labels the view). */
+  hideHeading?: boolean;
 }
 
 export default function RequestManagementView({
@@ -59,6 +64,8 @@ export default function RequestManagementView({
   emptyHint = "No requests found.",
   beforeList,
   headerActions,
+  embedded = false,
+  hideHeading = false,
 }: RequestManagementViewProps) {
   const dispatch = useDispatch<AppDispatch>();
   const api = useMemo(() => getRequestScopeApi(scope), [scope]);
@@ -72,10 +79,14 @@ export default function RequestManagementView({
   const { page, pageSize, search, statusFilter } = ui;
   const listLoading = isBusy(getListStatus);
   const showEstateFilter = Boolean(estateOptions && onEstateChange);
+  const showHeaderRow =
+    !hideHeading || showEstateFilter || Boolean(headerActions);
   const fullPageLoading =
     bootstrapping ||
     estatesLoading ||
     (Boolean(estateId) && (listLoading || getListStatus === "idle"));
+  const showOverlayLoader = fullPageLoading && !embedded;
+  const showSectionLoader = fullPageLoading && embedded;
 
   const loadRequests = useCallback(() => {
     if (!estateId) return Promise.resolve();
@@ -117,6 +128,16 @@ export default function RequestManagementView({
 
   const columns = useMemo(
     () => [
+      {
+        key: "code",
+        header: "Code",
+        render: (item: ScopedRequestItem) => (
+          <span className="font-medium tracking-[0.02em] text-foreground">
+            {formatRequestCode(item.code)}
+          </span>
+        ),
+        exportValue: (item: ScopedRequestItem) => formatRequestCode(item.code),
+      },
       {
         key: "createdAt",
         header: "Submitted",
@@ -166,21 +187,6 @@ export default function RequestManagementView({
         exportValue: (item: ScopedRequestItem) => getActorName(item.createdBy),
       },
       {
-        key: "attachments",
-        header: "Files",
-        render: (item: ScopedRequestItem) =>
-          item.attachments && item.attachments.length > 0 ? (
-            <span className="inline-flex items-center gap-1 text-xs text-[#2563EB]">
-              <Paperclip className="h-3.5 w-3.5" />
-              {item.attachments.length}
-            </span>
-          ) : (
-            "—"
-          ),
-        exportValue: (item: ScopedRequestItem) =>
-          String(item.attachments?.length ?? 0),
-      },
-      {
         key: "actions",
         header: "Actions",
         render: (item: ScopedRequestItem) => (
@@ -206,7 +212,14 @@ export default function RequestManagementView({
 
   return (
     <div className="relative">
-      {fullPageLoading && <Loader fullScreen label="Loading requests..." />}
+      {showOverlayLoader ? (
+        <Loader fullScreen label="Loading requests..." />
+      ) : null}
+      {showSectionLoader ? (
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-background/40 backdrop-blur-sm">
+          <Loader label="Loading requests..." />
+        </div>
+      ) : null}
 
       <div
         className={[
@@ -214,11 +227,16 @@ export default function RequestManagementView({
           fullPageLoading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
+        {showHeaderRow ? (
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          {hideHeading ? (
+            <div />
+          ) : (
           <div>
             <h1 className="font-heading text-3xl font-bold">{title}</h1>
             <p className="text-muted-foreground mt-1">{description}</p>
           </div>
+          )}
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
             {headerActions}
@@ -250,6 +268,7 @@ export default function RequestManagementView({
             ) : null}
           </div>
         </div>
+        ) : null}
 
         {beforeList}
 

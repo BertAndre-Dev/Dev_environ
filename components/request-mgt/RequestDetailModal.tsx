@@ -3,15 +3,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { Check, Paperclip, X } from "lucide-react";
+import { Check, Paperclip } from "lucide-react";
 import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import Loader from "@/components/ui/Loader";
 import { getApiErrorMessage } from "@/lib/api-error";
+import {
+  downloadAttachment,
+  getAttachmentFilename,
+} from "@/lib/download-attachment";
 import { isBusy } from "@/lib/async-status";
 import type { AppDispatch } from "@/redux/store";
+import { getRequestActorDisplayName } from "@/lib/request-actor";
 import {
   getRequestScopeApi,
   type RequestScope,
@@ -54,6 +59,11 @@ function formatStatusLabel(status?: ScopedRequestStatus) {
   return STATUS_LABELS[status] ?? status;
 }
 
+function formatRequestCode(code?: string) {
+  const trimmed = code?.trim();
+  return trimmed || "—";
+}
+
 function getStatusStyle(status?: ScopedRequestStatus) {
   if (status === "approved") return "bg-[#DCFCE7] text-[#16A34A]";
   if (status === "rejected" || status === "cancelled")
@@ -64,15 +74,9 @@ function getStatusStyle(status?: ScopedRequestStatus) {
 }
 
 function getActorName(
-  actor?: string | { firstName?: string; lastName?: string; email?: string },
+  actor?: string | { firstName?: string; lastName?: string; email?: string; name?: string },
 ) {
-  if (!actor) return "—";
-  if (typeof actor === "string") return actor;
-  const name = [actor.firstName, actor.lastName]
-    .filter(Boolean)
-    .join(" ")
-    .trim();
-  return name || actor.email || "—";
+  return getRequestActorDisplayName(actor);
 }
 
 interface RequestDetailModalProps {
@@ -131,23 +135,17 @@ export default function RequestDetailModal({
   const canCancel =
     item?.status === "pending_approval" || item?.status === "draft";
 
-  const handleDecide = async (decision: "approve" | "reject") => {
+  const handleApprove = async () => {
     if (!item?.id) return;
-    if (decision === "reject" && comment.trim().length < 3) {
-      toast.error("Please provide a rejection reason (at least 3 characters).");
-      return;
-    }
     try {
       await dispatch(
         api.decide({
           id: item.id,
-          decision,
+          decision: "approve",
           comment: comment.trim() || undefined,
         }),
       ).unwrap();
-      toast.success(
-        decision === "approve" ? "Request approved." : "Request rejected.",
-      );
+      toast.success("Request approved.");
       setComment("");
       onChanged?.();
     } catch (err: unknown) {
@@ -196,6 +194,11 @@ export default function RequestDetailModal({
                 <h2 className="font-heading text-xl font-semibold">
                   {item.title || "Request"}
                 </h2>
+                {item.code ? (
+                  <p className="mt-1 text-sm font-medium tracking-[0.02em] text-muted-foreground">
+                    {formatRequestCode(item.code)}
+                  </p>
+                ) : null}
                 <p className="text-sm text-muted-foreground mt-1">
                   {formatDate(item.createdAt || item.updatedAt)}
                 </p>
@@ -240,15 +243,19 @@ export default function RequestDetailModal({
                 <ul className="space-y-1.5">
                   {item.attachments.map((url, index) => (
                     <li key={`${url.slice(0, 24)}-${index}`}>
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-sm text-[#2563EB] hover:underline"
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void downloadAttachment(
+                            url,
+                            getAttachmentFilename(url, index),
+                          )
+                        }
+                        className="inline-flex items-center gap-2 text-sm text-[#2563EB] hover:underline cursor-pointer"
                       >
                         <Paperclip className="h-3.5 w-3.5" />
                         Attachment {index + 1}
-                      </a>
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -317,57 +324,28 @@ export default function RequestDetailModal({
               </div>
             ) : null}
 
-            {canDecide ? (
+            {canDecide || canCancel ? (
               <div className="space-y-3 border-t border-border pt-4">
-                <div>
-                  <Label htmlFor="request-decision-comment">
-                    Comment{" "}
-                    {item.status === "pending_approval"
-                      ? "(required to reject)"
-                      : ""}
-                  </Label>
-                  <Textarea
-                    id="request-decision-comment"
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    placeholder="Add a note for this decision..."
-                    disabled={mutating}
-                    className="min-h-24"
-                  />
-                </div>
-                <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
-                  <Button
-                    variant="outline"
-                    className="border-[#FCA5A5] text-[#DC2626] hover:bg-[#FEF2F2]"
-                    disabled={mutating}
-                    onClick={() => void handleDecide("reject")}
-                  >
-                    <X className="w-4 h-4 mr-2" />
-                    Reject
-                  </Button>
-                  <Button
-                    disabled={mutating}
-                    onClick={() => void handleDecide("approve")}
-                  >
-                    <Check className="w-4 h-4 mr-2" />
-                    Approve
-                  </Button>
-                </div>
-              </div>
-            ) : null}
+                {canDecide ? (
+                  <div>
+                    <Label htmlFor="request-decision-comment">
+                      Comment{" "}
+                      <span className="text-muted-foreground font-normal">
+                        (optional)
+                      </span>
+                    </Label>
+                    <Textarea
+                      id="request-decision-comment"
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      placeholder="Add a note for this decision..."
+                      disabled={mutating}
+                      className="min-h-24"
+                    />
+                  </div>
+                ) : null}
 
-            {canCancel ? (
-              <div className="border-t border-border pt-4 space-y-3">
-                {!confirmCancel ? (
-                  <Button
-                    variant="outline"
-                    className="w-full sm:w-auto"
-                    disabled={mutating}
-                    onClick={() => setConfirmCancel(true)}
-                  >
-                    Cancel request
-                  </Button>
-                ) : (
+                {confirmCancel ? (
                   <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] p-3 space-y-3">
                     <p className="text-sm text-[#991B1B]">
                       Cancel this request? This cannot be undone.
@@ -389,6 +367,28 @@ export default function RequestDetailModal({
                       </Button>
                     </div>
                   </div>
+                ) : (
+                  <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+                    {canCancel ? (
+                      <Button
+                        variant="outline"
+                        className="border-[#FCA5A5] text-[#DC2626] hover:bg-[#FEF2F2]"
+                        disabled={mutating}
+                        onClick={() => setConfirmCancel(true)}
+                      >
+                        Cancel request
+                      </Button>
+                    ) : null}
+                    {canDecide ? (
+                      <Button
+                        disabled={mutating}
+                        onClick={() => void handleApprove()}
+                      >
+                        <Check className="w-4 h-4 mr-2" />
+                        Approve
+                      </Button>
+                    ) : null}
+                  </div>
                 )}
               </div>
             ) : null}
@@ -408,6 +408,7 @@ export default function RequestDetailModal({
 export {
   formatCategory,
   formatDate,
+  formatRequestCode,
   formatStatusLabel,
   getActorName,
   getStatusStyle,

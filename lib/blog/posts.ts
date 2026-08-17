@@ -16,6 +16,29 @@ export type BlogPostMeta = {
 
 export const blogPosts: BlogPostMeta[] = [
   {
+    slug: "why-digital-efficiency-matters-more-than-ever",
+    title: "Why Digital Efficiency Matters More Than Ever",
+    excerpt:
+      "When requests live in WhatsApp, notebooks, and spreadsheets, an estate can still function — but not efficiently. Here's why connected digital operations matter more than ever.",
+    hook: "The estate was functioning, but it wasn't functioning efficiently.",
+    publishedAt: "2026-08-17",
+    readTimeMinutes: 4,
+    wordCount: 520,
+    category: "Estate Management",
+    author: "Bertahub Team",
+    featuredImage: "/assets/blog/blog-8.jpeg",
+    featuredImageAlt:
+      "Why Digital Efficiency Matters More Than Ever — Bertahub article banner with modern residential apartment buildings",
+    keywords: [
+      "digital efficiency estate management",
+      "digital property management",
+      "estate operations software",
+      "manual vs digital estate management",
+      "connected estate management",
+      "Bertahub",
+    ],
+  },
+  {
     slug: "digital-efficiency-why-it-matters-more-than-ever-in-property-management",
     title:
       "Digital Efficiency: Why It Matters More Than Ever in Property Management",

@@ -14,6 +14,7 @@ import DeleteModal from "@/components/resident/delete-modal/page";
 import Image from "next/image";
 import {
   ChevronDown,
+  Edit,
   FileText,
   MapPin,
   MessageSquareWarning,
@@ -28,6 +29,10 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Loader from "@/components/ui/Loader";
 import Table from "@/components/tables/list/page";
+import Modal from "@/components/modal/page";
+import EditUserForm, {
+  type UpdateUserDetailsData,
+} from "@/components/user-mgt/edit-user-form";
 import { CopyButton } from "@/components/ui/copy-button";
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import { MaintenanceRequestCard } from "@/components/admin/maintenance/maintenance-request-card";
@@ -384,12 +389,18 @@ function UserProfileDetails({
 }
 
 type UserIdThunk = AsyncThunk<unknown, string, object>;
+type UpdateUserThunk = AsyncThunk<
+  unknown,
+  { id: string; data: UpdateUserDetailsData },
+  object
+>;
 
 export type UserMgtActions = {
   getUser: UserIdThunk;
   activateUser: UserIdThunk;
   suspendUser: UserIdThunk;
   deleteUser: UserIdThunk;
+  updateUser?: UpdateUserThunk;
 };
 
 export interface UserDetailViewProps {
@@ -430,6 +441,7 @@ export default function UserDetailView({
   const [suspendSubmitting, setSuspendSubmitting] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedComplaintId, setSelectedComplaintId] = useState<string | null>(
     null,
@@ -873,6 +885,7 @@ export default function UserDetailView({
   ];
 
   const pageLoading = userLoading || (Boolean(user) && relatedLoading);
+  const updateUser = actions.updateUser;
 
   return (
     <div className="relative space-y-6">
@@ -957,6 +970,19 @@ export default function UserDetailView({
                         )}
                       />
                     </Button>
+
+                    {updateUser ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        disabled={actionLoading}
+                        onClick={() => setEditing(true)}
+                        title="Edit user details"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    ) : null}
 
                     {user.isActive ? (
                       <Button
@@ -1135,6 +1161,22 @@ export default function UserDetailView({
           </>
         ) : null}
       </div>
+
+      {editing && updateUser ? (
+        <Modal visible={editing} onClose={() => setEditing(false)}>
+          <EditUserForm
+            userId={userId}
+            close={() => setEditing(false)}
+            fetchUser={(id) => dispatch(actions.getUser(id)).unwrap()}
+            saveUser={(id, data) =>
+              dispatch(updateUser({ id, data })).unwrap()
+            }
+            onUpdated={() => {
+              fetchUser().catch(() => {});
+            }}
+          />
+        </Modal>
+      ) : null}
 
       <SuspendRentModal
         visible={suspendOpen}

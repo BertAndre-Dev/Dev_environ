@@ -10,6 +10,7 @@ import {
   UsersRound,
   Search,
   Eye,
+  Edit,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Table from "@/components/tables/list/page";
@@ -18,6 +19,8 @@ import {
   activateUser,
   suspendUser,
   deleteUser,
+  getUser,
+  updateUser,
 } from "@/redux/slice/admin/user-mgt/user";
 import { toast } from "react-toastify";
 import DeleteModal from "@/components/resident/delete-modal/page";
@@ -27,6 +30,7 @@ import { useCallback, useEffect, useState } from "react";
 import Modal from "@/components/modal/page";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import InviteUserForm from "@/components/admin/user-form/page";
+import EditUserForm from "@/components/user-mgt/edit-user-form";
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import Loader from "@/components/ui/Loader";
 import Select from "react-select";
@@ -96,6 +100,7 @@ export default function AdminUserPage() {
   const [suspendUserItem, setSuspendUserItem] = useState<AdminUserData | null>(
     null,
   );
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [suspendSubmitting, setSuspendSubmitting] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -238,6 +243,15 @@ export default function AdminUserPage() {
       const message = getApiErrorMessage(err);
       if (message) toast.error(message);
     }
+  };
+
+  const handleEditUser = (user: AdminUserData) => {
+    const id = user.id || (user as { _id?: string })._id;
+    if (!id) {
+      toast.error("User id is missing");
+      return;
+    }
+    setEditingUserId(id);
   };
 
   const handleDeleteUser = async (id?: string, name?: string) => {
@@ -384,6 +398,15 @@ export default function AdminUserPage() {
               <Eye className="w-4 h-4" />
             </Button>
           )}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleEditUser(item)}
+            title="Edit user details"
+          >
+            <Edit className="w-4 h-4 text-blue-600" />
+          </Button>
 
           {item.isActive ? (
             <Button
@@ -604,6 +627,26 @@ export default function AdminUserPage() {
                   if (message) toast.error(message);
                 })
               }
+            />
+          </Modal>
+        )}
+
+        {editingUserId && (
+          <Modal
+            visible={Boolean(editingUserId)}
+            onClose={() => setEditingUserId(null)}
+          >
+            <EditUserForm
+              userId={editingUserId}
+              close={() => setEditingUserId(null)}
+              fetchUser={(id) => dispatch(getUser(id)).unwrap()}
+              saveUser={(id, data) => dispatch(updateUser({ id, data })).unwrap()}
+              onUpdated={() => {
+                fetchAdminUsers(currentPage).catch((err: unknown) => {
+                  const message = getApiErrorMessage(err);
+                  if (message) toast.error(message);
+                });
+              }}
             />
           </Modal>
         )}

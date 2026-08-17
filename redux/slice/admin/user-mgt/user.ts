@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { apiErrorRejectValue, getApiErrorMessage } from "@/lib/api-error";
 
 // get all users by estate (with search)
 export const getAllUsersByEstate = createAsyncThunk(
@@ -125,6 +125,36 @@ export const activateUser = createAsyncThunk(
       return rejectWithValue({
         message: getApiErrorMessage(error) ?? "Failed to activate user",
       });
+    }
+  },
+);
+
+export type UpdateAdminUserPayload = {
+  id: string;
+  data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    countryCode?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    phoneNumber?: string;
+    address?: string;
+    role?: string;
+    image?: string;
+    residentType?: string | null;
+  };
+};
+
+/** PUT /api/v1/user-mgt/{id} — update user details */
+export const updateUser = createAsyncThunk(
+  "admin-user/updateUser",
+  async ({ id, data }: UpdateAdminUserPayload, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.put(`/api/v1/user-mgt/${id}`, data);
+      return res.data;
+    } catch (error: unknown) {
+      return rejectWithValue(apiErrorRejectValue(error));
     }
   },
 );

@@ -131,3 +131,33 @@ export const activateCompanyUser = createAsyncThunk(
     }
   },
 );
+
+export type UpdateCompanyUserPayload = {
+  id: string;
+  data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    countryCode?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    phoneNumber?: string;
+    address?: string;
+    role?: string;
+    image?: string;
+    residentType?: string | null;
+  };
+};
+
+/** PUT /api/v1/user-mgt/{id} — update user details */
+export const updateCompanyUser = createAsyncThunk(
+  "company-user/updateCompanyUser",
+  async ({ id, data }: UpdateCompanyUserPayload, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.put(`/api/v1/user-mgt/${id}`, data);
+      return res.data;
+    } catch (error: unknown) {
+      return rejectWithValue(apiErrorRejectValue(error));
+    }
+  },
+);

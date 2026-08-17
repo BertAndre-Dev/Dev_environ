@@ -11,6 +11,7 @@ import {
   deleteUser,
   getUser,
   suspendUser,
+  updateUser,
 } from "@/redux/slice/super-admin/super-admin-user/super-admin-user";
 import UserDetailView from "@/app/dashboard/admin/user/components/AdminUserDetailView";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -20,6 +21,7 @@ const SUPER_ADMIN_USER_ACTIONS = {
   activateUser,
   suspendUser,
   deleteUser,
+  updateUser,
 };
 
 export default function SuperAdminUserDetailPage() {

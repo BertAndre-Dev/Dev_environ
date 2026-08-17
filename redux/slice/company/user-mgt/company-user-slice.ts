@@ -8,6 +8,7 @@ import {
   getCompanyUsersByCompany,
   getCompanyUsersByEstate,
   suspendCompanyUser,
+  updateCompanyUser,
 } from "./company-user";
 
 export interface CompanyUserDetails {
@@ -28,6 +29,7 @@ export interface CompanyUserDetails {
   updatedAt?: string;
   id?: string;
   _id?: string;
+  residentType?: string;
 }
 
 export interface Pagination {
@@ -50,6 +52,7 @@ export interface CompanyUserState {
   deleteUserStatus: "idle" | "isLoading" | "succeeded" | "failed";
   getUsersStatus: "idle" | "isLoading" | "succeeded" | "failed";
   getUserStatus: "idle" | "isLoading" | "succeeded" | "failed";
+  updateUserStatus: "idle" | "isLoading" | "succeeded" | "failed";
   user: CompanyUserDetails | null;
   allUsers: AllCompanyUsersResponse | null;
   error: string | null;
@@ -61,6 +64,7 @@ const initialState: CompanyUserState = {
   deleteUserStatus: "idle",
   getUsersStatus: "idle",
   getUserStatus: "idle",
+  updateUserStatus: "idle",
   user: null,
   allUsers: null,
   error: null,
@@ -191,6 +195,31 @@ const companyUserSlice = createSlice({
       })
       .addCase(deleteCompanyUser.rejected, (state, action) => {
         state.deleteUserStatus = "failed";
+        state.error = getApiErrorMessage(action.payload) ?? null;
+      });
+
+    builder
+      .addCase(updateCompanyUser.pending, (state) => {
+        state.updateUserStatus = "isLoading";
+        state.error = null;
+      })
+      .addCase(updateCompanyUser.fulfilled, (state, action) => {
+        state.updateUserStatus = "succeeded";
+        const updated = action.payload?.data as CompanyUserDetails | undefined;
+        if (updated) {
+          const id = userId(updated);
+          if (state.user && userId(state.user) === id) {
+            state.user = { ...state.user, ...updated };
+          }
+          if (id && state.allUsers?.data) {
+            state.allUsers.data = state.allUsers.data.map((u) =>
+              userId(u) === id ? { ...u, ...updated } : u,
+            );
+          }
+        }
+      })
+      .addCase(updateCompanyUser.rejected, (state, action) => {
+        state.updateUserStatus = "failed";
         state.error = getApiErrorMessage(action.payload) ?? null;
       });
   },

@@ -12,6 +12,7 @@ import Loader from "@/components/ui/Loader";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { isBusy } from "@/lib/async-status";
 import type { AppDispatch } from "@/redux/store";
+import { getRequestActorDisplayName } from "@/lib/request-actor";
 import {
   getRequestScopeApi,
   type RequestScope,
@@ -64,15 +65,9 @@ function getStatusStyle(status?: ScopedRequestStatus) {
 }
 
 function getActorName(
-  actor?: string | { firstName?: string; lastName?: string; email?: string },
+  actor?: string | { firstName?: string; lastName?: string; email?: string; name?: string },
 ) {
-  if (!actor) return "—";
-  if (typeof actor === "string") return actor;
-  const name = [actor.firstName, actor.lastName]
-    .filter(Boolean)
-    .join(" ")
-    .trim();
-  return name || actor.email || "—";
+  return getRequestActorDisplayName(actor);
 }
 
 interface RequestDetailModalProps {

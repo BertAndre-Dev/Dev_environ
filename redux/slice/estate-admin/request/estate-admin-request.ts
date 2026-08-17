@@ -1,4 +1,10 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
+import {
+  enrichRequestItemsWithActorNames,
+  normalizeRequestActor,
+  resolveCreatedByFromRaw,
+  type RequestActor,
+} from "@/lib/request-actor";
 import axiosInstance from "@/utils/axiosInstance";
 
 export const ESTATE_ADMIN_REQUEST_STATUSES = [
@@ -25,13 +31,7 @@ export const ESTATE_ADMIN_REQUEST_STATUS_OPTIONS: {
 
 export type EstateAdminRequestDecision = "approve" | "reject";
 
-export interface EstateAdminRequestActor {
-  id?: string;
-  _id?: string;
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-}
+export type EstateAdminRequestActor = RequestActor;
 
 export interface EstateAdminRequestStepDecision {
   stepOrder?: number;
@@ -135,23 +135,6 @@ function extractPagination(payload: EstateAdminRequestsListResponse | undefined)
   );
 }
 
-function normalizeActor(
-  raw: unknown,
-): string | EstateAdminRequestActor | undefined {
-  if (raw == null) return undefined;
-  if (typeof raw === "string") return raw;
-  if (typeof raw !== "object") return undefined;
-  const item = raw as Record<string, unknown>;
-  return {
-    id: item.id != null ? String(item.id) : undefined,
-    _id: item._id != null ? String(item._id) : undefined,
-    firstName:
-      item.firstName != null ? String(item.firstName) : undefined,
-    lastName: item.lastName != null ? String(item.lastName) : undefined,
-    email: item.email != null ? String(item.email) : undefined,
-  };
-}
-
 function normalizeDecision(raw: unknown): EstateAdminRequestStepDecision | null {
   if (!raw || typeof raw !== "object") return null;
   const item = raw as Record<string, unknown>;
@@ -160,7 +143,7 @@ function normalizeDecision(raw: unknown): EstateAdminRequestStepDecision | null 
       item.stepOrder != null ? Number(item.stepOrder) : undefined,
     decision: item.decision != null ? String(item.decision) : undefined,
     comment: item.comment != null ? String(item.comment) : undefined,
-    decidedBy: normalizeActor(item.decidedBy),
+    decidedBy: normalizeRequestActor(item.decidedBy),
     decidedAt:
       item.decidedAt != null ? String(item.decidedAt) : undefined,
   };
@@ -228,7 +211,7 @@ export function normalizeEstateAdminRequestItem(
     decisions: decisionsRaw
       .map(normalizeDecision)
       .filter((d): d is EstateAdminRequestStepDecision => Boolean(d)),
-    createdBy: normalizeActor(raw.createdBy),
+    createdBy: resolveCreatedByFromRaw(raw),
     createdAt: raw.createdAt != null ? String(raw.createdAt) : undefined,
     updatedAt: raw.updatedAt != null ? String(raw.updatedAt) : undefined,
   };
@@ -274,8 +257,12 @@ export const getEstateAdminRequests = createAsyncThunk(
         { params: query },
       );
 
-      const list = extractList(res.data).map((item) =>
-        normalizeEstateAdminRequestItem(item as unknown as Record<string, unknown>),
+      const list = await enrichRequestItemsWithActorNames(
+        extractList(res.data).map((item) =>
+          normalizeEstateAdminRequestItem(
+            item as unknown as Record<string, unknown>,
+          ),
+        ),
       );
       const pagination = extractPagination(res.data);
 
@@ -305,7 +292,8 @@ export const getEstateAdminRequestById = createAsyncThunk(
       if (!item?.id) {
         return rejectWithValue({ message: "Request not found." });
       }
-      return item;
+      const [enriched] = await enrichRequestItemsWithActorNames([item]);
+      return enriched ?? item;
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
       return rejectWithValue({

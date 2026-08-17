@@ -1,4 +1,10 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
+import {
+  enrichRequestItemsWithActorNames,
+  normalizeRequestActor,
+  resolveCreatedByFromRaw,
+  type RequestActor,
+} from "@/lib/request-actor";
 import axiosInstance from "@/utils/axiosInstance";
 
 export const STAFF_REQUEST_STATUSES = [
@@ -33,7 +39,7 @@ export interface StaffRequestItem {
   attachments?: string[];
   workflowId?: string;
   status?: StaffRequestStatus;
-  createdBy?: string | { id?: string; _id?: string; firstName?: string; lastName?: string };
+  createdBy?: string | RequestActor;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -125,7 +131,7 @@ export function normalizeStaffRequest(
       : undefined,
     workflowId: raw.workflowId as string | undefined,
     status: normalizeStatus(raw.status),
-    createdBy: raw.createdBy as StaffRequestItem["createdBy"],
+    createdBy: resolveCreatedByFromRaw(raw),
     createdAt: raw.createdAt as string | undefined,
     updatedAt: raw.updatedAt as string | undefined,
   };
@@ -240,8 +246,10 @@ export const getStaffRequests = createAsyncThunk(
         { params: query },
       );
 
-      const list = extractList(res.data).map((item) =>
-        normalizeStaffRequest(item as unknown as Record<string, unknown>),
+      const list = await enrichRequestItemsWithActorNames(
+        extractList(res.data).map((item) =>
+          normalizeStaffRequest(item as unknown as Record<string, unknown>),
+        ),
       );
       const pagination = extractPagination(res.data);
 

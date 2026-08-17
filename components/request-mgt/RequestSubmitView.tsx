@@ -28,6 +28,7 @@ import {
   setStaffRequestStatusFilter,
 } from "@/redux/slice/staff/request/staff-request-slice";
 import type { AppDispatch, RootState } from "@/redux/store";
+import { getRequestActorDisplayName } from "@/lib/request-actor";
 import StaffRequestFormModal from "./StaffRequestFormModal";
 
 function formatDate(dateStr?: string) {
@@ -80,14 +81,7 @@ function getStatusStyle(status?: StaffRequestStatus) {
 }
 
 function getCreatedByName(item: StaffRequestItem) {
-  const createdBy = item.createdBy;
-  if (!createdBy) return "—";
-  if (typeof createdBy === "string") return createdBy;
-  const name = [createdBy.firstName, createdBy.lastName]
-    .filter(Boolean)
-    .join(" ")
-    .trim();
-  return name || "—";
+  return getRequestActorDisplayName(item.createdBy);
 }
 
 export interface RequestSubmitViewProps {

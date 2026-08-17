@@ -19,7 +19,7 @@ export const blogPosts: BlogPostMeta[] = [
     slug: "why-digital-efficiency-matters-more-than-ever",
     title: "Why Digital Efficiency Matters More Than Ever",
     excerpt:
-      "When requests live in WhatsApp, notebooks, and spreadsheets, an estate can still function — but not efficiently. Here's why connected digital operations matter more than ever.",
+      "When requests live in WhatsApp, notebooks, and spreadsheets, an estate can still function, but not efficiently. Here's why connected digital operations matter more than ever.",
     hook: "The estate was functioning, but it wasn't functioning efficiently.",
     publishedAt: "2026-08-17",
     readTimeMinutes: 4,
@@ -28,7 +28,7 @@ export const blogPosts: BlogPostMeta[] = [
     author: "Bertahub Team",
     featuredImage: "/assets/blog/blog-8.jpeg",
     featuredImageAlt:
-      "Why Digital Efficiency Matters More Than Ever — Bertahub article banner with modern residential apartment buildings",
+      "Why Digital Efficiency Matters More Than Ever, Bertahub article banner with modern residential apartment buildings",
     keywords: [
       "digital efficiency estate management",
       "digital property management",
@@ -52,7 +52,7 @@ export const blogPosts: BlogPostMeta[] = [
     author: "Bertahub Team",
     featuredImage: "/assets/blog/blog-7.jpeg",
     featuredImageAlt:
-      "Digital Efficiency: The Foundation of Smarter Property Management — property management dashboard on laptop and smartphone with modern residential buildings",
+      "Digital Efficiency: The Foundation of Smarter Property Management, property management dashboard on laptop and smartphone with modern residential buildings",
     keywords: [
       "digital efficiency property management",
       "digital property management",
@@ -136,7 +136,7 @@ export const blogPosts: BlogPostMeta[] = [
     slug: "why-resident-experience-should-be-every-estate-managers-priority",
     title: "Why Resident Experience Should Be Every Estate Manager's Priority",
     excerpt:
-      "Two estates can look identical on day one — but six months later, resident experience tells a different story. Operations matter, but what residents feel every day is what defines a thriving community.",
+      "Two estates can look identical on day one, but six months later, resident experience tells a different story. Operations matter, but what residents feel every day is what defines a thriving community.",
     hook: "Residents don't judge your estate by what happens behind the scenes. They judge it by what they experience every day.",
     publishedAt: "2026-06-22",
     readTimeMinutes: 5,

@@ -20,7 +20,7 @@ import {
   formatAmountInput,
   parseFormattedNumber,
 } from "@/lib/format-number";
-import { AccrueInterestFields } from "@/components/admin/bills-form/accrue-interest-fields";
+import { AccrueInterestFields, toInterestStartDate } from "@/components/admin/bills-form/accrue-interest-fields";
 import { cn } from "@/lib/utils";
 
 /** Form state: yearlyAmount can be string (empty input) or number */
@@ -33,6 +33,7 @@ interface BillFormState {
   compulsory: boolean;
   accrueInterest: boolean;
   interestRatePercent: string;
+  interestStartsAt: string;
   id?: string;
 }
 
@@ -46,6 +47,7 @@ export interface BillSubmitData {
   compulsory?: boolean;
   accrueInterest?: boolean;
   interestRatePercent?: number;
+  interestStartsAt?: string;
   id?: string;
 }
 
@@ -85,6 +87,7 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       initialData?.interestRatePercent != null
         ? String(initialData.interestRatePercent)
         : "",
+    interestStartsAt: toInterestStartDate(initialData?.interestStartsAt),
   });
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
@@ -118,6 +121,7 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
               fetchData.interestRatePercent != null
                 ? String(fetchData.interestRatePercent)
                 : "",
+            interestStartsAt: toInterestStartDate(fetchData.interestStartsAt),
           });
         }
       } catch (err: unknown) {
@@ -150,6 +154,10 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       toast.error("Please enter a valid interest rate.");
       return;
     }
+    if (formData.accrueInterest && !formData.interestStartsAt) {
+      toast.error("Please select when interest should start.");
+      return;
+    }
     const payload: BillSubmitData = {
       estateId: formData.estateId,
       name: formData.name,
@@ -159,6 +167,9 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       compulsory: formData.compulsory,
       accrueInterest: formData.accrueInterest,
       interestRatePercent: interestRate,
+      interestStartsAt: formData.accrueInterest
+        ? formData.interestStartsAt
+        : undefined,
     };
     onSubmit(payload);
   };
@@ -180,11 +191,15 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
               idPrefix="estate-bill"
               accrueInterest={formData.accrueInterest}
               interestRatePercent={formData.interestRatePercent}
+              interestStartsAt={formData.interestStartsAt}
               onAccrueInterestChange={(value) =>
                 handleChange("accrueInterest", value)
               }
               onInterestRateChange={(value) =>
                 handleChange("interestRatePercent", value)
+              }
+              onInterestStartsAtChange={(value) =>
+                handleChange("interestStartsAt", value)
               }
             />
 

@@ -18,7 +18,7 @@ import {
   parseFormattedNumber,
 } from "@/lib/format-number";
 import { formatAddressEntryLabel, normalizeAddresses } from "@/lib/address";
-import { AccrueInterestFields } from "@/components/admin/bills-form/accrue-interest-fields";
+import { AccrueInterestFields, toInterestStartDate } from "@/components/admin/bills-form/accrue-interest-fields";
 import { cn } from "@/lib/utils";
 
 export interface BillForAddressFormData {
@@ -30,6 +30,7 @@ export interface BillForAddressFormData {
   compulsory: boolean;
   accrueInterest: boolean;
   interestRatePercent: number;
+  interestStartsAt?: string;
 }
 
 export interface BillForAddressInitialData {
@@ -42,6 +43,7 @@ export interface BillForAddressInitialData {
   compulsory?: boolean;
   accrueInterest?: boolean;
   interestRatePercent?: number;
+  interestStartsAt?: string;
 }
 
 interface ResidentRecord {
@@ -107,6 +109,7 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
       initialData?.interestRatePercent != null
         ? String(initialData.interestRatePercent)
         : "",
+    interestStartsAt: toInterestStartDate(initialData?.interestStartsAt),
   });
 
   const attachedResidentName = useMemo(() => {
@@ -230,6 +233,10 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
               : initialData?.interestRatePercent != null
                 ? String(initialData.interestRatePercent)
                 : prev.interestRatePercent,
+          interestStartsAt:
+            toInterestStartDate(fetchData.interestStartsAt) ||
+            toInterestStartDate(initialData?.interestStartsAt) ||
+            prev.interestStartsAt,
         }));
       } catch (err: unknown) {
         const message = getApiErrorMessage(err);
@@ -281,6 +288,10 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
       toast.error("Please enter a valid interest rate.");
       return;
     }
+    if (form.accrueInterest && !form.interestStartsAt) {
+      toast.error("Please select when interest should start.");
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -293,6 +304,9 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
         compulsory: form.compulsory,
         accrueInterest: form.accrueInterest,
         interestRatePercent: interestRate,
+        interestStartsAt: form.accrueInterest
+          ? form.interestStartsAt
+          : undefined,
       });
     } finally {
       setSubmitting(false);
@@ -315,11 +329,15 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
               idPrefix="address-bill"
               accrueInterest={form.accrueInterest}
               interestRatePercent={form.interestRatePercent}
+              interestStartsAt={form.interestStartsAt}
               onAccrueInterestChange={(value) =>
                 handleChange("accrueInterest", value)
               }
               onInterestRateChange={(value) =>
                 handleChange("interestRatePercent", value)
+              }
+              onInterestStartsAtChange={(value) =>
+                handleChange("interestStartsAt", value)
               }
             />
 

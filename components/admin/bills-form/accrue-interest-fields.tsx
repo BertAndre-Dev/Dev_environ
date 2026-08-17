@@ -2,13 +2,23 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { IsoDatePicker } from "@/components/ui/iso-date-picker";
 import { cn } from "@/lib/utils";
+
+export function toInterestStartDate(value?: string | null): string {
+  if (!value) return "";
+  const trimmed = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) return trimmed.slice(0, 10);
+  return "";
+}
 
 type AccrueInterestFieldsProps = {
   accrueInterest: boolean;
   interestRatePercent: string;
+  interestStartsAt: string;
   onAccrueInterestChange: (value: boolean) => void;
   onInterestRateChange: (value: string) => void;
+  onInterestStartsAtChange: (value: string) => void;
   disabled?: boolean;
   idPrefix: string;
 };
@@ -16,13 +26,16 @@ type AccrueInterestFieldsProps = {
 export function AccrueInterestFields({
   accrueInterest,
   interestRatePercent,
+  interestStartsAt,
   onAccrueInterestChange,
   onInterestRateChange,
+  onInterestStartsAtChange,
   disabled = false,
   idPrefix,
 }: AccrueInterestFieldsProps) {
   const toggleId = `${idPrefix}-accrue-interest`;
   const rateId = `${idPrefix}-interest-rate`;
+  const startsAtId = `${idPrefix}-interest-starts-at`;
 
   return (
     <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 p-3">
@@ -72,6 +85,21 @@ export function AccrueInterestFields({
           className="mt-1"
         />
       </div>
+      {accrueInterest ? (
+        <div>
+          <Label htmlFor={startsAtId}>Interest starts at</Label>
+          <div className="mt-1">
+            <IsoDatePicker
+              id={startsAtId}
+              value={interestStartsAt}
+              onChange={onInterestStartsAtChange}
+              placeholder="Select start date"
+              disabled={disabled}
+              ariaLabel="Interest starts at"
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -50,10 +50,13 @@ interface BillData {
   name: string;
   description: string;
   yearlyAmount: number;
+  amount?: number;
   frequency?: string;
   isActive?: boolean;
   isServiceCharge?: boolean;
   compulsory?: boolean;
+  accrueInterest?: boolean;
+  interestRatePercent?: number;
 }
 
 type BillsTab = "bills" | "assigned";
@@ -73,6 +76,30 @@ function formatFrequencyLabel(frequency?: string): string {
     monthly: "Monthly",
   };
   return map[frequency] || frequency;
+}
+
+function formatInterestRate(item: {
+  accrueInterest?: boolean;
+  interestRatePercent?: number;
+}) {
+  if (!item.accrueInterest) return "—";
+  const rate = item.interestRatePercent;
+  if (rate == null || Number.isNaN(Number(rate))) return "—";
+  return `${Number(rate)}%`;
+}
+
+function YesNoBadge({ value }: { value?: boolean }) {
+  return (
+    <span
+      className={`px-3 py-1 rounded-full text-xs font-semibold ${
+        value
+          ? "bg-amber-100 text-amber-800"
+          : "bg-slate-100 text-slate-600"
+      }`}
+    >
+      {value ? "Yes" : "No"}
+    </span>
+  );
 }
 
 export default function BillPage() {
@@ -309,6 +336,8 @@ export default function BillPage() {
       name: item.billName,
       amount: item.amountDue ?? item.amount ?? item.amountPaid,
       compulsory: item.compulsory,
+      accrueInterest: item.accrueInterest,
+      interestRatePercent: item.interestRatePercent,
     });
     setAssignModalOpen(true);
   };
@@ -452,6 +481,8 @@ export default function BillPage() {
               amount: data.amount,
               frequency: "oneoff",
               compulsory: data.compulsory,
+              accrueInterest: data.accrueInterest,
+              interestRatePercent: data.interestRatePercent,
             },
           }),
         ).unwrap();
@@ -466,6 +497,8 @@ export default function BillPage() {
             amount: data.amount,
             frequency: "oneoff",
             compulsory: data.compulsory,
+            accrueInterest: data.accrueInterest,
+            interestRatePercent: data.interestRatePercent,
           }),
         ).unwrap();
         toast.success("Bill created for address successfully.");
@@ -508,7 +541,8 @@ export default function BillPage() {
     {
       key: "yearlyAmount",
       header: "Amount (₦)",
-      render: (item: BillData) => formatAmountDisplay(item.yearlyAmount),
+      render: (item: BillData) =>
+        formatAmountDisplay(item.amount ?? item.yearlyAmount),
     },
     {
       key: "frequency",
@@ -518,17 +552,17 @@ export default function BillPage() {
     {
       key: "compulsory",
       header: "Compulsory",
-      render: (item: BillData) => (
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-semibold ${
-            item.compulsory
-              ? "bg-amber-100 text-amber-800"
-              : "bg-slate-100 text-slate-600"
-          }`}
-        >
-          {item.compulsory ? "Yes" : "No"}
-        </span>
-      ),
+      render: (item: BillData) => <YesNoBadge value={item.compulsory} />,
+    },
+    {
+      key: "accrueInterest",
+      header: "Accrue Interest",
+      render: (item: BillData) => <YesNoBadge value={item.accrueInterest} />,
+    },
+    {
+      key: "interestRatePercent",
+      header: "Interest Rate",
+      render: (item: BillData) => formatInterestRate(item),
     },
     {
       key: "isActive",
@@ -630,17 +664,17 @@ export default function BillPage() {
     {
       key: "compulsory",
       header: "Compulsory",
-      render: (item) => (
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-semibold ${
-            item.compulsory
-              ? "bg-amber-100 text-amber-800"
-              : "bg-slate-100 text-slate-600"
-          }`}
-        >
-          {item.compulsory ? "Yes" : "No"}
-        </span>
-      ),
+      render: (item) => <YesNoBadge value={item.compulsory} />,
+    },
+    {
+      key: "accrueInterest",
+      header: "Accrue Interest",
+      render: (item) => <YesNoBadge value={item.accrueInterest} />,
+    },
+    {
+      key: "interestRatePercent",
+      header: "Interest Rate",
+      render: (item) => formatInterestRate(item),
     },
     {
       key: "status",

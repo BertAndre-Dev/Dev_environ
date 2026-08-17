@@ -9,7 +9,7 @@ export interface InvitedUserData {
   firstName: string;
   lastName: string;
   email: string;
-  /** Prefer WhatsApp-capable number. Required for staff, admin, company, and estate admin. */
+  /** Prefer WhatsApp-capable number. Required for every invited user. */
   phoneNumber?: string;
   role: string;
   /** Set to "owner" | "tenant" for residents; null for staff, security, admin, etc. */

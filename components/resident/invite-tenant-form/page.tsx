@@ -264,6 +264,7 @@ import { inviteTenant } from "@/redux/slice/resident/invite-tenant/invite-tenant
 import type { AppDispatch, RootState } from "@/redux/store";
 import { useDispatch, useSelector } from "react-redux";
 import { getApiErrorMessage } from "@/lib/api-error";
+import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
 
 type IdLike = string | { id?: string; _id?: string } | null | undefined;
 
@@ -282,6 +283,7 @@ interface FormData {
   firstName: string;
   lastName: string;
   email: string;
+  phoneNumber: string;
   addressId: string;
 }
 
@@ -292,6 +294,7 @@ export default function InviteTenantForm({ close }: InviteTenantFormProps) {
     firstName: "",
     lastName: "",
     email: "",
+    phoneNumber: "",
     addressId: "",
   });
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -372,6 +375,9 @@ export default function InviteTenantForm({ close }: InviteTenantFormProps) {
     if (!formData.firstName?.trim()) return toast.error("Please enter first name.");
     if (!formData.lastName?.trim()) return toast.error("Please enter last name.");
     if (!formData.email?.trim()) return toast.error("Please enter email.");
+    if (!formData.phoneNumber.trim()) {
+      return toast.error("Please provide a phone number.");
+    }
     if (!formData.addressId) return toast.error("Please select an address.");
 
     setSubmitLoading(true);
@@ -382,6 +388,7 @@ export default function InviteTenantForm({ close }: InviteTenantFormProps) {
           firstName: formData.firstName.trim(),
           lastName: formData.lastName.trim(),
           email: formData.email.trim(),
+          phoneNumber: formData.phoneNumber.trim(),
           addressIds: [formData.addressId],
         })
       ).unwrap();
@@ -441,6 +448,13 @@ export default function InviteTenantForm({ close }: InviteTenantFormProps) {
               className="mt-1"
             />
           </div>
+
+          <InvitePhoneNumberField
+            id="tenant-phone"
+            value={formData.phoneNumber}
+            onChange={handleInput}
+            className="mt-0"
+          />
 
           {entryOptions.length > 1 && (
             <div className="space-y-2">

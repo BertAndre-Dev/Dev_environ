@@ -28,12 +28,14 @@ export function buildEnergyProviderInviteHomeOwnerPayload(params: {
   firstName: string;
   lastName: string;
   email: string;
+  phoneNumber?: string;
   estateId: string;
   companyId?: string;
   addressIds: string[];
 }): InvitedUserData {
   const estateId = params.estateId.trim();
   const trimmedCompanyId = params.companyId?.trim();
+  const phoneNumber = params.phoneNumber?.trim();
 
   return {
     firstName: params.firstName.trim(),
@@ -43,6 +45,7 @@ export function buildEnergyProviderInviteHomeOwnerPayload(params: {
     residentType: "owner",
     estateId,
     ...(trimmedCompanyId ? { companyId: trimmedCompanyId } : {}),
+    ...(phoneNumber ? { phoneNumber } : {}),
     addressIds: params.addressIds
       .map((id) => String(id).trim())
       .filter(Boolean),
@@ -53,15 +56,9 @@ export function isEnergyProviderRole(role: string): boolean {
   return role.trim().toLowerCase() === ENERGY_PROVIDER_ROLE;
 }
 
-/** Phone is collected only when inviting staff, admin, company, or estate admin. */
-export function inviteRoleRequiresPhoneNumber(role?: string): boolean {
-  const normalized = (role ?? "").trim().toLowerCase();
-  return (
-    normalized === "staff" ||
-    normalized === "admin" ||
-    normalized === "company" ||
-    normalized === "estate admin"
-  );
+/** Phone is collected for every invited user, regardless of role. */
+export function inviteRoleRequiresPhoneNumber(_role?: string): boolean {
+  return true;
 }
 
 export function validateEnergyProviderInviteScope(params: {
@@ -106,9 +103,7 @@ export function buildInviteUserPayload(params: {
     role: params.role,
     residentType: null,
     addressIds: [],
-    ...(inviteRoleRequiresPhoneNumber(params.role) && phoneNumber
-      ? { phoneNumber }
-      : {}),
+    ...(phoneNumber ? { phoneNumber } : {}),
   };
 
   if (isEnergyProviderRole(params.role)) {

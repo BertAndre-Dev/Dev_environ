@@ -35,10 +35,13 @@ interface BillData {
   estateId: string;
   name: string;
   description: string;
-  yearlyAmount: number;
+  yearlyAmount?: number;
+  amount?: number;
   frequency: BillFrequency;
   isServiceCharge?: boolean;
   compulsory?: boolean;
+  accrueInterest?: boolean;
+  interestRatePercent?: number;
 }
 
 export interface CreateBillForAddressPayload {
@@ -50,16 +53,21 @@ export interface CreateBillForAddressPayload {
   frequency: BillFrequency;
   isServiceCharge?: boolean;
   compulsory?: boolean;
+  accrueInterest?: boolean;
+  interestRatePercent?: number;
 }
 
 export interface UpdateBillPayload {
   estateId: string;
   name: string;
   description: string;
-  yearlyAmount: number;
+  yearlyAmount?: number;
+  amount?: number;
   frequency: BillFrequency;
   isServiceCharge?: boolean;
   compulsory?: boolean;
+  accrueInterest?: boolean;
+  interestRatePercent?: number;
 }
 
 export interface UpdateBillForAddressPayload {
@@ -69,6 +77,23 @@ export interface UpdateBillForAddressPayload {
   frequency?: BillFrequency;
   isServiceCharge?: boolean;
   compulsory?: boolean;
+  accrueInterest?: boolean;
+  interestRatePercent?: number;
+}
+
+function billAmount(data: { amount?: number; yearlyAmount?: number }) {
+  return data.amount ?? data.yearlyAmount ?? 0;
+}
+
+function billInterestFields(data: {
+  accrueInterest?: boolean;
+  interestRatePercent?: number;
+}) {
+  const accrueInterest = Boolean(data.accrueInterest);
+  return {
+    accrueInterest,
+    interestRatePercent: accrueInterest ? Number(data.interestRatePercent) || 0 : 0,
+  };
 }
 
 // Create estate bill
@@ -76,7 +101,18 @@ export const createBill = createAsyncThunk(
   "bills/createBill",
   async (data: BillData, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.post("/api/v1/bills-mgt", data);
+      const res = await axiosInstance.post("/api/v1/bills-mgt", {
+        estateId: data.estateId,
+        name: data.name,
+        description: data.description,
+        amount: billAmount(data),
+        frequency: data.frequency,
+        ...(data.isServiceCharge != null
+          ? { isServiceCharge: data.isServiceCharge }
+          : {}),
+        compulsory: data.compulsory ?? false,
+        ...billInterestFields(data),
+      });
       return res.data;
     } catch (error: unknown) {
       const data = (error as { response?: { data?: unknown } })?.response?.data;
@@ -96,7 +132,18 @@ export const updateBill = createAsyncThunk(
     { rejectWithValue },
   ) => {
     try {
-      const res = await axiosInstance.put(`/api/v1/bills-mgt/${billId}`, data);
+      const res = await axiosInstance.put(`/api/v1/bills-mgt/${billId}`, {
+        estateId: data.estateId,
+        name: data.name,
+        description: data.description,
+        amount: billAmount(data),
+        frequency: data.frequency,
+        ...(data.isServiceCharge != null
+          ? { isServiceCharge: data.isServiceCharge }
+          : {}),
+        compulsory: data.compulsory ?? false,
+        ...billInterestFields(data),
+      });
       return res.data;
     } catch (error: unknown) {
       const data = (error as { response?: { data?: unknown } })?.response?.data;
@@ -130,6 +177,7 @@ export const updateBillForAddress = createAsyncThunk(
             ? { isServiceCharge: data.isServiceCharge }
             : {}),
           compulsory: data.compulsory ?? false,
+          ...billInterestFields(data),
         },
       );
       return res.data;
@@ -303,7 +351,19 @@ export const createBillForAddress = createAsyncThunk(
     try {
       const res = await axiosInstance.post(
         "/api/v1/bills-mgt/for-address/create",
-        data,
+        {
+          addressId: data.addressId,
+          estateId: data.estateId,
+          name: data.name,
+          description: data.description,
+          amount: data.amount,
+          frequency: data.frequency,
+          ...(data.isServiceCharge != null
+            ? { isServiceCharge: data.isServiceCharge }
+            : {}),
+          compulsory: data.compulsory ?? false,
+          ...billInterestFields(data),
+        },
       );
       return res.data;
     } catch (error: unknown) {

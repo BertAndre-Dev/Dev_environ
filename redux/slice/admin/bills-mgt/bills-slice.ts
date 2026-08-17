@@ -18,6 +18,7 @@ interface BillData {
   name: string;
   description: string;
   yearlyAmount: number;
+  amount?: number;
   frequency?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -25,6 +26,8 @@ interface BillData {
   isActive?: boolean;
   isServiceCharge?: boolean;
   compulsory?: boolean;
+  accrueInterest?: boolean;
+  interestRatePercent?: number;
 }
 
 export interface AssignedBillData {
@@ -43,6 +46,8 @@ export interface AssignedBillData {
   createdAt?: string;
   isServiceCharge?: boolean;
   compulsory?: boolean;
+  accrueInterest?: boolean;
+  interestRatePercent?: number;
 }
 
 

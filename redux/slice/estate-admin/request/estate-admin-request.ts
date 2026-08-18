@@ -344,7 +344,6 @@ export const decideEstateAdminRequest = createAsyncThunk(
       const body: Record<string, string> = { decision };
       if (comment) body.comment = comment;
       const estateId = payload.estateId?.trim();
-      if (estateId) body.estateId = estateId;
 
       const res = await axiosInstance.post(
         `/api/v1/requests/${id}/decide`,

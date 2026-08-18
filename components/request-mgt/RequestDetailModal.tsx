@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { Check, Paperclip } from "lucide-react";
+import { Check, Paperclip, Trash2 } from "lucide-react";
 import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import Loader from "@/components/ui/Loader";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import { getApiErrorMessage } from "@/lib/api-error";
 import {
   downloadAttachment,
@@ -100,15 +101,16 @@ export default function RequestDetailModal({
   const api = useMemo(() => getRequestScopeApi(scope), [scope]);
   const [comment, setComment] = useState("");
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const { selected, getByIdStatus, decideStatus, cancelStatus } = useSelector(
-    api.selectState,
-  );
+  const { selected, getByIdStatus, decideStatus, cancelStatus, deleteStatus } =
+    useSelector(api.selectState);
 
   const detailLoading = isBusy(getByIdStatus);
   const deciding = isBusy(decideStatus);
   const cancelling = isBusy(cancelStatus);
-  const mutating = deciding || cancelling;
+  const deleting = isBusy(deleteStatus);
+  const mutating = deciding || cancelling || deleting;
 
   let item: ScopedRequestItem | null = null;
   if (selected?.id === requestId) item = selected;
@@ -122,6 +124,7 @@ export default function RequestDetailModal({
     if (!requestId) return;
     setComment("");
     setConfirmCancel(false);
+    setConfirmDelete(false);
     dispatch(
       api.getById({
         id: requestId,
@@ -177,6 +180,23 @@ export default function RequestDetailModal({
     } catch (err: unknown) {
       const message = getApiErrorMessage(err);
       if (message) toast.error(message);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!item?.id) return;
+    try {
+      await dispatch(
+        api.delete({ id: item.id, estateId: resolvedEstateId }),
+      ).unwrap();
+      toast.success("Request deleted.");
+      setConfirmDelete(false);
+      onChanged?.();
+      onClose();
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
     }
   };
 
@@ -295,11 +315,6 @@ export default function RequestDetailModal({
                           </span>
                         ) : null}
                       </div>
-                      {step.approverType ? (
-                        <p className="text-xs text-muted-foreground mt-1 capitalize">
-                          Approver: {step.approverType.replaceAll("_", " ")}
-                        </p>
-                      ) : null}
                     </li>
                   ))}
                 </ul>
@@ -337,7 +352,7 @@ export default function RequestDetailModal({
               </div>
             ) : null}
 
-            {canDecide || canCancel ? (
+            {canDecide || canCancel || item ? (
               <div className="space-y-3 border-t border-border pt-4">
                 {canDecide ? (
                   <div>
@@ -382,6 +397,15 @@ export default function RequestDetailModal({
                   </div>
                 ) : (
                   <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+                    <Button
+                      variant="outline"
+                      className="border-[#FCA5A5] text-[#DC2626] hover:bg-[#FEF2F2]"
+                      disabled={mutating}
+                      onClick={() => setConfirmDelete(true)}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </Button>
                     {canCancel ? (
                       <Button
                         variant="outline"
@@ -408,6 +432,24 @@ export default function RequestDetailModal({
           </>
         )}
       </div>
+
+      <DeleteModal
+        visible={confirmDelete}
+        onClose={() => {
+          if (!deleting) setConfirmDelete(false);
+        }}
+        itemName={item?.title ?? "this request"}
+        onConfirm={handleDelete}
+        loading={deleting}
+        title="Delete request"
+        message={
+          <p className="text-sm text-muted-foreground mb-4">
+            Permanently delete{" "}
+            <strong>{item?.title ?? "this request"}</strong>? The creator and
+            everyone involved in the workflow will be notified.
+          </p>
+        }
+      />
     </Modal>
   );
 }

@@ -2,6 +2,7 @@ import { createSlice } from "@reduxjs/toolkit";
 import {
   getAdminRequestWorkflow,
   upsertAdminRequestWorkflow,
+  deleteAdminRequestWorkflow,
   type RequestWorkflow,
 } from "./admin-request";
 
@@ -11,6 +12,7 @@ interface AdminRequestState {
   workflows: RequestWorkflow[];
   getWorkflowStatus: AsyncStatus;
   upsertWorkflowStatus: AsyncStatus;
+  deleteWorkflowStatus: AsyncStatus;
   error: string | null;
 }
 
@@ -18,6 +20,7 @@ const initialState: AdminRequestState = {
   workflows: [],
   getWorkflowStatus: "idle",
   upsertWorkflowStatus: "idle",
+  deleteWorkflowStatus: "idle",
   error: null,
 };
 
@@ -87,6 +90,24 @@ const adminRequestSlice = createSlice({
           (action.payload as { message?: string })?.message ??
           action.error.message ??
           "Failed to save request workflow";
+      })
+      .addCase(deleteAdminRequestWorkflow.pending, (state) => {
+        state.deleteWorkflowStatus = "isLoading";
+        state.error = null;
+      })
+      .addCase(deleteAdminRequestWorkflow.fulfilled, (state, action) => {
+        state.deleteWorkflowStatus = "succeeded";
+        const deletedId = action.payload.id;
+        state.workflows = state.workflows.filter(
+          (workflow) => (workflow.id ?? workflow._id ?? "").trim() !== deletedId,
+        );
+      })
+      .addCase(deleteAdminRequestWorkflow.rejected, (state, action) => {
+        state.deleteWorkflowStatus = "failed";
+        state.error =
+          (action.payload as { message?: string })?.message ??
+          action.error.message ??
+          "Failed to delete request workflow";
       });
   },
 });

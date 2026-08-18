@@ -2,6 +2,7 @@ import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import {
   cancelEstateAdminRequest,
   decideEstateAdminRequest,
+  deleteEstateAdminRequest,
   getEstateAdminRequestById,
   getEstateAdminRequests,
   type EstateAdminRequestItem,
@@ -31,6 +32,7 @@ interface EstateAdminRequestState {
   getByIdStatus: AsyncStatus;
   decideStatus: AsyncStatus;
   cancelStatus: AsyncStatus;
+  deleteStatus: AsyncStatus;
   error: string | null;
 }
 
@@ -48,6 +50,7 @@ const initialState: EstateAdminRequestState = {
   getByIdStatus: "idle",
   decideStatus: "idle",
   cancelStatus: "idle",
+  deleteStatus: "idle",
   error: null,
 };
 
@@ -179,6 +182,28 @@ const estateAdminRequestSlice = createSlice({
           (action.payload as { message?: string })?.message ??
           action.error.message ??
           "Failed to cancel request";
+      })
+      .addCase(deleteEstateAdminRequest.pending, (state) => {
+        state.deleteStatus = "isLoading";
+        state.error = null;
+      })
+      .addCase(deleteEstateAdminRequest.fulfilled, (state, action) => {
+        state.deleteStatus = "succeeded";
+        const deletedId = action.payload.id;
+        state.list = state.list.filter((row) => row.id !== deletedId);
+        if (state.selected?.id === deletedId) {
+          state.selected = null;
+        }
+        if (state.pagination) {
+          state.pagination.total = Math.max(0, state.pagination.total - 1);
+        }
+      })
+      .addCase(deleteEstateAdminRequest.rejected, (state, action) => {
+        state.deleteStatus = "failed";
+        state.error =
+          (action.payload as { message?: string })?.message ??
+          action.error.message ??
+          "Failed to delete request";
       });
   },
 });

@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { Edit2, Settings2 } from "lucide-react";
+import { Edit2, Settings2, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { isBusy, isPending } from "@/lib/async-status";
 import {
-  APPROVER_TYPE_OPTIONS,
+  deleteAdminRequestWorkflow,
   getAdminRequestWorkflow,
   upsertAdminRequestWorkflow,
   type RequestWorkflow,
@@ -21,13 +22,6 @@ import {
   type WorkflowEstateUser,
 } from "@/components/request-mgt/workflow-users";
 import WorkflowConfigModal from "./WorkflowConfigModal";
-
-function formatApproverType(type: string) {
-  return (
-    APPROVER_TYPE_OPTIONS.find((o) => o.value === type)?.label ??
-    type.replaceAll("_", " ")
-  );
-}
 
 function StepUsers({
   userIds,
@@ -81,14 +75,16 @@ export default function RequestWorkflowConfigPanel({
   const [modalOpen, setModalOpen] = useState(false);
   const [editingWorkflow, setEditingWorkflow] =
     useState<RequestWorkflow | null>(null);
+  const [workflowToDelete, setWorkflowToDelete] =
+    useState<RequestWorkflow | null>(null);
   const [estateUsers, setEstateUsers] = useState<WorkflowEstateUser[]>([]);
 
-  const { workflows, getWorkflowStatus, upsertWorkflowStatus } = useSelector(
-    (state: RootState) => state.adminRequest,
-  );
+  const { workflows, getWorkflowStatus, upsertWorkflowStatus, deleteWorkflowStatus } =
+    useSelector((state: RootState) => state.adminRequest);
 
   const loadingWorkflow = isPending(getWorkflowStatus);
   const saving = isBusy(upsertWorkflowStatus);
+  const deleting = isBusy(deleteWorkflowStatus);
   const hasWorkflows = workflows.length > 0;
 
   const usersById = useMemo(() => {
@@ -167,6 +163,22 @@ export default function RequestWorkflowConfigPanel({
     if (saving) return;
     setModalOpen(false);
     setEditingWorkflow(null);
+  };
+
+  const handleDeleteWorkflow = async () => {
+    const workflowId = (
+      workflowToDelete?.id ?? workflowToDelete?._id ?? ""
+    ).trim();
+    if (!workflowId) return;
+    try {
+      await dispatch(deleteAdminRequestWorkflow(workflowId)).unwrap();
+      toast.success("Request workflow deleted.");
+      setWorkflowToDelete(null);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
+    }
   };
 
   const setWorkflowButton = (
@@ -251,16 +263,30 @@ export default function RequestWorkflowConfigPanel({
                         </p>
                       ) : null}
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      aria-label={`Edit ${workflow.name}`}
-                      onClick={() => openEditModal(workflow)}
-                      className="shrink-0 cursor-pointer active:scale-[0.97] transition-transform duration-100 ease-out"
-                    >
-                      <Edit2 className="w-4 h-4 text-blue-600" />
-                    </Button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        aria-label={`Edit ${workflow.name}`}
+                        onClick={() => openEditModal(workflow)}
+                        disabled={deleting}
+                        className="cursor-pointer active:scale-[0.97] transition-transform duration-100 ease-out"
+                      >
+                        <Edit2 className="w-4 h-4 text-blue-600" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        aria-label={`Delete ${workflow.name}`}
+                        onClick={() => setWorkflowToDelete(workflow)}
+                        disabled={deleting}
+                        className="cursor-pointer active:scale-[0.97] transition-transform duration-100 ease-out"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </div>
                   </div>
                   <div className="space-y-3">
                     <p className="text-sm font-medium text-muted-foreground">
@@ -277,10 +303,6 @@ export default function RequestWorkflowConfigPanel({
                               {step.order}
                             </span>
                             <span className="font-medium">{step.name}</span>
-                            <span className="text-muted-foreground">·</span>
-                            <span>
-                              {formatApproverType(step.approverType)}
-                            </span>
                             <span className="text-muted-foreground">·</span>
                             <span className="capitalize">
                               {step.approvalMode}
@@ -312,6 +334,24 @@ export default function RequestWorkflowConfigPanel({
           onSave={handleSave}
         />
       )}
+
+      <DeleteModal
+        visible={Boolean(workflowToDelete)}
+        onClose={() => {
+          if (!deleting) setWorkflowToDelete(null);
+        }}
+        itemName={workflowToDelete?.name ?? "this workflow"}
+        onConfirm={handleDeleteWorkflow}
+        loading={deleting}
+        title="Delete workflow"
+        message={
+          <p className="text-sm text-muted-foreground mb-4">
+            Permanently delete{" "}
+            <strong>{workflowToDelete?.name ?? "this workflow"}</strong>?
+            Existing requests keep the steps already copied onto them.
+          </p>
+        }
+      />
     </>
   );
 }

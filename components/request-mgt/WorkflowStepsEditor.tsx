@@ -11,9 +11,7 @@ import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   APPROVAL_MODE_OPTIONS,
-  APPROVER_TYPE_OPTIONS,
   type ApprovalMode,
-  type ApproverType,
   type WorkflowStep,
   createEmptyWorkflowStep,
 } from "@/redux/slice/admin/request/admin-request";
@@ -265,22 +263,6 @@ export default function WorkflowStepsEditor({
                     onChange={(e) => updateStep(index, { name: e.target.value })}
                     placeholder="Step name"
                     className="mt-1.5 rounded-xl"
-                    disabled={disabled}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor={`step-approver-${index}`}>Approver type</Label>
-                  <Select
-                    id={`step-approver-${index}`}
-                    options={APPROVER_TYPE_OPTIONS}
-                    value={step.approverType}
-                    onChange={(e) =>
-                      updateStep(index, {
-                        approverType: e.target.value as ApproverType,
-                      })
-                    }
-                    className="mt-1.5 w-full rounded-xl"
                     disabled={disabled}
                   />
                 </div>

@@ -1,22 +1,8 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 
-export const APPROVER_TYPES = [
-  "estate_admin",
-  "company",
-  "admin",
-] as const;
-
-export type ApproverType = (typeof APPROVER_TYPES)[number];
-
 export const APPROVAL_MODES = ["any", "all"] as const;
 export type ApprovalMode = (typeof APPROVAL_MODES)[number];
-
-export const APPROVER_TYPE_OPTIONS: { value: ApproverType; label: string }[] = [
-  { value: "estate_admin", label: "Estate admin" },
-  { value: "company", label: "Company" },
-  { value: "admin", label: "Admin" },
-];
 
 export const APPROVAL_MODE_OPTIONS: { value: ApprovalMode; label: string }[] = [
   { value: "any", label: "Any" },
@@ -26,7 +12,6 @@ export const APPROVAL_MODE_OPTIONS: { value: ApprovalMode; label: string }[] = [
 export interface WorkflowStep {
   order: number;
   name: string;
-  approverType: ApproverType;
   userIds?: string[];
   approvalMode: ApprovalMode;
   allowReject: boolean;
@@ -55,17 +40,6 @@ export interface UpsertRequestWorkflowPayload {
   isActive?: boolean;
 }
 
-function normalizeApproverType(raw: unknown): ApproverType {
-  const value = String(raw ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s-]+/g, "_");
-  if ((APPROVER_TYPES as readonly string[]).includes(value)) {
-    return value as ApproverType;
-  }
-  return "estate_admin";
-}
-
 function normalizeApprovalMode(raw: unknown): ApprovalMode {
   const value = String(raw ?? "")
     .trim()
@@ -84,7 +58,6 @@ export function normalizeWorkflowStep(
   return {
     order: Number(raw.order ?? index + 1) || index + 1,
     name: String(raw.name ?? "").trim(),
-    approverType: normalizeApproverType(raw.approverType),
     userIds,
     approvalMode: normalizeApprovalMode(raw.approvalMode),
     allowReject: raw.allowReject !== false,
@@ -165,7 +138,6 @@ export function createEmptyWorkflowStep(order = 1): WorkflowStep {
   return {
     order,
     name: "",
-    approverType: "estate_admin",
     userIds: [],
     approvalMode: "any",
     allowReject: true,
@@ -249,7 +221,6 @@ export const upsertAdminRequestWorkflow = createAsyncThunk(
         steps: steps.map((step, index) => ({
           order: index + 1,
           name: step.name.trim(),
-          approverType: step.approverType,
           userIds: (step.userIds ?? []).map((id) => id.trim()).filter(Boolean),
           approvalMode: step.approvalMode,
           allowReject: Boolean(step.allowReject),
@@ -283,6 +254,28 @@ export const upsertAdminRequestWorkflow = createAsyncThunk(
         message: Array.isArray(msg)
           ? msg[0]
           : (msg ?? "Failed to save request workflow"),
+      });
+    }
+  },
+);
+
+/** DELETE /api/v1/requests/workflows/{id} — permanently delete a workflow */
+export const deleteAdminRequestWorkflow = createAsyncThunk(
+  "adminRequest/deleteWorkflow",
+  async (id: string, { rejectWithValue }) => {
+    const workflowId = id?.trim();
+    if (!workflowId) {
+      return rejectWithValue({ message: "Workflow id is required." });
+    }
+
+    try {
+      await axiosInstance.delete(`/api/v1/requests/workflows/${workflowId}`);
+      return { id: workflowId };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ?? "Failed to delete request workflow",
       });
     }
   },

@@ -44,7 +44,6 @@ export interface CompanyRequestStepDecision {
 export interface CompanyRequestWorkflowStepSnapshot {
   order?: number;
   name?: string;
-  approverType?: string;
   status?: string;
 }
 
@@ -89,6 +88,11 @@ export interface GetCompanyRequestByIdPayload {
 }
 
 export interface CancelCompanyRequestPayload {
+  id: string;
+  estateId?: string;
+}
+
+export interface DeleteCompanyRequestPayload {
   id: string;
   estateId?: string;
 }
@@ -169,8 +173,6 @@ function normalizeStepSnapshot(
   return {
     order: item.order != null ? Number(item.order) : undefined,
     name: item.name != null ? String(item.name) : undefined,
-    approverType:
-      item.approverType != null ? String(item.approverType) : undefined,
     status: item.status != null ? String(item.status) : undefined,
   };
 }
@@ -392,6 +394,31 @@ export const cancelCompanyRequest = createAsyncThunk(
       return rejectWithValue({
         message:
           err?.response?.data?.message ?? "Failed to cancel request",
+      });
+    }
+  },
+);
+
+/** DELETE /api/v1/requests/{id} — permanently delete a request */
+export const deleteCompanyRequest = createAsyncThunk(
+  "companyRequest/delete",
+  async (payload: DeleteCompanyRequestPayload, { rejectWithValue }) => {
+    const requestId = payload.id?.trim();
+    const estateId = payload.estateId?.trim();
+    if (!requestId) {
+      return rejectWithValue({ message: "Request id is required." });
+    }
+
+    try {
+      await axiosInstance.delete(`/api/v1/requests/${requestId}`, {
+        params: estateId ? { estateId } : undefined,
+      });
+      return { id: requestId };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ?? "Failed to delete request",
       });
     }
   },

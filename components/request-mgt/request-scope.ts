@@ -2,6 +2,7 @@ import type { RootState } from "@/redux/store";
 import {
   cancelCompanyRequest,
   decideCompanyRequest,
+  deleteCompanyRequest,
   getCompanyRequestById,
   getCompanyRequests,
   COMPANY_REQUEST_STATUS_OPTIONS,
@@ -18,6 +19,7 @@ import {
 import {
   cancelEstateAdminRequest,
   decideEstateAdminRequest,
+  deleteEstateAdminRequest,
   getEstateAdminRequestById,
   getEstateAdminRequests,
   ESTATE_ADMIN_REQUEST_STATUS_OPTIONS,
@@ -58,6 +60,7 @@ export interface RequestSliceViewState {
   getByIdStatus: string;
   decideStatus: string;
   cancelStatus: string;
+  deleteStatus: string;
 }
 
 export interface RequestScopeApi {
@@ -67,6 +70,7 @@ export interface RequestScopeApi {
   getById: typeof getCompanyRequestById;
   decide: typeof decideCompanyRequest;
   cancel: typeof cancelCompanyRequest;
+  delete: typeof deleteCompanyRequest;
   setSearch: (value: string) => { type: string; payload: string };
   setStatusFilter: (value: ScopedRequestStatus | "") => {
     type: string;
@@ -84,6 +88,7 @@ const companyScope: RequestScopeApi = {
   getById: getCompanyRequestById,
   decide: decideCompanyRequest,
   cancel: cancelCompanyRequest,
+  delete: deleteCompanyRequest,
   setSearch: setCompanyRequestSearch,
   setStatusFilter: setCompanyRequestStatusFilter as RequestScopeApi["setStatusFilter"],
   setPage: setCompanyRequestPage,
@@ -98,6 +103,7 @@ const estateAdminScope: RequestScopeApi = {
   getById: getEstateAdminRequestById as RequestScopeApi["getById"],
   decide: decideEstateAdminRequest as RequestScopeApi["decide"],
   cancel: cancelEstateAdminRequest as RequestScopeApi["cancel"],
+  delete: deleteEstateAdminRequest as RequestScopeApi["delete"],
   setSearch: setEstateAdminRequestSearch,
   setStatusFilter:
     setEstateAdminRequestStatusFilter as RequestScopeApi["setStatusFilter"],

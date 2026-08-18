@@ -143,7 +143,7 @@ export function StaffGeneralSettingsCard() {
             countryCode: formData.countryCode,
             dateOfBirth: formData.dateOfBirth,
             gender: formData.gender,
-            phoneNumber: e164Phone,
+            phoneNumber: e164Phone ?? "",
             role: formData.role || undefined,
           },
         }),

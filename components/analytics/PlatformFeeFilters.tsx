@@ -37,7 +37,7 @@ const dateInputClassName =
 const selectClassName =
   "h-9 w-full min-w-42 appearance-none border-0 bg-transparent pr-8 text-[13px] shadow-none ring-0 focus:ring-0 active:scale-[0.99] motion-reduce:active:scale-100";
 
-const wellClassName = "flex flex-wrap items-center gap-1 rounded-xl bg-black/4 p-1 dark:bg-white/6";
+const wellClassName = "flex flex-wrap items-center gap-4 rounded-xl bg-black/4 p-1 dark:bg-white/6";
 
 export function PlatformFeeFilters({
   filters,

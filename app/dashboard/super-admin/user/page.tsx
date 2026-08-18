@@ -43,13 +43,11 @@ import { UserStatusModal } from "./components/UserStatusModal";
 import {
   DEFAULT_ESTATE_USER_ROLE,
   ESTATE_USER_ROLE_FILTER_OPTIONS,
+  ESTATE_SCOPE_ROLE_FILTER_OPTIONS,
   getEstateUserRoleTotalLabel,
   type EstateUserRoleFilter,
 } from "@/lib/estate-user-roles";
 /** Estate scope: company users are filtered under Company, not Estate. */
-const ESTATE_SCOPE_ROLE_FILTER_OPTIONS = ESTATE_USER_ROLE_FILTER_OPTIONS.filter(
-  (o) => o.value !== "company",
-);
 
 interface UserAddress {
   id: string;

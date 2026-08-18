@@ -10,7 +10,9 @@ import {
   Plus,
   MoreVertical,
   Search,
+  Eye,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import Table from "@/components/tables/list/page";
 import {
@@ -34,7 +36,6 @@ import Loader from "@/components/ui/Loader";
 import { isPending } from "@/lib/async-status";
 import { EstateStatusModal } from "./components/EstateStatusModal";
 import { EstateModulesForm } from "./components/EstateModulesForm";
-import { EstateViewModal } from "./components/EstateViewModal";
 
 type EstateTableRow = Omit<EstateData, "modules"> & {
   id?: string;
@@ -47,6 +48,7 @@ const PAGE_SIZE = 10;
 
 export default function EstatePage() {
   const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
 
   const { allEstates, pagination, loading } = useSelector(
     (state: RootState) => {
@@ -65,7 +67,6 @@ export default function EstatePage() {
   const [modulesOpen, setModulesOpen] = useState(false);
   const [selectedEstate, setSelectedEstate] = useState<EstateTableRow | null>(null);
   const [modulesEstate, setModulesEstate] = useState<EstateTableRow | null>(null);
-  const [viewingEstate, setViewingEstate] = useState<EstateTableRow | null>(null);
   const [statusItem, setStatusItem] = useState<EstateTableRow | null>(null);
   const [statusMode, setStatusMode] = useState<"suspend" | "activate">("suspend");
   const [statusSubmitting, setStatusSubmitting] = useState(false);
@@ -283,7 +284,20 @@ export default function EstatePage() {
       key: "actions",
       header: "Actions",
       render: (item: EstateTableRow) => (
-        <DropdownMenu.Root>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            title="View estate details"
+            className="cursor-pointer"
+            disabled={!item.id}
+            onClick={() => {
+              if (item.id) router.push(`/dashboard/super-admin/estate/${item.id}`);
+            }}
+          >
+            <Eye className="w-4 h-4 text-[#0150AC]" />
+          </Button>
+          <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
             <Button
               variant="ghost"
@@ -301,7 +315,9 @@ export default function EstatePage() {
               className="z-50 min-w-[200px] rounded-md border bg-white p-1 shadow-md"
             >
               <DropdownMenu.Item
-                onSelect={() => setViewingEstate(item)}
+                onSelect={() => {
+                  if (item.id) router.push(`/dashboard/super-admin/estate/${item.id}`);
+                }}
                 className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100"
               >
                 View Estate
@@ -339,6 +355,7 @@ export default function EstatePage() {
             </DropdownMenu.Content>
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
+        </div>
       ),
     },
   ];
@@ -531,13 +548,6 @@ export default function EstatePage() {
           />
         </Modal>
       )}
-
-      <EstateViewModal
-        open={Boolean(viewingEstate?.id)}
-        estateId={viewingEstate?.id ?? null}
-        fallback={viewingEstate}
-        onClose={() => setViewingEstate(null)}
-      />
 
       <EstateStatusModal
         visible={Boolean(statusItem)}

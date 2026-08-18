@@ -23,6 +23,10 @@ export const ESTATE_USER_ROLE_FILTER_OPTIONS: {
   { label: "Estate admins", value: "estate admin" },
 ];
 
+/** Estate scope: company users are filtered under Company, not Estate. */
+export const ESTATE_SCOPE_ROLE_FILTER_OPTIONS =
+  ESTATE_USER_ROLE_FILTER_OPTIONS.filter((o) => o.value !== "company");
+
 /** Stats card label for the active role filter, e.g. "Total Residents". */
 export function getEstateUserRoleTotalLabel(
   role: EstateUserRoleFilter,

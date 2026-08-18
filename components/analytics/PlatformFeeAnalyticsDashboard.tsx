@@ -196,10 +196,7 @@ export function PlatformFeeAnalyticsDashboard({
   const showSkeleton = loading || (!data && !showError);
   const showContent = Boolean(data) && !loading;
   const account = data?.account;
-  const accountLabel =
-    account?.accountNumber || account?.bankCode
-      ? [account.accountNumber, account.bankCode].filter(Boolean).join(" · ")
-      : null;
+  const accountLabel = account?.accountNumber ?? null;
 
   return (
     <section className={cn("space-y-4 bg-amber-50 p-4 rounded-xl border border-amber-200", className)}>
@@ -208,7 +205,7 @@ export function PlatformFeeAnalyticsDashboard({
           Platform fees
         </h2>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          Settled fees across estates and companies
+          Platform fee analytics
         </p>
       </div>
 

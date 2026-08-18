@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import DeleteModal from "@/components/resident/delete-modal/page";
-import { Plus, Edit, Trash2, Power, PowerOff, Search } from "lucide-react";
+import { Plus, Edit, Trash2, Power, PowerOff, Search, Eye } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -129,6 +130,7 @@ function normalizeModules(mods: unknown): CompanyModuleKey[] {
 
 export default function SuperAdminCompanyPage() {
   const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
 
   const { list, pagination, loading, modules, modulesLoading } = useSelector(
     (state: RootState) => {
@@ -404,6 +406,19 @@ export default function SuperAdminCompanyPage() {
         exportable: false,
         render: (item: CompanyItem) => (
           <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const id = companyId(item);
+                if (id) router.push(`/dashboard/super-admin/company/${id}`);
+              }}
+              title="View company details"
+              className="cursor-pointer"
+              disabled={!companyId(item)}
+            >
+              <Eye className="w-4 h-4 text-[#0150AC]" />
+            </Button>
             <Button
               variant="ghost"
               size="sm"

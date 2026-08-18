@@ -5,7 +5,7 @@ import HeroSection from "@/components/landing-page/heroSection";
 import AboutSection from "@/components/landing-page/aboutSection";
 import FAQSection from "@/components/landing-page/faqSection";
 import BlogSection from "@/components/landing-page/blogSection";
-import FeaturesShowcaseSection from "@/components/landing-page/featuresShowcaseSection";
+// import FeaturesShowcaseSection from "@/components/landing-page/featuresShowcaseSection";
 import BertaShowcaseSection from "@/components/landing-page/bertaShowcaseSection";
 import FeaturesSection from "@/components/landing-page/featuresSection";
 import Footer from "@/components/landing-page/footer";

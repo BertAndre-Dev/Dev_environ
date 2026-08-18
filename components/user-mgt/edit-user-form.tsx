@@ -10,6 +10,11 @@ import { CountryCodeSelect } from "@/components/ui/country-code-select";
 import { toast } from "react-toastify";
 import Loader from "@/components/ui/Loader";
 import { getApiErrorMessage, getApiSuccessMessage } from "@/lib/api-error";
+import {
+  PHONE_E164_ERROR,
+  splitPhoneFields,
+  toE164PhoneNumber,
+} from "@/lib/phone-e164";
 
 export type EditableUser = {
   id?: string;
@@ -77,14 +82,18 @@ function emptyForm(): EditUserFormData {
 }
 
 function mapUserToForm(user: EditableUser): EditUserFormData {
+  const { countryCode, nationalNumber } = splitPhoneFields(
+    user.phoneNumber,
+    user.countryCode,
+  );
   return {
     firstName: user.firstName ?? "",
     lastName: user.lastName ?? "",
     email: user.email ?? "",
-    countryCode: user.countryCode ?? "",
+    countryCode,
     dateOfBirth: toDateInputValue(user.dateOfBirth),
     gender: user.gender ?? "",
-    phoneNumber: user.phoneNumber ?? "",
+    phoneNumber: nationalNumber,
     address: user.address ?? "",
   };
 }
@@ -168,6 +177,15 @@ export default function EditUserForm({
       return;
     }
 
+    const phone = formData.phoneNumber.trim();
+    const e164Phone = phone
+      ? toE164PhoneNumber(phone, formData.countryCode)
+      : "";
+    if (phone && !e164Phone) {
+      toast.error(PHONE_E164_ERROR);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await saveUser(userId, {
@@ -177,7 +195,7 @@ export default function EditUserForm({
         countryCode: formData.countryCode.trim(),
         dateOfBirth: formData.dateOfBirth,
         gender: formData.gender,
-        phoneNumber: formData.phoneNumber.trim(),
+        phoneNumber: e164Phone || undefined,
         address: formData.address.trim(),
         role,
         residentType: residentType ?? undefined,
@@ -266,8 +284,11 @@ export default function EditUserForm({
                 <Input
                   id="edit-phoneNumber"
                   name="phoneNumber"
+                  type="tel"
+                  inputMode="numeric"
                   value={formData.phoneNumber}
                   onChange={handleChange}
+                  placeholder="8100001427"
                   className="mt-1"
                 />
               </div>

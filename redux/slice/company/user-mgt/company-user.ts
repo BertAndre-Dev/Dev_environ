@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import { apiErrorRejectValue } from "@/lib/api-error";
+import { withE164PhoneNumber } from "@/lib/phone-e164";
 
 export type GetCompanyUsersParams = {
   page?: number;
@@ -154,7 +155,10 @@ export const updateCompanyUser = createAsyncThunk(
   "company-user/updateCompanyUser",
   async ({ id, data }: UpdateCompanyUserPayload, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.put(`/api/v1/user-mgt/${id}`, data);
+      const res = await axiosInstance.put(
+        `/api/v1/user-mgt/${id}`,
+        withE164PhoneNumber(data),
+      );
       return res.data;
     } catch (error: unknown) {
       return rejectWithValue(apiErrorRejectValue(error));

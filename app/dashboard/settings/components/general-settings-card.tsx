@@ -15,6 +15,11 @@ import { resetUserProfileState } from "@/redux/slice/resident/user-profile/user-
 import { getUserProfile } from "@/redux/slice/resident/user-profile/user-profile";
 import { updateUserProfile } from "@/redux/slice/settings/user-profile";
 import { isBusy, isPending } from "@/lib/async-status";
+import {
+  PHONE_E164_ERROR,
+  splitPhoneFields,
+  toE164PhoneNumber,
+} from "@/lib/phone-e164";
 
 type UserFormState = {
   firstName: string;
@@ -82,12 +87,16 @@ export function GeneralSettingsCard() {
   useEffect(() => {
     if (!user) return;
     const u = user as UserFormState & { residentType?: string };
+    const { countryCode, nationalNumber } = splitPhoneFields(
+      user.phoneNumber,
+      user.countryCode,
+    );
     setFormData({
       firstName: user.firstName || "",
       lastName: user.lastName || "",
       email: user.email || "",
-      countryCode: user.countryCode || "",
-      phoneNumber: user.phoneNumber || "",
+      countryCode,
+      phoneNumber: nationalNumber,
       dateOfBirth: user.dateOfBirth ? user.dateOfBirth.split("T")[0] : "",
       gender: user.gender || "",
       role: user.role || "",
@@ -125,6 +134,16 @@ export function GeneralSettingsCard() {
       return;
     }
 
+    const phone = formData.phoneNumber.trim();
+    const e164Phone = phone
+      ? toE164PhoneNumber(phone, formData.countryCode)
+      : "";
+    if (phone && !e164Phone) {
+      setFormError(PHONE_E164_ERROR);
+      toast.error(PHONE_E164_ERROR);
+      return;
+    }
+
     try {
       const res = await dispatch(
         updateUserProfile({
@@ -136,7 +155,7 @@ export function GeneralSettingsCard() {
             countryCode: formData.countryCode,
             dateOfBirth: formData.dateOfBirth,
             gender: formData.gender,
-            phoneNumber: formData.phoneNumber,
+            phoneNumber: e164Phone,
             role: formData.role || undefined,
           },
         }),
@@ -222,7 +241,17 @@ export function GeneralSettingsCard() {
             </div>
             <div>
               <label className="text-sm font-medium" htmlFor="phone-number">Phone</label>
-              <Input id="phone-number" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} className="mt-2 h-10" disabled={isLoading} />
+              <Input
+                id="phone-number"
+                name="phoneNumber"
+                type="tel"
+                inputMode="numeric"
+                value={formData.phoneNumber}
+                onChange={handleChange}
+                placeholder="8100001427"
+                className="mt-2 h-10"
+                disabled={isLoading}
+              />
             </div>
           </div>
 

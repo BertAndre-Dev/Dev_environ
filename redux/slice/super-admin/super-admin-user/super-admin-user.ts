@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import { apiErrorRejectValue } from "@/lib/api-error";
+import { withE164PhoneNumber } from "@/lib/phone-e164";
 
 // get all users by estate (with pagination)
 export const getAllUsersByEstate = createAsyncThunk(
@@ -190,7 +191,10 @@ export const updateUser = createAsyncThunk(
   "super-admin-user/updateUser",
   async ({ id, data }: UpdateUserPayload, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.put(`/api/v1/user-mgt/${id}`, data);
+      const res = await axiosInstance.put(
+        `/api/v1/user-mgt/${id}`,
+        withE164PhoneNumber(data),
+      );
       return res.data;
     } catch (error: unknown) {
       return rejectWithValue(apiErrorRejectValue(error));

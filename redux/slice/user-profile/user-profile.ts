@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { withE164PhoneNumber } from "@/lib/phone-e164";
 
 export type UpdateUserProfilePayload = {
   id: string;
@@ -36,7 +37,10 @@ export const updateUserProfile = createAsyncThunk(
   "user-profile/updateUserProfile",
   async ({ id, data }: UpdateUserProfilePayload, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.put(`/api/v1/user-mgt/${id}`, data);
+      const res = await axiosInstance.put(
+        `/api/v1/user-mgt/${id}`,
+        withE164PhoneNumber(data),
+      );
       return res.data;
     } catch (error: any) {
       return rejectWithValue({

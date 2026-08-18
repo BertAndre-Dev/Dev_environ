@@ -379,7 +379,7 @@ export const cancelEstateAdminRequest = createAsyncThunk(
     try {
       const res = await axiosInstance.post(
         `/api/v1/requests/${requestId}/cancel`,
-        estateId ? { estateId } : {},
+        {},
         { params: estateId ? { estateId } : undefined },
       );
       return {

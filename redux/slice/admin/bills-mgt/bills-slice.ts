@@ -28,6 +28,7 @@ interface BillData {
   compulsory?: boolean;
   accrueInterest?: boolean;
   interestRatePercent?: number;
+  interestStartsAt?: string;
 }
 
 export interface AssignedBillData {
@@ -48,6 +49,7 @@ export interface AssignedBillData {
   compulsory?: boolean;
   accrueInterest?: boolean;
   interestRatePercent?: number;
+  interestStartsAt?: string;
 }
 
 

@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, Trash2 } from "lucide-react";
 import Select from "react-select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select as NativeSelect } from "@/components/ui/select";
 import Table from "@/components/tables/list/page";
 import Loader from "@/components/ui/Loader";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { isBusy } from "@/lib/async-status";
 import type { AppDispatch } from "@/redux/store";
@@ -27,6 +28,10 @@ import {
   type ScopedRequestItem,
   type ScopedRequestStatus,
 } from "./request-scope";
+import {
+  requestDeleteIconButtonClass,
+  requestViewButtonClass,
+} from "./request-action-styles";
 
 type EstateSelectOption = { label: string; value: string };
 
@@ -73,11 +78,15 @@ export default function RequestManagementView({
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [viewingFallback, setViewingFallback] =
     useState<ScopedRequestItem | null>(null);
+  const [requestToDelete, setRequestToDelete] =
+    useState<ScopedRequestItem | null>(null);
 
-  const { list, pagination, ui, getListStatus } = useSelector(api.selectState);
+  const { list, pagination, ui, getListStatus, deleteStatus } =
+    useSelector(api.selectState);
 
   const { page, pageSize, search, statusFilter } = ui;
   const listLoading = isBusy(getListStatus);
+  const deleting = isBusy(deleteStatus);
   const showEstateFilter = Boolean(estateOptions && onEstateChange);
   const showHeaderRow =
     !hideHeading || showEstateFilter || Boolean(headerActions);
@@ -105,6 +114,28 @@ export default function RequestManagementView({
         if (message) toast.error(message);
       });
   }, [api, dispatch, estateId, page, pageSize, statusFilter, search]);
+
+  const handleDeleteRequest = async () => {
+    if (!requestToDelete?.id) return;
+    try {
+      await dispatch(
+        api.delete({
+          id: requestToDelete.id,
+          estateId: estateId ?? undefined,
+        }),
+      ).unwrap();
+      toast.success("Request deleted.");
+      setRequestToDelete(null);
+      if (viewingId === requestToDelete.id) {
+        setViewingId(null);
+        setViewingFallback(null);
+      }
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
+    }
+  };
 
   useEffect(() => {
     return () => {
@@ -190,22 +221,33 @@ export default function RequestManagementView({
         key: "actions",
         header: "Actions",
         render: (item: ScopedRequestItem) => (
-          <Button
-            size="sm"
-            variant="outline"
-            className="rounded-full border-[#93C5FD] text-[#2563EB] hover:bg-[#EFF6FF]"
-            onClick={() => {
-              setViewingFallback(item);
-              setViewingId(item.id);
-            }}
-          >
-            View
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className={requestViewButtonClass}
+              onClick={() => {
+                setViewingFallback(item);
+                setViewingId(item.id);
+              }}
+            >
+              View
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className={requestDeleteIconButtonClass}
+              disabled={deleting}
+              onClick={() => setRequestToDelete(item)}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         ),
         exportable: false,
       },
     ],
-    [],
+    [deleting],
   );
 
   const total = pagination?.total ?? list.length;
@@ -334,6 +376,7 @@ export default function RequestManagementView({
         <RequestDetailModal
           scope={scope}
           requestId={viewingId}
+          estateId={estateId}
           fallback={viewingFallback}
           onClose={() => {
             setViewingId(null);
@@ -344,6 +387,24 @@ export default function RequestManagementView({
           }}
         />
       ) : null}
+
+      <DeleteModal
+        visible={Boolean(requestToDelete)}
+        onClose={() => {
+          if (!deleting) setRequestToDelete(null);
+        }}
+        itemName={requestToDelete?.title ?? "this request"}
+        onConfirm={handleDeleteRequest}
+        loading={deleting}
+        title="Delete request"
+        message={
+          <p className="text-sm text-muted-foreground mb-4">
+            Permanently delete{" "}
+            <strong>{requestToDelete?.title ?? "this request"}</strong>? The
+            creator and everyone involved in the workflow will be notified.
+          </p>
+        }
+      />
     </div>
   );
 }

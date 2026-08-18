@@ -57,6 +57,7 @@ interface BillData {
   compulsory?: boolean;
   accrueInterest?: boolean;
   interestRatePercent?: number;
+  interestStartsAt?: string;
 }
 
 type BillsTab = "bills" | "assigned";
@@ -86,6 +87,20 @@ function formatInterestRate(item: {
   const rate = item.interestRatePercent;
   if (rate == null || Number.isNaN(Number(rate))) return "—";
   return `${Number(rate)}%`;
+}
+
+function formatInterestStartsAt(item: {
+  accrueInterest?: boolean;
+  interestStartsAt?: string;
+}) {
+  if (!item.accrueInterest || !item.interestStartsAt) return "—";
+  const date = new Date(item.interestStartsAt);
+  if (Number.isNaN(date.getTime())) return item.interestStartsAt;
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function YesNoBadge({ value }: { value?: boolean }) {
@@ -338,6 +353,7 @@ export default function BillPage() {
       compulsory: item.compulsory,
       accrueInterest: item.accrueInterest,
       interestRatePercent: item.interestRatePercent,
+      interestStartsAt: item.interestStartsAt,
     });
     setAssignModalOpen(true);
   };
@@ -483,6 +499,7 @@ export default function BillPage() {
               compulsory: data.compulsory,
               accrueInterest: data.accrueInterest,
               interestRatePercent: data.interestRatePercent,
+              interestStartsAt: data.interestStartsAt,
             },
           }),
         ).unwrap();
@@ -499,6 +516,7 @@ export default function BillPage() {
             compulsory: data.compulsory,
             accrueInterest: data.accrueInterest,
             interestRatePercent: data.interestRatePercent,
+            interestStartsAt: data.interestStartsAt,
           }),
         ).unwrap();
         toast.success("Bill created for address successfully.");
@@ -563,6 +581,11 @@ export default function BillPage() {
       key: "interestRatePercent",
       header: "Interest Rate",
       render: (item: BillData) => formatInterestRate(item),
+    },
+    {
+      key: "interestStartsAt",
+      header: "Interest Starts",
+      render: (item: BillData) => formatInterestStartsAt(item),
     },
     {
       key: "isActive",
@@ -675,6 +698,11 @@ export default function BillPage() {
       key: "interestRatePercent",
       header: "Interest Rate",
       render: (item) => formatInterestRate(item),
+    },
+    {
+      key: "interestStartsAt",
+      header: "Interest Starts",
+      render: (item) => formatInterestStartsAt(item),
     },
     {
       key: "status",

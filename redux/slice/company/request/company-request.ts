@@ -44,7 +44,6 @@ export interface CompanyRequestStepDecision {
 export interface CompanyRequestWorkflowStepSnapshot {
   order?: number;
   name?: string;
-  approverType?: string;
   status?: string;
 }
 
@@ -80,6 +79,22 @@ export interface DecideCompanyRequestPayload {
   id: string;
   decision: CompanyRequestDecision;
   comment?: string;
+  estateId?: string;
+}
+
+export interface GetCompanyRequestByIdPayload {
+  id: string;
+  estateId?: string;
+}
+
+export interface CancelCompanyRequestPayload {
+  id: string;
+  estateId?: string;
+}
+
+export interface DeleteCompanyRequestPayload {
+  id: string;
+  estateId?: string;
 }
 
 interface CompanyRequestsListResponse {
@@ -158,8 +173,6 @@ function normalizeStepSnapshot(
   return {
     order: item.order != null ? Number(item.order) : undefined,
     name: item.name != null ? String(item.name) : undefined,
-    approverType:
-      item.approverType != null ? String(item.approverType) : undefined,
     status: item.status != null ? String(item.status) : undefined,
   };
 }
@@ -279,17 +292,20 @@ export const getCompanyRequests = createAsyncThunk(
   },
 );
 
-/** GET /api/v1/requests/{id} — get a request by ID */
+/** GET /api/v1/requests/{id}?estateId= — get a request by ID */
 export const getCompanyRequestById = createAsyncThunk(
   "companyRequest/getById",
-  async (id: string, { rejectWithValue }) => {
-    const requestId = id?.trim();
+  async (payload: GetCompanyRequestByIdPayload, { rejectWithValue }) => {
+    const requestId = payload.id?.trim();
+    const estateId = payload.estateId?.trim();
     if (!requestId) {
       return rejectWithValue({ message: "Request id is required." });
     }
 
     try {
-      const res = await axiosInstance.get(`/api/v1/requests/${requestId}`);
+      const res = await axiosInstance.get(`/api/v1/requests/${requestId}`, {
+        params: estateId ? { estateId } : undefined,
+      });
       const item = extractRequestPayload(res.data);
       if (!item?.id) {
         return rejectWithValue({ message: "Request not found." });
@@ -329,10 +345,12 @@ export const decideCompanyRequest = createAsyncThunk(
     try {
       const body: Record<string, string> = { decision };
       if (comment) body.comment = comment;
+      const estateId = payload.estateId?.trim();
 
       const res = await axiosInstance.post(
         `/api/v1/requests/${id}/decide`,
         body,
+        { params: estateId ? { estateId } : undefined },
       );
       return {
         id,
@@ -353,8 +371,9 @@ export const decideCompanyRequest = createAsyncThunk(
 /** POST /api/v1/requests/{id}/cancel — cancel a pending request */
 export const cancelCompanyRequest = createAsyncThunk(
   "companyRequest/cancel",
-  async (id: string, { rejectWithValue }) => {
-    const requestId = id?.trim();
+  async (payload: CancelCompanyRequestPayload, { rejectWithValue }) => {
+    const requestId = payload.id?.trim();
+    const estateId = payload.estateId?.trim();
     if (!requestId) {
       return rejectWithValue({ message: "Request id is required." });
     }
@@ -362,6 +381,8 @@ export const cancelCompanyRequest = createAsyncThunk(
     try {
       const res = await axiosInstance.post(
         `/api/v1/requests/${requestId}/cancel`,
+        {},
+        { params: estateId ? { estateId } : undefined },
       );
       return {
         id: requestId,
@@ -373,6 +394,31 @@ export const cancelCompanyRequest = createAsyncThunk(
       return rejectWithValue({
         message:
           err?.response?.data?.message ?? "Failed to cancel request",
+      });
+    }
+  },
+);
+
+/** DELETE /api/v1/requests/{id} — permanently delete a request */
+export const deleteCompanyRequest = createAsyncThunk(
+  "companyRequest/delete",
+  async (payload: DeleteCompanyRequestPayload, { rejectWithValue }) => {
+    const requestId = payload.id?.trim();
+    const estateId = payload.estateId?.trim();
+    if (!requestId) {
+      return rejectWithValue({ message: "Request id is required." });
+    }
+
+    try {
+      await axiosInstance.delete(`/api/v1/requests/${requestId}`, {
+        params: estateId ? { estateId } : undefined,
+      });
+      return { id: requestId };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ?? "Failed to delete request",
       });
     }
   },

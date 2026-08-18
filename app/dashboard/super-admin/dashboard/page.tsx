@@ -16,6 +16,7 @@ import { MeterCommunicationStatusChart } from "@/components/charts/MeterCommunic
 import { PowerAvailabilityCard } from "@/components/charts/PowerAvailabilityCard";
 // import { PaymentChannelsChart } from "@/components/charts/PaymentChannelsChart";
 import { CollectionEfficiencyChart } from "@/components/charts/CollectionEfficiencyChart";
+import { PlatformFeeAnalyticsDashboard } from "@/components/analytics/PlatformFeeAnalyticsDashboard";
 import { AveragePurchaseStatCard } from "@/components/dashboard/super-admin/AveragePurchaseStatCard";
 import { CustomerMeterSummaryCard } from "@/components/charts/CustomerMeterSummaryCard";
 import { CustomerActivationsCard } from "@/components/charts/CustomerActivationsCard";
@@ -508,6 +509,17 @@ export default function SuperAdminDashboard() {
             <KpiCard key={card.label} {...card} />
           ))}
         </div>
+
+        <PlatformFeeAnalyticsDashboard
+          estateOptions={customerMeterEstateOptions}
+          companyOptions={customerMeterCompanyOptions}
+          estatesLoading={
+            isPending(estatesStatus) && customerMeterEstateOptions.length === 0
+          }
+          companiesLoading={
+            isPending(companiesStatus) && customerMeterCompanyOptions.length === 0
+          }
+        />
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <AveragePurchaseStatCard

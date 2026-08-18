@@ -1,26 +1,61 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { Settings2 } from "lucide-react";
+import { Edit2, Settings2, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import DeleteModal from "@/components/resident/delete-modal/page";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { isBusy, isPending } from "@/lib/async-status";
 import {
-  APPROVER_TYPE_OPTIONS,
+  deleteAdminRequestWorkflow,
   getAdminRequestWorkflow,
   upsertAdminRequestWorkflow,
+  type RequestWorkflow,
   type WorkflowStep,
 } from "@/redux/slice/admin/request/admin-request";
 import type { AppDispatch, RootState } from "@/redux/store";
+import {
+  fetchWorkflowEstateUsers,
+  type WorkflowEstateUser,
+} from "@/components/request-mgt/workflow-users";
+import {
+  requestDeleteIconGhostClass,
+  requestEditIconButtonClass,
+} from "@/components/request-mgt/request-action-styles";
 import WorkflowConfigModal from "./WorkflowConfigModal";
 
-function formatApproverType(type: string) {
+function StepUsers({
+  userIds,
+  usersById,
+}: Readonly<{
+  userIds?: string[];
+  usersById: Map<string, WorkflowEstateUser>;
+}>) {
+  if (!userIds?.length) return null;
+
   return (
-    APPROVER_TYPE_OPTIONS.find((o) => o.value === type)?.label ??
-    type.replaceAll("_", " ")
+    <ul className="mt-2 flex flex-wrap gap-1.5">
+      {userIds.map((id) => {
+        const user = usersById.get(id);
+        return (
+          <li
+            key={id}
+            className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-white border border-black/8 px-2.5 py-1 text-xs"
+          >
+            <span className="truncate font-medium text-foreground">
+              {user?.name ?? id}
+            </span>
+            <span className="text-muted-foreground">·</span>
+            <span className="shrink-0 text-muted-foreground">
+              {user?.roleLabel ?? "User"}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -39,17 +74,28 @@ export default function RequestWorkflowConfigPanel({
   enabled = true,
   compact = false,
   estateLabel,
-}: RequestWorkflowConfigPanelProps) {
+}: Readonly<RequestWorkflowConfigPanelProps>) {
   const dispatch = useDispatch<AppDispatch>();
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingWorkflow, setEditingWorkflow] =
+    useState<RequestWorkflow | null>(null);
+  const [workflowToDelete, setWorkflowToDelete] =
+    useState<RequestWorkflow | null>(null);
+  const [estateUsers, setEstateUsers] = useState<WorkflowEstateUser[]>([]);
 
-  const { workflows, getWorkflowStatus, upsertWorkflowStatus } = useSelector(
-    (state: RootState) => state.adminRequest,
-  );
+  const { workflows, getWorkflowStatus, upsertWorkflowStatus, deleteWorkflowStatus } =
+    useSelector((state: RootState) => state.adminRequest);
 
   const loadingWorkflow = isPending(getWorkflowStatus);
   const saving = isBusy(upsertWorkflowStatus);
+  const deleting = isBusy(deleteWorkflowStatus);
   const hasWorkflows = workflows.length > 0;
+
+  const usersById = useMemo(() => {
+    const map = new Map<string, WorkflowEstateUser>();
+    estateUsers.forEach((user) => map.set(user.id, user));
+    return map;
+  }, [estateUsers]);
 
   useEffect(() => {
     if (!estateId || !enabled) return;
@@ -59,6 +105,22 @@ export default function RequestWorkflowConfigPanel({
         const message = getApiErrorMessage(err);
         if (message) toast.error(message);
       });
+  }, [dispatch, estateId, enabled]);
+
+  useEffect(() => {
+    if (!estateId || !enabled) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const users = await fetchWorkflowEstateUsers(dispatch, estateId);
+        if (!cancelled) setEstateUsers(users);
+      } catch {
+        if (!cancelled) setEstateUsers([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [dispatch, estateId, enabled]);
 
   const handleSave = async (payload: {
@@ -78,9 +140,44 @@ export default function RequestWorkflowConfigPanel({
           isActive: true,
         }),
       ).unwrap();
-      toast.success("Request workflow saved.");
+      toast.success(
+        editingWorkflow ? "Request workflow updated." : "Request workflow saved.",
+      );
       setModalOpen(false);
+      setEditingWorkflow(null);
       await dispatch(getAdminRequestWorkflow(estateId)).unwrap();
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+      throw err;
+    }
+  };
+
+  const openCreateModal = () => {
+    setEditingWorkflow(null);
+    setModalOpen(true);
+  };
+
+  const openEditModal = (workflow: RequestWorkflow) => {
+    setEditingWorkflow(workflow);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    if (saving) return;
+    setModalOpen(false);
+    setEditingWorkflow(null);
+  };
+
+  const handleDeleteWorkflow = async () => {
+    const workflowId = (
+      workflowToDelete?.id ?? workflowToDelete?._id ?? ""
+    ).trim();
+    if (!workflowId) return;
+    try {
+      await dispatch(deleteAdminRequestWorkflow(workflowId)).unwrap();
+      toast.success("Request workflow deleted.");
+      setWorkflowToDelete(null);
     } catch (err: unknown) {
       const message = getApiErrorMessage(err);
       if (message) toast.error(message);
@@ -90,7 +187,7 @@ export default function RequestWorkflowConfigPanel({
 
   const setWorkflowButton = (
     <Button
-      onClick={() => setModalOpen(true)}
+      onClick={openCreateModal}
       disabled={!estateId}
       size={compact ? "sm" : "default"}
       variant="outline"
@@ -159,15 +256,41 @@ export default function RequestWorkflowConfigPanel({
                   }
                   className="space-y-3 rounded-2xl border border-black/5 bg-white p-4"
                 >
-                  <div>
-                    <h3 className="font-heading text-lg font-semibold tracking-[-0.01em]">
-                      {workflow.name}
-                    </h3>
-                    {workflow.description ? (
-                      <p className="text-sm text-muted-foreground mt-1 leading-snug">
-                        {workflow.description}
-                      </p>
-                    ) : null}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="font-heading text-lg font-semibold tracking-[-0.01em]">
+                        {workflow.name}
+                      </h3>
+                      {workflow.description ? (
+                        <p className="text-sm text-muted-foreground mt-1 leading-snug">
+                          {workflow.description}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Edit ${workflow.name}`}
+                        onClick={() => openEditModal(workflow)}
+                        disabled={deleting}
+                        className={requestEditIconButtonClass}
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Delete ${workflow.name}`}
+                        onClick={() => setWorkflowToDelete(workflow)}
+                        disabled={deleting}
+                        className={requestDeleteIconGhostClass}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                   <div className="space-y-3">
                     <p className="text-sm font-medium text-muted-foreground">
@@ -185,28 +308,14 @@ export default function RequestWorkflowConfigPanel({
                             </span>
                             <span className="font-medium">{step.name}</span>
                             <span className="text-muted-foreground">·</span>
-                            <span>
-                              {formatApproverType(step.approverType)}
-                            </span>
-                            <span className="text-muted-foreground">·</span>
                             <span className="capitalize">
                               {step.approvalMode}
                             </span>
-                            {step.approverType === "user" &&
-                              (step.userIds?.length ?? 0) > 0 && (
-                                <>
-                                  <span className="text-muted-foreground">
-                                    ·
-                                  </span>
-                                  <span className="text-muted-foreground">
-                                    {step.userIds?.length} user
-                                    {(step.userIds?.length ?? 0) === 1
-                                      ? ""
-                                      : "s"}
-                                  </span>
-                                </>
-                              )}
                           </div>
+                          <StepUsers
+                            userIds={step.userIds}
+                            usersById={usersById}
+                          />
                         </li>
                       ))}
                     </ol>
@@ -220,13 +329,33 @@ export default function RequestWorkflowConfigPanel({
 
       {modalOpen && (
         <WorkflowConfigModal
+          key={editingWorkflow?.id ?? editingWorkflow?._id ?? "new-workflow"}
           visible={modalOpen}
           estateId={estateId}
           saving={saving}
-          onClose={() => setModalOpen(false)}
+          initialWorkflow={editingWorkflow}
+          onClose={closeModal}
           onSave={handleSave}
         />
       )}
+
+      <DeleteModal
+        visible={Boolean(workflowToDelete)}
+        onClose={() => {
+          if (!deleting) setWorkflowToDelete(null);
+        }}
+        itemName={workflowToDelete?.name ?? "this workflow"}
+        onConfirm={handleDeleteWorkflow}
+        loading={deleting}
+        title="Delete workflow"
+        message={
+          <p className="text-sm text-muted-foreground mb-4">
+            Permanently delete{" "}
+            <strong>{workflowToDelete?.name ?? "this workflow"}</strong>?
+            Existing requests keep the steps already copied onto them.
+          </p>
+        }
+      />
     </>
   );
 }

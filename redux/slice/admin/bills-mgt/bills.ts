@@ -42,6 +42,7 @@ interface BillData {
   compulsory?: boolean;
   accrueInterest?: boolean;
   interestRatePercent?: number;
+  interestStartsAt?: string;
 }
 
 export interface CreateBillForAddressPayload {
@@ -55,6 +56,7 @@ export interface CreateBillForAddressPayload {
   compulsory?: boolean;
   accrueInterest?: boolean;
   interestRatePercent?: number;
+  interestStartsAt?: string;
 }
 
 export interface UpdateBillPayload {
@@ -68,6 +70,7 @@ export interface UpdateBillPayload {
   compulsory?: boolean;
   accrueInterest?: boolean;
   interestRatePercent?: number;
+  interestStartsAt?: string;
 }
 
 export interface UpdateBillForAddressPayload {
@@ -79,6 +82,7 @@ export interface UpdateBillForAddressPayload {
   compulsory?: boolean;
   accrueInterest?: boolean;
   interestRatePercent?: number;
+  interestStartsAt?: string;
 }
 
 function billAmount(data: { amount?: number; yearlyAmount?: number }) {
@@ -88,11 +92,16 @@ function billAmount(data: { amount?: number; yearlyAmount?: number }) {
 function billInterestFields(data: {
   accrueInterest?: boolean;
   interestRatePercent?: number;
+  interestStartsAt?: string;
 }) {
   const accrueInterest = Boolean(data.accrueInterest);
+  const interestStartsAt = accrueInterest
+    ? String(data.interestStartsAt ?? "").trim().slice(0, 10)
+    : "";
   return {
     accrueInterest,
     interestRatePercent: accrueInterest ? Number(data.interestRatePercent) || 0 : 0,
+    ...(accrueInterest && interestStartsAt ? { interestStartsAt } : {}),
   };
 }
 

@@ -334,6 +334,7 @@ export default function RequestManagementView({
         <RequestDetailModal
           scope={scope}
           requestId={viewingId}
+          estateId={estateId}
           fallback={viewingFallback}
           onClose={() => {
             setViewingId(null);

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { Settings2 } from "lucide-react";
+import { Edit2, Settings2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -12,6 +12,7 @@ import {
   APPROVER_TYPE_OPTIONS,
   getAdminRequestWorkflow,
   upsertAdminRequestWorkflow,
+  type RequestWorkflow,
   type WorkflowStep,
 } from "@/redux/slice/admin/request/admin-request";
 import type { AppDispatch, RootState } from "@/redux/store";
@@ -78,6 +79,8 @@ export default function RequestWorkflowConfigPanel({
 }: Readonly<RequestWorkflowConfigPanelProps>) {
   const dispatch = useDispatch<AppDispatch>();
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingWorkflow, setEditingWorkflow] =
+    useState<RequestWorkflow | null>(null);
   const [estateUsers, setEstateUsers] = useState<WorkflowEstateUser[]>([]);
 
   const { workflows, getWorkflowStatus, upsertWorkflowStatus } = useSelector(
@@ -137,8 +140,11 @@ export default function RequestWorkflowConfigPanel({
           isActive: true,
         }),
       ).unwrap();
-      toast.success("Request workflow saved.");
+      toast.success(
+        editingWorkflow ? "Request workflow updated." : "Request workflow saved.",
+      );
       setModalOpen(false);
+      setEditingWorkflow(null);
       await dispatch(getAdminRequestWorkflow(estateId)).unwrap();
     } catch (err: unknown) {
       const message = getApiErrorMessage(err);
@@ -147,9 +153,25 @@ export default function RequestWorkflowConfigPanel({
     }
   };
 
+  const openCreateModal = () => {
+    setEditingWorkflow(null);
+    setModalOpen(true);
+  };
+
+  const openEditModal = (workflow: RequestWorkflow) => {
+    setEditingWorkflow(workflow);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    if (saving) return;
+    setModalOpen(false);
+    setEditingWorkflow(null);
+  };
+
   const setWorkflowButton = (
     <Button
-      onClick={() => setModalOpen(true)}
+      onClick={openCreateModal}
       disabled={!estateId}
       size={compact ? "sm" : "default"}
       variant="outline"
@@ -218,15 +240,27 @@ export default function RequestWorkflowConfigPanel({
                   }
                   className="space-y-3 rounded-2xl border border-black/5 bg-white p-4"
                 >
-                  <div>
-                    <h3 className="font-heading text-lg font-semibold tracking-[-0.01em]">
-                      {workflow.name}
-                    </h3>
-                    {workflow.description ? (
-                      <p className="text-sm text-muted-foreground mt-1 leading-snug">
-                        {workflow.description}
-                      </p>
-                    ) : null}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="font-heading text-lg font-semibold tracking-[-0.01em]">
+                        {workflow.name}
+                      </h3>
+                      {workflow.description ? (
+                        <p className="text-sm text-muted-foreground mt-1 leading-snug">
+                          {workflow.description}
+                        </p>
+                      ) : null}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Edit ${workflow.name}`}
+                      onClick={() => openEditModal(workflow)}
+                      className="shrink-0 cursor-pointer active:scale-[0.97] transition-transform duration-100 ease-out"
+                    >
+                      <Edit2 className="w-4 h-4 text-blue-600" />
+                    </Button>
                   </div>
                   <div className="space-y-3">
                     <p className="text-sm font-medium text-muted-foreground">
@@ -269,10 +303,12 @@ export default function RequestWorkflowConfigPanel({
 
       {modalOpen && (
         <WorkflowConfigModal
+          key={editingWorkflow?.id ?? editingWorkflow?._id ?? "new-workflow"}
           visible={modalOpen}
           estateId={estateId}
           saving={saving}
-          onClose={() => setModalOpen(false)}
+          initialWorkflow={editingWorkflow}
+          onClose={closeModal}
           onSave={handleSave}
         />
       )}

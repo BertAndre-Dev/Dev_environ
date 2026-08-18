@@ -6,14 +6,25 @@ import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { WorkflowStep } from "@/redux/slice/admin/request/admin-request";
+import type {
+  RequestWorkflow,
+  WorkflowStep,
+} from "@/redux/slice/admin/request/admin-request";
 import WorkflowStepsEditor from "@/components/request-mgt/WorkflowStepsEditor";
+
+function cloneSteps(steps: WorkflowStep[] = []): WorkflowStep[] {
+  return steps.map((step) => ({
+    ...step,
+    userIds: [...(step.userIds ?? [])],
+  }));
+}
 
 interface WorkflowConfigModalProps {
   readonly visible: boolean;
   readonly estateId?: string | null;
   readonly loading?: boolean;
   readonly saving?: boolean;
+  readonly initialWorkflow?: RequestWorkflow | null;
   readonly onClose: () => void;
   readonly onSave: (payload: {
     name: string;
@@ -27,15 +38,23 @@ export default function WorkflowConfigModal({
   estateId,
   loading = false,
   saving = false,
+  initialWorkflow = null,
   onClose,
   onSave,
 }: WorkflowConfigModalProps) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [steps, setSteps] = useState<WorkflowStep[]>([]);
+  const isEditing = Boolean(initialWorkflow?.name);
+  const [name, setName] = useState(initialWorkflow?.name ?? "");
+  const [description, setDescription] = useState(
+    initialWorkflow?.description ?? "",
+  );
+  const [steps, setSteps] = useState<WorkflowStep[]>(
+    cloneSteps(initialWorkflow?.steps),
+  );
 
   const busy = loading || saving;
-  const saveLabel = saving ? "Saving..." : "Save workflow";
+  let saveLabel = "Save workflow";
+  if (saving) saveLabel = "Saving...";
+  else if (isEditing) saveLabel = "Save changes";
 
   const handleClose = () => {
     if (saving) return;
@@ -65,11 +84,12 @@ export default function WorkflowConfigModal({
       <div className="flex flex-col min-h-0 max-h-[90vh]">
         <div className="shrink-0 px-5 sm:px-6 pt-5 sm:pt-6 pb-4 border-b border-black/5 bg-white/80 backdrop-blur-xl">
           <h2 className="font-heading text-xl font-semibold tracking-[-0.02em]">
-            Set approval workflow
+            {isEditing ? "Edit approval workflow" : "Set approval workflow"}
           </h2>
           <p className="text-sm text-muted-foreground mt-1 leading-snug">
-            Use an existing workflow name to update it, or a new name to create
-            another workflow.
+            {isEditing
+              ? "Update this workflow’s steps, approvers, and users."
+              : "Use an existing workflow name to update it, or a new name to create another workflow."}
           </p>
         </div>
 

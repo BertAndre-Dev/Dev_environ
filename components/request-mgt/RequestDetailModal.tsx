@@ -82,6 +82,7 @@ function getActorName(
 interface RequestDetailModalProps {
   scope: RequestScope;
   requestId: string | null;
+  estateId?: string | null;
   fallback?: ScopedRequestItem | null;
   onClose: () => void;
   onChanged?: () => void;
@@ -90,6 +91,7 @@ interface RequestDetailModalProps {
 export default function RequestDetailModal({
   scope,
   requestId,
+  estateId,
   fallback = null,
   onClose,
   onChanged,
@@ -113,11 +115,19 @@ export default function RequestDetailModal({
   else if (fallback?.id === requestId) item = fallback;
   else item = selected ?? fallback;
 
+  const resolvedEstateId =
+    estateId?.trim() || item?.estateId?.trim() || fallback?.estateId?.trim();
+
   useEffect(() => {
     if (!requestId) return;
     setComment("");
     setConfirmCancel(false);
-    dispatch(api.getById(requestId))
+    dispatch(
+      api.getById({
+        id: requestId,
+        estateId: resolvedEstateId,
+      }),
+    )
       .unwrap()
       .catch((err: unknown) => {
         const message = getApiErrorMessage(err);
@@ -127,7 +137,7 @@ export default function RequestDetailModal({
     return () => {
       dispatch(api.clearSelected());
     };
-  }, [api, dispatch, requestId]);
+  }, [api, dispatch, requestId, resolvedEstateId]);
 
   if (!requestId) return null;
 
@@ -143,6 +153,7 @@ export default function RequestDetailModal({
           id: item.id,
           decision: "approve",
           comment: comment.trim() || undefined,
+          estateId: resolvedEstateId,
         }),
       ).unwrap();
       toast.success("Request approved.");
@@ -157,7 +168,9 @@ export default function RequestDetailModal({
   const handleCancel = async () => {
     if (!item?.id) return;
     try {
-      await dispatch(api.cancel(item.id)).unwrap();
+      await dispatch(
+        api.cancel({ id: item.id, estateId: resolvedEstateId }),
+      ).unwrap();
       toast.success("Request cancelled.");
       setConfirmCancel(false);
       onChanged?.();
@@ -392,12 +405,6 @@ export default function RequestDetailModal({
                 )}
               </div>
             ) : null}
-
-            <div className="flex justify-end pt-2">
-              <Button variant="outline" onClick={onClose} disabled={mutating}>
-                Close
-              </Button>
-            </div>
           </>
         )}
       </div>

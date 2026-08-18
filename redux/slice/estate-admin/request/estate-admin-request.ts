@@ -80,6 +80,17 @@ export interface DecideEstateAdminRequestPayload {
   id: string;
   decision: EstateAdminRequestDecision;
   comment?: string;
+  estateId?: string;
+}
+
+export interface GetEstateAdminRequestByIdPayload {
+  id: string;
+  estateId?: string;
+}
+
+export interface CancelEstateAdminRequestPayload {
+  id: string;
+  estateId?: string;
 }
 
 interface EstateAdminRequestsListResponse {
@@ -279,17 +290,20 @@ export const getEstateAdminRequests = createAsyncThunk(
   },
 );
 
-/** GET /api/v1/requests/{id} — get a request by ID */
+/** GET /api/v1/requests/{id}?estateId= — get a request by ID */
 export const getEstateAdminRequestById = createAsyncThunk(
   "estateAdminRequest/getById",
-  async (id: string, { rejectWithValue }) => {
-    const requestId = id?.trim();
+  async (payload: GetEstateAdminRequestByIdPayload, { rejectWithValue }) => {
+    const requestId = payload.id?.trim();
+    const estateId = payload.estateId?.trim();
     if (!requestId) {
       return rejectWithValue({ message: "Request id is required." });
     }
 
     try {
-      const res = await axiosInstance.get(`/api/v1/requests/${requestId}`);
+      const res = await axiosInstance.get(`/api/v1/requests/${requestId}`, {
+        params: estateId ? { estateId } : undefined,
+      });
       const item = extractRequestPayload(res.data);
       if (!item?.id) {
         return rejectWithValue({ message: "Request not found." });
@@ -329,10 +343,13 @@ export const decideEstateAdminRequest = createAsyncThunk(
     try {
       const body: Record<string, string> = { decision };
       if (comment) body.comment = comment;
+      const estateId = payload.estateId?.trim();
+      if (estateId) body.estateId = estateId;
 
       const res = await axiosInstance.post(
         `/api/v1/requests/${id}/decide`,
         body,
+        { params: estateId ? { estateId } : undefined },
       );
       return {
         id,
@@ -353,8 +370,9 @@ export const decideEstateAdminRequest = createAsyncThunk(
 /** POST /api/v1/requests/{id}/cancel — cancel a pending request */
 export const cancelEstateAdminRequest = createAsyncThunk(
   "estateAdminRequest/cancel",
-  async (id: string, { rejectWithValue }) => {
-    const requestId = id?.trim();
+  async (payload: CancelEstateAdminRequestPayload, { rejectWithValue }) => {
+    const requestId = payload.id?.trim();
+    const estateId = payload.estateId?.trim();
     if (!requestId) {
       return rejectWithValue({ message: "Request id is required." });
     }
@@ -362,6 +380,8 @@ export const cancelEstateAdminRequest = createAsyncThunk(
     try {
       const res = await axiosInstance.post(
         `/api/v1/requests/${requestId}/cancel`,
+        estateId ? { estateId } : {},
+        { params: estateId ? { estateId } : undefined },
       );
       return {
         id: requestId,

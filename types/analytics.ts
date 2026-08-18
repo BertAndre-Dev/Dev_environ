@@ -433,3 +433,92 @@ export interface TransactionAnalyticsResponse {
   message: string;
   data: TransactionAnalyticsDashboard;
 }
+
+export interface PlatformFeeAccount {
+  bankCode: string;
+  accountNumber: string;
+}
+
+export interface PlatformFeePeriod {
+  startDate: string;
+  endDate: string;
+}
+
+export interface PlatformFeeFilter {
+  estateId: string | null;
+  companyId: string | null;
+}
+
+export interface PlatformFeeSourceStat {
+  total: number;
+  count: number;
+}
+
+export interface PlatformFeeCards {
+  total: number;
+  count: number;
+  bills: PlatformFeeSourceStat;
+  vends: PlatformFeeSourceStat;
+  transfers: PlatformFeeSourceStat;
+  funding: PlatformFeeSourceStat;
+  rents: PlatformFeeSourceStat;
+  other: PlatformFeeSourceStat;
+  [source: string]: number | PlatformFeeSourceStat;
+}
+
+export interface PlatformFeePieSlice {
+  label: string;
+  value: number;
+}
+
+export interface PlatformFeeBarSeries {
+  name: string;
+  data: number[];
+}
+
+export interface PlatformFeeBarChart {
+  granularity: "month" | "week" | "day";
+  categories: string[];
+  series: PlatformFeeBarSeries[];
+}
+
+export interface PlatformFeeListItem {
+  id: string;
+  date: string;
+  source: string;
+  fee: number;
+  description: string;
+}
+
+export interface PlatformFeeAnalytics {
+  account: PlatformFeeAccount;
+  period: PlatformFeePeriod;
+  filter: PlatformFeeFilter;
+  cards: PlatformFeeCards;
+  pieChart: PlatformFeePieSlice[];
+  barChart: PlatformFeeBarChart;
+  list: PlatformFeeListItem[];
+}
+
+export interface PlatformFeePagination {
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
+}
+
+export interface PlatformFeeResponse {
+  success: boolean;
+  message: string;
+  data: PlatformFeeAnalytics;
+  pagination: PlatformFeePagination;
+}
+
+export interface PlatformFeeQueryParams {
+  startDate: string;
+  endDate: string;
+  estateId?: string;
+  companyId?: string;
+  page?: number;
+  limit?: number;
+}

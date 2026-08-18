@@ -162,6 +162,7 @@ function sharedPickerProps(
   minDate?: Date | null,
   maxDate?: Date | null,
   hasValue = false,
+  withPortal = true,
 ) {
   return {
     dateFormat: DISPLAY_DATE_FORMAT,
@@ -171,7 +172,7 @@ function sharedPickerProps(
     toggleCalendarOnIconClick: true,
     icon: datePickerIcon,
     todayButton: "Jump to today",
-    withPortal: true,
+    withPortal,
     shouldCloseOnSelect: true,
     isClearable: hasValue,
     fixedHeight: true,
@@ -222,6 +223,8 @@ export type IsoDatePickerProps = {
   disabled?: boolean;
   className?: string;
   ariaLabel?: string;
+  /** When false, the calendar opens next to the input instead of a page overlay. */
+  withPortal?: boolean;
 };
 
 export function IsoDatePicker({
@@ -234,6 +237,7 @@ export function IsoDatePicker({
   disabled,
   className,
   ariaLabel,
+  withPortal = true,
 }: Readonly<IsoDatePickerProps>) {
   const selected = parseIsoToDate(value);
   const min = useMemo(() => parseIsoToDate(minDate), [minDate]);
@@ -242,7 +246,7 @@ export function IsoDatePicker({
 
   return (
     <DatePicker
-      {...sharedPickerProps(min, max, Boolean(selected))}
+      {...sharedPickerProps(min, max, Boolean(selected), withPortal)}
       id={id}
       selected={selected}
       onChange={(d: Date | null) => onChange(dateToIsoString(d))}
@@ -280,6 +284,7 @@ type LinkedRangeBase = {
   onEndChange: (iso: string) => void;
   disabled?: boolean;
   className?: string;
+  withPortal?: boolean;
 };
 
 /** Start half of a linked range (pair with `IsoLinkedRangeEnd`). */
@@ -294,6 +299,7 @@ export function IsoLinkedRangeStart({
   minDate,
   disabled,
   className,
+  withPortal = true,
 }: Omit<LinkedRangeBase, "onEndChange"> & {
   onEndChange?: (iso: string) => void;
   id?: string;
@@ -306,7 +312,7 @@ export function IsoLinkedRangeStart({
   const min = parseIsoToDate(minDate);
   return (
     <DatePicker
-      {...sharedPickerProps(min, e, Boolean(s))}
+      {...sharedPickerProps(min, e, Boolean(s), withPortal)}
       id={id}
       selected={s}
       onChange={(d: Date | null) => {
@@ -341,6 +347,7 @@ export function IsoLinkedRangeEnd({
   placeholder = "Select end date",
   disabled,
   className,
+  withPortal = true,
 }: Omit<LinkedRangeBase, "onStartChange"> & {
   id?: string;
   ariaLabel?: string;
@@ -350,7 +357,7 @@ export function IsoLinkedRangeEnd({
   const e = parseIsoToDate(endDate);
   return (
     <DatePicker
-      {...sharedPickerProps(s, null, Boolean(e))}
+      {...sharedPickerProps(s, null, Boolean(e), withPortal)}
       id={id}
       selected={e}
       onChange={(d: Date | null) => onEndChange(dateToIsoString(d))}

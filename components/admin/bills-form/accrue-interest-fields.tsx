@@ -52,7 +52,7 @@ export function AccrueInterestFields({
           disabled={disabled}
           onClick={() => onAccrueInterestChange(!accrueInterest)}
           className={cn(
-            "relative inline-flex h-7 w-[44px] shrink-0 cursor-pointer items-center rounded-full p-0.5",
+            "relative inline-flex h-7 w-11 shrink-0 cursor-pointer items-center rounded-full p-0.5",
             "transition-colors duration-150 ease-out active:scale-[0.97]",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0150AC]/40",
             "disabled:cursor-not-allowed disabled:opacity-50",
@@ -71,34 +71,36 @@ export function AccrueInterestFields({
         When enabled, overdue bills will accrue interest at the percentage you
         set below. The interest rate is applied monthly, rather than annually.
       </p>
-      <div>
-        <Label htmlFor={rateId}>Interest rate (%)</Label>
-        <Input
-          id={rateId}
-          type="text"
-          inputMode="decimal"
-          value={interestRatePercent}
-          onChange={(e) => onInterestRateChange(e.target.value)}
-          placeholder="2.5"
-          disabled={disabled || !accrueInterest}
-          required={accrueInterest}
-          className="mt-1"
-        />
-      </div>
       {accrueInterest ? (
-        <div>
-          <Label htmlFor={startsAtId}>Interest starts at</Label>
-          <div className="mt-1">
-            <IsoDatePicker
-              id={startsAtId}
-              value={interestStartsAt}
-              onChange={onInterestStartsAtChange}
-              placeholder="Select start date"
+        <>
+          <div>
+            <Label htmlFor={rateId}>Interest rate (%)</Label>
+            <Input
+              id={rateId}
+              type="text"
+              inputMode="decimal"
+              value={interestRatePercent}
+              onChange={(e) => onInterestRateChange(e.target.value)}
+              placeholder="2.5"
               disabled={disabled}
-              ariaLabel="Interest starts at"
+              required
+              className="mt-1"
             />
           </div>
-        </div>
+          <div>
+            <Label htmlFor={startsAtId}>Interest starts at</Label>
+            <div className="mt-1">
+              <IsoDatePicker
+                id={startsAtId}
+                value={interestStartsAt}
+                onChange={onInterestStartsAtChange}
+                placeholder="Select start date"
+                disabled={disabled}
+                ariaLabel="Interest starts at"
+              />
+            </div>
+          </div>
+        </>
       ) : null}
     </div>
   );

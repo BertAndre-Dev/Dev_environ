@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { Settings2 } from "lucide-react";
@@ -15,12 +15,48 @@ import {
   type WorkflowStep,
 } from "@/redux/slice/admin/request/admin-request";
 import type { AppDispatch, RootState } from "@/redux/store";
+import {
+  fetchWorkflowEstateUsers,
+  type WorkflowEstateUser,
+} from "@/components/request-mgt/workflow-users";
 import WorkflowConfigModal from "./WorkflowConfigModal";
 
 function formatApproverType(type: string) {
   return (
     APPROVER_TYPE_OPTIONS.find((o) => o.value === type)?.label ??
     type.replaceAll("_", " ")
+  );
+}
+
+function StepUsers({
+  userIds,
+  usersById,
+}: Readonly<{
+  userIds?: string[];
+  usersById: Map<string, WorkflowEstateUser>;
+}>) {
+  if (!userIds?.length) return null;
+
+  return (
+    <ul className="mt-2 flex flex-wrap gap-1.5">
+      {userIds.map((id) => {
+        const user = usersById.get(id);
+        return (
+          <li
+            key={id}
+            className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-white border border-black/8 px-2.5 py-1 text-xs"
+          >
+            <span className="truncate font-medium text-foreground">
+              {user?.name ?? id}
+            </span>
+            <span className="text-muted-foreground">·</span>
+            <span className="shrink-0 text-muted-foreground">
+              {user?.roleLabel ?? "User"}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -39,9 +75,10 @@ export default function RequestWorkflowConfigPanel({
   enabled = true,
   compact = false,
   estateLabel,
-}: RequestWorkflowConfigPanelProps) {
+}: Readonly<RequestWorkflowConfigPanelProps>) {
   const dispatch = useDispatch<AppDispatch>();
   const [modalOpen, setModalOpen] = useState(false);
+  const [estateUsers, setEstateUsers] = useState<WorkflowEstateUser[]>([]);
 
   const { workflows, getWorkflowStatus, upsertWorkflowStatus } = useSelector(
     (state: RootState) => state.adminRequest,
@@ -51,6 +88,12 @@ export default function RequestWorkflowConfigPanel({
   const saving = isBusy(upsertWorkflowStatus);
   const hasWorkflows = workflows.length > 0;
 
+  const usersById = useMemo(() => {
+    const map = new Map<string, WorkflowEstateUser>();
+    estateUsers.forEach((user) => map.set(user.id, user));
+    return map;
+  }, [estateUsers]);
+
   useEffect(() => {
     if (!estateId || !enabled) return;
     dispatch(getAdminRequestWorkflow(estateId))
@@ -59,6 +102,22 @@ export default function RequestWorkflowConfigPanel({
         const message = getApiErrorMessage(err);
         if (message) toast.error(message);
       });
+  }, [dispatch, estateId, enabled]);
+
+  useEffect(() => {
+    if (!estateId || !enabled) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const users = await fetchWorkflowEstateUsers(dispatch, estateId);
+        if (!cancelled) setEstateUsers(users);
+      } catch {
+        if (!cancelled) setEstateUsers([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [dispatch, estateId, enabled]);
 
   const handleSave = async (payload: {
@@ -192,21 +251,11 @@ export default function RequestWorkflowConfigPanel({
                             <span className="capitalize">
                               {step.approvalMode}
                             </span>
-                            {step.approverType === "user" &&
-                              (step.userIds?.length ?? 0) > 0 && (
-                                <>
-                                  <span className="text-muted-foreground">
-                                    ·
-                                  </span>
-                                  <span className="text-muted-foreground">
-                                    {step.userIds?.length} user
-                                    {(step.userIds?.length ?? 0) === 1
-                                      ? ""
-                                      : "s"}
-                                  </span>
-                                </>
-                              )}
                           </div>
+                          <StepUsers
+                            userIds={step.userIds}
+                            usersById={usersById}
+                          />
                         </li>
                       ))}
                     </ol>

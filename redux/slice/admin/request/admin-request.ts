@@ -5,7 +5,6 @@ export const APPROVER_TYPES = [
   "estate_admin",
   "company",
   "admin",
-  "user",
 ] as const;
 
 export type ApproverType = (typeof APPROVER_TYPES)[number];
@@ -17,7 +16,6 @@ export const APPROVER_TYPE_OPTIONS: { value: ApproverType; label: string }[] = [
   { value: "estate_admin", label: "Estate admin" },
   { value: "company", label: "Company" },
   { value: "admin", label: "Admin" },
-  { value: "user", label: "Specific user" },
 ];
 
 export const APPROVAL_MODE_OPTIONS: { value: ApprovalMode; label: string }[] = [
@@ -60,8 +58,8 @@ export interface UpsertRequestWorkflowPayload {
 function normalizeApproverType(raw: unknown): ApproverType {
   const value = String(raw ?? "")
     .trim()
-    .toLowerCase();
-  if (value === "users") return "user";
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
   if ((APPROVER_TYPES as readonly string[]).includes(value)) {
     return value as ApproverType;
   }
@@ -233,9 +231,12 @@ export const upsertAdminRequestWorkflow = createAsyncThunk(
           message: `Step ${index + 1}: name is required.`,
         });
       }
-      if (step.approverType === "user" && (step.userIds?.length ?? 0) <= 0) {
+      const userIds = (step.userIds ?? [])
+        .map((id) => id.trim())
+        .filter(Boolean);
+      if (userIds.length <= 0) {
         return rejectWithValue({
-          message: `Step ${index + 1}: add at least one user ID for specific user.`,
+          message: `Step ${index + 1}: select at least one user.`,
         });
       }
     }
@@ -249,10 +250,7 @@ export const upsertAdminRequestWorkflow = createAsyncThunk(
           order: index + 1,
           name: step.name.trim(),
           approverType: step.approverType,
-          userIds:
-            step.approverType === "user"
-              ? (step.userIds ?? []).map((id) => id.trim()).filter(Boolean)
-              : undefined,
+          userIds: (step.userIds ?? []).map((id) => id.trim()).filter(Boolean),
           approvalMode: step.approvalMode,
           allowReject: Boolean(step.allowReject),
           reminderEnabled: Boolean(step.reminderEnabled),

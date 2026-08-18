@@ -21,6 +21,10 @@ import {
   fetchWorkflowEstateUsers,
   type WorkflowEstateUser,
 } from "@/components/request-mgt/workflow-users";
+import {
+  requestDeleteIconGhostClass,
+  requestEditIconButtonClass,
+} from "@/components/request-mgt/request-action-styles";
 import WorkflowConfigModal from "./WorkflowConfigModal";
 
 function StepUsers({
@@ -267,24 +271,24 @@ export default function RequestWorkflowConfigPanel({
                       <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
+                        size="icon-sm"
                         aria-label={`Edit ${workflow.name}`}
                         onClick={() => openEditModal(workflow)}
                         disabled={deleting}
-                        className="cursor-pointer active:scale-[0.97] transition-transform duration-100 ease-out"
+                        className={requestEditIconButtonClass}
                       >
-                        <Edit2 className="w-4 h-4 text-blue-600" />
+                        <Edit2 className="w-4 h-4" />
                       </Button>
                       <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
+                        size="icon-sm"
                         aria-label={`Delete ${workflow.name}`}
                         onClick={() => setWorkflowToDelete(workflow)}
                         disabled={deleting}
-                        className="cursor-pointer active:scale-[0.97] transition-transform duration-100 ease-out"
+                        className={requestDeleteIconGhostClass}
                       >
-                        <Trash2 className="w-4 h-4 text-red-600" />
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>

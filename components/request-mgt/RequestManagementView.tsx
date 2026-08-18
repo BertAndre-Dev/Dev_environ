@@ -28,6 +28,10 @@ import {
   type ScopedRequestItem,
   type ScopedRequestStatus,
 } from "./request-scope";
+import {
+  requestDeleteIconButtonClass,
+  requestViewButtonClass,
+} from "./request-action-styles";
 
 type EstateSelectOption = { label: string; value: string };
 
@@ -221,7 +225,7 @@ export default function RequestManagementView({
             <Button
               size="sm"
               variant="outline"
-              className="rounded-full border-[#93C5FD] text-[#2563EB] hover:bg-[#EFF6FF]"
+              className={requestViewButtonClass}
               onClick={() => {
                 setViewingFallback(item);
                 setViewingId(item.id);
@@ -232,7 +236,7 @@ export default function RequestManagementView({
             <Button
               size="sm"
               variant="outline"
-              className="rounded-full border-[#FCA5A5] text-[#DC2626] hover:bg-[#FEF2F2]"
+              className={requestDeleteIconButtonClass}
               disabled={deleting}
               onClick={() => setRequestToDelete(item)}
             >

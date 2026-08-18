@@ -28,6 +28,7 @@ import {
   setStaffRequestStatusFilter,
 } from "@/redux/slice/staff/request/staff-request-slice";
 import type { AppDispatch, RootState } from "@/redux/store";
+import { requestViewButtonClass } from "@/components/request-mgt/request-action-styles";
 import { getRequestActorDisplayName } from "@/lib/request-actor";
 import {
   downloadAttachment,
@@ -266,7 +267,7 @@ export default function RequestSubmitView({
           <Button
             size="sm"
             variant="outline"
-            className="rounded-full border-[#93C5FD] text-[#2563EB] hover:bg-[#EFF6FF]"
+            className={requestViewButtonClass}
             onClick={() => setViewing(item)}
           >
             View

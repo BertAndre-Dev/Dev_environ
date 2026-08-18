@@ -177,7 +177,7 @@ export const getAdminRequestWorkflow = createAsyncThunk(
   },
 );
 
-/** PUT /api/v1/requests/workflows — upsert by name (same name updates, new name creates) */
+/** PUT /api/v1/requests/workflows — upsert by name (same name updates steps/settings; new name creates another workflow) */
 export const upsertAdminRequestWorkflow = createAsyncThunk(
   "adminRequest/upsertWorkflow",
   async (payload: UpsertRequestWorkflowPayload, { rejectWithValue }) => {

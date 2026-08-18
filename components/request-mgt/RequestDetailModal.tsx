@@ -24,6 +24,7 @@ import {
   type ScopedRequestItem,
   type ScopedRequestStatus,
 } from "./request-scope";
+import { requestDestructiveOutlineButtonClass } from "./request-action-styles";
 
 const STATUS_LABELS: Record<ScopedRequestStatus, string> = {
   draft: "Draft",
@@ -399,7 +400,7 @@ export default function RequestDetailModal({
                   <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
                     <Button
                       variant="outline"
-                      className="border-[#FCA5A5] text-[#DC2626] hover:bg-[#FEF2F2]"
+                      className={requestDestructiveOutlineButtonClass}
                       disabled={mutating}
                       onClick={() => setConfirmDelete(true)}
                     >
@@ -409,7 +410,7 @@ export default function RequestDetailModal({
                     {canCancel ? (
                       <Button
                         variant="outline"
-                        className="border-[#FCA5A5] text-[#DC2626] hover:bg-[#FEF2F2]"
+                        className={requestDestructiveOutlineButtonClass}
                         disabled={mutating}
                         onClick={() => setConfirmCancel(true)}
                       >

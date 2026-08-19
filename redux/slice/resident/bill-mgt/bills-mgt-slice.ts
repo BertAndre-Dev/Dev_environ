@@ -19,6 +19,11 @@ export interface EstateBillData {
   amount?: number;
   amountPayable?: number;
   amountPayableByFrequency?: Record<string, number>;
+  principalDue?: number;
+  accruedInterest?: number;
+  accrueInterest?: boolean;
+  interestRatePercent?: number;
+  interestStartsAt?: string;
   isActive?: boolean;
   isServiceCharge?: boolean;
   compulsory?: boolean;
@@ -37,6 +42,12 @@ export interface AssignedBillData {
   amountPaid?: number;
   amount?: number;
   yearlyAmount?: number;
+  amountPayable?: number;
+  principalDue?: number;
+  accruedInterest?: number;
+  accrueInterest?: boolean;
+  interestRatePercent?: number;
+  interestStartsAt?: string;
   status?: string;
   addressId?: string;
   createdAt?: string;

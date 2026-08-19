@@ -250,7 +250,7 @@ export default function EstateManagementShowcase({
         {/* Right — phone mockup */}
         <div className="flex justify-center lg:justify-end">
           <PhoneFrame>
-            <AnimatePresence mode="wait" initial={false}>
+            <AnimatePresence initial={false}>
               <motion.video
                 key={activeTab}
                 src={active.videoSrc}
@@ -259,22 +259,14 @@ export default function EstateManagementShowcase({
                 muted
                 playsInline
                 aria-label={`${active.label} app preview`}
-                className="h-full w-full object-cover object-top"
-                initial={
-                  reduceMotion
-                    ? { opacity: 0 }
-                    : { opacity: 0, scale: 0.98 }
-                }
+                className="absolute inset-0 h-full w-full object-cover object-top"
+                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 1.02 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={
-                  reduceMotion
-                    ? { opacity: 0 }
-                    : { opacity: 0, scale: 0.98 }
-                }
+                exit={reduceMotion ? { opacity: 0 } : { opacity: 0 }}
                 transition={
                   reduceMotion
-                    ? { duration: 0.2 }
-                    : { type: "spring", bounce: 0, duration: 0.35 }
+                    ? { duration: 0.15 }
+                    : { duration: 0.4, ease: [0.4, 0, 0.2, 1] }
                 }
               />
             </AnimatePresence>

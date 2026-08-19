@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Eye, Info } from "lucide-react";
+import { AlertCircle, Eye, Info } from "lucide-react";
 import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import BillsForm from "@/components/resident/bill-form/page";
@@ -68,6 +68,13 @@ function formatDateTime(value?: string | null): string | null {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return date.toLocaleString();
+}
+
+function hasActiveInterest(bill: {
+  accrueInterest?: boolean;
+  interestRatePercent?: number;
+}): boolean {
+  return Boolean(bill.accrueInterest) && Number(bill.interestRatePercent) > 0;
 }
 
 function DetailRow({
@@ -454,6 +461,7 @@ export default function BillPage() {
             ) : (
               estateBills.map((b) => {
                 const period = formatAmountPeriod(b.frequency);
+                const interestStartsLabel = formatDateTime(b.interestStartsAt);
                 return (
                 <Card
                   key={b.id}
@@ -472,6 +480,24 @@ export default function BillPage() {
                         </span>
                       ) : null}
                     </p>
+                    {hasActiveInterest(b) ? (
+                      <p
+                        className="mt-1.5 flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400"
+                        title={`Accrues interest ${Number(b.interestRatePercent)}% monthly${
+                          interestStartsLabel
+                            ? ` starting ${interestStartsLabel}`
+                            : ""
+                        }`}
+                      >
+                        <AlertCircle className="size-3.5 shrink-0" aria-hidden />
+                        <span className="min-w-0 truncate">
+                          Accrues interest {Number(b.interestRatePercent)}% monthly
+                          {interestStartsLabel
+                            ? ` starting ${interestStartsLabel}`
+                            : ""}
+                        </span>
+                      </p>
+                    ) : null}
                   </div>
                 </Card>
                 );

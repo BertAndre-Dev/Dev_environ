@@ -197,7 +197,7 @@ export default function EstateManagementShowcase({
             </p>
           ) : (
             <form className="mt-8 w-full max-w-xl" onSubmit={handleSubmit}>
-              <div className="flex w-full flex-col gap-2 rounded-full border border-[#0150AC] bg-white p-1.5 sm:flex-row sm:items-center sm:gap-0 sm:pl-4">
+              <div className="flex w-full flex-col gap-2 rounded-2xl border border-[#0150AC] bg-white p-2 sm:flex-row sm:items-center sm:gap-0 sm:rounded-full sm:p-1.5 sm:pl-4">
                 <label htmlFor="estate-showcase-email" className="sr-only">
                   Email address
                 </label>
@@ -206,6 +206,8 @@ export default function EstateManagementShowcase({
                   name="email"
                   type="email"
                   autoComplete="email"
+                  inputMode="email"
+                  enterKeyHint="send"
                   required
                   placeholder="Email Address"
                   value={email}
@@ -217,13 +219,13 @@ export default function EstateManagementShowcase({
                     }
                   }}
                   disabled={isSubmitting}
-                  className="min-w-0 flex-1 rounded-full border-none bg-transparent px-4 py-2.5 text-sm text-[#171717] outline-none placeholder:text-[#9CA3AF] sm:px-0 disabled:opacity-60"
+                  className="min-w-0 flex-1 rounded-xl border-none bg-transparent px-4 py-3 text-base text-[#171717] outline-none placeholder:text-[#9CA3AF] disabled:opacity-60 sm:rounded-full sm:px-0 sm:py-2.5 sm:text-sm"
                 />
                 <button
                   type="submit"
                   disabled={isSubmitting}
                   aria-busy={isSubmitting}
-                  className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-[#0150AC] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#01408a] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex w-full shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-[#0150AC] px-6 py-3 text-base font-medium text-white transition-colors hover:bg-[#01408a] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:py-2.5 sm:text-sm"
                 >
                   {isSubmitting ? (
                     <>

@@ -13,6 +13,7 @@ import {
   getCommentsByComplaint,
   createComment,
 } from "./resident-complaints";
+import { parseCommentPayload } from "@/lib/maintenance-comments";
 
 export type { ResidentComplaintItem, ResidentCommentItem };
 
@@ -87,15 +88,15 @@ function normalizeComplaint(p: Record<string, unknown>): ResidentComplaintItem {
 }
 
 function normalizeComment(c: Record<string, unknown>): ResidentCommentItem {
-  const id = String(c._id ?? c.id ?? "");
+  const parsed = parseCommentPayload(c);
   return {
-    id,
-    _id: id,
-    complaintId: String(c.complaintId ?? ""),
-    userId: String(c.userId ?? ""),
-    text: (c.text as string) ?? "",
-    user: c.user as ResidentCommentItem["user"],
-    createdAt: c.createdAt as string,
+    id: parsed.id,
+    _id: parsed.id,
+    complaintId: parsed.complaintId,
+    userId: parsed.userId,
+    text: parsed.text,
+    user: parsed.user,
+    createdAt: parsed.createdAt,
   };
 }
 

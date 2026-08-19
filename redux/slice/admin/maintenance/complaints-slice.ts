@@ -9,6 +9,7 @@ import {
   createComment,
 } from "./complaints";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { parseCommentPayload } from "@/lib/maintenance-comments";
 
 export type { ComplaintItem, CommentItem };
 
@@ -66,15 +67,15 @@ function normalizeComplaint(p: Record<string, unknown>): ComplaintItem {
 }
 
 function normalizeComment(c: Record<string, unknown>): CommentItem {
-  const id = String(c._id ?? c.id ?? "");
+  const parsed = parseCommentPayload(c);
   return {
-    id,
-    _id: id,
-    complaintId: String(c.complaintId ?? ""),
-    userId: String(c.userId ?? ""),
-    text: (c.text as string) ?? "",
-    user: c.user as CommentItem["user"],
-    createdAt: c.createdAt as string,
+    id: parsed.id,
+    _id: parsed.id,
+    complaintId: parsed.complaintId,
+    userId: parsed.userId,
+    text: parsed.text,
+    user: parsed.user,
+    createdAt: parsed.createdAt,
   };
 }
 

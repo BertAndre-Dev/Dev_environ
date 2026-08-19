@@ -41,7 +41,13 @@ export interface CommentItem {
   complaintId: string;
   userId: string;
   text: string;
-  user?: { firstName?: string; lastName?: string };
+  user?: {
+    id?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    role?: string;
+  };
   createdAt?: string;
   image?: string;
 }

@@ -11,7 +11,10 @@ export type CollectionEfficiencyRow = {
   expected: number;
   collected: number;
   efficiencyPercent: number;
+  /** expected > 0 — efficiency is meaningful */
   isApplicable: boolean;
+  /** expected === 0 && collected === 0 — show placeholder, not zero-width bars */
+  isNoActivity: boolean;
 };
 
 const CATEGORY_DEFS: ReadonlyArray<{
@@ -43,6 +46,7 @@ export function toCollectionEfficiencyRows(
 
   return CATEGORY_DEFS.map(({ key, category }) => {
     const entry = normalizeCategory(data[key]);
+    const isNoActivity = entry.expected === 0 && entry.collected === 0;
     return {
       key,
       category,
@@ -50,6 +54,7 @@ export function toCollectionEfficiencyRows(
       collected: entry.collected,
       efficiencyPercent: entry.efficiencyPercent,
       isApplicable: entry.expected > 0,
+      isNoActivity,
     };
   });
 }

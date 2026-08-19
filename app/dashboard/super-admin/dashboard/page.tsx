@@ -3,7 +3,13 @@
 import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Building2, Gauge, Users } from "lucide-react";
-import { DashboardHeader, KpiCard } from "./components";
+import {
+  DashboardHeader,
+  DashboardSection,
+  DashboardSectionNav,
+  type DashboardSectionItem,
+  KpiCard,
+} from "./components";
 import { RevenueTrendChart } from "@/components/charts/RevenueTrendChart";
 import { RechargeBehaviorChart } from "@/components/charts/RechargeBehaviorChart";
 import { ConsumptionSnapshotChart } from "@/components/charts/ConsumptionSnapshotChart";
@@ -20,6 +26,9 @@ import { PlatformFeeAnalyticsDashboard } from "@/components/analytics/PlatformFe
 import { AveragePurchaseStatCard } from "@/components/dashboard/super-admin/AveragePurchaseStatCard";
 import { CustomerMeterSummaryCard } from "@/components/charts/CustomerMeterSummaryCard";
 import { CustomerActivationsCard } from "@/components/charts/CustomerActivationsCard";
+import { VendingFrequencyCard } from "@/components/charts/VendingFrequencyCard";
+import { RevenueBySegmentCard } from "@/components/charts/RevenueBySegmentCard";
+import { RevenueSummaryCard } from "@/components/charts/RevenueSummaryCard";
 import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
 import { getRevenueTrend } from "@/redux/slice/super-admin/revenue-trend/revenue-trend";
 import {
@@ -27,7 +36,6 @@ import {
   selectRevenueTrendGranularity,
   selectRevenueTrendLoading,
   selectRevenueTrendSeries,
-  selectRevenueTrendStatus,
   setRevenueTrendGranularity,
 } from "@/redux/slice/super-admin/revenue-trend/revenue-trend-slice";
 import { getAveragePurchaseValue } from "@/redux/slice/super-admin/average-purchase/average-purchase";
@@ -43,21 +51,18 @@ import {
   selectTopEstatesEnergyLoading,
   selectTopEstatesEnergyScope,
   selectTopEstatesEnergySeries,
-  selectTopEstatesEnergyStatus,
 } from "@/redux/slice/super-admin/top-estates-energy/top-estates-energy-slice";
 import { getFaultsSummary } from "@/redux/slice/super-admin/faults-summary/faults-summary";
 import {
   selectFaultsSummaryData,
   selectFaultsSummaryError,
   selectFaultsSummaryLoading,
-  selectFaultsSummaryStatus,
 } from "@/redux/slice/super-admin/faults-summary/faults-summary-slice";
 import { getMeterCommunicationStatus } from "@/redux/slice/super-admin/meter-communication-status/meter-communication-status";
 import {
   selectMeterCommunicationStatusData,
   selectMeterCommunicationStatusError,
   selectMeterCommunicationStatusLoading,
-  selectMeterCommunicationStatusStatus,
 } from "@/redux/slice/super-admin/meter-communication-status/meter-communication-status-slice";
 import { getPowerAvailability } from "@/redux/slice/super-admin/power-availability/power-availability";
 import {
@@ -66,26 +71,15 @@ import {
   selectPowerAvailabilityLoading,
   selectPowerAvailabilityStatus,
 } from "@/redux/slice/super-admin/power-availability/power-availability-slice";
-import { getPaymentChannels } from "@/redux/slice/super-admin/payment-channels/payment-channels";
-import {
-  // selectPaymentChannelsError,
-  selectPaymentChannelsLoading,
-  // selectPaymentChannelsPeriod,
-  selectPaymentChannelsSeries,
-  selectPaymentChannelsStatus,
-} from "@/redux/slice/super-admin/payment-channels/payment-channels-slice";
 import { getCollectionEfficiency } from "@/redux/slice/super-admin/collection-efficiency/collection-efficiency";
 import {
   selectCollectionEfficiencyData,
   selectCollectionEfficiencyError,
   selectCollectionEfficiencyLoading,
-  selectCollectionEfficiencyStatus,
 } from "@/redux/slice/super-admin/collection-efficiency/collection-efficiency-slice";
 import { getCustomerGrowth } from "@/redux/slice/super-admin/customer-growth/customer-growth";
 import {
   selectCustomerGrowthData,
-  selectCustomerGrowthLoading,
-  selectCustomerGrowthStatus,
 } from "@/redux/slice/super-admin/customer-growth/customer-growth-slice";
 import { getRechargeBehavior } from "@/redux/slice/super-admin/recharge-behavior/recharge-behavior";
 import {
@@ -93,7 +87,6 @@ import {
   selectRechargeBehaviorError,
   selectRechargeBehaviorLoading,
   selectRechargeBehaviorSeries,
-  selectRechargeBehaviorStatus,
   setRechargeBehaviorBucket,
 } from "@/redux/slice/super-admin/recharge-behavior/recharge-behavior-slice";
 import { getConsumptionSnapshot } from "@/redux/slice/super-admin/consumption-snapshot/consumption-snapshot";
@@ -102,7 +95,6 @@ import {
   selectConsumptionSnapshotError,
   selectConsumptionSnapshotLoading,
   selectConsumptionSnapshotScope,
-  selectConsumptionSnapshotStatus,
 } from "@/redux/slice/super-admin/consumption-snapshot/consumption-snapshot-slice";
 import {
   getCustomerMeterSummary,
@@ -115,7 +107,6 @@ import {
   selectCustomerMeterSummaryFilter,
   selectCustomerMeterSummaryLoading,
   selectCustomerMeterSummaryScope,
-  selectCustomerMeterSummaryStatus,
   setFilter,
 } from "@/redux/slice/super-admin/customer-meter-summary/customer-meter-summary-slice";
 import { getCompanies } from "@/redux/slice/super-admin/company-mgt/company";
@@ -124,15 +115,31 @@ import {
   selectCustomerActivationsData,
   selectCustomerActivationsError,
   selectCustomerActivationsLoading,
-  selectCustomerActivationsStatus,
 } from "@/redux/slice/super-admin/customer-activations/customer-activations-slice";
+import { getVendingFrequency } from "@/redux/slice/super-admin/vending-frequency/vending-frequency";
+import {
+  selectVendingFrequencyData,
+  selectVendingFrequencyError,
+  selectVendingFrequencyLoading,
+} from "@/redux/slice/super-admin/vending-frequency/vending-frequency-slice";
+import { getRevenueBySegment } from "@/redux/slice/super-admin/revenue-by-segment/revenue-by-segment";
+import {
+  selectRevenueBySegmentData,
+  selectRevenueBySegmentError,
+  selectRevenueBySegmentLoading,
+} from "@/redux/slice/super-admin/revenue-by-segment/revenue-by-segment-slice";
+import { getRevenueSummary } from "@/redux/slice/super-admin/revenue-summary/revenue-summary";
+import {
+  selectRevenueSummaryData,
+  selectRevenueSummaryError,
+  selectRevenueSummaryLoading,
+} from "@/redux/slice/super-admin/revenue-summary/revenue-summary-slice";
 import type { RootState, AppDispatch } from "@/redux/store";
 import type {
   CustomerGrowthMetric,
   RechargeBehaviorBucket,
   RevenueTrendGranularity,
 } from "@/types/analytics";
-import Loader from "@/components/ui/Loader";
 import { isPending } from "@/lib/async-status";
 import { toast } from "react-toastify";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -154,6 +161,14 @@ function growthTrendProps(metric: CustomerGrowthMetric | null): {
   };
 }
 
+const DASHBOARD_SECTIONS: DashboardSectionItem[] = [
+  { id: "overview", label: "Overview" },
+  { id: "revenue", label: "Revenue" },
+  { id: "customers", label: "Customers" },
+  { id: "energy", label: "Energy" },
+  { id: "infrastructure", label: "Infrastructure" },
+];
+
 export default function SuperAdminDashboard() {
   const dispatch = useDispatch<AppDispatch>();
 
@@ -161,7 +176,6 @@ export default function SuperAdminDashboard() {
   const revenueSeries = useSelector(selectRevenueTrendSeries);
   const revenueGranularity = useSelector(selectRevenueTrendGranularity);
   const revenueLoading = useSelector(selectRevenueTrendLoading);
-  const revenueStatus = useSelector(selectRevenueTrendStatus);
   const revenueError = useSelector(selectRevenueTrendError);
   const averagePurchase = useSelector(selectAveragePurchaseData);
   const averagePurchaseLoading = useSelector(selectAveragePurchaseLoading);
@@ -169,55 +183,36 @@ export default function SuperAdminDashboard() {
   const averagePurchaseError = useSelector(selectAveragePurchaseError);
   const topEstatesSeries = useSelector(selectTopEstatesEnergySeries);
   const topEstatesLoading = useSelector(selectTopEstatesEnergyLoading);
-  const topEstatesStatus = useSelector(selectTopEstatesEnergyStatus);
   const topEstatesError = useSelector(selectTopEstatesEnergyError);
   const topEstatesScope = useSelector(selectTopEstatesEnergyScope);
   const faultsSummary = useSelector(selectFaultsSummaryData);
   const faultsSummaryLoading = useSelector(selectFaultsSummaryLoading);
-  const faultsSummaryStatus = useSelector(selectFaultsSummaryStatus);
   const faultsSummaryError = useSelector(selectFaultsSummaryError);
   const meterCommStatus = useSelector(selectMeterCommunicationStatusData);
   const meterCommStatusLoading = useSelector(
     selectMeterCommunicationStatusLoading,
-  );
-  const meterCommAsyncStatus = useSelector(
-    selectMeterCommunicationStatusStatus,
   );
   const meterCommStatusError = useSelector(selectMeterCommunicationStatusError);
   const powerAvailability = useSelector(selectPowerAvailabilityData);
   const powerAvailabilityLoading = useSelector(selectPowerAvailabilityLoading);
   const powerAvailabilityStatus = useSelector(selectPowerAvailabilityStatus);
   const powerAvailabilityError = useSelector(selectPowerAvailabilityError);
-  const paymentChannelsSeries = useSelector(selectPaymentChannelsSeries);
-  const paymentChannelsLoading = useSelector(selectPaymentChannelsLoading);
-  const paymentChannelsStatus = useSelector(selectPaymentChannelsStatus);
-  // const paymentChannelsError = useSelector(selectPaymentChannelsError);
-  // const paymentChannelsPeriod = useSelector(selectPaymentChannelsPeriod);
   const collectionEfficiency = useSelector(selectCollectionEfficiencyData);
   const collectionEfficiencyLoading = useSelector(
     selectCollectionEfficiencyLoading,
-  );
-  const collectionEfficiencyStatus = useSelector(
-    selectCollectionEfficiencyStatus,
   );
   const collectionEfficiencyError = useSelector(
     selectCollectionEfficiencyError,
   );
   const customerGrowth = useSelector(selectCustomerGrowthData);
-  const customerGrowthLoading = useSelector(selectCustomerGrowthLoading);
-  const customerGrowthStatus = useSelector(selectCustomerGrowthStatus);
   const rechargeSeries = useSelector(selectRechargeBehaviorSeries);
   const rechargeBucket = useSelector(selectRechargeBehaviorBucket);
   const rechargeLoading = useSelector(selectRechargeBehaviorLoading);
-  const rechargeStatus = useSelector(selectRechargeBehaviorStatus);
   const rechargeError = useSelector(selectRechargeBehaviorError);
   const consumptionSnapshot = useSelector(selectConsumptionSnapshotData);
   const consumptionSnapshotScope = useSelector(selectConsumptionSnapshotScope);
   const consumptionSnapshotLoading = useSelector(
     selectConsumptionSnapshotLoading,
-  );
-  const consumptionSnapshotStatus = useSelector(
-    selectConsumptionSnapshotStatus,
   );
   const consumptionSnapshotError = useSelector(selectConsumptionSnapshotError);
   const customerMeterSummary = useSelector(selectCustomerMeterSummaryData);
@@ -226,9 +221,6 @@ export default function SuperAdminDashboard() {
   );
   const customerMeterSummaryLoading = useSelector(
     selectCustomerMeterSummaryLoading,
-  );
-  const customerMeterSummaryStatus = useSelector(
-    selectCustomerMeterSummaryStatus,
   );
   const customerMeterSummaryError = useSelector(
     selectCustomerMeterSummaryError,
@@ -240,10 +232,16 @@ export default function SuperAdminDashboard() {
   const customerActivationsLoading = useSelector(
     selectCustomerActivationsLoading,
   );
-  const customerActivationsStatus = useSelector(
-    selectCustomerActivationsStatus,
-  );
   const customerActivationsError = useSelector(selectCustomerActivationsError);
+  const vendingFrequency = useSelector(selectVendingFrequencyData);
+  const vendingFrequencyLoading = useSelector(selectVendingFrequencyLoading);
+  const vendingFrequencyError = useSelector(selectVendingFrequencyError);
+  const revenueBySegment = useSelector(selectRevenueBySegmentData);
+  const revenueBySegmentLoading = useSelector(selectRevenueBySegmentLoading);
+  const revenueBySegmentError = useSelector(selectRevenueBySegmentError);
+  const revenueSummary = useSelector(selectRevenueSummaryData);
+  const revenueSummaryLoading = useSelector(selectRevenueSummaryLoading);
+  const revenueSummaryError = useSelector(selectRevenueSummaryError);
   const estates = estateState?.allEstates?.data ?? [];
   const estatesPagination = estateState?.allEstates?.pagination ?? null;
   const estatesStatus = estateState?.getAllEstatesState as string | undefined;
@@ -330,11 +328,19 @@ export default function SuperAdminDashboard() {
   }, [dispatch]);
 
   useEffect(() => {
-    void dispatch(getPaymentChannels());
+    void dispatch(getCollectionEfficiency());
   }, [dispatch]);
 
   useEffect(() => {
-    void dispatch(getCollectionEfficiency());
+    void dispatch(getVendingFrequency());
+  }, [dispatch]);
+
+  useEffect(() => {
+    void dispatch(getRevenueBySegment());
+  }, [dispatch]);
+
+  useEffect(() => {
+    void dispatch(getRevenueSummary());
   }, [dispatch]);
 
   useEffect(() => {
@@ -436,6 +442,18 @@ export default function SuperAdminDashboard() {
     void dispatch(getCollectionEfficiency());
   };
 
+  const handleVendingFrequencyRetry = () => {
+    void dispatch(getVendingFrequency());
+  };
+
+  const handleRevenueBySegmentRetry = () => {
+    void dispatch(getRevenueBySegment());
+  };
+
+  const handleRevenueSummaryRetry = () => {
+    void dispatch(getRevenueSummary());
+  };
+
   const topEstatesPeriodLabel = formatTopEstatesPeriodLabel(
     topEstatesScope?.period?.startDate,
     topEstatesScope?.period?.endDate,
@@ -472,44 +490,50 @@ export default function SuperAdminDashboard() {
     ];
   }, [estatesPagination?.total, customerGrowth]);
 
-  const pageLoading =
-    (isPending(estatesStatus) && estates.length === 0) ||
-    (isPending(companiesStatus) && companies.length === 0) ||
-    (isPending(averagePurchaseStatus) && !averagePurchase) ||
-    (isPending(powerAvailabilityStatus) && !powerAvailability) ||
-    (isPending(revenueStatus) && revenueSeries.length === 0) ||
-    (isPending(topEstatesStatus) && topEstatesSeries.length === 0) ||
-    (isPending(paymentChannelsStatus) && paymentChannelsSeries.length === 0) ||
-    (isPending(collectionEfficiencyStatus) && !collectionEfficiency) ||
-    (isPending(faultsSummaryStatus) && !faultsSummary) ||
-    (isPending(meterCommAsyncStatus) && !meterCommStatus) ||
-    (isPending(customerGrowthStatus) && !customerGrowth) ||
-    (isPending(rechargeStatus) && rechargeSeries.length === 0) ||
-    (isPending(consumptionSnapshotStatus) && !consumptionSnapshot) ||
-    (isPending(customerMeterSummaryStatus) && !customerMeterSummary) ||
-    (isPending(customerActivationsStatus) && !customerActivations);
-
   return (
-    <div className="relative">
-      {pageLoading && <Loader fullScreen label="Loading dashboard..." />}
+    <div className="space-y-6 pb-8 sm:space-y-8">
+      <DashboardHeader
+        title="Dashboard"
+        subtitle="Platform-wide metrics — jump to a section or scroll for details"
+      />
 
-      <div
-        className={[
-          "space-y-6 sm:space-y-8 pb-8",
-          pageLoading ? "pointer-events-none select-none" : "",
-        ].join(" ")}
+      <DashboardSectionNav sections={DASHBOARD_SECTIONS} />
+
+      <DashboardSection
+        id="overview"
+        title="Overview"
+        description="Headline counts and live operational signals"
       >
-        <DashboardHeader
-          title="Dashboard"
-          subtitle="Welcome back! Here's an overview"
-        />
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6 ">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
           {kpiCards.map((card) => (
             <KpiCard key={card.label} {...card} />
           ))}
         </div>
 
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-5">
+          <AveragePurchaseStatCard
+            data={averagePurchase}
+            loading={averagePurchaseLoading || isPending(averagePurchaseStatus)}
+            error={averagePurchaseError}
+            onRetry={handleAveragePurchaseRetry}
+          />
+
+          <PowerAvailabilityCard
+            data={powerAvailability}
+            loading={
+              powerAvailabilityLoading || isPending(powerAvailabilityStatus)
+            }
+            error={powerAvailabilityError}
+            onRetry={handlePowerAvailabilityRetry}
+          />
+        </div>
+      </DashboardSection>
+
+      <DashboardSection
+        id="revenue"
+        title="Revenue"
+        description="Platform fees, trends, and collection performance"
+      >
         <PlatformFeeAnalyticsDashboard
           estateOptions={customerMeterEstateOptions}
           companyOptions={customerMeterCompanyOptions}
@@ -517,45 +541,10 @@ export default function SuperAdminDashboard() {
             isPending(estatesStatus) && customerMeterEstateOptions.length === 0
           }
           companiesLoading={
-            isPending(companiesStatus) && customerMeterCompanyOptions.length === 0
+            isPending(companiesStatus) &&
+            customerMeterCompanyOptions.length === 0
           }
         />
-
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <AveragePurchaseStatCard
-            data={averagePurchase}
-            loading={averagePurchaseLoading}
-            error={averagePurchaseError}
-            onRetry={handleAveragePurchaseRetry}
-          />
-
-          <PowerAvailabilityCard
-            data={powerAvailability}
-            loading={powerAvailabilityLoading}
-            error={powerAvailabilityError}
-            onRetry={handlePowerAvailabilityRetry}
-          />
-        </div>
-
-          <CustomerActivationsCard
-            data={customerActivations}
-            loading={customerActivationsLoading}
-            error={customerActivationsError}
-            onRetry={handleCustomerActivationsRetry}
-          />
-
-          <CustomerMeterSummaryCard
-            data={customerMeterSummary}
-            scope={customerMeterSummaryScope}
-            loading={customerMeterSummaryLoading}
-            error={customerMeterSummaryError}
-            onRetry={handleCustomerMeterSummaryRetry}
-            filter={customerMeterSummaryFilter}
-            onFilterChange={handleCustomerMeterSummaryFilterChange}
-            estateOptions={customerMeterEstateOptions}
-            companyOptions={customerMeterCompanyOptions}
-          />
-
 
         <RevenueTrendChart
           series={revenueSeries}
@@ -566,6 +555,63 @@ export default function SuperAdminDashboard() {
           onRetry={handleRevenueRetry}
         />
 
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5">
+          <RevenueBySegmentCard
+            data={revenueBySegment}
+            loading={revenueBySegmentLoading}
+            error={revenueBySegmentError}
+            onRetry={handleRevenueBySegmentRetry}
+          />
+
+          <RevenueSummaryCard
+            data={revenueSummary}
+            loading={revenueSummaryLoading}
+            error={revenueSummaryError}
+            onRetry={handleRevenueSummaryRetry}
+          />
+        </div>
+
+        <CollectionEfficiencyChart
+          data={collectionEfficiency}
+          loading={collectionEfficiencyLoading}
+          error={collectionEfficiencyError}
+          onRetry={handleCollectionEfficiencyRetry}
+        />
+      </DashboardSection>
+
+      <DashboardSection
+        id="customers"
+        title="Customers"
+        description="Activation, vending behavior, and meter-level breakdowns"
+      >
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5">
+          <VendingFrequencyCard
+            data={vendingFrequency}
+            loading={vendingFrequencyLoading}
+            error={vendingFrequencyError}
+            onRetry={handleVendingFrequencyRetry}
+          />
+
+          <CustomerActivationsCard
+            data={customerActivations}
+            loading={customerActivationsLoading}
+            error={customerActivationsError}
+            onRetry={handleCustomerActivationsRetry}
+          />
+        </div>
+
+        <CustomerMeterSummaryCard
+          data={customerMeterSummary}
+          scope={customerMeterSummaryScope}
+          loading={customerMeterSummaryLoading}
+          error={customerMeterSummaryError}
+          onRetry={handleCustomerMeterSummaryRetry}
+          filter={customerMeterSummaryFilter}
+          onFilterChange={handleCustomerMeterSummaryFilterChange}
+          estateOptions={customerMeterEstateOptions}
+          companyOptions={customerMeterCompanyOptions}
+        />
+
         <RechargeBehaviorChart
           series={rechargeSeries}
           bucket={rechargeBucket}
@@ -574,7 +620,13 @@ export default function SuperAdminDashboard() {
           onBucketChange={handleRechargeBucket}
           onRetry={handleRechargeRetry}
         />
+      </DashboardSection>
 
+      <DashboardSection
+        id="energy"
+        title="Energy"
+        description="Consumption patterns and top-performing estates"
+      >
         <TopEstatesEnergyChart
           series={topEstatesSeries}
           loading={topEstatesLoading}
@@ -591,25 +643,14 @@ export default function SuperAdminDashboard() {
           error={consumptionSnapshotError}
           onRetry={handleConsumptionSnapshotRetry}
         />
+      </DashboardSection>
 
-        {/* <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-          <PaymentChannelsChart
-            series={paymentChannelsSeries}
-            loading={paymentChannelsLoading}
-            error={paymentChannelsError}
-            period={paymentChannelsPeriod}
-            onRetry={handlePaymentChannelsRetry}
-          /> */}
-
-          <CollectionEfficiencyChart
-            data={collectionEfficiency}
-            loading={collectionEfficiencyLoading}
-            error={collectionEfficiencyError}
-            onRetry={handleCollectionEfficiencyRetry}
-          />
-        {/* </div> */}
-
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+      <DashboardSection
+        id="infrastructure"
+        title="Infrastructure"
+        description="Faults and meter connectivity health"
+      >
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-5">
           <FaultsSummaryChart
             data={faultsSummary}
             loading={faultsSummaryLoading}
@@ -624,7 +665,7 @@ export default function SuperAdminDashboard() {
             onRetry={handleMeterCommStatusRetry}
           />
         </div>
-      </div>
+      </DashboardSection>
     </div>
   );
 }

@@ -1,4 +1,7 @@
 export { DashboardHeader } from "./dashboard-header"
+export { DashboardSection } from "./dashboard-section"
+export { DashboardSectionNav } from "./dashboard-section-nav"
+export type { DashboardSectionItem } from "./dashboard-section-nav"
 export { KpiCard } from "./kpi-card"
 export type { KpiCardProps } from "./kpi-card"
 export { DashboardChartCard } from "./dashboard-chart-card"

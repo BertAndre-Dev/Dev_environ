@@ -5,7 +5,6 @@ import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 import { motion, useReducedMotion } from "framer-motion";
 import { ClipboardList } from "lucide-react";
-import Select from "react-select";
 import Tab from "@/components/tabs/page";
 import RequestManagementView from "@/components/request-mgt/RequestManagementView";
 import RequestWorkflowConfigPanel from "@/components/request-mgt/RequestWorkflowConfigPanel";
@@ -28,6 +27,7 @@ export default function CompanyRequestPage() {
   const dispatch = useDispatch<AppDispatch>();
   const reduceMotion = useReducedMotion();
   const [companyName, setCompanyName] = useState("Company");
+  const [companyId, setCompanyId] = useState<string | null>(null);
   const [estates, setEstates] = useState<EstateOption[]>([]);
   const [selectedEstate, setSelectedEstate] =
     useState<EstateSelectOption | null>(null);
@@ -50,6 +50,7 @@ export default function CompanyRequestPage() {
           return;
         }
         setCompanyName(company.name);
+        setCompanyId(company.id);
 
         let options: EstateOption[] = [];
         try {
@@ -80,47 +81,25 @@ export default function CompanyRequestPage() {
 
   return (
     <div className="relative space-y-6">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-[#D0DFF280]">
-              <ClipboardList className="w-5 h-5 text-[#0150AC]" />
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-2xl bg-[#D0DFF280]">
+                <ClipboardList className="w-5 h-5 text-[#0150AC]" />
+              </div>
+              <h1 className="font-heading text-3xl font-bold tracking-[-0.02em]">
+                Request Management
+              </h1>
             </div>
-            <h1 className="font-heading text-3xl font-bold tracking-[-0.02em]">
-              Request Management
-            </h1>
+            <p className="text-muted-foreground mt-2 leading-snug">
+              Review requests or configure the approval workflow for{" "}
+              <span className="font-bold uppercase underline text-foreground">
+                {companyName}
+              </span>
+              .
+            </p>
           </div>
-          <p className="text-muted-foreground mt-2 leading-snug">
-            Review requests or configure the approval workflow for{" "}
-            <span className="font-bold uppercase underline text-foreground">
-              {companyName}
-            </span>
-            .
-          </p>
         </div>
-
-        <div className="w-full sm:w-56 min-w-48">
-          <Select
-            options={estateOptions}
-            placeholder="Select estate"
-            value={selectedEstate}
-            onChange={(option) =>
-              setSelectedEstate(option as EstateSelectOption | null)
-            }
-            isSearchable
-            isDisabled={!estateOptions.length}
-            styles={{
-              control: (base) => ({ ...base, cursor: "pointer" }),
-              option: (base) => ({ ...base, cursor: "pointer" }),
-              dropdownIndicator: (base) => ({
-                ...base,
-                cursor: "pointer",
-              }),
-              clearIndicator: (base) => ({ ...base, cursor: "pointer" }),
-            }}
-          />
-        </div>
-      </div>
 
       <Tab
         titles={COMPANY_REQUEST_TABS}
@@ -138,6 +117,11 @@ export default function CompanyRequestPage() {
             {tab === "Workflow" ? (
               <RequestWorkflowConfigPanel
                 estateId={estateId}
+                companyId={companyId}
+                estateOptions={estateOptions}
+                selectedEstate={selectedEstate}
+                onEstateChange={setSelectedEstate}
+                estatesLoading={estatesLoading}
                 enabled={!estatesLoading && Boolean(estateId)}
                 estateLabel={selectedEstate?.label}
               />
@@ -154,6 +138,9 @@ export default function CompanyRequestPage() {
                   </span>
                 }
                 estateId={estateId}
+                estateOptions={estateOptions}
+                selectedEstate={selectedEstate}
+                onEstateChange={setSelectedEstate}
                 estatesLoading={estatesLoading}
                 emptyHint="No requests found for this estate."
                 hideHeading

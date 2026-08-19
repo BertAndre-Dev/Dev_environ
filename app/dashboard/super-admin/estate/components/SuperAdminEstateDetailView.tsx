@@ -150,7 +150,8 @@ export function SuperAdminEstateDetailView({
       const fromApi = parseEstateModulesResponse(
         modulesRes?.data ?? modulesRes,
       );
-      const fromDetails = Array.isArray(details?.modules) ? details.modules : [];
+      const fromDetails =
+        details && Array.isArray(details.modules) ? details.modules : [];
       setModules(fromApi.length > 0 ? fromApi : fromDetails);
     } catch (err: unknown) {
       const message = getApiErrorMessage(err);

@@ -137,7 +137,6 @@ function CardBody({
           emptyMessage="No revenue this period"
           emptyDescription="Bill and vending revenue will appear here."
           chartHeight={300}
-          ringWidth={38}
         />
         <DonutBreakdown
           title="Customers by segment"
@@ -147,7 +146,6 @@ function CardBody({
           emptyMessage="No customers this period"
           emptyDescription="Tenant and owner counts will appear here."
           chartHeight={300}
-          ringWidth={38}
         />
       </div>
     </div>

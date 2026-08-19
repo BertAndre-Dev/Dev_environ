@@ -101,7 +101,7 @@ export function PlatformFeeSourceChart({
                   cy="50%"
                   dataKey="value"
                   nameKey="label"
-                  innerRadius="52%"
+                  innerRadius="68%"
                   outerRadius="96%"
                   paddingAngle={chartData.length > 1 ? 4 : 0}
                   stroke="#ffffff"

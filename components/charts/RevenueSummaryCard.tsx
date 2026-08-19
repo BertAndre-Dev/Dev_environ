@@ -155,7 +155,6 @@ function CardBody({
         centerSubLabel="Total revenue"
         formatValue={formatTransactionAmount}
         chartHeight={300}
-        ringWidth={38}
       />
 
       {/* {hasMismatch ? (

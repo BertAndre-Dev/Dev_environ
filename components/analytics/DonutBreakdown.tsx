@@ -21,8 +21,6 @@ type DonutBreakdownProps = Readonly<{
   emptyDescription?: string;
   className?: string;
   chartHeight?: number;
-  /** Donut ring thickness — higher values produce a wider ring. */
-  ringWidth?: number;
 }>;
 
 type ChartSlice = DonutSlice & { key: string };
@@ -62,7 +60,6 @@ export function DonutBreakdown({
   emptyDescription,
   className,
   chartHeight = 280,
-  ringWidth = 36,
 }: DonutBreakdownProps) {
   const visibleSlices = useMemo(
     () => slices.filter((slice) => slice.value > 0),
@@ -120,7 +117,7 @@ export function DonutBreakdown({
                   cy="50%"
                   dataKey="value"
                   nameKey="name"
-                  innerRadius={`${Math.max(40, 100 - ringWidth * 2 - 8)}%`}
+                  innerRadius="68%"
                   outerRadius="96%"
                   paddingAngle={chartData.length > 1 ? 4 : 0}
                   stroke="#ffffff"

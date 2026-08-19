@@ -22,6 +22,7 @@ function cloneSteps(steps: WorkflowStep[] = []): WorkflowStep[] {
 interface WorkflowConfigModalProps {
   readonly visible: boolean;
   readonly estateId?: string | null;
+  readonly companyId?: string | null;
   readonly loading?: boolean;
   readonly saving?: boolean;
   readonly initialWorkflow?: RequestWorkflow | null;
@@ -36,6 +37,7 @@ interface WorkflowConfigModalProps {
 export default function WorkflowConfigModal({
   visible,
   estateId,
+  companyId,
   loading = false,
   saving = false,
   initialWorkflow = null,
@@ -133,6 +135,7 @@ export default function WorkflowConfigModal({
                 steps={steps}
                 onChange={setSteps}
                 estateId={estateId}
+                companyId={companyId}
                 disabled={busy}
               />
             </form>

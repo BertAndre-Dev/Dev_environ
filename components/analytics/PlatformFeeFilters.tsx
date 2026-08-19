@@ -32,12 +32,16 @@ type PlatformFeeFiltersProps = Readonly<{
 }>;
 
 const dateInputClassName =
-  "h-9 min-w-[9.25rem] w-[9.25rem] border-0 bg-transparent px-2.5 pr-9 text-[13px] shadow-none ring-0 focus:ring-0";
+  "h-9 w-full min-w-0 cursor-pointer border-0 bg-transparent px-2 text-[13px] shadow-none ring-0 focus:ring-0";
 
 const selectClassName =
-  "h-9 w-full min-w-42 appearance-none border-0 bg-transparent pr-8 text-[13px] shadow-none ring-0 focus:ring-0 active:scale-[0.99] motion-reduce:active:scale-100";
+  "h-9 w-full min-w-42 cursor-pointer appearance-none border-0 bg-transparent pr-8 text-[13px] shadow-none ring-0 focus:ring-0 active:scale-[0.99] motion-reduce:active:scale-100";
 
-const wellClassName = "flex flex-wrap items-center gap-4 rounded-xl bg-black/4 p-1 dark:bg-white/6";
+const fieldWellClassName =
+  "flex flex-col gap-1.5 rounded-xl bg-black/4 p-2.5 dark:bg-white/6";
+
+const scopeWellClassName =
+  "grid grid-cols-1 gap-3 rounded-xl bg-black/4 p-2.5 sm:grid-cols-2 dark:bg-white/6";
 
 export function PlatformFeeFilters({
   filters,
@@ -91,42 +95,58 @@ export function PlatformFeeFilters({
         "[@media(prefers-reduced-transparency:reduce)]:bg-card [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none [@media(prefers-reduced-transparency:reduce)]:backdrop-saturate-100",
       )}
     >
-      <div className="flex flex-col gap-3 lg:gap-6">
+      <div className="flex flex-col gap-4 lg:gap-5">
         <fieldset className="min-w-0">
           <legend className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
             Period
           </legend>
-          <div className={wellClassName}>
-            <IsoLinkedRangeStart
-              startDate={draftStartDate}
-              endDate={draftEndDate}
-              onStartChange={setDraftStartDate}
-              onEndChange={setDraftEndDate}
-              ariaLabel="Start date"
-              className={dateInputClassName}
-              withPortal={false}
-            />
-            <span
-              className="px-0.5 text-[13px] text-muted-foreground/50"
-              aria-hidden
-            >
-              –
-            </span>
-            <IsoLinkedRangeEnd
-              startDate={draftStartDate}
-              endDate={draftEndDate}
-              onEndChange={setDraftEndDate}
-              ariaLabel="End date"
-              className={dateInputClassName}
-              withPortal={false}
-            />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
+            <div className={fieldWellClassName}>
+              <label
+                htmlFor="platform-fee-start-date"
+                className="px-0.5 text-xs font-medium text-foreground"
+              >
+                Start date
+              </label>
+              <IsoLinkedRangeStart
+                id="platform-fee-start-date"
+                startDate={draftStartDate}
+                endDate={draftEndDate}
+                onStartChange={setDraftStartDate}
+                onEndChange={setDraftEndDate}
+                ariaLabel="Start date"
+                placeholder="Select start date"
+                className={dateInputClassName}
+                withPortal={false}
+              />
+            </div>
+
+            <div className={fieldWellClassName}>
+              <label
+                htmlFor="platform-fee-end-date"
+                className="px-0.5 text-xs font-medium text-foreground"
+              >
+                End date
+              </label>
+              <IsoLinkedRangeEnd
+                id="platform-fee-end-date"
+                startDate={draftStartDate}
+                endDate={draftEndDate}
+                onEndChange={setDraftEndDate}
+                ariaLabel="End date"
+                placeholder="Select end date"
+                className={dateInputClassName}
+                withPortal={false}
+              />
+            </div>
+
             <Button
               type="button"
               size="sm"
               onClick={handleApplyDates}
               disabled={!canApply}
               className={cn(
-                "ml-0.5 h-8 rounded-lg px-3 text-[13px] font-medium",
+                "h-9 w-full cursor-pointer rounded-lg px-4 text-[13px] font-medium lg:w-auto lg:min-w-[5.5rem]",
                 "transition-[transform,opacity] duration-100 ease-out",
                 "active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100",
                 canApply ? "opacity-100" : "opacity-40",
@@ -141,7 +161,7 @@ export function PlatformFeeFilters({
           <legend className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
             Scope
           </legend>
-          <div className={wellClassName}>
+          <div className={scopeWellClassName}>
             <LabeledSelect
               id="platform-fee-estate"
               label="Estate"
@@ -191,23 +211,28 @@ function LabeledSelect({
   onChange: (value: string) => void;
 }>) {
   return (
-    <div className="relative min-w-42 flex-1">
-      <label htmlFor={id} className="sr-only">
+    <div className="min-w-0 flex-1">
+      <label
+        htmlFor={id}
+        className="mb-1.5 block px-0.5 text-xs font-medium text-foreground"
+      >
         {label}
       </label>
-      <Select
-        id={id}
-        aria-label={label}
-        value={value}
-        disabled={disabled}
-        options={options}
-        className={selectClassName}
-        onChange={(event) => onChange(event.target.value.trim())}
-      />
-      <ChevronDown
-        className="pointer-events-none absolute top-1/2 right-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
-        aria-hidden
-      />
+      <div className="relative">
+        <Select
+          id={id}
+          aria-label={label}
+          value={value}
+          disabled={disabled}
+          options={options}
+          className={selectClassName}
+          onChange={(event) => onChange(event.target.value.trim())}
+        />
+        <ChevronDown
+          className="pointer-events-none absolute top-1/2 right-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+          aria-hidden
+        />
+      </div>
     </div>
   );
 }

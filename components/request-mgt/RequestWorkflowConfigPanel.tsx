@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { Edit2, Settings2, Trash2 } from "lucide-react";
+import Select from "react-select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DeleteModal from "@/components/resident/delete-modal/page";
@@ -25,7 +26,25 @@ import {
   requestDeleteIconGhostClass,
   requestEditIconButtonClass,
 } from "@/components/request-mgt/request-action-styles";
+import {
+  clearAdminRequestWorkflow,
+} from "@/redux/slice/admin/request/admin-request-slice";
 import WorkflowConfigModal from "./WorkflowConfigModal";
+
+type EstateSelectOption = { label: string; value: string };
+
+const estateSelectStyles = {
+  control: (base: Record<string, unknown>) => ({ ...base, cursor: "pointer" }),
+  option: (base: Record<string, unknown>) => ({ ...base, cursor: "pointer" }),
+  dropdownIndicator: (base: Record<string, unknown>) => ({
+    ...base,
+    cursor: "pointer",
+  }),
+  clearIndicator: (base: Record<string, unknown>) => ({
+    ...base,
+    cursor: "pointer",
+  }),
+};
 
 function StepUsers({
   userIds,
@@ -61,6 +80,12 @@ function StepUsers({
 
 export interface RequestWorkflowConfigPanelProps {
   estateId: string | null;
+  companyId?: string | null;
+  /** Company (multi-estate): pass options so user picks which estate to configure. */
+  estateOptions?: EstateSelectOption[];
+  selectedEstate?: EstateSelectOption | null;
+  onEstateChange?: (option: EstateSelectOption | null) => void;
+  estatesLoading?: boolean;
   /** When false, skip auto-fetch (e.g. parent still bootstrapping). */
   enabled?: boolean;
   /** Compact mode: summary card only (no page-level title). */
@@ -71,6 +96,11 @@ export interface RequestWorkflowConfigPanelProps {
 
 export default function RequestWorkflowConfigPanel({
   estateId,
+  companyId = null,
+  estateOptions,
+  selectedEstate = null,
+  onEstateChange,
+  estatesLoading = false,
   enabled = true,
   compact = false,
   estateLabel,
@@ -82,6 +112,10 @@ export default function RequestWorkflowConfigPanel({
   const [workflowToDelete, setWorkflowToDelete] =
     useState<RequestWorkflow | null>(null);
   const [estateUsers, setEstateUsers] = useState<WorkflowEstateUser[]>([]);
+
+  const showEstateSelector = Boolean(estateOptions?.length && onEstateChange);
+  const resolvedEstateId = selectedEstate?.value ?? estateId;
+  const resolvedEstateLabel = selectedEstate?.label ?? estateLabel;
 
   const { workflows, getWorkflowStatus, upsertWorkflowStatus, deleteWorkflowStatus } =
     useSelector((state: RootState) => state.adminRequest);
@@ -98,21 +132,32 @@ export default function RequestWorkflowConfigPanel({
   }, [estateUsers]);
 
   useEffect(() => {
-    if (!estateId || !enabled) return;
-    dispatch(getAdminRequestWorkflow(estateId))
+    setModalOpen(false);
+    setEditingWorkflow(null);
+    setWorkflowToDelete(null);
+    dispatch(clearAdminRequestWorkflow());
+  }, [dispatch, resolvedEstateId]);
+
+  useEffect(() => {
+    if (!resolvedEstateId || !enabled) return;
+    dispatch(getAdminRequestWorkflow(resolvedEstateId))
       .unwrap()
       .catch((err: unknown) => {
         const message = getApiErrorMessage(err);
         if (message) toast.error(message);
       });
-  }, [dispatch, estateId, enabled]);
+  }, [dispatch, resolvedEstateId, enabled]);
 
   useEffect(() => {
-    if (!estateId || !enabled) return;
+    if (!resolvedEstateId || !enabled) return;
     let cancelled = false;
     (async () => {
       try {
-        const users = await fetchWorkflowEstateUsers(dispatch, estateId);
+        const users = await fetchWorkflowEstateUsers(
+          dispatch,
+          resolvedEstateId,
+          companyId,
+        );
         if (!cancelled) setEstateUsers(users);
       } catch {
         if (!cancelled) setEstateUsers([]);
@@ -121,22 +166,22 @@ export default function RequestWorkflowConfigPanel({
     return () => {
       cancelled = true;
     };
-  }, [dispatch, estateId, enabled]);
+  }, [dispatch, resolvedEstateId, companyId, enabled]);
 
   const handleSave = async (payload: {
     name: string;
     description?: string;
     steps: WorkflowStep[];
   }) => {
-    if (!estateId) {
-      toast.error("Missing estate info.");
+    if (!resolvedEstateId) {
+      toast.error("Select an estate first.");
       return;
     }
     try {
       await dispatch(
         upsertAdminRequestWorkflow({
           ...payload,
-          estateId,
+          estateId: resolvedEstateId,
           isActive: true,
         }),
       ).unwrap();
@@ -145,7 +190,7 @@ export default function RequestWorkflowConfigPanel({
       );
       setModalOpen(false);
       setEditingWorkflow(null);
-      await dispatch(getAdminRequestWorkflow(estateId)).unwrap();
+      await dispatch(getAdminRequestWorkflow(resolvedEstateId)).unwrap();
     } catch (err: unknown) {
       const message = getApiErrorMessage(err);
       if (message) toast.error(message);
@@ -188,7 +233,7 @@ export default function RequestWorkflowConfigPanel({
   const setWorkflowButton = (
     <Button
       onClick={openCreateModal}
-      disabled={!estateId}
+      disabled={!resolvedEstateId || estatesLoading}
       size={compact ? "sm" : "default"}
       variant="outline"
       className="shrink-0 rounded-full active:scale-[0.97] transition-transform duration-100 ease-out"
@@ -197,6 +242,22 @@ export default function RequestWorkflowConfigPanel({
       Set workflow
     </Button>
   );
+
+  const estateSelector = showEstateSelector ? (
+    <div className="w-full sm:w-56 min-w-48">
+      <Select
+        options={estateOptions}
+        placeholder="Select estate"
+        value={selectedEstate}
+        onChange={(option) =>
+          onEstateChange?.(option as EstateSelectOption | null)
+        }
+        isSearchable
+        isDisabled={estatesLoading || !estateOptions?.length}
+        styles={estateSelectStyles}
+      />
+    </div>
+  ) : null;
 
   return (
     <>
@@ -207,7 +268,29 @@ export default function RequestWorkflowConfigPanel({
             : "p-5 sm:p-6 rounded-2xl border-black/5 shadow-sm"
         }
       >
-        {loadingWorkflow && estateId ? (
+        {showEstateSelector ? (
+          <div className="mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-5 border-b border-black/5">
+            <div>
+              <p className="text-sm font-medium text-foreground">Estate</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
+                Workflows are saved for the selected estate.
+              </p>
+            </div>
+            {estateSelector}
+          </div>
+        ) : null}
+
+        {!resolvedEstateId && !estatesLoading ? (
+          <div className="py-8 text-center space-y-3">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#F7F8FA]">
+              <Settings2 className="w-6 h-6 text-muted-foreground" />
+            </div>
+            <p className="text-muted-foreground">
+              Select an estate to configure approval workflows.
+            </p>
+            {!showEstateSelector ? estateSelector : null}
+          </div>
+        ) : loadingWorkflow && resolvedEstateId ? (
           <p className="text-sm text-muted-foreground py-6 text-center">
             Loading workflow...
           </p>
@@ -218,12 +301,12 @@ export default function RequestWorkflowConfigPanel({
             </div>
             <p className="text-muted-foreground">
               No approval workflow configured yet
-              {estateLabel ? (
+              {resolvedEstateLabel ? (
                 <>
                   {" "}
                   for{" "}
                   <span className="font-semibold text-foreground">
-                    {estateLabel}
+                    {resolvedEstateLabel}
                   </span>
                 </>
               ) : null}
@@ -331,7 +414,8 @@ export default function RequestWorkflowConfigPanel({
         <WorkflowConfigModal
           key={editingWorkflow?.id ?? editingWorkflow?._id ?? "new-workflow"}
           visible={modalOpen}
-          estateId={estateId}
+          estateId={resolvedEstateId}
+          companyId={companyId}
           saving={saving}
           initialWorkflow={editingWorkflow}
           onClose={closeModal}

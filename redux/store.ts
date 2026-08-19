@@ -141,6 +141,9 @@ import superAdminConsumptionSnapshotSliceReducer from "@/redux/slice/super-admin
 import superAdminCustomerMeterSummarySliceReducer from "@/redux/slice/super-admin/customer-meter-summary/customer-meter-summary-slice";
 import superAdminCustomerActivationsSliceReducer from "@/redux/slice/super-admin/customer-activations/customer-activations-slice";
 import superAdminPlatformFeesSliceReducer from "@/redux/slice/super-admin/platform-fees/platform-fees-slice";
+import superAdminVendingFrequencySliceReducer from "@/redux/slice/super-admin/vending-frequency/vending-frequency-slice";
+import superAdminRevenueBySegmentSliceReducer from "@/redux/slice/super-admin/revenue-by-segment/revenue-by-segment-slice";
+import superAdminRevenueSummarySliceReducer from "@/redux/slice/super-admin/revenue-summary/revenue-summary-slice";
 
 const persistConfig = {
   key: "root",
@@ -442,6 +445,9 @@ export const store = configureStore({
     superAdminCustomerMeterSummary: superAdminCustomerMeterSummarySliceReducer,
     superAdminCustomerActivations: superAdminCustomerActivationsSliceReducer,
     superAdminPlatformFees: superAdminPlatformFeesSliceReducer,
+    superAdminVendingFrequency: superAdminVendingFrequencySliceReducer,
+    superAdminRevenueBySegment: superAdminRevenueBySegmentSliceReducer,
+    superAdminRevenueSummary: superAdminRevenueSummarySliceReducer,
     [mapsApi.reducerPath]: mapsApi.reducer,
   },
 

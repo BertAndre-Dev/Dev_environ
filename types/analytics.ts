@@ -260,6 +260,54 @@ export interface CustomerActivationsResponse {
   scope: AnalyticsScope;
 }
 
+export interface VendingFrequencyData {
+  totalVends: number;
+  uniqueMeters: number;
+  vendsPerDay: number;
+  vendsPerMeter: number;
+  period: AnalyticsPeriodRange;
+}
+
+export interface VendingFrequencyResponse {
+  success: boolean;
+  message: string;
+  data: VendingFrequencyData;
+  scope: AnalyticsScope;
+}
+
+export interface RevenueBySegmentData {
+  totalRevenue: number;
+  vendingRevenue: number;
+  billRevenue: number;
+  bySegment: {
+    owners: { customerCount: number };
+    tenants: { customerCount: number };
+  };
+  period: AnalyticsPeriodRange;
+}
+
+export interface RevenueBySegmentResponse {
+  success: boolean;
+  message: string;
+  data: RevenueBySegmentData;
+  scope: AnalyticsScope;
+}
+
+export interface RevenueSummaryData {
+  totalRevenue: number;
+  vendingRevenue: number;
+  billRevenue: number;
+  manualRevenueEntries: number;
+  period: AnalyticsPeriodRange;
+}
+
+export interface RevenueSummaryResponse {
+  success: boolean;
+  message: string;
+  data: RevenueSummaryData;
+  scope: AnalyticsScope;
+}
+
 export interface MeterSummaryData {
   totalMeters: number;
   activeMeters: number;

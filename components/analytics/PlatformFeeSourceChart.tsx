@@ -92,7 +92,7 @@ export function PlatformFeeSourceChart({
         <EmptyState />
       ) : (
         <div className="flex flex-col items-center justify-center px-4 py-5 sm:px-5">
-          <div className="relative h-[220px] w-full rounded-xl bg-white/70 dark:bg-black/20">
+          <div className="relative h-[280px] w-full rounded-xl bg-white/70 dark:bg-black/20">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -101,8 +101,8 @@ export function PlatformFeeSourceChart({
                   cy="50%"
                   dataKey="value"
                   nameKey="label"
-                  innerRadius="58%"
-                  outerRadius="88%"
+                  innerRadius="68%"
+                  outerRadius="96%"
                   paddingAngle={chartData.length > 1 ? 4 : 0}
                   stroke="#ffffff"
                   strokeWidth={2}

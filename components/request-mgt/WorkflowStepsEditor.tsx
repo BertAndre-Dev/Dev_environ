@@ -30,6 +30,7 @@ interface WorkflowStepsEditorProps {
   readonly steps: WorkflowStep[];
   readonly onChange: (steps: WorkflowStep[]) => void;
   readonly estateId?: string | null;
+  readonly companyId?: string | null;
   readonly disabled?: boolean;
 }
 
@@ -87,6 +88,7 @@ export default function WorkflowStepsEditor({
   steps,
   onChange,
   estateId,
+  companyId,
   disabled = false,
 }: WorkflowStepsEditorProps) {
   const dispatch = useDispatch<AppDispatch>();
@@ -104,7 +106,11 @@ export default function WorkflowStepsEditor({
     (async () => {
       setUsersLoading(true);
       try {
-        const next = await fetchWorkflowEstateUsers(dispatch, estateId);
+        const next = await fetchWorkflowEstateUsers(
+          dispatch,
+          estateId,
+          companyId,
+        );
         if (!cancelled) setUserOptions(next);
       } catch {
         if (!cancelled) setUserOptions([]);
@@ -115,7 +121,7 @@ export default function WorkflowStepsEditor({
     return () => {
       cancelled = true;
     };
-  }, [dispatch, estateId]);
+  }, [dispatch, estateId, companyId]);
 
   useEffect(() => {
     if (openPickerIndex == null) return;
@@ -254,13 +260,15 @@ export default function WorkflowStepsEditor({
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                <div className="md:col-span-2">
+              <div className="grid grid-cols-1 gap-3.5">
+                <div>
                   <Label htmlFor={`step-name-${index}`}>Step name</Label>
                   <Input
                     id={`step-name-${index}`}
                     value={step.name}
-                    onChange={(e) => updateStep(index, { name: e.target.value })}
+                    onChange={(e) =>
+                      updateStep(index, { name: e.target.value })
+                    }
                     placeholder="Step name"
                     className="mt-1.5 rounded-xl"
                     disabled={disabled}
@@ -283,197 +291,205 @@ export default function WorkflowStepsEditor({
                   />
                 </div>
 
-                <div className="md:col-span-2 space-y-2.5">
+                <div className="space-y-2.5">
                   <Label>Users</Label>
                   <div
                     ref={isOpen ? pickerRef : undefined}
                     className="relative"
                   >
-                    <button
-                      type="button"
-                      disabled={disabled || !estateId}
-                      aria-expanded={isOpen}
-                      aria-haspopup="listbox"
-                      onClick={() => {
-                        if (isOpen) {
-                          closePicker();
-                          return;
-                        }
-                        setOpenPickerIndex(index);
-                        setActiveRole(null);
-                        setUserSearch("");
-                      }}
-                      className={cn(
-                        "flex h-10 w-full items-center justify-between rounded-xl border border-input bg-white px-3 text-sm text-left",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0150AC]/40",
-                        "active:scale-[0.99] transition-transform duration-100 ease-out",
-                        "disabled:opacity-50 disabled:pointer-events-none cursor-pointer",
-                      )}
-                    >
-                      <span
-                        className={
-                          selectedIds.length
-                            ? "text-foreground"
-                            : "text-muted-foreground"
-                        }
-                      >
-                        {selectedIds.length
-                          ? `${selectedIds.length} user${selectedIds.length === 1 ? "" : "s"} selected`
-                          : "Select users"}
-                      </span>
-                      <ChevronRight
+                      <button
+                        type="button"
+                        disabled={disabled || !estateId}
+                        aria-expanded={isOpen}
+                        aria-haspopup="listbox"
+                        onClick={() => {
+                          if (isOpen) {
+                            closePicker();
+                            return;
+                          }
+                          setOpenPickerIndex(index);
+                          setActiveRole(null);
+                          setUserSearch("");
+                        }}
                         className={cn(
-                          "h-4 w-4 text-muted-foreground transition-transform duration-200",
-                          isOpen && "rotate-90",
+                          "flex h-10 w-full items-center justify-between rounded-xl border border-input bg-white px-3 text-sm text-left",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0150AC]/40",
+                          "active:scale-[0.99] transition-transform duration-100 ease-out",
+                          "disabled:opacity-50 disabled:pointer-events-none cursor-pointer",
                         )}
-                      />
-                    </button>
-
-                    <AnimatePresence>
-                      {isOpen ? (
-                        <motion.div
-                          initial={
-                            reduceMotion
-                              ? { opacity: 0 }
-                              : { opacity: 0, y: -6, scale: 0.98 }
-                          }
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={
-                            reduceMotion
-                              ? { opacity: 0 }
-                              : { opacity: 0, y: -4, scale: 0.98 }
-                          }
-                          transition={
-                            reduceMotion ? { duration: 0.15 } : pickerSpring
-                          }
-                          className="absolute z-20 mt-1.5 w-full overflow-hidden rounded-xl border border-black/8 bg-white shadow-[0_12px_32px_rgba(16,24,40,0.12)] origin-top"
-                        >
-                          {activeRole ? (
-                            <div>
-                              <div className="flex items-center gap-2 border-b border-black/5 px-2 py-2">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setActiveRole(null);
-                                    setUserSearch("");
-                                  }}
-                                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-medium text-[#0150AC] hover:bg-[#0150AC]/8 active:scale-[0.97] transition-[transform,background-color] duration-100 ease-out cursor-pointer"
-                                >
-                                  <ChevronLeft className="h-4 w-4" />
-                                  {formatWorkflowRoleLabel(activeRole)}
-                                </button>
-                              </div>
-                              <div className="p-2">
-                                <Input
-                                  value={userSearch}
-                                  onChange={(e) => setUserSearch(e.target.value)}
-                                  placeholder="Search users..."
-                                  className="rounded-lg"
-                                  disabled={disabled}
-                                />
-                              </div>
-                              <div className="max-h-52 overflow-y-auto">
-                                {usersLoading ? (
-                                  <p className="px-3 py-4 text-sm text-muted-foreground">
-                                    Loading users...
-                                  </p>
-                                ) : null}
-                                {!usersLoading && filteredRoleUsers.length === 0 ? (
-                                  <p className="px-3 py-4 text-sm text-muted-foreground">
-                                    No users in this role.
-                                  </p>
-                                ) : null}
-                                {!usersLoading &&
-                                  filteredRoleUsers.map((user) => {
-                                    const checked = selectedIds.includes(user.id);
-                                    return (
-                                      <label
-                                        key={user.id}
-                                        className="flex items-center gap-3 px-3 py-2.5 text-sm cursor-pointer hover:bg-black/3 active:bg-black/5 transition-colors duration-100"
-                                      >
-                                        <input
-                                          type="checkbox"
-                                          checked={checked}
-                                          onChange={() => toggleUser(index, user.id)}
-                                          disabled={disabled}
-                                          className="size-4 rounded border-input accent-[#0150AC]"
-                                        />
-                                        <span className="min-w-0 truncate">
-                                          {user.label}
-                                        </span>
-                                      </label>
-                                    );
-                                  })}
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="py-1">
-                              {WORKFLOW_USER_ROLES.map((role) => {
-                                const count =
-                                  usersByRole.get(role.value)?.length ?? 0;
-                                const selectedInRole = selectedIds.filter((id) =>
-                                  usersByRole
-                                    .get(role.value)
-                                    ?.some((user) => user.id === id),
-                                ).length;
-                                return (
-                                  <button
-                                    key={role.value}
-                                    type="button"
-                                    onClick={() => setActiveRole(role.value)}
-                                    className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-sm hover:bg-black/3 active:bg-black/5 active:scale-[0.99] transition-[transform,background-color] duration-100 ease-out cursor-pointer"
-                                  >
-                                    <span className="font-medium">
-                                      {role.label}
-                                    </span>
-                                    <span className="inline-flex items-center gap-2 text-muted-foreground">
-                                      {selectedInRole > 0 ? (
-                                        <span className="text-xs text-[#0150AC]">
-                                          {selectedInRole} selected
-                                        </span>
-                                      ) : (
-                                        <span className="text-xs">
-                                          {usersLoading ? "…" : count}
-                                        </span>
-                                      )}
-                                      <ChevronRight className="h-4 w-4" />
-                                    </span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </motion.div>
-                      ) : null}
-                    </AnimatePresence>
-                  </div>
-
-                  {selectedUsers.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedUsers.map((user) => (
+                      >
                         <span
-                          key={user.id}
-                          className="inline-flex max-w-full items-center gap-1 rounded-full bg-white border border-black/8 px-2.5 py-1 text-xs"
+                          className={
+                            selectedIds.length
+                              ? "text-foreground"
+                              : "text-muted-foreground"
+                          }
                         >
-                          <span className="truncate">{user.label}</span>
-                          <button
-                            type="button"
-                            aria-label={`Remove ${user.label}`}
-                            disabled={disabled}
-                            onClick={() => toggleUser(index, user.id)}
-                            className="rounded-full p-0.5 hover:bg-black/5 active:scale-[0.97] cursor-pointer disabled:opacity-40"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
+                          {selectedIds.length
+                            ? `${selectedIds.length} user${selectedIds.length === 1 ? "" : "s"} selected`
+                            : "Select users"}
                         </span>
-                      ))}
+                        <ChevronRight
+                          className={cn(
+                            "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                            isOpen && "rotate-90",
+                          )}
+                        />
+                      </button>
+
+                      <AnimatePresence>
+                        {isOpen ? (
+                          <motion.div
+                            initial={
+                              reduceMotion
+                                ? { opacity: 0 }
+                                : { opacity: 0, y: -6, scale: 0.98 }
+                            }
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={
+                              reduceMotion
+                                ? { opacity: 0 }
+                                : { opacity: 0, y: -4, scale: 0.98 }
+                            }
+                            transition={
+                              reduceMotion ? { duration: 0.15 } : pickerSpring
+                            }
+                            className="absolute z-20 mt-1.5 w-full overflow-hidden rounded-xl border border-black/8 bg-white shadow-[0_12px_32px_rgba(16,24,40,0.12)] origin-top"
+                          >
+                            {activeRole ? (
+                              <div>
+                                <div className="flex items-center gap-2 border-b border-black/5 px-2 py-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveRole(null);
+                                      setUserSearch("");
+                                    }}
+                                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-medium text-[#0150AC] hover:bg-[#0150AC]/8 active:scale-[0.97] transition-[transform,background-color] duration-100 ease-out cursor-pointer"
+                                  >
+                                    <ChevronLeft className="h-4 w-4" />
+                                    {formatWorkflowRoleLabel(activeRole)}
+                                  </button>
+                                </div>
+                                <div className="p-2">
+                                  <Input
+                                    value={userSearch}
+                                    onChange={(e) =>
+                                      setUserSearch(e.target.value)
+                                    }
+                                    placeholder="Search users..."
+                                    className="rounded-lg"
+                                    disabled={disabled}
+                                  />
+                                </div>
+                                <div className="max-h-52 overflow-y-auto">
+                                  {usersLoading ? (
+                                    <p className="px-3 py-4 text-sm text-muted-foreground">
+                                      Loading users...
+                                    </p>
+                                  ) : null}
+                                  {!usersLoading &&
+                                  filteredRoleUsers.length === 0 ? (
+                                    <p className="px-3 py-4 text-sm text-muted-foreground">
+                                      No users in this role.
+                                    </p>
+                                  ) : null}
+                                  {!usersLoading &&
+                                    filteredRoleUsers.map((user) => {
+                                      const checked = selectedIds.includes(
+                                        user.id,
+                                      );
+                                      return (
+                                        <label
+                                          key={user.id}
+                                          className="flex items-center gap-3 px-3 py-2.5 text-sm cursor-pointer hover:bg-black/3 active:bg-black/5 transition-colors duration-100"
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            checked={checked}
+                                            onChange={() =>
+                                              toggleUser(index, user.id)
+                                            }
+                                            disabled={disabled}
+                                            className="size-4 rounded border-input accent-[#0150AC]"
+                                          />
+                                          <span className="min-w-0 truncate">
+                                            {user.label}
+                                          </span>
+                                        </label>
+                                      );
+                                    })}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="py-1">
+                                {WORKFLOW_USER_ROLES.map((role) => {
+                                  const count =
+                                    usersByRole.get(role.value)?.length ?? 0;
+                                  const selectedInRole = selectedIds.filter(
+                                    (id) =>
+                                      usersByRole
+                                        .get(role.value)
+                                        ?.some((user) => user.id === id),
+                                  ).length;
+                                  return (
+                                    <button
+                                      key={role.value}
+                                      type="button"
+                                      onClick={() => setActiveRole(role.value)}
+                                      className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-sm hover:bg-black/3 active:bg-black/5 active:scale-[0.99] transition-[transform,background-color] duration-100 ease-out cursor-pointer"
+                                    >
+                                      <span className="font-medium">
+                                        {role.label}
+                                      </span>
+                                      <span className="inline-flex items-center gap-2 text-muted-foreground">
+                                        {selectedInRole > 0 ? (
+                                          <span className="text-xs text-[#0150AC]">
+                                            {selectedInRole} selected
+                                          </span>
+                                        ) : (
+                                          <span className="text-xs">
+                                            {usersLoading ? "…" : count}
+                                          </span>
+                                        )}
+                                        <ChevronRight className="h-4 w-4" />
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </motion.div>
+                        ) : null}
+                      </AnimatePresence>
                     </div>
-                  ) : selectedIds.length > 0 ? (
-                    <p className="text-xs text-muted-foreground">
-                      {selectedIds.length} user
-                      {selectedIds.length === 1 ? "" : "s"} selected
-                    </p>
-                  ) : null}
+
+                    {selectedUsers.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedUsers.map((user) => (
+                          <span
+                            key={user.id}
+                            className="inline-flex max-w-full items-center gap-1 rounded-full bg-white border border-black/8 px-2.5 py-1 text-xs"
+                          >
+                            <span className="truncate">{user.label}</span>
+                            <button
+                              type="button"
+                              aria-label={`Remove ${user.label}`}
+                              disabled={disabled}
+                              onClick={() => toggleUser(index, user.id)}
+                              className="rounded-full p-0.5 hover:bg-black/5 active:scale-[0.97] cursor-pointer disabled:opacity-40"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    ) : selectedIds.length > 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        {selectedIds.length} user
+                        {selectedIds.length === 1 ? "" : "s"} selected
+                      </p>
+                    ) : null}
                 </div>
               </div>
 
@@ -506,12 +522,18 @@ export default function WorkflowStepsEditor({
                       id={`step-interval-${index}`}
                       type="number"
                       min={1}
-                      value={step.reminderIntervalHours ?? 24}
-                      onChange={(e) =>
-                        updateStep(index, {
-                          reminderIntervalHours: Number(e.target.value) || 24,
-                        })
+                      value={
+                        step.reminderIntervalHours != null
+                          ? step.reminderIntervalHours
+                          : ""
                       }
+                      onChange={(e) => {
+                        const raw = e.target.value.trim();
+                        updateStep(index, {
+                          reminderIntervalHours:
+                            raw === "" ? undefined : Number(raw),
+                        });
+                      }}
                       className="mt-1.5 rounded-xl"
                       disabled={disabled}
                     />
@@ -522,12 +544,18 @@ export default function WorkflowStepsEditor({
                       id={`step-max-${index}`}
                       type="number"
                       min={1}
-                      value={step.reminderMaxCount ?? 3}
-                      onChange={(e) =>
-                        updateStep(index, {
-                          reminderMaxCount: Number(e.target.value) || 3,
-                        })
+                      value={
+                        step.reminderMaxCount != null
+                          ? step.reminderMaxCount
+                          : ""
                       }
+                      onChange={(e) => {
+                        const raw = e.target.value.trim();
+                        updateStep(index, {
+                          reminderMaxCount:
+                            raw === "" ? undefined : Number(raw),
+                        });
+                      }}
                       className="mt-1.5 rounded-xl"
                       disabled={disabled}
                     />

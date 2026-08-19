@@ -65,9 +65,11 @@ export function normalizeWorkflowStep(
     reminderIntervalHours:
       raw.reminderIntervalHours != null
         ? Number(raw.reminderIntervalHours)
-        : 24,
+        : undefined,
     reminderMaxCount:
-      raw.reminderMaxCount != null ? Number(raw.reminderMaxCount) : 3,
+      raw.reminderMaxCount != null
+        ? Number(raw.reminderMaxCount)
+        : undefined,
   };
 }
 
@@ -142,8 +144,6 @@ export function createEmptyWorkflowStep(order = 1): WorkflowStep {
     approvalMode: "any",
     allowReject: true,
     reminderEnabled: false,
-    reminderIntervalHours: 24,
-    reminderMaxCount: 3,
   };
 }
 
@@ -211,6 +211,20 @@ export const upsertAdminRequestWorkflow = createAsyncThunk(
           message: `Step ${index + 1}: select at least one user.`,
         });
       }
+      if (step.reminderEnabled) {
+        const interval = Number(step.reminderIntervalHours);
+        const maxCount = Number(step.reminderMaxCount);
+        if (!Number.isFinite(interval) || interval < 1) {
+          return rejectWithValue({
+            message: `Step ${index + 1}: reminder interval (hours) is required.`,
+          });
+        }
+        if (!Number.isFinite(maxCount) || maxCount < 1) {
+          return rejectWithValue({
+            message: `Step ${index + 1}: max reminders is required.`,
+          });
+        }
+      }
     }
 
     try {
@@ -226,10 +240,10 @@ export const upsertAdminRequestWorkflow = createAsyncThunk(
           allowReject: Boolean(step.allowReject),
           reminderEnabled: Boolean(step.reminderEnabled),
           reminderIntervalHours: step.reminderEnabled
-            ? Number(step.reminderIntervalHours) || 24
+            ? Number(step.reminderIntervalHours)
             : undefined,
           reminderMaxCount: step.reminderEnabled
-            ? Number(step.reminderMaxCount) || 3
+            ? Number(step.reminderMaxCount)
             : undefined,
         })),
         isActive: payload.isActive ?? true,

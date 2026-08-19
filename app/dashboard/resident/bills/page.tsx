@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Eye, Info } from "lucide-react";
+import { AlertTriangle, Eye, Info } from "lucide-react";
 import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import BillsForm from "@/components/resident/bill-form/page";
@@ -52,17 +52,6 @@ function formatFrequencyLabel(frequency?: string): string {
   return map[frequency] || frequency;
 }
 
-function formatAmountPeriod(frequency?: string): string {
-  const normalized = (frequency ?? "").toLowerCase().replace(/[_-]/g, "");
-  const map: Record<string, string> = {
-    yearly: "annum",
-    monthly: "month",
-    quarterly: "quarter",
-    oneoff: "one-off",
-  };
-  return map[normalized] ?? "";
-}
-
 function formatDateTime(value?: string | null): string | null {
   if (!value) return null;
   const date = new Date(value);
@@ -70,11 +59,137 @@ function formatDateTime(value?: string | null): string | null {
   return date.toLocaleString();
 }
 
+function formatNaira(value: number): string {
+  return `₦${value.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function formatInterestStart(value?: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 function hasActiveInterest(bill: {
   accrueInterest?: boolean;
   interestRatePercent?: number;
 }): boolean {
   return Boolean(bill.accrueInterest) && Number(bill.interestRatePercent) > 0;
+}
+
+function PayableBillCard({
+  name,
+  description,
+  frequency,
+  compulsory,
+  amountPayable,
+  principalDue,
+  accruedInterest,
+  interestRatePercent,
+  interestStartsAt,
+  onPay,
+}: {
+  name: string;
+  description?: string;
+  frequency?: string;
+  compulsory?: boolean;
+  amountPayable: number;
+  principalDue?: number;
+  accruedInterest?: number;
+  interestRatePercent?: number;
+  interestStartsAt?: string;
+  onPay: () => void;
+}) {
+  const showInterest =
+    Boolean(interestRatePercent) && Number(interestRatePercent) > 0;
+  const badgeParts = [
+    formatFrequencyLabel(frequency),
+    compulsory ? "Compulsory" : null,
+  ].filter(Boolean) as string[];
+  const startsLabel = formatInterestStart(interestStartsAt);
+
+  return (
+    <button
+      type="button"
+      onClick={onPay}
+      className={[
+        "flex w-full cursor-pointer flex-col rounded-2xl border border-border/80 bg-card p-5 text-left",
+        "shadow-sm transition-[transform,background-color,box-shadow] duration-100 ease-out",
+        "hover:bg-muted/30 hover:shadow-md",
+        "active:scale-[0.99] active:bg-muted/50",
+        "motion-reduce:transition-none motion-reduce:active:scale-100",
+      ].join(" ")}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-lg text-primary font-semibold leading-tight tracking-[-0.02em] capitalize">
+            {name}
+          </h3>
+          {description ? (
+            <p className="mt-1 text-sm leading-snug text-muted-foreground">
+              {description}
+            </p>
+          ) : null}
+        </div>
+        {badgeParts.length > 0 ? (
+          <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium tracking-wide text-muted-foreground">
+            {badgeParts.join(" · ")}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="mt-5 space-y-1.5">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-sm">Amount payable</span>
+          <span className="text-lg font-semibold tabular-nums tracking-tight">
+            {formatNaira(amountPayable)}
+          </span>
+        </div>
+        {showInterest ? (
+          <>
+            <div className="flex items-baseline justify-between gap-3 text-sm text-muted-foreground">
+              <span>Principal due</span>
+              <span className="tabular-nums">
+                {formatNaira(Number(principalDue ?? 0))}
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between gap-3 text-sm text-muted-foreground">
+              <span>Accrued interest</span>
+              <span className="tabular-nums">
+                {formatNaira(Number(accruedInterest ?? 0))}
+              </span>
+            </div>
+          </>
+        ) : null}
+      </div>
+
+      {showInterest ? (
+        <div
+          className="mt-4 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-700/45 dark:bg-amber-950/35"
+        >
+          <AlertTriangle
+            className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-500"
+            aria-hidden
+          />
+          <p className="text-[13px] leading-snug text-muted-foreground">
+            This fee accrues interest at{" "}
+            <span className="font-semibold text-foreground">
+              {Number(interestRatePercent)}% monthly
+            </span>. Unpaid balances
+            will continue to grow — the amount shown reflects interest accrued
+            as of today and will increase if left unpaid.
+          </p>
+        </div>
+      ) : null}
+    </button>
+  );
 }
 
 function DetailRow({
@@ -106,7 +221,9 @@ function assignedBillName(bill: AssignedBillData): string {
 }
 
 function assignedBillAmount(bill: AssignedBillData): number {
-  return Number(bill.amountDue ?? bill.amount ?? bill.yearlyAmount ?? 0);
+  return Number(
+    bill.amountPayable ?? bill.amountDue ?? bill.amount ?? bill.yearlyAmount ?? 0,
+  );
 }
 
 function assignedBillPayId(bill: AssignedBillData): string | null {
@@ -451,7 +568,7 @@ export default function BillPage() {
         </div>
 
         {activeTab === "estate" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {!bootstrapping &&
             isSettled(getBillsByEstateState) &&
             estateBills.length === 0 ? (
@@ -459,53 +576,33 @@ export default function BillPage() {
                 No payable bills for this estate.
               </p>
             ) : (
-              estateBills.map((b) => {
-                const period = formatAmountPeriod(b.frequency);
-                const interestStartsLabel = formatDateTime(b.interestStartsAt);
-                return (
-                <Card
+              estateBills.map((b) => (
+                <PayableBillCard
                   key={b.id}
-                  className="p-4 cursor-pointer hover:shadow-md"
-                  onClick={() => b.id && setPayBillId(b.id)}
-                >
-                  <div className="flex flex-col">
-                    <h3 className="text-sm font-semibold capitalize text-blue-600">
-                      {b.name}
-                    </h3>
-                    <p className="text-md font-bold mt-1">
-                      ₦{Number(b.yearlyAmount ?? 0).toLocaleString()}
-                      {period ? (
-                        <span className="text-sm font-medium text-muted-foreground">
-                          /{period}
-                        </span>
-                      ) : null}
-                    </p>
-                    {hasActiveInterest(b) ? (
-                      <p
-                        className="mt-1.5 flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400"
-                        title={`Accrues interest ${Number(b.interestRatePercent)}% monthly${
-                          interestStartsLabel
-                            ? ` starting ${interestStartsLabel}`
-                            : ""
-                        }`}
-                      >
-                        <AlertCircle className="size-3.5 shrink-0" aria-hidden />
-                        <span className="min-w-0 truncate">
-                          Accrues interest {Number(b.interestRatePercent)}% monthly
-                          {interestStartsLabel
-                            ? ` starting ${interestStartsLabel}`
-                            : ""}
-                        </span>
-                      </p>
-                    ) : null}
-                  </div>
-                </Card>
-                );
-              })
+                  name={b.name || "Untitled bill"}
+                  description={b.description}
+                  frequency={b.frequency}
+                  compulsory={b.compulsory}
+                  amountPayable={Number(
+                    b.amountPayable ?? b.yearlyAmount ?? 0,
+                  )}
+                  principalDue={Number(
+                    b.principalDue ?? b.amount ?? b.yearlyAmount ?? 0,
+                  )}
+                  accruedInterest={Number(b.accruedInterest ?? 0)}
+                  interestRatePercent={
+                    hasActiveInterest(b)
+                      ? Number(b.interestRatePercent)
+                      : undefined
+                  }
+                  interestStartsAt={b.interestStartsAt}
+                  onPay={() => b.id && setPayBillId(b.id)}
+                />
+              ))
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {!selectedAddressId ? (
               <p className="text-muted-foreground">
                 Select an address to view assigned bills.
@@ -519,13 +616,22 @@ export default function BillPage() {
             ) : (
               assignedBills.map((b) => {
                 const payId = assignedBillPayId(b);
-                const freqLabel = formatFrequencyLabel(b.frequency);
                 const amount = assignedBillAmount(b);
                 return (
-                  <Card
+                  <PayableBillCard
                     key={b.id || b._id || payId || assignedBillName(b)}
-                    className="p-4 cursor-pointer hover:shadow-md"
-                    onClick={() =>
+                    name={assignedBillName(b)}
+                    frequency={b.frequency}
+                    amountPayable={amount}
+                    principalDue={Number(b.principalDue ?? amount)}
+                    accruedInterest={Number(b.accruedInterest ?? 0)}
+                    interestRatePercent={
+                      hasActiveInterest(b)
+                        ? Number(b.interestRatePercent)
+                        : undefined
+                    }
+                    interestStartsAt={b.interestStartsAt}
+                    onPay={() =>
                       payId &&
                       handlePayBill({
                         billId: payId,
@@ -533,22 +639,7 @@ export default function BillPage() {
                         amountPaid: amount,
                       })
                     }
-                  >
-                    <div className="flex flex-col">
-                      <h3 className="text-sm font-semibold capitalize text-blue-600">
-                        {assignedBillName(b)}
-                      </h3>
-                      <p className="text-md font-bold mt-1">
-                        ₦{amount.toLocaleString()}
-                        {freqLabel ? (
-                          <span className="text-sm font-medium text-muted-foreground">
-                            {" "}
-                            / {freqLabel.toLowerCase()}
-                          </span>
-                        ) : null}
-                      </p>
-                    </div>
-                  </Card>
+                  />
                 );
               })
             )}

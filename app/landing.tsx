@@ -32,7 +32,7 @@ export default function Home() {
         <BertaShowcaseSection />
 
         <FeaturesSection />
-        <TestimonialsSection />
+        {/* <TestimonialsSection /> */}
         <FAQSection />
         <BlogSection />
       </main>

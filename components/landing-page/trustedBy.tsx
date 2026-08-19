@@ -129,7 +129,7 @@ export default function TrustedBy() {
       <div className="relative overflow-hidden bg-[#101010]">
         <div className="relative z-20 mx-auto flex max-w-3xl flex-col items-center px-6 pt-10 pb-6 text-center">
           <h2 className="text-[28px] font-semibold leading-tight tracking-[-0.02em] text-white sm:text-[36px] lg:text-[40px]">
-            Powering Leading Estates Across Nigeria
+            Powering Leading Estates Across Africa
           </h2>
           <button
             type="button"

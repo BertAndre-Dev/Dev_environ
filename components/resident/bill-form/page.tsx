@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { AlertBanner } from "@/components/ui/alert-banner";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import SwitchAddress from "@/components/resident/switch-address/page";
@@ -88,6 +89,20 @@ function resolvePaymentFrequencies(
   return { options: [fallback], editable: false, value: fallback };
 }
 
+function hasActiveInterest(bill: {
+  accrueInterest?: boolean;
+  interestRatePercent?: number;
+}): boolean {
+  return Boolean(bill.accrueInterest) && Number(bill.interestRatePercent) > 0;
+}
+
+function formatDateTime(value?: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString();
+}
+
 function lookupAmountByFrequency(
   amounts: Record<string, number> | undefined,
   frequency: BillFrequency,
@@ -128,6 +143,9 @@ export default function BillsForm({
     { label: string; value: BillFrequency }[]
   >([]);
   const [frequencyEditable, setFrequencyEditable] = useState(false);
+  const [accrueInterest, setAccrueInterest] = useState(false);
+  const [interestRatePercent, setInterestRatePercent] = useState<number>(0);
+  const [interestStartsAt, setInterestStartsAt] = useState<string | undefined>();
 
   const amountToPay = useMemo(() => {
     const fromFrequency = lookupAmountByFrequency(
@@ -175,6 +193,9 @@ export default function BillsForm({
               value,
             })),
           );
+          setAccrueInterest(Boolean(billData.accrueInterest));
+          setInterestRatePercent(Number(billData.interestRatePercent) || 0);
+          setInterestStartsAt(billData.interestStartsAt);
         }
 
         const userRes = await dispatch(getSignedInUser()).unwrap();
@@ -302,6 +323,19 @@ export default function BillsForm({
             </div>
           </div>
         )}
+
+        {!loading &&
+        hasActiveInterest({ accrueInterest, interestRatePercent }) ? (
+          <AlertBanner
+            variant="warning"
+            className="rounded-md border px-3 py-2"
+            message={`Accrues interest ${interestRatePercent}% monthly${
+              formatDateTime(interestStartsAt)
+                ? ` starting ${formatDateTime(interestStartsAt)}`
+                : ""
+            }`}
+          />
+        ) : null}
 
         <div className="pt-6">
           <Button type="submit" className="w-full" disabled={loading || submitting}>

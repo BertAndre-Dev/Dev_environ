@@ -21,10 +21,10 @@ const AUDIENCES = {
     image: "/assets/ft/man.svg",
     imageAlt: "Property operator reviewing estate data on a computer",
     features: [
-      { title: "Insight", description: FEATURE_COPY },
-      { title: "Insight", description: FEATURE_COPY },
-      { title: "Insight", description: FEATURE_COPY },
-      { title: "Insight", description: FEATURE_COPY },
+      { title: "Energy Intelligence", description: "Get real-time insights into energy consumption across every property, catch irregular usage early, and make informed, cost-saving decisions." },
+      { title: "Property & Occupant Management", description: "Create and manage properties, units, and occupants from one central system, built for clarity as your portfolio scales." },
+      { title: "Billing & Collections", description: "Automate recurring charges and utility billing, track collections in real time, and instantly reconcile payments with auto-generated reports." },
+      { title: "Operations & Performance Insights", description: "Monitor service delivery and maintenance performance while gaining actionable insights into operations and revenue, all in one view." },
     ] satisfies readonly FeatureItem[],
   },
   residents: {
@@ -33,10 +33,10 @@ const AUDIENCES = {
     image: "/assets/ft/woman.svg",
     imageAlt: "Residents enjoying community living at home",
     features: [
-      { title: "Insight", description: FEATURE_COPY },
-      { title: "Insight", description: FEATURE_COPY },
-      { title: "Insight", description: FEATURE_COPY },
-      { title: "Insight", description: FEATURE_COPY },
+      { title: "Energy Intelligence", description: "See exactly what you're using, in real time, track your own energy consumption and never be caught off guard by a bill again." },
+      { title: "Bills & Payments", description: "View your charges, pay instantly, and keep a clear record of every payment, no more chasing receipts or wondering what you owe." },
+      { title: "Maintenance Requests", description: "Report an issue in seconds and track it through to resolution, no more calls or messages that go unanswered." },
+      { title: "Visitor Access", description: "Invite guests, approve deliveries, and manage who comes and goes right from your phone, without holding up the gate." },
     ] satisfies readonly FeatureItem[],
   },
 } as const;

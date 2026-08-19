@@ -8,22 +8,36 @@ type FeatureItem = Readonly<{
   description: string;
 }>;
 
-const FEATURE_COPY =
-  "Our mission is to design, deploy, and manage modern energy infrastructure that combines conventional energy resources, renewable system.";
-
 const LEFT_FEATURES: readonly FeatureItem[] = [
-  { title: "Insight", description: FEATURE_COPY },
-  { title: "Energy Intelligence", description: FEATURE_COPY },
+  {
+    title: "Insight",
+    description:
+      "Real-time visibility into everything happening across your properties, one dashboard, every metric that matters.",
+  },
+  {
+    title: "Energy Intelligence",
+    description:
+      "Live, unit-level energy consumption data that catches irregular usage early and turns billing disputes into billing certainty.",
+  },
 ];
 
 const RIGHT_FEATURES: readonly FeatureItem[] = [
-  { title: "Property Management", description: FEATURE_COPY },
-  { title: "Energy Vending", description: FEATURE_COPY },
+  {
+    title: "Property Management",
+    description:
+      "Manage assets, tenants, and operations from a single source of truth, no more spreadsheets, no more guesswork.",
+  },
+  {
+    title: "Energy Vending",
+    description:
+      "Sell prepaid power with configurable limits and controls, protecting your energy budget while keeping tenants powered up.",
+  },
 ];
 
 const CENTER_FEATURE: FeatureItem = {
-  title: "Insight",
-  description: FEATURE_COPY,
+  title: "Financial Reporting",
+  description:
+    "Automated expense and revenue recognition that keeps your books audit-ready and your monthly-end close fast.",
 };
 
 const spring = { type: "spring" as const, bounce: 0, duration: 0.4 };

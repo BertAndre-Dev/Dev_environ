@@ -24,8 +24,7 @@ type Tab = Readonly<{
   id: TabId;
   label: string;
   icon: LucideIcon;
-  /** Actual file under /public/assets/gif — names do not match TabId 1:1 */
-  gifSrc: string;
+  videoSrc: string;
 }>;
 
 const TABS: readonly Tab[] = [
@@ -33,32 +32,31 @@ const TABS: readonly Tab[] = [
     id: "energy",
     label: "Energy",
     icon: Zap,
-    gifSrc: "/assets/gif/energy.gif",
+    videoSrc: "/assets/gif/energy.mp4",
   },
   {
     id: "visitors",
     label: "Visitors",
     icon: Users,
-    gifSrc: "/assets/gif/visitor.gif",
+    videoSrc: "/assets/gif/visitor.mp4",
   },
   {
     id: "pay-bills",
     label: "Pay Bills",
     icon: FileText,
-    gifSrc: "/assets/gif/bill.gif",
+    videoSrc: "/assets/gif/bill.mp4",
   },
   {
     id: "analytics",
     label: "Analytics",
     icon: BarChart3,
-    gifSrc: "/assets/gif/analytics.gif",
+    videoSrc: "/assets/gif/analytics.mp4",
   },
   {
     id: "community",
     label: "Community",
     icon: Globe,
-    // Filename is literally `communnity .gif` (typo + trailing space)
-    gifSrc: `/assets/gif/${encodeURIComponent("communnity .gif")}`,
+    videoSrc: "/assets/gif/community.mp4",
   },
 ];
 
@@ -76,7 +74,7 @@ type EstateManagementShowcaseProps = Readonly<{
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function EstateManagementShowcase({
-  subheading = "One app. Lorem Ipsum sit dolor",
+  subheading = "One App – Total Control",
   description = "Manage your property and energy operations, payments, and residents all in one powerful platform.",
 }: EstateManagementShowcaseProps) {
   const reduceMotion = useReducedMotion();
@@ -90,8 +88,11 @@ export default function EstateManagementShowcase({
 
   useEffect(() => {
     TABS.forEach((tab) => {
-      const img = new window.Image();
-      img.src = tab.gifSrc;
+      const link = document.createElement("link");
+      link.rel = "preload";
+      link.as = "video";
+      link.href = tab.videoSrc;
+      document.head.appendChild(link);
     });
   }, []);
 
@@ -250,10 +251,14 @@ export default function EstateManagementShowcase({
         <div className="flex justify-center lg:justify-end">
           <PhoneFrame>
             <AnimatePresence mode="wait" initial={false}>
-              <motion.img
+              <motion.video
                 key={activeTab}
-                src={active.gifSrc}
-                alt={`${active.label} app preview`}
+                src={active.videoSrc}
+                autoPlay
+                loop
+                muted
+                playsInline
+                aria-label={`${active.label} app preview`}
                 className="h-full w-full object-cover object-top"
                 initial={
                   reduceMotion

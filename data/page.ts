@@ -263,18 +263,18 @@ export const companyNav = [
     path: "/dashboard/company/asset-mgt",
     moduleKey: "asset-maintenance",
   },
-  {
-    label: "Expenses",
-    icon: CircleDollarSign,
-    path: "/dashboard/company/expenses",
-    moduleKey: "expense",
-  },
-  {
-    label: "Revenue",
-    icon: Banknote,
-    path: "/dashboard/company/revenue",
-    moduleKey: "revenue",
-  },
+  // {
+  //   label: "Expenses",
+  //   icon: CircleDollarSign,
+  //   path: "/dashboard/company/expenses",
+  //   moduleKey: "expense",
+  // },
+  // {
+  //   label: "Revenue",
+  //   icon: Banknote,
+  //   path: "/dashboard/company/revenue",
+  //   moduleKey: "revenue",
+  // },
   {
     label: "Operations Reporting",
     icon: ClipboardList,

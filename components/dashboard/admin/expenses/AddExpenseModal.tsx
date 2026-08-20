@@ -1,6 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useRef, useState } from "react";
+import { Paperclip, X } from "lucide-react";
+import { toast } from "react-toastify";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,12 +13,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { fileToBase64 } from "@/lib/file-to-base64";
+import { getApiErrorMessage } from "@/lib/api-error";
+
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const MAX_ATTACHMENTS = 5;
+const FILE_ACCEPT =
+  "image/jpeg,image/png,image/webp,image/gif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,application/pdf";
+
+export type ExpenseDraftAttachment = {
+  name: string;
+  dataUrl: string;
+};
 
 export interface AddExpenseDraftEntry {
   id: string;
   description: string;
   amount: string;
   documentNumber: string;
+  attachments: ExpenseDraftAttachment[];
 }
 
 export interface AddExpenseModalProps {
@@ -30,14 +45,115 @@ export interface AddExpenseModalProps {
     field: "description" | "amount" | "documentNumber",
     value: string,
   ) => void;
+  onAttachmentsChange: (id: string, attachments: ExpenseDraftAttachment[]) => void;
   onAddDraft: () => void;
   onRemoveDraft: (id: string) => void;
   onSubmit: () => void;
   showDateAndUpload?: boolean;
   date?: string;
-  file?: File | null;
   onDateChange?: (value: string) => void;
-  onFileChange?: (file: File | null) => void;
+}
+
+function DraftAttachmentsPicker({
+  attachments,
+  disabled,
+  onChange,
+}: Readonly<{
+  attachments: ExpenseDraftAttachment[];
+  disabled: boolean;
+  onChange: (next: ExpenseDraftAttachment[]) => void;
+}>) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [reading, setReading] = useState(false);
+
+  const handleFilesSelected = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+
+    const remaining = MAX_ATTACHMENTS - attachments.length;
+    if (remaining <= 0) {
+      toast.error(`You can attach up to ${MAX_ATTACHMENTS} files per entry.`);
+      e.target.value = "";
+      return;
+    }
+
+    const selected = files.slice(0, remaining);
+    setReading(true);
+    try {
+      const next: ExpenseDraftAttachment[] = [];
+      for (const file of selected) {
+        if (file.size > MAX_FILE_BYTES) {
+          toast.error(`${file.name} exceeds 10MB.`);
+          continue;
+        }
+        const dataUrl = await fileToBase64(file);
+        next.push({ name: file.name, dataUrl });
+      }
+      if (next.length) onChange([...attachments, ...next]);
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err) || "Failed to read file.";
+      toast.error(message);
+    } finally {
+      setReading(false);
+      e.target.value = "";
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">Attachments</p>
+      {attachments.length > 0 ? (
+        <ul className="space-y-1.5">
+          {attachments.map((file, index) => (
+            <li
+              key={`${file.name}-${index}`}
+              className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
+            >
+              <span className="flex min-w-0 items-center gap-2 truncate">
+                <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <span className="truncate">{file.name}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  onChange(attachments.filter((_, i) => i !== index))
+                }
+                disabled={disabled}
+                className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted"
+                aria-label={`Remove ${file.name}`}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <input
+        ref={inputRef}
+        type="file"
+        accept={FILE_ACCEPT}
+        multiple
+        className="hidden"
+        onChange={handleFilesSelected}
+        disabled={disabled || attachments.length >= MAX_ATTACHMENTS}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={disabled || attachments.length >= MAX_ATTACHMENTS}
+        onClick={() => inputRef.current?.click()}
+      >
+        <Paperclip className="mr-2 h-4 w-4" />
+        {reading ? "Reading files..." : "Add files"}
+      </Button>
+      <p className="text-xs text-muted-foreground">
+        Optional. Up to {MAX_ATTACHMENTS} receipts or invoices, 10MB each.
+      </p>
+    </div>
+  );
 }
 
 export function AddExpenseModal({
@@ -47,18 +163,17 @@ export function AddExpenseModal({
   drafts,
   onOpenChange,
   onDraftChange,
+  onAttachmentsChange,
   onAddDraft,
   onRemoveDraft,
   onSubmit,
   showDateAndUpload = true,
   date = "",
-  file = null,
   onDateChange,
-  onFileChange,
 }: Readonly<AddExpenseModalProps>) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto min-h-[30vh]">
+      <DialogContent className="max-h-[80vh] min-h-[30vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Expense</DialogTitle>
         </DialogHeader>
@@ -101,9 +216,9 @@ export function AddExpenseModal({
             {drafts.map((row, idx) => (
               <div
                 key={row.id}
-                className="rounded-md border border-border/60 p-3 space-y-3"
+                className="space-y-3 rounded-md border border-border/60 p-3"
               >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                   <div className="space-y-2">
                     <label
                       className="text-sm font-medium"
@@ -157,6 +272,12 @@ export function AddExpenseModal({
                   </div>
                 </div>
 
+                <DraftAttachmentsPicker
+                  attachments={row.attachments}
+                  disabled={saving}
+                  onChange={(next) => onAttachmentsChange(row.id, next)}
+                />
+
                 {drafts.length > 1 && (
                   <div className="flex justify-end">
                     <Button
@@ -172,23 +293,6 @@ export function AddExpenseModal({
               </div>
             ))}
           </div>
-
-          {showDateAndUpload ? (
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="add-expense-file">
-                Upload supporting document (Receipt/ Invoice)
-              </label>
-              <input
-                id="add-expense-file"
-                type="file"
-                onChange={(e) => onFileChange?.(e.target.files?.[0] ?? null)}
-                className="block w-full text-sm"
-              />
-              {file ? (
-                <p className="text-xs text-muted-foreground">{file.name}</p>
-              ) : null}
-            </div>
-          ) : null}
 
           <div className="flex items-center justify-between gap-3 pt-2">
             <Button
@@ -208,4 +312,3 @@ export function AddExpenseModal({
     </Dialog>
   );
 }
-

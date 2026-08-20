@@ -199,6 +199,7 @@ export default function ExpenseHeadDetailPage() {
     description: "",
     amount: "",
     documentNumber: "",
+    attachments: [],
   });
 
   const openAdd = () => {
@@ -234,6 +235,14 @@ export default function ExpenseHeadDetailPage() {
   const addDraft = () => setDrafts((prev) => [...prev, createDraftEntry()]);
   const removeDraft = (id: string) =>
     setDrafts((prev) => prev.filter((p) => p.id !== id));
+  const onAttachmentsChange = (
+    id: string,
+    attachments: AddExpenseDraftEntry["attachments"],
+  ) => {
+    setDrafts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, attachments } : p)),
+    );
+  };
 
   const submitCreate = async () => {
     if (!headId) return toast.error("Expense head not resolved.");
@@ -244,6 +253,7 @@ export default function ExpenseHeadDetailPage() {
       description: d.description.trim(),
       documentNumber: d.documentNumber.trim(),
       amount: Number(d.amount),
+      attachments: d.attachments.map((file) => file.dataUrl),
     }));
 
     for (const [idx, e] of entriesPayload.entries()) {
@@ -416,6 +426,7 @@ export default function ExpenseHeadDetailPage() {
           drafts={drafts}
           onOpenChange={(open) => (open ? setAddOpen(true) : closeAdd())}
           onDraftChange={onDraftChange}
+          onAttachmentsChange={onAttachmentsChange}
           onAddDraft={addDraft}
           onRemoveDraft={removeDraft}
           onSubmit={submitCreate}

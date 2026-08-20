@@ -1,5 +1,11 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import {
+  EXPENSE_ENTRY_BULK_MAX,
+  parseExpenseAttachments,
+  toExpenseEntryBulkBody,
+  type ExpenseEntryWriteItem,
+} from "@/lib/expense-entry";
 
 export type ExpenseEntry = {
   id?: string;
@@ -8,6 +14,7 @@ export type ExpenseEntry = {
   description: string;
   documentNumber: string;
   amount: number;
+  attachments?: string[];
   createdAt?: string;
   updatedAt?: string;
 };
@@ -27,18 +34,19 @@ export type ExpenseEntryListResponse = {
 export const createExpenseEntriesBulk = createAsyncThunk(
   "estate-admin-expense-entry/createExpenseEntriesBulk",
   async (
-    payload: {
-      entries: Array<{
-        headId: string;
-        description: string;
-        documentNumber: string;
-        amount: number;
-      }>;
-    },
+    payload: { entries: ExpenseEntryWriteItem[] },
     { rejectWithValue },
   ) => {
     try {
-      const res = await axiosInstance.post("/api/v1/expense-entry", payload);
+      if (payload.entries.length > EXPENSE_ENTRY_BULK_MAX) {
+        return rejectWithValue({
+          message: `Max ${EXPENSE_ENTRY_BULK_MAX} entries per request.`,
+        });
+      }
+      const res = await axiosInstance.post(
+        "/api/v1/expense-entry",
+        toExpenseEntryBulkBody(payload.entries),
+      );
       return res.data;
     } catch (error: any) {
       return rejectWithValue({
@@ -77,7 +85,16 @@ export const getExpenseEntriesByHead = createAsyncThunk(
       const res = await axiosInstance.get(
         `/api/v1/expense-entry/head/${headId}${qs ? "?" + qs : ""}`,
       );
-      return res.data as ExpenseEntryListResponse;
+      const data = res.data as ExpenseEntryListResponse;
+      return {
+        ...data,
+        data: Array.isArray(data.data)
+          ? data.data.map((item) => ({
+              ...item,
+              attachments: parseExpenseAttachments(item.attachments),
+            }))
+          : data.data,
+      };
     } catch (error: any) {
       return rejectWithValue({
         message:

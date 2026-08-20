@@ -170,8 +170,7 @@ export function DesignationsManager({ role }: Readonly<Props>) {
 
   const loadList = useCallback(
     async (nextPage = page) => {
-      const estateId =
-        role === "company" ? selectedEstate?.value : scopeId;
+      const estateId = role === "company" ? selectedEstate?.value : scopeId;
       if (role === "company" && (!scopeId || !estateId)) return;
       if (role === "estate" && !estateId) return;
 
@@ -268,7 +267,9 @@ export function DesignationsManager({ role }: Readonly<Props>) {
           isActive: nextActive,
         }),
       ).unwrap();
-      toast.success(nextActive ? "Designation activated." : "Designation deactivated.");
+      toast.success(
+        nextActive ? "Designation activated." : "Designation deactivated.",
+      );
       setItemToToggle(null);
       if (!includeInactive && !nextActive) {
         await loadList(page);
@@ -308,13 +309,6 @@ export function DesignationsManager({ role }: Readonly<Props>) {
     pageSize: pagination?.limit ?? DESIGNATIONS_PAGE_SIZE,
   };
 
-  const subtitle = useMemo(() => {
-    if (role === "company") {
-      return `Titles for ${scopeName}. Names stay unique per company or estate.`;
-    }
-    return `Titles for ${scopeName}, including parent company titles when this estate belongs to a company.`;
-  }, [role, scopeName]);
-
   const estateNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const estate of estates) map.set(estate.id, estate.name);
@@ -337,9 +331,7 @@ export function DesignationsManager({ role }: Readonly<Props>) {
         key: "estateId",
         header: "Estate",
         render: (item: Designation) =>
-          item.estateId
-            ? estateNameById.get(item.estateId) || "Estate"
-            : "—",
+          item.estateId ? estateNameById.get(item.estateId) || "Estate" : "—",
       },
       {
         key: "isActive",
@@ -390,7 +382,11 @@ export function DesignationsManager({ role }: Readonly<Props>) {
                 size="sm"
                 className="cursor-pointer"
                 onClick={() => setItemToToggle(item)}
-                title={item.isActive ? "Deactivate designation" : "Activate designation"}
+                title={
+                  item.isActive
+                    ? "Deactivate designation"
+                    : "Activate designation"
+                }
               >
                 {item.isActive ? (
                   <PowerOff className="w-4 h-4 text-amber-600" />
@@ -439,14 +435,13 @@ export function DesignationsManager({ role }: Readonly<Props>) {
             <h1 className="mt-1 font-heading text-[32px] font-bold leading-[1.05] tracking-[-0.03em]">
               Designations
             </h1>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-black/55">
-              {subtitle}
-            </p>
           </div>
           <Button
             type="button"
             onClick={openCreate}
-            disabled={!scopeId || (role === "company" && !selectedEstate?.value)}
+            disabled={
+              !scopeId || (role === "company" && !selectedEstate?.value)
+            }
             className="self-start rounded-full bg-[#0150AC] text-white active:scale-[0.97] hover:bg-[#0150AC]/90"
           >
             <Plus className="size-4" />

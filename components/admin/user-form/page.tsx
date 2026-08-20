@@ -237,7 +237,6 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
       lastName: formData.lastName,
       email: formData.email,
       phoneNumber: e164Phone,
-      countryCode: formData.countryCode.trim(),
       role: formData.role,
       residentType: formData.role === "resident" ? "owner" : null,
       ...(inviteRequiresDesignation(formData.role)

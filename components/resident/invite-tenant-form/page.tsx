@@ -406,7 +406,6 @@ export default function InviteTenantForm({ close }: InviteTenantFormProps) {
           lastName: formData.lastName.trim(),
           email: formData.email.trim(),
           phoneNumber: e164Phone,
-          countryCode: formData.countryCode.trim(),
           addressIds: [formData.addressId],
         })
       ).unwrap();

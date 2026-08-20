@@ -86,3 +86,11 @@ export function withE164PhoneNumber<
   if (!e164) return data;
   return { ...data, phoneNumber: e164 };
 }
+
+/** E.164 phone for invite-user; `countryCode` is UI-only and must not be posted. */
+export function toInviteUserApiBody<
+  T extends { phoneNumber?: string; countryCode?: string },
+>(data: T): Omit<T, "countryCode"> {
+  const { countryCode: _countryCode, ...body } = withE164PhoneNumber(data);
+  return body;
+}

@@ -206,7 +206,6 @@ export default function EnergyProviderInviteUserForm({
             lastName: formData.lastName,
             email: formData.email,
             phoneNumber: e164Phone,
-            countryCode: formData.countryCode,
             estateId: formData.estateId,
             companyId,
             addressIds: formData.addressIds,

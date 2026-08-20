@@ -214,7 +214,6 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
         lastName: formData.lastName,
         email: formData.email,
         phoneNumber: e164Phone,
-        countryCode: formData.countryCode,
         role: formData.role,
         inviteContext: inviteScope,
         estateId: formData.estateId,

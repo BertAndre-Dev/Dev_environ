@@ -144,7 +144,6 @@ export default function CompanyInviteUserForm({
             lastName: formData.lastName,
             email: formData.email,
             phoneNumber: e164Phone,
-            countryCode: formData.countryCode,
             role: formData.role,
             inviteContext: "company",
             estateId: formData.estateId,

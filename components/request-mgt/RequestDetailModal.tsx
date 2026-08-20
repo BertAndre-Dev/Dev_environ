@@ -24,6 +24,7 @@ import {
   type ScopedRequestStatus,
 } from "./request-scope";
 import { requestDestructiveOutlineButtonClass } from "./request-action-styles";
+import RequestComments from "./RequestComments";
 
 const STATUS_LABELS: Record<ScopedRequestStatus, string> = {
   draft: "Draft",
@@ -332,12 +333,17 @@ export default function RequestDetailModal({
               </div>
             ) : null}
 
+            <RequestComments
+              requestId={item.id}
+              estateId={resolvedEstateId}
+            />
+
             {canDecide || canCancel || item ? (
               <div className="space-y-3 border-t border-border pt-4">
                 {canDecide ? (
                   <div>
                     <Label htmlFor="request-decision-comment">
-                      Comment{" "}
+                      Decision note{" "}
                       <span className="text-muted-foreground font-normal">
                         (optional)
                       </span>

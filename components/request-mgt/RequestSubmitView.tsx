@@ -35,6 +35,7 @@ import {
   getAttachmentFilename,
 } from "@/lib/download-attachment";
 import StaffRequestFormModal from "./StaffRequestFormModal";
+import RequestComments from "./RequestComments";
 
 function formatDate(dateStr?: string) {
   if (!dateStr) return "—";
@@ -477,11 +478,11 @@ export default function RequestSubmitView({
               </div>
             ) : null}
 
-            <div className="flex justify-end pt-2">
-              <Button variant="outline" onClick={() => setViewing(null)}>
-                Close
-              </Button>
-            </div>
+            <RequestComments
+              requestId={viewing.id}
+              estateId={estateId || viewing.estateId}
+            />
+           
           </div>
         </Modal>
       )}

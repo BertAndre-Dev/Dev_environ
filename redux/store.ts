@@ -109,6 +109,7 @@ import staffRequestSliceReducer from "@/redux/slice/staff/request/staff-request-
 import companyRequestSliceReducer from "@/redux/slice/company/request/company-request-slice";
 import estateAdminRequestSliceReducer from "@/redux/slice/estate-admin/request/estate-admin-request-slice";
 import requestCommentsSliceReducer from "@/redux/slice/request/request-comments-slice";
+import designationsSliceReducer from "@/redux/slice/designations/designations-slice";
 import estateAdminAnnouncementsSliceReducer from "@/redux/slice/estate-admin/announcements/estate-admin-announcements-slice";
 import superAdminEnergyProviderConfigSliceReducer from "@/redux/slice/super-admin/energy-provider-config/energy-provider-config-slice";
 import superAdminEnergyConsumptionSliceReducer from "@/redux/slice/super-admin/energy-consumption/super-admin-energy-consumption-slice";
@@ -415,6 +416,7 @@ export const store = configureStore({
     companyRequest: companyRequestSliceReducer,
     estateAdminRequest: estateAdminRequestSliceReducer,
     requestComments: requestCommentsSliceReducer,
+    designations: designationsSliceReducer,
     superAdminEnergyProviderConfig: superAdminEnergyProviderConfigSliceReducer,
     energyProviderVends: energyProviderVendsSliceReducer,
     companyEnergyProviderConfig: companyEnergyProviderConfigSliceReducer,

@@ -116,7 +116,7 @@ export function DesignationFormSheet({
     !modulesLoading &&
     (!needsEstate || Boolean(estateId));
 
-  let submitLabel = "Create title";
+  let submitLabel = "Create designation";
   if (saving) submitLabel = "Saving…";
   else if (editing) submitLabel = "Save changes";
 

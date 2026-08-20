@@ -463,7 +463,7 @@ export default function CompanyEstatePage() {
                       city: selectedEstate.city ?? "",
                       state: selectedEstate.state ?? "",
                       country: selectedEstate.country ?? "",
-                      modules: [],
+                      plan: selectedEstate.plan,
                       visitorVerificationMode:
                         (selectedEstate as EstateTableRow).visitorVerificationMode,
                     }

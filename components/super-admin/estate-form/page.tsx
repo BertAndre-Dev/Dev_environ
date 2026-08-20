@@ -1,23 +1,31 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useDispatch, useSelector } from "react-redux"
-import { toast } from "react-toastify"
-import { Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CountryDropdown, RegionDropdown } from "react-country-region-selector"
-import { ModuleSelectionChips } from "@/components/shared/module-selection-chips"
-import type { AppDispatch, RootState } from "@/redux/store"
+import { InvitePlanSelect } from "@/components/invite/InvitePlanSelect"
+import { DEFAULT_PLAN, normalizePlanKey } from "@/lib/plans"
 import type { EstateData } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt"
 import { VisitorVerificationMode } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt"
-import { getCompanyModules } from "@/redux/slice/super-admin/company-mgt/company"
 
 interface EstateFormProps {
   initialData?: EstateData | null
   onSubmit: (data: EstateData) => void
+}
+
+function emptyEstate(): EstateData {
+  return {
+    name: "",
+    address: "",
+    city: "",
+    state: "",
+    country: "",
+    plan: DEFAULT_PLAN,
+    visitorVerificationMode: VisitorVerificationMode.VIEW_AND_VERIFY,
+  }
 }
 
 export default function EstateForm({
@@ -25,35 +33,7 @@ export default function EstateForm({
   onSubmit,
 }: EstateFormProps) {
   const isEditing = Boolean(initialData)
-  const dispatch = useDispatch<AppDispatch>()
-  const { availableModules, modulesLoading, modulesError } = useSelector(
-    (state: RootState) => {
-      const companyState = state.superAdminCompany
-      return {
-        availableModules: (companyState?.modules ?? []) as string[],
-        modulesLoading: companyState?.getModulesStatus === "isLoading",
-        modulesError:
-          companyState?.getModulesStatus === "failed"
-            ? companyState?.error ?? null
-            : null,
-      }
-    },
-  )
-
-  const [formData, setFormData] = useState<EstateData>({
-    name: "",
-    address: "",
-    city: "",
-    state: "",
-    country: "",
-    modules: [],
-    visitorVerificationMode: VisitorVerificationMode.VIEW_AND_VERIFY,
-  })
-
-  useEffect(() => {
-    if (isEditing) return
-    dispatch(getCompanyModules())
-  }, [dispatch, isEditing])
+  const [formData, setFormData] = useState<EstateData>(emptyEstate())
 
   useEffect(() => {
     if (initialData) {
@@ -63,21 +43,13 @@ export default function EstateForm({
         city: initialData.city,
         state: initialData.state,
         country: initialData.country,
-        modules: [],
+        plan: normalizePlanKey(initialData.plan),
         visitorVerificationMode:
           initialData.visitorVerificationMode ??
           VisitorVerificationMode.VIEW_AND_VERIFY,
       })
     } else {
-      setFormData({
-        name: "",
-        address: "",
-        city: "",
-        state: "",
-        country: "",
-        modules: [],
-        visitorVerificationMode: VisitorVerificationMode.VIEW_AND_VERIFY,
-      })
+      setFormData(emptyEstate())
     }
   }, [initialData])
 
@@ -87,16 +59,10 @@ export default function EstateForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!isEditing && formData.modules.length === 0) {
-      toast.error("Select at least one module")
-      return
-    }
-    if (isEditing) {
-      const { modules: _modules, ...rest } = formData
-      onSubmit({ ...rest, modules: [] })
-      return
-    }
-    onSubmit(formData)
+    onSubmit({
+      ...formData,
+      plan: normalizePlanKey(formData.plan),
+    })
   }
 
   const textFields = [
@@ -178,46 +144,15 @@ export default function EstateForm({
             </select>
           </div>
 
-          {!isEditing && (
-            <div className="space-y-3">
-              <Label>Modules</Label>
-              <p className="text-sm text-muted-foreground">
-                Select one or more features enabled for this estate.
-              </p>
-              {modulesLoading ? (
-                <div className="flex items-center gap-2 rounded-md border border-border px-3 py-6 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading available modules…
-                </div>
-              ) : modulesError ? (
-                <p className="text-sm text-destructive">{modulesError}</p>
-              ) : availableModules.length === 0 ? (
-                <p className="text-sm text-destructive">No modules are available.</p>
-              ) : (
-                <ModuleSelectionChips
-                  availableModules={availableModules}
-                  selectedModules={formData.modules}
-                  onChange={(modules) =>
-                    setFormData((prev) => ({ ...prev, modules }))
-                  }
-                />
-              )}
-            </div>
-          )}
+          <InvitePlanSelect
+            value={normalizePlanKey(formData.plan)}
+            onChange={(plan) => setFormData((prev) => ({ ...prev, plan }))}
+            description="Assigns modules and vending/bill rates from this plan."
+          />
 
           <div className="w-full pt-4">
-            <Button
-              type="submit"
-              className="w-full cursor-pointer"
-              disabled={
-                !isEditing &&
-                (modulesLoading ||
-                  Boolean(modulesError) ||
-                  availableModules.length === 0 ||
-                  formData.modules.length === 0)
-              }
-            >
-              {initialData ? "Update" : "Create Estate"}
+            <Button type="submit" className="w-full cursor-pointer">
+              {isEditing ? "Update" : "Create Estate"}
             </Button>
           </div>
         </CardContent>

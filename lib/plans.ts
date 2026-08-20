@@ -4,6 +4,60 @@ export type SubscriptionPlan = {
   staffAssignableModules: string[];
 };
 
+export const DEFAULT_PLAN = "standard";
+
+export const FALLBACK_PLANS: SubscriptionPlan[] = [
+  { key: "standard", name: "Standard", staffAssignableModules: [] },
+  { key: "classic", name: "Classic", staffAssignableModules: [] },
+  { key: "premium", name: "Premium", staffAssignableModules: [] },
+];
+
+export function normalizePlanKey(value: unknown): string {
+  if (typeof value === "string") {
+    const plan = value.trim().toLowerCase();
+    if (plan) return plan;
+  }
+  return DEFAULT_PLAN;
+}
+
+export function toCompanyWriteBody(data: {
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+  isActive?: boolean;
+  plan?: string;
+}) {
+  return {
+    name: data.name.trim(),
+    address: data.address.trim(),
+    city: data.city.trim(),
+    state: data.state.trim(),
+    country: data.country.trim(),
+    isActive: data.isActive ?? true,
+    plan: normalizePlanKey(data.plan),
+  };
+}
+
+export function toEstateWriteBody(data: {
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+  isActive?: boolean;
+  plan?: string;
+  visitorVerificationMode?: string;
+}) {
+  return {
+    ...toCompanyWriteBody(data),
+    ...(data.visitorVerificationMode
+      ? { visitorVerificationMode: data.visitorVerificationMode }
+      : {}),
+  };
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (value && typeof value === "object" && !Array.isArray(value)) {
     return value as Record<string, unknown>;

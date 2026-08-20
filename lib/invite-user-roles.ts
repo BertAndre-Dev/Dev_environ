@@ -65,16 +65,6 @@ export function inviteRequiresDesignation(role: string): boolean {
   return role.trim().toLowerCase() === "staff";
 }
 
-/** Plan is selected when inviting a company or estate (not staff). */
-export function inviteRequiresPlan(role: string): boolean {
-  const normalized = role.trim().toLowerCase();
-  return (
-    normalized === "company" ||
-    normalized === "estate admin" ||
-    normalized === "admin"
-  );
-}
-
 export function validateEnergyProviderInviteScope(params: {
   role: string;
   inviteContext: "estate" | "company";
@@ -106,14 +96,12 @@ export function buildInviteUserPayload(params: {
   estateId?: string;
   companyId?: string;
   designationId?: string;
-  plan?: string;
   modules?: string[];
 }): InvitedUserData {
   const estateId = params.estateId?.trim();
   const companyId = params.companyId?.trim();
   const phoneNumber = params.phoneNumber?.trim();
   const designationId = params.designationId?.trim();
-  const plan = params.plan?.trim();
   const modules = (params.modules ?? [])
     .map((item) => item.trim())
     .filter(Boolean);
@@ -127,7 +115,6 @@ export function buildInviteUserPayload(params: {
     addressIds: [],
     ...(phoneNumber ? { phoneNumber } : {}),
     ...(designationId ? { designationId } : {}),
-    ...(plan ? { plan } : {}),
     ...(modules.length ? { modules } : {}),
   };
 

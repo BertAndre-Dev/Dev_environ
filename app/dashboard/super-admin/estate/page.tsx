@@ -40,6 +40,7 @@ import { EstateModulesForm } from "./components/EstateModulesForm";
 type EstateTableRow = Omit<EstateData, "modules"> & {
   id?: string;
   modules?: string[];
+  plan?: string;
   createdAt?: string | number | Date;
   visitorVerificationMode?: string;
 };
@@ -523,7 +524,7 @@ export default function EstatePage() {
                     city: selectedEstate.city,
                     state: selectedEstate.state,
                     country: selectedEstate.country,
-                    modules: [],
+                    plan: selectedEstate.plan,
                     visitorVerificationMode:
                       (selectedEstate as any).visitorVerificationMode,
                   }

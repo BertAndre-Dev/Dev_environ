@@ -465,7 +465,7 @@ export default function EnergyProviderEstatePage() {
                       city: selectedEstate.city ?? "",
                       state: selectedEstate.state ?? "",
                       country: selectedEstate.country ?? "",
-                      modules: [],
+                      plan: selectedEstate.plan,
                       visitorVerificationMode:
                         (selectedEstate as EstateTableRow).visitorVerificationMode as EstateData["visitorVerificationMode"],
                     }

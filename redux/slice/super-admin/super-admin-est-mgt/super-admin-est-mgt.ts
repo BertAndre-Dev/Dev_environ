@@ -2,6 +2,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import { parseEstateModulesResponse } from "@/lib/estate-module-labels";
 import { apiErrorRejectValue } from "@/lib/api-error";
+import { toEstateWriteBody } from "@/lib/plans";
 
 export enum VisitorVerificationMode {
   VIEW_AND_VERIFY = "VIEW_AND_VERIFY",
@@ -16,7 +17,8 @@ export interface EstateData {
   state: string;
   country: string;
   isActive?: boolean;
-  modules: string[];
+  modules?: string[];
+  plan?: string;
   visitorVerificationMode?: VisitorVerificationMode;
 }
 
@@ -62,7 +64,10 @@ export const createEstate = createAsyncThunk(
   "super-admin-est-mgt/createEstate",
   async (data: EstateData, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.post("/api/v1/estate-mgt", data);
+      const res = await axiosInstance.post(
+        "/api/v1/estate-mgt",
+        toEstateWriteBody(data),
+      );
       return res.data;
     } catch (error: unknown) {
       return rejectWithValue(apiErrorRejectValue(error));
@@ -140,7 +145,10 @@ export const updateEstate = createAsyncThunk(
     { rejectWithValue },
   ) => {
     try {
-      const res = await axiosInstance.put(`/api/v1/estate-mgt/${id}`, data);
+      const res = await axiosInstance.put(
+        `/api/v1/estate-mgt/${id}`,
+        toEstateWriteBody(data),
+      );
       return res.data;
     } catch (error: unknown) {
       return rejectWithValue(apiErrorRejectValue(error));

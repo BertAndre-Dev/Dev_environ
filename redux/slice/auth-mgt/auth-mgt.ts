@@ -18,8 +18,6 @@ export interface InvitedUserData {
   addressIds: string[];
   /** Required when inviting staff. */
   designationId?: string;
-  /** Required when inviting a company or estate. */
-  plan?: string;
   /** Optional modules granted when inviting staff. */
   modules?: string[];
 }

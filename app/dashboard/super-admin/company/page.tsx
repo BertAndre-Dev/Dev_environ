@@ -23,13 +23,13 @@ import {
   createCompany,
   deleteCompany,
   getCompanies,
-  getCompanyModules,
   suspendCompany,
   updateCompany,
   type CompanyItem,
   type CreateCompanyPayload,
   type CompanyModuleKey,
 } from "@/redux/slice/super-admin/company-mgt/company";
+import { DEFAULT_PLAN, normalizePlanKey } from "@/lib/plans";
 
 const PAGE_SIZE = 10;
 
@@ -132,15 +132,13 @@ export default function SuperAdminCompanyPage() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
 
-  const { list, pagination, loading, modules, modulesLoading } = useSelector(
+  const { list, pagination, loading } = useSelector(
     (state: RootState) => {
       const s: any = (state as any).superAdminCompany;
       return {
         list: (s?.list ?? []) as CompanyItem[],
         pagination: s?.pagination ?? null,
         loading: isPending(s?.getListStatus),
-        modules: (s?.modules ?? []) as CompanyModuleKey[],
-        modulesLoading: s?.getModulesStatus === "isLoading",
       };
     },
   );
@@ -170,20 +168,10 @@ export default function SuperAdminCompanyPage() {
     state: "",
     country: "",
     isActive: true,
-    modules: [],
+    plan: DEFAULT_PLAN,
   });
 
   const effectivePageSize = Number(pagination?.pageSize) || PAGE_SIZE;
-
-  useEffect(() => {
-    if (!open) return;
-    dispatch(getCompanyModules())
-      .unwrap()
-      .catch((err: unknown) => {
-        const message = getApiErrorMessage(err);
-        if (message) toast.error(message);
-      });
-  }, [dispatch, open]);
 
   const fetchList = useCallback(
     (targetPage: number) => {
@@ -239,7 +227,7 @@ export default function SuperAdminCompanyPage() {
       state: "",
       country: "",
       isActive: true,
-      modules: [],
+      plan: DEFAULT_PLAN,
     });
     setOpen(true);
   };
@@ -253,7 +241,7 @@ export default function SuperAdminCompanyPage() {
       state: item.state ?? "",
       country: item.country ?? "",
       isActive: Boolean(item.isActive),
-      modules: normalizeModules(item.modules),
+      plan: normalizePlanKey(item.plan),
     });
     setOpen(true);
   };
@@ -270,8 +258,8 @@ export default function SuperAdminCompanyPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.modules.length) {
-      toast.error("Select at least one module");
+    if (!form.plan.trim()) {
+      toast.error("Please select a plan.");
       return;
     }
     try {
@@ -465,7 +453,7 @@ export default function SuperAdminCompanyPage() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [modules],
+    [],
   );
 
   const emptyMessage = "No companies found.";
@@ -576,8 +564,6 @@ export default function SuperAdminCompanyPage() {
           mode={editingCompany ? "update" : "create"}
           form={form}
           setForm={setForm}
-          modules={modules}
-          modulesLoading={modulesLoading}
           onSubmit={handleSubmit}
         />
 

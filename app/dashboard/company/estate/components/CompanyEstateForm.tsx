@@ -1,26 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { toast } from "react-toastify";
-import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CountryDropdown, RegionDropdown } from "react-country-region-selector";
-import { ModuleSelectionChips } from "@/components/shared/module-selection-chips";
-import type { AppDispatch } from "@/redux/store";
+import { InvitePlanSelect } from "@/components/invite/InvitePlanSelect";
+import { DEFAULT_PLAN, normalizePlanKey } from "@/lib/plans";
 import {
   type EstateData,
   VisitorVerificationMode,
-  fetchCompanyEstateModules,
 } from "@/redux/slice/company/estate-mgt/company-estate";
-import {
-  selectCompanyAvailableModules,
-  selectCompanyModulesError,
-  selectCompanyModulesLoading,
-} from "@/redux/slice/company/estate-mgt/company-estate-slice";
 
 type Props = {
   initialData?: EstateData | null;
@@ -32,11 +23,6 @@ export default function CompanyEstateForm({
   onSubmit,
 }: Readonly<Props>) {
   const isEditing = Boolean(initialData);
-  const dispatch = useDispatch<AppDispatch>();
-
-  const availableModules = useSelector(selectCompanyAvailableModules);
-  const modulesLoading = useSelector(selectCompanyModulesLoading);
-  const modulesError = useSelector(selectCompanyModulesError);
 
   const [formData, setFormData] = useState<EstateData>(() => ({
     name: initialData?.name ?? "",
@@ -44,15 +30,10 @@ export default function CompanyEstateForm({
     city: initialData?.city ?? "",
     state: initialData?.state ?? "",
     country: initialData?.country ?? "",
-    modules: Array.isArray(initialData?.modules) ? [...initialData!.modules!] : [],
+    plan: normalizePlanKey(initialData?.plan) || DEFAULT_PLAN,
     visitorVerificationMode:
       initialData?.visitorVerificationMode ?? VisitorVerificationMode.VIEW_AND_VERIFY,
   }));
-
-  useEffect(() => {
-    if (isEditing) return;
-    dispatch(fetchCompanyEstateModules());
-  }, [dispatch, isEditing]);
 
   useEffect(() => {
     if (initialData) {
@@ -62,7 +43,7 @@ export default function CompanyEstateForm({
         city: initialData.city,
         state: initialData.state,
         country: initialData.country,
-        modules: Array.isArray(initialData.modules) ? [...initialData.modules] : [],
+        plan: normalizePlanKey(initialData.plan),
         visitorVerificationMode:
           initialData.visitorVerificationMode ?? VisitorVerificationMode.VIEW_AND_VERIFY,
       });
@@ -75,16 +56,10 @@ export default function CompanyEstateForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isEditing && (!formData.modules || formData.modules.length === 0)) {
-      toast.error("Select at least one module for this estate");
-      return;
-    }
-    if (isEditing) {
-      const { modules: _modules, ...rest } = formData;
-      onSubmit({ ...rest, modules: [] });
-      return;
-    }
-    onSubmit({ ...formData });
+    onSubmit({
+      ...formData,
+      plan: normalizePlanKey(formData.plan),
+    });
   };
 
   const textFields = [
@@ -92,8 +67,6 @@ export default function CompanyEstateForm({
     { label: "Estate Address", name: "address" as const, placeholder: "Enter address" },
     { label: "City", name: "city" as const, placeholder: "Enter city" },
   ];
-
-  const selectedModules = formData.modules ?? [];
 
   return (
     <form onSubmit={handleSubmit}>
@@ -164,49 +137,15 @@ export default function CompanyEstateForm({
           </select>
         </div>
 
-        {!isEditing && (
-          <div className="space-y-3">
-            <Label>Modules</Label>
-            <p className="text-sm text-muted-foreground">
-              Select one or more modules to enable for this estate.
-            </p>
-
-            {modulesLoading ? (
-              <div className="flex items-center gap-2 rounded-md border border-border px-3 py-6 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading available modules…
-              </div>
-            ) : modulesError ? (
-              <p className="text-sm text-destructive">{modulesError}</p>
-            ) : availableModules.length === 0 ? (
-              <p className="text-sm text-destructive">
-                No modules are available. Please contact support.
-              </p>
-            ) : (
-              <ModuleSelectionChips
-                availableModules={availableModules}
-                selectedModules={selectedModules}
-                onChange={(modules) =>
-                  setFormData((prev) => ({ ...prev, modules }))
-                }
-              />
-            )}
-          </div>
-        )}
+        <InvitePlanSelect
+          value={normalizePlanKey(formData.plan)}
+          onChange={(plan) => setFormData((prev) => ({ ...prev, plan }))}
+          description="Assigns modules and vending/bill rates from this plan. Defaults to the company plan if omitted."
+        />
 
         <div className="w-full pt-4">
-          <Button
-            type="submit"
-            className="w-full cursor-pointer"
-            disabled={
-              !isEditing &&
-              (modulesLoading ||
-                Boolean(modulesError) ||
-                availableModules.length === 0 ||
-                selectedModules.length === 0)
-            }
-          >
-            {initialData ? "Update" : "Create Estate"}
+          <Button type="submit" className="w-full cursor-pointer">
+            {isEditing ? "Update" : "Create Estate"}
           </Button>
         </div>
       </CardContent>

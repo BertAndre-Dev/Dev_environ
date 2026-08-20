@@ -64,6 +64,7 @@ export interface PaidBillData {
   frequency?: string;
   amountPaid?: number;
   lastPaymentDate?: string | null;
+  createdAt?: string;
   startDate?: string;
   nextDueDate?: string;
   status?: string;

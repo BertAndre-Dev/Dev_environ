@@ -8,6 +8,11 @@ import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import BillsForm from "@/components/resident/bill-form/page";
 import SwitchAddress from "@/components/resident/switch-address/page";
+import { ReceiptModal } from "@/components/receipt/ReceiptModal";
+import {
+  resolveReceiptAddressLabel,
+  residentDisplayName,
+} from "@/components/receipt/format";
 import {
   getBillsByEstate,
   getBillsForAddress,
@@ -21,8 +26,8 @@ import {
   type PaidBillData,
 } from "@/redux/slice/resident/bill-mgt/bills-mgt-slice";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
+import { parseResidentEstate } from "@/app/dashboard/resident/asset/lib/estate";
 import {
-  formatAddressLabel,
   normalizeAddresses,
   type AddressOption,
 } from "@/lib/address";
@@ -32,6 +37,7 @@ import { AppDispatch, RootState } from "@/redux/store";
 import Loader from "@/components/ui/Loader";
 import { isPending, isSettled } from "@/lib/async-status";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { formatDateTime } from "@/lib/format-date";
 
 type BillsTab = "estate" | "assigned";
 
@@ -50,13 +56,6 @@ function formatFrequencyLabel(frequency?: string): string {
     monthly: "Monthly",
   };
   return map[frequency] || frequency;
-}
-
-function formatDateTime(value?: string | null): string | null {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleString();
 }
 
 function formatNaira(value: number): string {
@@ -192,30 +191,6 @@ function PayableBillCard({
   );
 }
 
-function DetailRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: React.ReactNode;
-}) {
-  if (
-    value == null ||
-    value === "" ||
-    value === "-" ||
-    (typeof value === "string" && value.trim() === "")
-  ) {
-    return null;
-  }
-
-  return (
-    <div className="flex flex-col gap-0.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4 border-b border-border/60 py-2.5 last:border-b-0">
-      <span className="text-sm text-muted-foreground shrink-0">{label}</span>
-      <span className="text-sm font-medium text-right break-all">{value}</span>
-    </div>
-  );
-}
-
 function assignedBillName(bill: AssignedBillData): string {
   return bill.billName || bill.name || "Untitled bill";
 }
@@ -238,6 +213,9 @@ export default function BillPage() {
   const [userId, setUserId] = useState("");
   const [walletId, setWalletId] = useState("");
   const [estateId, setEstateId] = useState("");
+  const [estateName, setEstateName] = useState("");
+  const [payerName, setPayerName] = useState("");
+  const [payerEmail, setPayerEmail] = useState("");
   const [addressOptions, setAddressOptions] = useState<AddressOption[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
     null,
@@ -290,22 +268,21 @@ export default function BillPage() {
           (user.walletId as string | undefined) ??
           ((user.wallet as { id?: string } | undefined)?.id ?? "");
 
-        const rawEstateId = user.estateId as
-          | string
-          | { id?: string; _id?: string }
-          | undefined;
-        const eId =
-          typeof rawEstateId === "string"
-            ? rawEstateId
-            : rawEstateId?._id ||
-              rawEstateId?.id ||
-              ((user.estate as { id?: string } | undefined)?.id ?? "");
+        const estate = parseResidentEstate(user);
+        const eId = estate?.id ?? "";
         const addresses = normalizeAddresses(user);
         const firstId = addresses.length > 0 ? addresses[0].id : null;
 
         setUserId(uId);
         setWalletId(wId);
         setEstateId(eId);
+        setEstateName(estate?.name ?? "");
+        setPayerName(
+          residentDisplayName(user.firstName, user.lastName) ?? "",
+        );
+        setPayerEmail(
+          typeof user.email === "string" ? user.email : "",
+        );
         setAddressOptions(addresses);
         setSelectedAddressId((prev) => prev ?? firstId);
 
@@ -442,17 +419,17 @@ export default function BillPage() {
     }
   };
 
-  const resolveAddressLabel = (addressId?: string) => {
-    if (!addressId) return "-";
-    const match = addressOptions.find((a) => a.id === addressId);
-    return match ? formatAddressLabel(match) : addressId;
-  };
-
   const columns = [
     {
       key: "billName",
       header: "Bill Name",
       render: (item: PaidBillData) => item.billName || "-",
+    },
+    {
+      key: "createdAt",
+      header: "Created At",
+      render: (item: PaidBillData) => formatDateTime(item.createdAt, "-"),
+      exportValue: (item: PaidBillData) => formatDateTime(item.createdAt, ""),
     },
     {
       key: "frequency",
@@ -494,8 +471,8 @@ export default function BillPage() {
           size="icon"
           className="h-8 w-8"
           onClick={() => setViewBill(item)}
-          title="View more"
-          aria-label="View more"
+          title="View receipt"
+          aria-label="View receipt"
         >
           <Eye className="h-4 w-4" />
         </Button>
@@ -739,63 +716,21 @@ export default function BillPage() {
           ) : null}
         </Modal>
 
-        <Modal visible={!!viewBill} onClose={() => setViewBill(null)}>
-          <div className="pr-6 pt-2">
-            <h2 className="text-lg font-semibold text-blue-600 capitalize mb-4">
-              {viewBill?.billName || "Bill details"}
-            </h2>
-            <div className="space-y-0">
-              <DetailRow
-                label="Bill name"
-                value={viewBill?.billName || null}
-              />
-              <DetailRow
-                label="Frequency"
-                value={
-                  formatFrequencyLabel(viewBill?.frequency) ||
-                  viewBill?.frequency ||
-                  null
-                }
-              />
-              <DetailRow
-                label="Amount paid"
-                value={
-                  viewBill?.amountPaid != null
-                    ? `₦${Number(viewBill.amountPaid).toLocaleString()}`
-                    : null
-                }
-              />
-              <DetailRow
-                label="Status"
-                value={
-                  viewBill?.status ? (
-                    <span className="capitalize">{viewBill.status}</span>
-                  ) : null
-                }
-              />
-              <DetailRow
-                label="Last payment date"
-                value={formatDateTime(viewBill?.lastPaymentDate)}
-              />
-              <DetailRow
-                label="Start date"
-                value={formatDateTime(viewBill?.startDate)}
-              />
-              <DetailRow
-                label="Next due date"
-                value={formatDateTime(viewBill?.nextDueDate)}
-              />
-              <DetailRow
-                label="Address"
-                value={
-                  viewBill?.addressId
-                    ? resolveAddressLabel(viewBill.addressId)
-                    : null
-                }
-              />
-            </div>
-          </div>
-        </Modal>
+        <ReceiptModal
+          isOpen={!!viewBill}
+          onClose={() => setViewBill(null)}
+          type="bill"
+          bill={viewBill}
+          party={{
+            payerName: payerName || undefined,
+            email: payerEmail || undefined,
+            estateName: estateName || undefined,
+            addressLabel: resolveReceiptAddressLabel(
+              addressOptions,
+              viewBill?.addressId || selectedAddressId,
+            ),
+          }}
+        />
       </div>
     </div>
   );

@@ -1,20 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Select from "react-select";
+import { Loader2 } from "lucide-react";
 import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DesignationToggle } from "@/components/designations/DesignationToggle";
+import { ModuleSelectionChips } from "@/components/shared/module-selection-chips";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { Designation } from "@/lib/designations";
+import { parseEstateModulesResponse } from "@/lib/estate-module-labels";
+import axiosInstance from "@/utils/axiosInstance";
 
 export type DesignationFormValues = {
   name: string;
   description: string;
   isActive: boolean;
   estateId?: string;
+  modules: string[];
 };
 
 type EstateSelectOption = { label: string; value: string };
@@ -48,6 +54,10 @@ export function DesignationFormSheet({
   const [description, setDescription] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [estateId, setEstateId] = useState("");
+  const [modules, setModules] = useState<string[]>([]);
+  const [availableModules, setAvailableModules] = useState<string[]>([]);
+  const [modulesLoading, setModulesLoading] = useState(false);
+  const [modulesError, setModulesError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -55,13 +65,55 @@ export function DesignationFormSheet({
     setDescription(initial?.description ?? "");
     setIsActive(initial?.isActive ?? true);
     setEstateId(initial?.estateId ?? defaultEstateId ?? "");
+    setModules(initial?.modules ?? []);
+    setAvailableModules([]);
+    setModulesError(null);
   }, [open, initial, defaultEstateId]);
+
+  useEffect(() => {
+    if (!open) return;
+    const resolvedEstateId = estateId.trim();
+    if (!resolvedEstateId) {
+      setAvailableModules([]);
+      setModulesLoading(false);
+      setModulesError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setModulesLoading(true);
+    setModulesError(null);
+
+    axiosInstance
+      .get(`/api/v1/estate-mgt/${resolvedEstateId}/modules`)
+      .then((res) => {
+        if (cancelled) return;
+        const next = parseEstateModulesResponse(res.data);
+        setAvailableModules(next);
+        setModules((prev) => prev.filter((module) => next.includes(module)));
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setAvailableModules([]);
+        setModulesError(
+          getApiErrorMessage(err) ?? "Failed to load estate modules.",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setModulesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, estateId]);
 
   const editing = Boolean(initial?.id);
   const needsEstate = showEstateSelect && !editing;
   const canSubmit =
     name.trim().length >= 2 &&
     !saving &&
+    !modulesLoading &&
     (!needsEstate || Boolean(estateId));
 
   let submitLabel = "Create title";
@@ -75,8 +127,41 @@ export function DesignationFormSheet({
       description: description.trim(),
       isActive,
       estateId: needsEstate ? estateId : undefined,
+      modules,
     });
   };
+
+  let modulesContent: React.ReactNode;
+  if (!estateId.trim()) {
+    modulesContent = (
+      <p className="text-sm text-muted-foreground">
+        Select an estate to load modules.
+      </p>
+    );
+  } else if (modulesLoading) {
+    modulesContent = (
+      <div className="flex items-center gap-2 rounded-md border border-border px-3 py-6 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading modules…
+      </div>
+    );
+  } else if (modulesError) {
+    modulesContent = <p className="text-sm text-destructive">{modulesError}</p>;
+  } else if (availableModules.length === 0) {
+    modulesContent = (
+      <p className="text-sm text-muted-foreground">
+        This estate has no modules enabled.
+      </p>
+    );
+  } else {
+    modulesContent = (
+      <ModuleSelectionChips
+        availableModules={availableModules}
+        selectedModules={modules}
+        onChange={setModules}
+      />
+    );
+  }
 
   return (
     <Modal visible={open} onClose={onClose}>
@@ -105,7 +190,10 @@ export function DesignationFormSheet({
               value={
                 estateOptions.find((option) => option.value === estateId) ?? null
               }
-              onChange={(option) => setEstateId(option?.value ?? "")}
+              onChange={(option) => {
+                setEstateId(option?.value ?? "");
+                setModules([]);
+              }}
               isSearchable
               isLoading={estatesLoading}
               isDisabled={estatesLoading || saving}
@@ -142,6 +230,14 @@ export function DesignationFormSheet({
             onChange={(event) => setDescription(event.target.value)}
             placeholder="Oversees estate facilities and vendors."
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Modules</Label>
+          <p className="text-sm text-muted-foreground">
+            Choose which features staff with this title can access.
+          </p>
+          {modulesContent}
         </div>
 
         {editing ? (

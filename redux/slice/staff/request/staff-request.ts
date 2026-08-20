@@ -44,6 +44,11 @@ export interface StaffRequestItem {
   updatedAt?: string;
 }
 
+export interface RequestFieldValue {
+  key: string;
+  value: string;
+}
+
 export interface CreateStaffRequestPayload {
   title: string;
   description?: string;
@@ -51,6 +56,7 @@ export interface CreateStaffRequestPayload {
   estateId: string;
   attachments?: string[];
   workflowId?: string;
+  fieldValues?: RequestFieldValue[];
 }
 
 export interface ListStaffRequestsParams {
@@ -211,6 +217,16 @@ export const createStaffRequest = createAsyncThunk(
       };
       const workflowId = payload.workflowId?.trim();
       if (workflowId) body.workflowId = workflowId;
+      const fieldValues = (payload.fieldValues ?? [])
+        .map((field) => {
+          const key = field.key?.trim() ?? "";
+          const raw =
+            typeof field.value === "string" ? field.value : "";
+          const value = raw.startsWith("data:") ? raw : raw.trim();
+          return { key, value };
+        })
+        .filter((field) => field.key && field.value);
+      if (fieldValues.length > 0) body.fieldValues = fieldValues;
 
       const res = await axiosInstance.post("/api/v1/requests", body);
       return res.data;

@@ -7,6 +7,7 @@ export type Designation = {
   description: string;
   companyId?: string;
   estateId?: string;
+  modules: string[];
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -61,6 +62,13 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return null;
 }
 
+function parseStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter(Boolean);
+}
+
 export function parseDesignation(raw: unknown): Designation | null {
   const record = asRecord(raw);
   if (!record) return null;
@@ -86,6 +94,7 @@ export function parseDesignation(raw: unknown): Designation | null {
     description,
     companyId: companyId || undefined,
     estateId: estateId || undefined,
+    modules: parseStringList(source.modules),
     isActive: parseIsActive(source.isActive ?? source.active ?? source.status),
     createdAt:
       typeof source.createdAt === "string" ? source.createdAt : undefined,
@@ -182,3 +191,50 @@ export function isStaffAssignmentDeleteError(message: string | undefined): boole
   if (!message) return false;
   return /staff|assigned|in use|cannot delete|deactivate/i.test(message);
 }
+
+export function userDesignationId(user: {
+  designationId?: string | null;
+  memberships?: Array<{
+    designationId?: string | null;
+    isCurrent?: boolean;
+  }>;
+}): string {
+  const top = user.designationId?.trim();
+  if (top) return top;
+  const memberships = user.memberships ?? [];
+  const current = memberships.find(
+    (membership) => membership.isCurrent && membership.designationId?.trim(),
+  );
+  return (
+    current?.designationId?.trim() ||
+    memberships.find((membership) => membership.designationId?.trim())
+      ?.designationId?.trim() ||
+    ""
+  );
+}
+
+export function designationNamesById(
+  items: Designation[],
+): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const item of items) {
+    if (item.id) map[item.id] = item.name;
+  }
+  return map;
+}
+
+export function designationLabelForUser(
+  user: {
+    designationId?: string | null;
+    memberships?: Array<{
+      designationId?: string | null;
+      isCurrent?: boolean;
+    }>;
+  },
+  namesById: Record<string, string>,
+): string {
+  const id = userDesignationId(user);
+  if (!id) return "—";
+  return namesById[id]?.trim() || "—";
+}
+

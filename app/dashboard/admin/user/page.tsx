@@ -43,6 +43,12 @@ import {
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { isPending } from "@/lib/async-status";
+import { getDesignations } from "@/redux/slice/designations/designations";
+import {
+  designationLabelForUser,
+  designationNamesById,
+  normalizeEntityId,
+} from "@/lib/designations";
 /** Admin user management: exclude company, estate admin, and admin from role filter. */
 const ADMIN_USER_ROLE_FILTER_OPTIONS = ESTATE_USER_ROLE_FILTER_OPTIONS.filter(
   (o) =>
@@ -70,6 +76,11 @@ interface AdminUserData {
   serviceCharge: boolean;
   isActive?: boolean;
   invitationStatus?: string;
+  designationId?: string;
+  memberships?: Array<{
+    designationId?: string;
+    isCurrent?: boolean;
+  }>;
 }
 
 interface EstateOption {
@@ -108,6 +119,9 @@ export default function AdminUserPage() {
     DEFAULT_ESTATE_USER_ROLE,
   );
   const [bootstrapping, setBootstrapping] = useState(true);
+  const [designationNames, setDesignationNames] = useState<
+    Record<string, string>
+  >({});
 
   const { allAdminUsers, pagination, listPending } = useSelector(
     (state: RootState) => {
@@ -195,6 +209,36 @@ export default function AdminUserPage() {
       if (message) toast.error(message);
     });
   }, [selectedEstate?.value, fetchAdminUsers]);
+
+  useEffect(() => {
+    if (roleFilter !== "staff" || !selectedEstate?.value) {
+      setDesignationNames({});
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await dispatch(
+          getDesignations({
+            estateId: selectedEstate.value,
+            companyId: normalizeEntityId(user?.companyId ?? user?.company) || undefined,
+            includeInactive: true,
+            page: 1,
+            limit: 200,
+          }),
+        ).unwrap();
+        if (cancelled) return;
+        setDesignationNames(designationNamesById(res.items ?? []));
+      } catch {
+        if (!cancelled) setDesignationNames({});
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch, roleFilter, selectedEstate?.value, user]);
 
   const handleEstateModal = (user?: AdminUserData) => {
     setSelectedUser(user || null);
@@ -324,6 +368,7 @@ export default function AdminUserPage() {
   };
 
   const showResidentColumns = roleFilter === "resident";
+  const showStaffColumns = roleFilter === "staff";
 
   const columns = [
     {
@@ -357,6 +402,18 @@ export default function AdminUserPage() {
               item.role?.toLowerCase() === "resident"
                 ? item.residentType || "-"
                 : "-",
+          },
+        ]
+      : []),
+    ...(showStaffColumns
+      ? [
+          {
+            key: "designation",
+            header: "Designation",
+            render: (item: AdminUserData) =>
+              designationLabelForUser(item, designationNames),
+            exportValue: (item: AdminUserData) =>
+              designationLabelForUser(item, designationNames),
           },
         ]
       : []),

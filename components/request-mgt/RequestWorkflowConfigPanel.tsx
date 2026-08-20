@@ -15,6 +15,7 @@ import {
   getAdminRequestWorkflow,
   upsertAdminRequestWorkflow,
   type RequestWorkflow,
+  type RequestWorkflowField,
   type WorkflowStep,
 } from "@/redux/slice/admin/request/admin-request";
 import type { AppDispatch, RootState } from "@/redux/store";
@@ -172,6 +173,7 @@ export default function RequestWorkflowConfigPanel({
     name: string;
     description?: string;
     steps: WorkflowStep[];
+    fields: RequestWorkflowField[];
   }) => {
     if (!resolvedEstateId) {
       toast.error("Select an estate first.");
@@ -403,6 +405,50 @@ export default function RequestWorkflowConfigPanel({
                       ))}
                     </ol>
                   </div>
+                  {workflow.fields?.length ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Request form fields ({workflow.fields.length})
+                      </p>
+                      <ul className="flex flex-wrap gap-1.5">
+                        {workflow.fields.map((field) => (
+                          <li
+                            key={field.key}
+                            className="inline-flex max-w-full items-center gap-1 rounded-full bg-white border border-black/8 px-2.5 py-1 text-xs"
+                          >
+                            <span className="truncate font-medium">
+                              {field.label}
+                            </span>
+                            {field.required ? (
+                              <span className="text-muted-foreground">· required</span>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  {workflow.fields?.length ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Request form fields ({workflow.fields.length})
+                      </p>
+                      <ul className="flex flex-wrap gap-1.5">
+                        {workflow.fields.map((field) => (
+                          <li
+                            key={field.key}
+                            className="inline-flex max-w-full items-center gap-1 rounded-full bg-white border border-black/8 px-2.5 py-1 text-xs"
+                          >
+                            <span className="truncate font-medium">
+                              {field.label}
+                            </span>
+                            {field.required ? (
+                              <span className="text-muted-foreground">· required</span>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>

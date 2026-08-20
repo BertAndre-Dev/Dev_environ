@@ -26,6 +26,7 @@ export type CreateDesignationPayload = {
   description?: string;
   companyId?: string;
   estateId?: string;
+  modules?: string[];
 };
 
 export type UpdateDesignationPayload = {
@@ -33,6 +34,7 @@ export type UpdateDesignationPayload = {
   name?: string;
   description?: string;
   isActive?: boolean;
+  modules?: string[];
 };
 
 export type DesignationListResult = {
@@ -49,13 +51,17 @@ export const createDesignation = createAsyncThunk(
       return rejectWithValue({ message: "Name is required." });
     }
 
-    const body: Record<string, string> = { name };
+    const body: Record<string, string | string[]> = { name };
     const description = payload.description?.trim();
     const companyId = payload.companyId?.trim();
     const estateId = payload.estateId?.trim();
+    const modules = (payload.modules ?? [])
+      .map((module) => module.trim())
+      .filter(Boolean);
     if (description) body.description = description;
     if (companyId) body.companyId = companyId;
     if (estateId) body.estateId = estateId;
+    body.modules = modules;
 
     try {
       const res = await axiosInstance.post("/api/v1/designations", body);
@@ -67,6 +73,7 @@ export const createDesignation = createAsyncThunk(
           description: description ?? "",
           companyId: companyId || undefined,
           estateId: estateId || undefined,
+          modules,
           isActive: true,
         },
       };
@@ -161,12 +168,17 @@ export const updateDesignation = createAsyncThunk(
       return rejectWithValue({ message: "Designation id is required." });
     }
 
-    const body: Record<string, string | boolean> = {};
+    const body: Record<string, string | boolean | string[]> = {};
     if (typeof payload.name === "string") body.name = payload.name.trim();
     if (typeof payload.description === "string") {
       body.description = payload.description.trim();
     }
     if (typeof payload.isActive === "boolean") body.isActive = payload.isActive;
+    if (payload.modules) {
+      body.modules = payload.modules
+        .map((module) => module.trim())
+        .filter(Boolean);
+    }
 
     try {
       const res = await axiosInstance.put(`/api/v1/designations/${id}`, body);
@@ -179,6 +191,7 @@ export const updateDesignation = createAsyncThunk(
             typeof payload.description === "string"
               ? payload.description.trim()
               : "",
+          modules: Array.isArray(payload.modules) ? payload.modules : [],
           isActive: payload.isActive ?? true,
         },
       };

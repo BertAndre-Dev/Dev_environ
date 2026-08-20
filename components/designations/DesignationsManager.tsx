@@ -25,6 +25,7 @@ import {
   isStaffAssignmentDeleteError,
   type Designation,
 } from "@/lib/designations";
+import { labelForEstateModule } from "@/lib/estate-module-labels";
 import { parseAdminEstate } from "@/app/dashboard/admin/asset/lib/estate";
 import {
   mapCompanyEstateRows,
@@ -229,6 +230,7 @@ export function DesignationsManager({ role }: Readonly<Props>) {
             name: values.name,
             description: values.description,
             isActive: values.isActive,
+            modules: values.modules,
           }),
         ).unwrap();
         toast.success("Designation updated.");
@@ -245,6 +247,7 @@ export function DesignationsManager({ role }: Readonly<Props>) {
             description: values.description || undefined,
             companyId: role === "company" ? scopeId : undefined,
             estateId,
+            modules: values.modules,
           }),
         ).unwrap();
         toast.success("Designation created.");
@@ -326,6 +329,16 @@ export function DesignationsManager({ role }: Readonly<Props>) {
         key: "description",
         header: "Description",
         render: (item: Designation) => item.description || "—",
+      },
+      {
+        key: "modules",
+        header: "Modules",
+        render: (item: Designation) =>
+          item.modules?.length
+            ? item.modules.map(labelForEstateModule).join(", ")
+            : "—",
+        exportValue: (item: Designation) =>
+          (item.modules ?? []).map(labelForEstateModule).join(", "),
       },
       {
         key: "estateId",
@@ -527,7 +540,9 @@ export function DesignationsManager({ role }: Readonly<Props>) {
         showEstateSelect={role === "company"}
         estateOptions={estateSelectOptions}
         estatesLoading={estatesLoading}
-        defaultEstateId={selectedEstate?.value ?? ""}
+        defaultEstateId={
+          role === "company" ? (selectedEstate?.value ?? "") : scopeId
+        }
         onClose={closeSheet}
         onSubmit={handleSubmit}
       />

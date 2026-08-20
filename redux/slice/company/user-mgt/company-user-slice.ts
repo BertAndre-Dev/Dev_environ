@@ -30,6 +30,11 @@ export interface CompanyUserDetails {
   id?: string;
   _id?: string;
   residentType?: string;
+  designationId?: string;
+  memberships?: Array<{
+    designationId?: string | null;
+    isCurrent?: boolean;
+  }>;
 }
 
 export interface Pagination {

@@ -19,6 +19,7 @@ import type {
   CreateStaffRequestPayload,
   StaffRequestCategory,
 } from "@/redux/slice/staff/request/staff-request";
+import WorkflowRequestFields from "@/components/request-mgt/WorkflowRequestFields";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10MB
 const MAX_ATTACHMENTS = 5;
@@ -57,6 +58,10 @@ export default function StaffRequestFormModal({
     { name: string; dataUrl: string }[]
   >([]);
   const [encoding, setEncoding] = useState(false);
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [fieldFileNames, setFieldFileNames] = useState<Record<string, string>>(
+    {},
+  );
 
   const categoryOptions = categories.map((c) => ({
     value: c.value,
@@ -88,6 +93,16 @@ export default function StaffRequestFormModal({
 
     return [{ value: "", label: "Use estate default" }, ...named];
   }, [workflows, workflowsLoading]);
+
+  const selectedWorkflow = useMemo(
+    () =>
+      workflows.find(
+        (workflow) =>
+          (workflow.id ?? workflow._id ?? "").trim() === workflowId.trim(),
+      ) ?? null,
+    [workflows, workflowId],
+  );
+  const extraFields = selectedWorkflow?.fields ?? [];
 
   useEffect(() => {
     if (!categories.length) {
@@ -141,12 +156,19 @@ export default function StaffRequestFormModal({
     };
   }, [visible, estateId]);
 
+  useEffect(() => {
+    setFieldValues({});
+    setFieldFileNames({});
+  }, [workflowId]);
+
   const resetForm = () => {
     setTitle("");
     setDescription("");
     setCategory(categories[0]?.value ?? "");
     setWorkflowId("");
     setAttachments([]);
+    setFieldValues({});
+    setFieldFileNames({});
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -201,6 +223,24 @@ export default function StaffRequestFormModal({
     e.preventDefault();
     if (!title.trim() || !category || !estateId) return;
 
+    const missing = extraFields.find(
+      (field) => field.required && !(fieldValues[field.key] ?? "").trim(),
+    );
+    if (missing) {
+      toast.error(`${missing.label} is required.`);
+      return;
+    }
+
+    const fieldValuePayload = extraFields
+      .map((field) => {
+        const raw = fieldValues[field.key] ?? "";
+        return {
+          key: field.key,
+          value: field.type === "file" ? raw : raw.trim(),
+        };
+      })
+      .filter((field) => field.value);
+
     try {
       await onSubmit({
         title: title.trim(),
@@ -211,6 +251,7 @@ export default function StaffRequestFormModal({
             ? attachments.map((a) => a.dataUrl)
             : undefined,
         workflowId: workflowId.trim() || undefined,
+        fieldValues: fieldValuePayload.length > 0 ? fieldValuePayload : undefined,
       });
       resetForm();
     } catch {
@@ -219,7 +260,13 @@ export default function StaffRequestFormModal({
   };
 
   const valid = Boolean(
-    title.trim() && category && estateId && categories.length > 0,
+    title.trim() &&
+      category &&
+      estateId &&
+      categories.length > 0 &&
+      extraFields.every(
+        (field) => !field.required || (fieldValues[field.key] ?? "").trim(),
+      ),
   );
   // Only block the whole form while submitting or encoding files.
   // Category loading should not disable title/description/etc.
@@ -294,6 +341,23 @@ export default function StaffRequestFormModal({
               disabled={busy || workflowsLoading || workflows.length === 0}
             />
           </div>
+
+          {extraFields.length > 0 ? (
+            <WorkflowRequestFields
+              fields={extraFields}
+              values={fieldValues}
+              fileNames={fieldFileNames}
+              onValueChange={(key, value) =>
+                setFieldValues((prev) => ({ ...prev, [key]: value }))
+              }
+              onFileNameChange={(key, fileName) =>
+                setFieldFileNames((prev) => ({ ...prev, [key]: fileName }))
+              }
+              disabled={busy}
+              encoding={encoding}
+              onEncodingChange={setEncoding}
+            />
+          ) : null}
 
           <div>
             <Label>Attachments</Label>

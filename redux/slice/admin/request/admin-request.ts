@@ -1,4 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
+import { slugify } from "@/lib/slug";
 import axiosInstance from "@/utils/axiosInstance";
 
 export const APPROVAL_MODES = ["any", "all"] as const;
@@ -20,6 +21,37 @@ export interface WorkflowStep {
   reminderMaxCount?: number;
 }
 
+export const WORKFLOW_FIELD_TYPES = [
+  "text",
+  "textarea",
+  "number",
+  "select",
+  "file",
+] as const;
+
+export type WorkflowFieldType = (typeof WORKFLOW_FIELD_TYPES)[number];
+
+export const WORKFLOW_FIELD_TYPE_OPTIONS: {
+  value: WorkflowFieldType;
+  label: string;
+}[] = [
+  { value: "text", label: "Text" },
+  { value: "textarea", label: "Long text" },
+  { value: "number", label: "Number" },
+  { value: "select", label: "Dropdown" },
+  { value: "file", label: "File" },
+];
+
+export interface RequestWorkflowField {
+  key: string;
+  label: string;
+  type: WorkflowFieldType;
+  required?: boolean;
+  options?: string[];
+  placeholder?: string;
+  helpText?: string;
+}
+
 export interface RequestWorkflow {
   id?: string;
   _id?: string;
@@ -27,6 +59,7 @@ export interface RequestWorkflow {
   description?: string;
   estateId: string;
   steps: WorkflowStep[];
+  fields?: RequestWorkflowField[];
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -37,6 +70,7 @@ export interface UpsertRequestWorkflowPayload {
   description?: string;
   estateId: string;
   steps: WorkflowStep[];
+  fields?: RequestWorkflowField[];
   isActive?: boolean;
 }
 
@@ -73,6 +107,117 @@ export function normalizeWorkflowStep(
   };
 }
 
+function normalizeWorkflowFieldType(raw: unknown): WorkflowFieldType {
+  const value = String(raw ?? "")
+    .trim()
+    .toLowerCase();
+  return (WORKFLOW_FIELD_TYPES as readonly string[]).includes(value)
+    ? (value as WorkflowFieldType)
+    : "text";
+}
+
+function normalizeWorkflowFieldOptions(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    return raw
+      .map((option) => String(option ?? "").trim())
+      .filter(Boolean);
+  }
+  if (typeof raw === "string") {
+    return raw
+      .split(",")
+      .map((option) => option.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+export function workflowFieldKeyFromLabel(label: string): string {
+  return slugify(label).replace(/-/g, "_");
+}
+
+export function normalizeWorkflowField(
+  raw: Record<string, unknown>,
+  index = 0,
+): RequestWorkflowField {
+  const label = String(raw.label ?? "").trim();
+  const key =
+    String(raw.key ?? "").trim() ||
+    workflowFieldKeyFromLabel(label) ||
+    `field_${index + 1}`;
+
+  return {
+    key,
+    label,
+    type: normalizeWorkflowFieldType(raw.type),
+    required: Boolean(raw.required),
+    options: normalizeWorkflowFieldOptions(raw.options),
+    placeholder: raw.placeholder
+      ? String(raw.placeholder).trim()
+      : undefined,
+    helpText: raw.helpText ? String(raw.helpText).trim() : undefined,
+  };
+}
+
+export function createEmptyWorkflowField(): RequestWorkflowField {
+  return {
+    key: "",
+    label: "",
+    type: "text",
+    required: false,
+    options: [],
+    placeholder: "",
+    helpText: "",
+  };
+}
+
+export function assignUniqueWorkflowFieldKeys(
+  fields: RequestWorkflowField[],
+): RequestWorkflowField[] {
+  const used = new Set<string>();
+  return fields.map((field, index) => {
+    const fromLabel = workflowFieldKeyFromLabel(field.label);
+    let key = field.key.trim() || fromLabel || `field_${index + 1}`;
+    const base = key;
+    let suffix = 2;
+    while (used.has(key)) {
+      key = `${base}_${suffix}`;
+      suffix += 1;
+    }
+    used.add(key);
+    return { ...field, key };
+  });
+}
+
+export function serializeWorkflowFields(
+  fields: RequestWorkflowField[] | undefined,
+): Array<{
+  key: string;
+  label: string;
+  type: WorkflowFieldType;
+  required: boolean;
+  options?: string[];
+  placeholder?: string;
+  helpText?: string;
+}> {
+  return assignUniqueWorkflowFieldKeys(fields ?? [])
+    .filter((field) => field.label.trim())
+    .map((field) => {
+      const options =
+        field.type === "select"
+          ? (field.options ?? []).map((option) => option.trim()).filter(Boolean)
+          : undefined;
+      return {
+        key: field.key,
+        label: field.label.trim(),
+        type: field.type,
+        required: Boolean(field.required),
+        options: options?.length ? options : undefined,
+        placeholder: field.placeholder?.trim() || undefined,
+        helpText: field.helpText?.trim() || undefined,
+      };
+    });
+}
+
 export function normalizeRequestWorkflow(
   raw: Record<string, unknown> | null | undefined,
 ): RequestWorkflow | null {
@@ -88,6 +233,15 @@ export function normalizeRequestWorkflow(
       index,
     ),
   );
+  const fieldsRaw = Array.isArray(raw.fields) ? raw.fields : [];
+  const fields = fieldsRaw.map((field, index) =>
+    normalizeWorkflowField(
+      (field && typeof field === "object"
+        ? field
+        : {}) as Record<string, unknown>,
+      index,
+    ),
+  );
 
   return {
     id,
@@ -98,6 +252,7 @@ export function normalizeRequestWorkflow(
       : undefined,
     estateId: String(raw.estateId ?? "").trim(),
     steps,
+    fields,
     isActive: raw.isActive as boolean | undefined,
     createdAt: raw.createdAt as string | undefined,
     updatedAt: raw.updatedAt as string | undefined,
@@ -227,6 +382,15 @@ export const upsertAdminRequestWorkflow = createAsyncThunk(
       }
     }
 
+    const fields = serializeWorkflowFields(payload.fields);
+    for (const [index, field] of fields.entries()) {
+      if (field.type === "select" && !(field.options ?? []).length) {
+        return rejectWithValue({
+          message: `Form field ${index + 1}: add at least one dropdown option.`,
+        });
+      }
+    }
+
     try {
       const body = {
         name,
@@ -246,6 +410,7 @@ export const upsertAdminRequestWorkflow = createAsyncThunk(
             ? Number(step.reminderMaxCount)
             : undefined,
         })),
+        fields,
         isActive: payload.isActive ?? true,
       };
 

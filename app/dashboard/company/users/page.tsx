@@ -48,6 +48,11 @@ import {
   getEstateUserRoleTotalLabel,
   type EstateUserRoleFilter,
 } from "@/lib/estate-user-roles";
+import { getDesignations } from "@/redux/slice/designations/designations";
+import {
+  designationLabelForUser,
+  designationNamesById,
+} from "@/lib/designations";
 
 /** Company user management: exclude estate admin & company from role filter. */
 const COMPANY_USER_ROLE_FILTER_OPTIONS = ESTATE_USER_ROLE_FILTER_OPTIONS.filter(
@@ -107,6 +112,9 @@ export default function CompanyUsersPage() {
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [estatesLoading, setEstatesLoading] = useState(true);
   const [estateOptions, setEstateOptions] = useState<EstateOption[]>([]);
+  const [designationNames, setDesignationNames] = useState<
+    Record<string, string>
+  >({});
 
   const allUsers = useSelector((state: RootState) =>
     selectCompanyUsersList(state),
@@ -214,6 +222,36 @@ export default function CompanyUsersPage() {
     });
   }, [selectedEstate, fetchUsers]);
 
+  useEffect(() => {
+    if (roleFilter !== "staff" || !selectedEstate?.value) {
+      setDesignationNames({});
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await dispatch(
+          getDesignations({
+            estateId: selectedEstate.value,
+            companyId: companyId || undefined,
+            includeInactive: true,
+            page: 1,
+            limit: 200,
+          }),
+        ).unwrap();
+        if (cancelled) return;
+        setDesignationNames(designationNamesById(res.items ?? []));
+      } catch {
+        if (!cancelled) setDesignationNames({});
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch, roleFilter, selectedEstate?.value, companyId]);
+
   const closeStatusModal = () => {
     if (statusSubmitting) return;
     setStatusItem(null);
@@ -289,6 +327,7 @@ export default function CompanyUsersPage() {
   };
 
   const showResidentColumns = roleFilter === "resident";
+  const showStaffColumns = roleFilter === "staff";
 
   const columns = useMemo(
     () => [
@@ -318,6 +357,18 @@ export default function CompanyUsersPage() {
                 String(Boolean(item.serviceCharge)),
               exportValue: (item: CompanyUserDetails) =>
                 String(Boolean(item.serviceCharge)),
+            },
+          ]
+        : []),
+      ...(showStaffColumns
+        ? [
+            {
+              key: "designation" as const,
+              header: "Designation",
+              render: (item: CompanyUserDetails) =>
+                designationLabelForUser(item, designationNames),
+              exportValue: (item: CompanyUserDetails) =>
+                designationLabelForUser(item, designationNames),
             },
           ]
         : []),
@@ -394,7 +445,7 @@ export default function CompanyUsersPage() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pagination?.currentPage, showResidentColumns],
+    [pagination?.currentPage, showResidentColumns, showStaffColumns, designationNames],
   );
 
   const stats = useMemo(

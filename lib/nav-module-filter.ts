@@ -6,7 +6,6 @@ export const NAV_ALWAYS_VISIBLE_LABELS = new Set([
   "Energy Provider Management",
   "Notifications",
   "Map",
-  "Designations",
 ]);
 
 /** Security role pages that are not estate modules. */

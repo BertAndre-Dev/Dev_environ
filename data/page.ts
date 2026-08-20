@@ -21,7 +21,6 @@ import {
   UserCog,
   UserPlus,
   UsersRound,
-  IdCard,
   Wallet,
   Wrench,
 } from "lucide-react";
@@ -230,11 +229,6 @@ export const companyNav = [
     moduleKey: "users",
   },
   {
-    label: "Designations",
-    icon: IdCard,
-    path: "/dashboard/company/designations",
-  },
-  {
     label: "Energy Provider",
     icon: IoSpeedometerOutline,
     path: "/dashboard/company/energy-provider",
@@ -327,11 +321,6 @@ export const adminNav = [
     icon: UserCog,
     path: "/dashboard/admin/user",
     moduleKey: "users",
-  },
-  {
-    label: "Designations",
-    icon: IdCard,
-    path: "/dashboard/admin/designations",
   },
   {
     label: "Bills Management",
@@ -548,11 +537,6 @@ export const estateAdminNav = [
     label: "Overview",
     icon: FiHome,
     path: "/dashboard/estate-admin/dashboard",
-  },
-  {
-    label: "Designations",
-    icon: IdCard,
-    path: "/dashboard/estate-admin/designations",
   },
   {
     label: "Transactions",

@@ -6,6 +6,8 @@ export const PHONE_E164_EXAMPLE = "+2348141153727";
 export const PHONE_E164_ERROR =
   'Invalid phone number. It must include a country code in E.164 format. Example: +2348141153727. Do not use 08141153727 or 8141153727.';
 
+export const DEFAULT_COUNTRY_CODE = "+234";
+
 function compactPhone(value: string) {
   return value.trim().replace(/[\s()-]/g, "");
 }

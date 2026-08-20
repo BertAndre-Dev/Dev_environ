@@ -265,6 +265,11 @@ import type { AppDispatch, RootState } from "@/redux/store";
 import { useDispatch, useSelector } from "react-redux";
 import { getApiErrorMessage } from "@/lib/api-error";
 import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
+import {
+  DEFAULT_COUNTRY_CODE,
+  PHONE_E164_ERROR,
+  toE164PhoneNumber,
+} from "@/lib/phone-e164";
 
 type IdLike = string | { id?: string; _id?: string } | null | undefined;
 
@@ -284,6 +289,7 @@ interface FormData {
   lastName: string;
   email: string;
   phoneNumber: string;
+  countryCode: string;
   addressId: string;
 }
 
@@ -295,6 +301,7 @@ export default function InviteTenantForm({ close }: InviteTenantFormProps) {
     lastName: "",
     email: "",
     phoneNumber: "",
+    countryCode: DEFAULT_COUNTRY_CODE,
     addressId: "",
   });
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -378,6 +385,16 @@ export default function InviteTenantForm({ close }: InviteTenantFormProps) {
     if (!formData.phoneNumber.trim()) {
       return toast.error("Please provide a phone number.");
     }
+    if (!formData.countryCode.trim()) {
+      return toast.error("Please select a country code.");
+    }
+    const e164Phone = toE164PhoneNumber(
+      formData.phoneNumber,
+      formData.countryCode,
+    );
+    if (!e164Phone) {
+      return toast.error(PHONE_E164_ERROR);
+    }
     if (!formData.addressId) return toast.error("Please select an address.");
 
     setSubmitLoading(true);
@@ -388,7 +405,8 @@ export default function InviteTenantForm({ close }: InviteTenantFormProps) {
           firstName: formData.firstName.trim(),
           lastName: formData.lastName.trim(),
           email: formData.email.trim(),
-          phoneNumber: formData.phoneNumber.trim(),
+          phoneNumber: e164Phone,
+          countryCode: formData.countryCode.trim(),
           addressIds: [formData.addressId],
         })
       ).unwrap();
@@ -451,8 +469,12 @@ export default function InviteTenantForm({ close }: InviteTenantFormProps) {
 
           <InvitePhoneNumberField
             id="tenant-phone"
-            value={formData.phoneNumber}
-            onChange={handleInput}
+            countryCode={formData.countryCode}
+            phoneNumber={formData.phoneNumber}
+            onCountryCodeChange={(countryCode) =>
+              setFormData((prev) => ({ ...prev, countryCode }))
+            }
+            onPhoneNumberChange={handleInput}
             className="mt-0"
           />
 

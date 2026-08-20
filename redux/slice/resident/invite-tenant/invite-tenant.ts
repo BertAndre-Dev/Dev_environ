@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { withE164PhoneNumber } from "@/lib/phone-e164";
 
 /**
  * Payload for resident (owner) inviting a tenant.
@@ -14,6 +15,7 @@ export interface InviteTenantPayload {
   lastName: string;
   email: string;
   phoneNumber?: string;
+  countryCode?: string;
   addressIds: string[];
 }
 
@@ -27,7 +29,7 @@ export const inviteTenant = createAsyncThunk(
   "resident-invite-tenant/inviteTenant",
   async (payload: InviteTenantPayload, { rejectWithValue }) => {
     try {
-      const { companyId, ...rest } = payload;
+      const { companyId, ...rest } = withE164PhoneNumber(payload);
       const trimmedCompanyId = companyId?.trim();
       const body = {
         ...rest,

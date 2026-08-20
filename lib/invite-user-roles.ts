@@ -29,6 +29,7 @@ export function buildEnergyProviderInviteHomeOwnerPayload(params: {
   lastName: string;
   email: string;
   phoneNumber?: string;
+  countryCode?: string;
   estateId: string;
   companyId?: string;
   addressIds: string[];
@@ -36,6 +37,7 @@ export function buildEnergyProviderInviteHomeOwnerPayload(params: {
   const estateId = params.estateId.trim();
   const trimmedCompanyId = params.companyId?.trim();
   const phoneNumber = params.phoneNumber?.trim();
+  const countryCode = params.countryCode?.trim();
 
   return {
     firstName: params.firstName.trim(),
@@ -46,6 +48,7 @@ export function buildEnergyProviderInviteHomeOwnerPayload(params: {
     estateId,
     ...(trimmedCompanyId ? { companyId: trimmedCompanyId } : {}),
     ...(phoneNumber ? { phoneNumber } : {}),
+    ...(countryCode ? { countryCode } : {}),
     addressIds: params.addressIds
       .map((id) => String(id).trim())
       .filter(Boolean),
@@ -87,6 +90,7 @@ export function buildInviteUserPayload(params: {
   lastName: string;
   email: string;
   phoneNumber?: string;
+  countryCode?: string;
   role: string;
   inviteContext: "estate" | "company";
   estateId?: string;
@@ -95,6 +99,7 @@ export function buildInviteUserPayload(params: {
   const estateId = params.estateId?.trim();
   const companyId = params.companyId?.trim();
   const phoneNumber = params.phoneNumber?.trim();
+  const countryCode = params.countryCode?.trim();
 
   const base: InvitedUserData = {
     firstName: params.firstName.trim(),
@@ -104,6 +109,7 @@ export function buildInviteUserPayload(params: {
     residentType: null,
     addressIds: [],
     ...(phoneNumber ? { phoneNumber } : {}),
+    ...(countryCode ? { countryCode } : {}),
   };
 
   if (isEnergyProviderRole(params.role)) {

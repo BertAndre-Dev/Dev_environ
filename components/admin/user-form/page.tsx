@@ -14,6 +14,11 @@ import { getEntriesByField } from "@/redux/slice/admin/address-mgt/entry/entry";
 import { iniviteUser, getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
 import type { AppDispatch } from "@/redux/store";
+import {
+  DEFAULT_COUNTRY_CODE,
+  PHONE_E164_ERROR,
+  toE164PhoneNumber,
+} from "@/lib/phone-e164";
 
 type InviteUserFormProps = {
   close: () => void;
@@ -27,6 +32,7 @@ interface InviteUserFormData {
   lastName: string;
   email: string;
   phoneNumber: string;
+  countryCode: string;
   role: "resident" | "security" | "staff" | "company" | "";
   residentType: string | null;
   addressIds: string[];
@@ -49,6 +55,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
     lastName: "",
     email: "",
     phoneNumber: "",
+    countryCode: DEFAULT_COUNTRY_CODE,
     role: "",
     residentType: null,
     addressIds: [],
@@ -151,6 +158,16 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
     if (!formData.phoneNumber.trim()) {
       return toast.error("Please provide a phone number.");
     }
+    if (!formData.countryCode.trim()) {
+      return toast.error("Please select a country code.");
+    }
+    const e164Phone = toE164PhoneNumber(
+      formData.phoneNumber,
+      formData.countryCode,
+    );
+    if (!e164Phone) {
+      return toast.error(PHONE_E164_ERROR);
+    }
 
     if (formData.role === "resident") {
       if (!formData.addressIds?.length) {
@@ -168,7 +185,8 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
       firstName: formData.firstName,
       lastName: formData.lastName,
       email: formData.email,
-      phoneNumber: formData.phoneNumber.trim(),
+      phoneNumber: e164Phone,
+      countryCode: formData.countryCode.trim(),
       role: formData.role,
       residentType: formData.role === "resident" ? "owner" : "owner",
       // Guard against accidental empty ids (prevents backend ObjectId cast errors)
@@ -242,8 +260,12 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
 
           <InvitePhoneNumberField
             id="phoneNumber"
-            value={formData.phoneNumber}
-            onChange={handleInput}
+            countryCode={formData.countryCode}
+            phoneNumber={formData.phoneNumber}
+            onCountryCodeChange={(countryCode) =>
+              setFormData((prev) => ({ ...prev, countryCode }))
+            }
+            onPhoneNumberChange={handleInput}
           />
 
           {/* Address(es) – checkboxes for Resident (one email, multiple apartments) */}

@@ -158,17 +158,15 @@ export default function TrustedBy() {
             </div>
           </div>
 
-          {/* Hub logo — larger, lowered so it sits more on the black/white edge */}
-          <div className="absolute left-1/2 bottom-0 z-30 -translate-x-1/2 translate-y-1/2 sm:translate-y-[28%]">
+          {/* Hub logo — overlaps the black/white boundary and sits above the dotted band */}
+          <div className="absolute left-1/2 bottom-[-8px] z-40 -translate-x-1/2 sm:bottom-[-12px]">
             <div className="relative flex items-center justify-center">
-              {/* subtle orange glow behind the white tile */}
               <div
                 aria-hidden="true"
-                className="absolute -inset-1 rounded-2xl bg-[#FA8128] opacity-20 blur-3xl"
+                className="absolute -inset-2 rounded-2xl bg-[#FA8128] opacity-25 blur-3xl"
               />
 
-              {/* white rounded tile for the B logo */}
-              <div className="relative flex h-[104px] w-[104px] items-center justify-center rounded-2xl bg-white shadow-[0_20px_60px_rgba(0,0,0,0.25)] sm:h-[120px] sm:w-[120px]">
+              <div className="relative z-20 flex h-[104px] w-[104px] items-center justify-center rounded-[28px] bg-white shadow-[0_20px_60px_rgba(0,0,0,0.25)] sm:h-[120px] sm:w-[120px]">
                 <Image
                   src="/assets/trustedby/logo.svg"
                   alt="Berta Hub"

@@ -136,7 +136,7 @@ export default function FeaturesSection() {
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={activeTab}
-            className="mt-10 grid items-stretch gap-8 lg:mt-12 lg:grid-cols-2 lg:gap-12"
+            className="mt-10 grid items-stretch gap-8 md:mt-12 md:gap-12 lg:mt-12 lg:grid-cols-2 lg:gap-12"
             initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
@@ -146,8 +146,8 @@ export default function FeaturesSection() {
                 : { type: "spring", bounce: 0, duration: 0.4 }
             }
           >
-            <div className="relative mx-auto w-full max-w-[560px] overflow-hidden rounded-[28px] lg:mx-0 lg:max-w-none">
-              <div className="relative aspect-600/687 w-full">
+            <div className="relative mx-auto w-full max-w-[560px] overflow-hidden rounded-[28px] lg:mx-0 lg:max-w-none h-full">
+              <div className="relative h-full w-full min-h-[320px] sm:min-h-[380px] md:min-h-[420px] lg:min-h-[480px]">
                 <Image
                   src={audience.image}
                   alt={audience.imageAlt}
@@ -159,7 +159,7 @@ export default function FeaturesSection() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-4 sm:gap-5">
+            <div className="flex flex-col gap-4 sm:gap-5 mx-auto w-full max-w-[560px] lg:mx-0 lg:max-w-none lg:justify-center">
               {audience.features.map((feature, index) => (
                 <FeatureCard
                   key={`${activeTab}-${feature.title}-${index}`}

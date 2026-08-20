@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { useReducedMotion } from "framer-motion";
@@ -67,6 +67,73 @@ function formatDesignationDate(value?: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+const VISIBLE_MODULE_LIMIT = 2;
+
+function DesignationModulesCell({
+  modules,
+}: Readonly<{ modules?: string[] }>) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const mods = modules ?? [];
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  if (!mods.length) return <span className="text-muted-foreground">—</span>;
+
+  const visible = mods.slice(0, VISIBLE_MODULE_LIMIT);
+  const overflow = mods.slice(VISIBLE_MODULE_LIMIT);
+
+  return (
+    <div className="relative flex flex-wrap items-center gap-1" ref={ref}>
+      {visible.map((key) => (
+        <span
+          key={key}
+          className="px-2 py-0.5 rounded-full text-xs bg-muted whitespace-nowrap"
+        >
+          {labelForEstateModule(key)}
+        </span>
+      ))}
+      {overflow.length > 0 ? (
+        <>
+          <button
+            type="button"
+            onClick={() => setOpen((value) => !value)}
+            className="px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors cursor-pointer whitespace-nowrap"
+          >
+            +{overflow.length} more
+          </button>
+          {open ? (
+            <div className="absolute left-0 top-full mt-1 z-50 w-64 max-w-[min(16rem,70vw)] rounded-lg border border-border bg-popover shadow-md p-3">
+              <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
+                All modules ({mods.length})
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {mods.map((key) => (
+                  <span
+                    key={key}
+                    className="px-2 py-0.5 rounded-full text-xs bg-muted whitespace-nowrap"
+                  >
+                    {labelForEstateModule(key)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  );
 }
 
 export function DesignationsManager({ role }: Readonly<Props>) {
@@ -321,6 +388,12 @@ export function DesignationsManager({ role }: Readonly<Props>) {
   const columns = useMemo(
     () => [
       {
+        key: "createdAt",
+        header: "Created",
+        render: (item: Designation) => formatDesignationDate(item.createdAt),
+        exportValue: (item: Designation) => item.createdAt ?? "",
+      },
+      {
         key: "name",
         header: "Name",
         render: (item: Designation) => item.name || "—",
@@ -333,10 +406,9 @@ export function DesignationsManager({ role }: Readonly<Props>) {
       {
         key: "modules",
         header: "Modules",
-        render: (item: Designation) =>
-          item.modules?.length
-            ? item.modules.map(labelForEstateModule).join(", ")
-            : "—",
+        render: (item: Designation) => (
+          <DesignationModulesCell modules={item.modules} />
+        ),
         exportValue: (item: Designation) =>
           (item.modules ?? []).map(labelForEstateModule).join(", "),
       },
@@ -360,12 +432,6 @@ export function DesignationsManager({ role }: Readonly<Props>) {
             {item.isActive ? "Active" : "Inactive"}
           </span>
         ),
-      },
-      {
-        key: "createdAt",
-        header: "Created",
-        render: (item: Designation) => formatDesignationDate(item.createdAt),
-        exportValue: (item: Designation) => item.createdAt ?? "",
       },
       {
         key: "actions",

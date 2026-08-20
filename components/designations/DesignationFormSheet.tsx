@@ -255,10 +255,7 @@ export function DesignationFormSheet({
           </div>
         ) : null}
 
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={onClose} disabled={saving}>
-            Cancel
-          </Button>
+        <div className="flex justify-end pt-2">
           <Button
             className="text-white"
             style={{ backgroundColor: "#0150AC" }}

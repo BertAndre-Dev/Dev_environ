@@ -7,6 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
 import { cn } from "@/lib/utils";
+import { CommentThread } from "@/components/maintenance/comment-thread";
+import {
+  authorInitials,
+  residentIdFromComplaint,
+} from "@/lib/maintenance-comments";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type {
   ResidentComplaintItem,
@@ -42,24 +47,6 @@ function formatDate(dateString?: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-function getAddressDisplay(
-  addressId?: ResidentComplaintItem["addressId"],
-): string {
-  if (!addressId) return "—";
-  if (typeof addressId === "object" && addressId?.data) {
-    const parts = Object.values(addressId.data).filter(Boolean);
-    return parts.length ? parts.join(", ") : "—";
-  }
-  return "—";
-}
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 function getRequesterName(complaint: ResidentComplaintItem): string {
@@ -99,10 +86,6 @@ export function ResidentComplaintCard({
         | null,
   );
   const userId = authUser?.id ?? authUser?._id ?? "";
-  const commenterName = [authUser?.firstName, authUser?.lastName]
-    .filter(Boolean)
-    .join(" ")
-    .trim();
 
   const comments = useSelector((state: RootState) => {
     const s = state.residentComplaints as {
@@ -150,39 +133,44 @@ export function ResidentComplaintCard({
       .finally(() => setSubmittingComment(false));
   };
 
-  // const location = getAddressDisplay(complaint.addressId);
   const ticketLabel = `#${complaint.ticketNumber || String(complaint.id).slice(-8).toUpperCase()}`;
+  const requesterName = getRequesterName(complaint);
 
   return (
     <Card
       className={cn(
-        "overflow-hidden transition-shadow",
-        isExpanded && "ring-2 ring-primary",
+        "mt-0 gap-0 overflow-hidden rounded-2xl border-border/70 py-0 shadow-sm",
+        "transition-shadow duration-150 ease-out",
+        isExpanded && "ring-2 ring-primary/70 shadow-md",
       )}
     >
       <CardContent className="p-0">
-        <div className="p-4 space-y-4 overflow-auto h-[250px]">
+        <div className="space-y-4 p-4 sm:p-5">
           <button
             type="button"
-            className="w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+            className="w-full cursor-pointer rounded-xl text-left outline-none transition-transform duration-100 ease-out active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100"
             onClick={onToggle}
           >
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  {getRequesterName(complaint)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {formatDate(complaint.createdAt)}
-                </p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#0150AC]/10 text-sm font-semibold text-[#0150AC]">
+                  {authorInitials(requesterName) || "R"}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-[15px] font-semibold leading-tight tracking-[-0.01em]">
+                    {requesterName}
+                  </p>
+                  <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
+                    {formatDate(complaint.createdAt)}
+                  </p>
+                </div>
               </div>
-
-              <div className="flex flex-col items-center justify-center gap-2">
-                <span className="text-sm font-medium text-muted-foreground shrink-0">
+              <div className="flex shrink-0 flex-col items-end gap-2">
+                <span className="text-[11px] font-medium tabular-nums tracking-wide text-muted-foreground">
                   {ticketLabel}
                 </span>
                 <span
-                  className="text-xs font-medium text-white rounded-lg p-2"
+                  className="rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize text-white"
                   style={{ backgroundColor: getStatusStyle(complaint.status) }}
                 >
                   {complaint.status || "—"}
@@ -190,61 +178,57 @@ export function ResidentComplaintCard({
               </div>
             </div>
 
-            <p className="font-semibold text-foreground mt-2">
+            <p className="mt-3 text-base font-semibold leading-snug tracking-[-0.015em]">
               {complaint.title || "Maintenance request"}
             </p>
-            <p className="text-sm text-foreground whitespace-pre-wrap mt-1">
+            <p
+              className={cn(
+                "mt-1 text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap",
+                !isExpanded && "line-clamp-3",
+              )}
+            >
               {complaint.description || "No description."}
             </p>
           </button>
 
-          {isExpanded && (
+          {isExpanded ? (
             <>
-              {comments.length > 0 && (
-                <div className="space-y-3 pt-2 border-t border-border">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Comments
+              {comments.length > 0 ? (
+                <div className="space-y-3 border-t border-border/70 pt-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Comments · {comments.length}
                   </p>
-                  {comments.map((c) => (
-                    <div
-                      key={c.id}
-                      className="flex p-2 rounded-lg shadow-sm border border-[#E0E0E0] gap-2"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs border border-[#A1BFE4] font-medium shrink-0">
-                        {getInitials(commenterName)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{commenterName}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDate(c.createdAt)}
-                        </p>
-                        <p className="text-sm text-foreground mt-0.5">
-                          {c.text}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                  <CommentThread
+                    comments={comments}
+                    residentId={residentIdFromComplaint(complaint)}
+                    formatDate={formatDate}
+                  />
                 </div>
-              )}
+              ) : null}
 
               <form
                 onSubmit={handleSubmitComment}
-                className="flex gap-2 pt-2 border-t border-border"
+                className="flex items-center gap-2 rounded-full border border-border/70 bg-muted/50 p-1 pl-4"
               >
                 <Input
                   type="text"
-                  placeholder="Write a comment..."
+                  placeholder="Write a comment…"
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
-                  className="flex-1"
+                  className="h-9 flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
                   disabled={submittingComment}
                 />
-                <Button type="submit" size="sm" disabled={submittingComment}>
-                  {submittingComment ? "..." : "Comment"}
+                <Button
+                  type="submit"
+                  size="sm"
+                  className="h-9 shrink-0 cursor-pointer rounded-full px-4 active:scale-[0.97]"
+                  disabled={submittingComment}
+                >
+                  {submittingComment ? "Sending" : "Send"}
                 </Button>
               </form>
             </>
-          )}
+          ) : null}
         </div>
       </CardContent>
     </Card>

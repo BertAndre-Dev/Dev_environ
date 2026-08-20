@@ -10,6 +10,11 @@ import { MapPin, MessageCircle } from "lucide-react";
 import { toast } from "react-toastify";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { cn } from "@/lib/utils";
+import { CommentThread } from "@/components/maintenance/comment-thread";
+import {
+  authorInitials,
+  residentIdFromComplaint,
+} from "@/lib/maintenance-comments";
 import type {
   ComplaintItem,
   CommentItem,
@@ -72,20 +77,11 @@ function getRequesterName(complaint: ComplaintItem): string {
   return "Requester";
 }
 
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((s) => s[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
-
 interface MaintenanceRequestCardProps {
-  complaint: ComplaintItem;
-  estateName?: string;
-  isSelected?: boolean;
-  onSelect?: () => void;
+  readonly complaint: ComplaintItem;
+  readonly estateName?: string;
+  readonly isSelected?: boolean;
+  readonly onSelect?: () => void;
 }
 
 export function MaintenanceRequestCard({
@@ -119,12 +115,13 @@ export function MaintenanceRequestCard({
   );
 
   useEffect(() => {
+    if (!isSelected) return;
     dispatch(
       getCommentsByComplaint({ complaintId: complaint.id, page: 1, limit: 50 }),
     )
       .unwrap()
       .catch(() => {});
-  }, [complaint.id, dispatch]);
+  }, [complaint.id, dispatch, isSelected]);
 
   const handleStatusChange = (newStatus: string) => {
     if (newStatus === complaint.status) return;
@@ -165,9 +162,10 @@ export function MaintenanceRequestCard({
   };
 
   const requesterName = getRequesterName(complaint);
-  // const location = getAddressDisplay(complaint.addressId);
-  // // const locationParts = [location, estateName].filter(Boolean);
-  // // const locationLine = locationParts.length > 0 ? locationParts.join : location;
+  const addressLine = getAddressDisplay(complaint.addressId);
+  const locationLine = [addressLine !== "—" ? addressLine : null, estateName]
+    .filter(Boolean)
+    .join(" · ");
   const ticketDisplay =
     complaint.ticketNumber ||
     `MR-${String(complaint.id).slice(-8).toUpperCase()}`;
@@ -175,111 +173,114 @@ export function MaintenanceRequestCard({
   return (
     <Card
       className={cn(
-        "overflow-hidden transition-shadow",
-        isSelected && "ring-2 ring-primary",
+        "mt-0 gap-0 overflow-hidden rounded-2xl border-border/70 py-0 shadow-sm",
+        "transition-[box-shadow,transform] duration-150 ease-out",
+        isSelected && "ring-2 ring-primary/70 shadow-md",
       )}
-      onClick={onSelect}
     >
       <CardContent className="p-0">
-        <div className="p-3 space-y-4">
-          {/* Header */}
-          <div className="flex flex-row items-start lg:items-center justify-between gap-3">
-            <div className="flex gap-1">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary shrink-0">
-                {getInitials(requesterName)}
+        <div className="space-y-4 p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3">
+            <button
+              type="button"
+              onClick={onSelect}
+              aria-expanded={isSelected}
+              className="flex min-w-0 flex-1 cursor-pointer flex-col text-left outline-none transition-transform duration-100 ease-out active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100"
+            >
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#0150AC]/10 text-sm font-semibold text-[#0150AC]">
+                  {authorInitials(requesterName) || "R"}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-[15px] font-semibold leading-tight tracking-[-0.01em]">
+                    {requesterName}
+                  </p>
+                  <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
+                    {formatDate(complaint.createdAt)}
+                  </p>
+                  {locationLine ? (
+                    <p className="mt-1 flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                      <MapPin className="size-3.5 shrink-0" aria-hidden />
+                      <span className="truncate">{locationLine}</span>
+                    </p>
+                  ) : null}
+                </div>
               </div>
-              <div>
-                <p className="font-semibold text-foreground">{requesterName}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {formatDate(complaint.createdAt)}
-                </p>
-                <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                  <MapPin className="w-3.5 h-3.5 shrink-0" />
-                  <span>
-                    {estateName}
-                  </span>
+              <div className="mt-3 space-y-1.5">
+                {complaint.title ? (
+                  <p className="text-base font-semibold leading-snug tracking-[-0.015em]">
+                    {complaint.title}
+                  </p>
+                ) : null}
+                <p
+                  className={cn(
+                    "text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap",
+                    !isSelected && "line-clamp-3",
+                  )}
+                >
+                  {complaint.description || "No description."}
                 </p>
               </div>
-            </div>
-            <div className="flex flex-col items-start lg:items-center justify-center gap-2">
-              <span className="text-sm font-medium text-muted-foreground shrink-0 pb-2">
+            </button>
+            <div className="flex shrink-0 flex-col items-end gap-2">
+              <span className="text-[11px] font-medium tabular-nums tracking-wide text-muted-foreground">
                 #{ticketDisplay}
               </span>
-              <div className="relative min-w-[120px]">
-                <Select
-                  options={STATUS_OPTIONS_API}
-                  value={complaint.status}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    handleStatusChange(e.target.value);
-                  }}
-                  disabled={updateStatusLoading}
-                  className="min-w-[120px] pr-8 text-white border-0 font-medium cursor-pointer"
-                  style={{
-                    backgroundColor: getStatusStyle(complaint.status),
-                  }}
-                />
-              </div>
+              <Select
+                options={STATUS_OPTIONS_API}
+                value={complaint.status}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  handleStatusChange(e.target.value);
+                }}
+                disabled={updateStatusLoading}
+                className="min-w-34 cursor-pointer rounded-full border-0 pr-8 text-xs font-semibold text-white"
+                style={{
+                  backgroundColor: getStatusStyle(complaint.status),
+                }}
+              />
             </div>
           </div>
 
-          {/* Title */}
-          {complaint.title && (
-            <p className="font-semibold text-foreground">{complaint.title}</p>
-          )}
-
-          {/* Description */}
-          <p className="text-sm text-foreground whitespace-pre-wrap">
-            {complaint.description || "No description."}
-          </p>
-
-          {/* Comments list */}
-          {comments.length > 0 && (
-            <div className="space-y-3 pt-2 border-t border-border">
-              <p className="text-xs font-medium text-muted-foreground">
-                Comments
-              </p>
-              {comments.map((c) => (
-                    <div key={c.id} className="flex p-2 rounded-lg shadow-sm border border-[#E0E0E0] gap-2">
-                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs border border-[#A1BFE4] font-medium shrink-0">
-                    FM
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">Facility Manager</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDate(c.createdAt)}
-                    </p>
-                    <p className="text-sm text-foreground mt-0.5">{c.text}</p>
-                  </div>
+          {isSelected ? (
+            <>
+              {comments.length > 0 ? (
+                <div className="space-y-3 border-t border-border/70 pt-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Comments · {comments.length}
+                  </p>
+                  <CommentThread
+                    comments={comments}
+                    residentId={residentIdFromComplaint(complaint)}
+                    formatDate={formatDate}
+                  />
                 </div>
-              ))}
-            </div>
-          )}
+              ) : null}
 
-          {/* Comment form */}
-          <form
-            onSubmit={handleSubmitComment}
-            className="flex flex-row items-center justify-between gap-2 pt-2 border-t border-border"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Input
-              type="text"
-              placeholder="Write a comment..."
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              className="flex-1"
-              disabled={submittingComment}
-            />
-            <Button
-              type="submit"
-              className="cursor-pointer"
-              size="sm"
-              disabled={submittingComment}
-            >
-              <MessageCircle className="w-4 h-4 mr-1.5" />
-              {submittingComment ? "..." : "Comment"}
-            </Button>
-          </form>
+              <form
+                onSubmit={handleSubmitComment}
+                className="flex items-center gap-2 rounded-full border border-border/70 bg-muted/50 p-1 pl-4"
+              >
+                <Input
+                  type="text"
+                  placeholder="Write a comment…"
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  className="h-9 flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                  disabled={submittingComment}
+                />
+                <Button
+                  type="submit"
+                  className="h-9 shrink-0 cursor-pointer rounded-full px-4 active:scale-[0.97]"
+                  size="sm"
+                  disabled={submittingComment}
+                >
+                  <MessageCircle className="size-4" />
+                  {submittingComment ? "Sending" : "Send"}
+                </Button>
+              </form>
+            </>
+          ) : null}
         </div>
       </CardContent>
     </Card>

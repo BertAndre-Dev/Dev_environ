@@ -18,6 +18,12 @@ export interface InvitedUserData {
   /** Set to "owner" | "tenant" for residents; null for staff, security, admin, etc. */
   residentType: string | null;
   addressIds: string[];
+  /** Required when inviting staff. */
+  designationId?: string;
+  /** Required when inviting a company or estate. */
+  plan?: string;
+  /** Optional modules granted when inviting staff. */
+  modules?: string[];
 }
 
 interface VerifyInvitedUserData {

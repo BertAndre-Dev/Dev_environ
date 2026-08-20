@@ -68,6 +68,8 @@ type CountryCodeSelectProps = {
   disabled?: boolean;
   className?: string;
   placeholder?: string;
+  /** Sit inside a combined phone field (no outer border/margin). */
+  embedded?: boolean;
 };
 
 export function CountryCodeSelect({
@@ -77,6 +79,7 @@ export function CountryCodeSelect({
   disabled = false,
   className,
   placeholder = "Select code",
+  embedded = false,
 }: CountryCodeSelectProps) {
   const generatedId = useId();
   const triggerId = id ?? generatedId;
@@ -161,19 +164,29 @@ export function CountryCodeSelect({
           aria-expanded={open}
           aria-controls={listId}
           className={cn(
-            "mt-2 flex h-10 w-full items-center gap-2 rounded-md border border-border bg-background px-3 text-left text-sm outline-none",
+            "flex h-10 items-center gap-2 bg-background text-left text-sm outline-none",
             "transition-[transform,box-shadow,border-color] duration-100 ease-out",
-            "active:scale-[0.97]",
-            "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
             "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
             "motion-reduce:transition-none motion-reduce:active:scale-100",
+            embedded
+              ? "h-full w-auto shrink-0 rounded-none border-0 px-2.5 shadow-none active:bg-black/5 focus-visible:bg-black/5 dark:active:bg-white/10"
+              : [
+                  "mt-2 w-full rounded-md border border-border px-3",
+                  "active:scale-[0.97]",
+                  "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                ],
             className,
           )}
         >
           {selected ? (
             <>
               <CountryFlag iso={selected.iso} name={selected.name} />
-              <span className="min-w-0 flex-1 truncate tabular-nums tracking-tight">
+              <span
+                className={cn(
+                  "tabular-nums tracking-tight",
+                  embedded ? "shrink-0" : "min-w-0 flex-1 truncate",
+                )}
+              >
                 {selected.dialCode}
               </span>
             </>

@@ -15,9 +15,11 @@ import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-esta
 import {
   buildInviteUserPayload,
   COMPANY_INVITE_ROLE_OPTIONS,
+  inviteRequiresPlan,
   validateEnergyProviderInviteScope,
 } from "@/lib/invite-user-roles";
 import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
+import { InvitePlanSelect } from "@/components/invite/InvitePlanSelect";
 import {
   DEFAULT_COUNTRY_CODE,
   PHONE_E164_ERROR,
@@ -38,6 +40,7 @@ type FormState = {
   phoneNumber: string;
   countryCode: string;
   role: string;
+  plan: string;
 };
 
 export default function CompanyInviteUserForm({
@@ -54,6 +57,7 @@ export default function CompanyInviteUserForm({
     phoneNumber: "",
     countryCode: DEFAULT_COUNTRY_CODE,
     role: "",
+    plan: "",
   });
   const [estates, setEstates] = useState<{ id: string; name: string }[]>([]);
   const [loadingEstates, setLoadingEstates] = useState(false);
@@ -127,6 +131,9 @@ export default function CompanyInviteUserForm({
       companyId,
     });
     if (energyProviderError) return toast.error(energyProviderError);
+    if (inviteRequiresPlan(formData.role) && !formData.plan.trim()) {
+      return toast.error("Please select a plan.");
+    }
 
     setSubmitting(true);
     try {
@@ -142,6 +149,7 @@ export default function CompanyInviteUserForm({
             inviteContext: "company",
             estateId: formData.estateId,
             companyId,
+            plan: inviteRequiresPlan(formData.role) ? formData.plan : undefined,
           }),
         ),
       ).unwrap();
@@ -154,6 +162,7 @@ export default function CompanyInviteUserForm({
         phoneNumber: "",
         countryCode: DEFAULT_COUNTRY_CODE,
         role: "",
+        plan: "",
       });
       onSuccess?.();
       onClose();
@@ -228,11 +237,19 @@ export default function CompanyInviteUserForm({
                 setFormData((prev) => ({
                   ...prev,
                   role: opt?.value ?? "",
+                  plan: inviteRequiresPlan(opt?.value ?? "") ? prev.plan : "",
                 }))
               }
               placeholder="Select role"
             />
           </div>
+          {inviteRequiresPlan(formData.role) ? (
+            <InvitePlanSelect
+              value={formData.plan}
+              onChange={(plan) => setFormData((prev) => ({ ...prev, plan }))}
+              disabled={submitting}
+            />
+          ) : null}
           <InvitePhoneNumberField
             id="invite-phone"
             countryCode={formData.countryCode}

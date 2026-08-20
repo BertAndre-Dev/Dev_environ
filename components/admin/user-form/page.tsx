@@ -14,11 +14,13 @@ import { getEntriesByField } from "@/redux/slice/admin/address-mgt/entry/entry";
 import { iniviteUser, getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
 import type { AppDispatch } from "@/redux/store";
+import { getDesignations } from "@/redux/slice/designations/designations";
 import {
   DEFAULT_COUNTRY_CODE,
   PHONE_E164_ERROR,
   toE164PhoneNumber,
 } from "@/lib/phone-e164";
+import { inviteRequiresDesignation } from "@/lib/invite-user-roles";
 
 type InviteUserFormProps = {
   close: () => void;
@@ -36,6 +38,7 @@ interface InviteUserFormData {
   role: "resident" | "security" | "staff" | "company" | "";
   residentType: string | null;
   addressIds: string[];
+  designationId: string;
 }
 
 const roleOptions = [
@@ -59,10 +62,15 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
     role: "",
     residentType: null,
     addressIds: [],
+    designationId: "",
   });
 
   const [loading, setLoading] = useState(false);
   const [entryOptions, setEntryOptions] = useState<any[]>([]);
+  const [designationOptions, setDesignationOptions] = useState<
+    { label: string; value: string }[]
+  >([]);
+  const [designationLoading, setDesignationLoading] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -141,6 +149,45 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
     load();
   }, [dispatch]);
 
+  useEffect(() => {
+    if (!inviteRequiresDesignation(formData.role) || !formData.estateId) {
+      setDesignationOptions([]);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      setDesignationLoading(true);
+      try {
+        const res = await dispatch(
+          getDesignations({
+            estateId: formData.estateId,
+            companyId: formData.companyId || undefined,
+            page: 1,
+            limit: 200,
+          }),
+        ).unwrap();
+        if (cancelled) return;
+        setDesignationOptions(
+          (res.items ?? [])
+            .filter((item) => item.isActive)
+            .map((item) => ({ value: item.id, label: item.name })),
+        );
+      } catch (err: unknown) {
+        if (cancelled) return;
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+        setDesignationOptions([]);
+      } finally {
+        if (!cancelled) setDesignationLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch, formData.role, formData.estateId, formData.companyId]);
+
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
@@ -175,6 +222,10 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
       }
     }
 
+    if (inviteRequiresDesignation(formData.role) && !formData.designationId.trim()) {
+      return toast.error("Please select a designation.");
+    }
+
     // companyId is optional on the invite endpoint — only include it when we
     // actually resolved one for the signed-in admin. This prevents sending
     // empty/null ids which trigger backend ObjectId cast errors.
@@ -188,7 +239,10 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
       phoneNumber: e164Phone,
       countryCode: formData.countryCode.trim(),
       role: formData.role,
-      residentType: formData.role === "resident" ? "owner" : "owner",
+      residentType: formData.role === "resident" ? "owner" : null,
+      ...(inviteRequiresDesignation(formData.role)
+        ? { designationId: formData.designationId.trim() }
+        : {}),
       // Guard against accidental empty ids (prevents backend ObjectId cast errors)
       addressIds:
         formData.role === "resident"
@@ -252,11 +306,41 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
                   role,
                   residentType: role === "resident" ? prev.residentType ?? "owner" : null,
                   addressIds: role === "resident" ? prev.addressIds : [],
+                  designationId: inviteRequiresDesignation(role)
+                    ? prev.designationId
+                    : "",
                 }));
               }}
               placeholder="Select role"
             />
           </div>
+
+          {inviteRequiresDesignation(formData.role) ? (
+            <div>
+              <Label>Designation</Label>
+              <Select
+                options={designationOptions}
+                value={
+                  designationOptions.find(
+                    (option) => option.value === formData.designationId,
+                  ) ?? null
+                }
+                onChange={(opt) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    designationId: opt?.value ?? "",
+                  }))
+                }
+                isLoading={designationLoading}
+                placeholder={
+                  designationLoading
+                    ? "Loading designations..."
+                    : "Select designation"
+                }
+                noOptionsMessage={() => "No designations in this estate"}
+              />
+            </div>
+          ) : null}
 
           <InvitePhoneNumberField
             id="phoneNumber"

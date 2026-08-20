@@ -12,12 +12,14 @@ import { iniviteUser } from "@/redux/slice/auth-mgt/auth-mgt"; // keep name you 
 import { getCompanies } from "@/redux/slice/super-admin/company-mgt/company";
 import {
   buildInviteUserPayload,
+  inviteRequiresPlan,
   isEnergyProviderRole,
   SUPER_ADMIN_COMPANY_INVITE_ROLE_OPTIONS,
   SUPER_ADMIN_ESTATE_INVITE_ROLE_OPTIONS,
   validateEnergyProviderInviteScope,
 } from "@/lib/invite-user-roles";
 import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
+import { InvitePlanSelect } from "@/components/invite/InvitePlanSelect";
 import { toast } from "react-toastify";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch, RootState } from "@/redux/store";
@@ -40,6 +42,7 @@ interface InviteUserFormData {
   phoneNumber: string;
   countryCode: string;
   role: string;
+  plan: string;
 }
 
 // ✅ FIXED: Correct React.FC syntax
@@ -55,6 +58,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
     phoneNumber: "",
     countryCode: DEFAULT_COUNTRY_CODE,
     role: "",
+    plan: "",
   });
 
   const [estates, setEstates] = useState<any[]>([]);
@@ -145,6 +149,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
         return {
           ...prev,
           role: nextValue,
+          plan: inviteRequiresPlan(nextValue) ? prev.plan : "",
         };
       }
       return { ...prev, [field]: nextValue };
@@ -161,6 +166,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
       phoneNumber: "",
       countryCode: DEFAULT_COUNTRY_CODE,
       role: "",
+      plan: "",
     });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -197,6 +203,9 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
       companyId: formData.companyId,
     });
     if (energyProviderError) return toast.error(energyProviderError);
+    if (inviteRequiresPlan(formData.role) && !formData.plan.trim()) {
+      return toast.error("Please select a plan.");
+    }
 
     setSubmitting(true);
     try {
@@ -210,6 +219,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
         inviteContext: inviteScope,
         estateId: formData.estateId,
         companyId: formData.companyId,
+        plan: inviteRequiresPlan(formData.role) ? formData.plan : undefined,
       });
       const res = await dispatch(iniviteUser(payload) as any).unwrap();
       toast.success(res?.message || "User invited successfully");
@@ -294,7 +304,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
                   checked={inviteScope === "estate"}
                   onChange={() => {
                     setInviteScope("estate");
-                    setFormData((p) => ({ ...p, companyId: "", role: "" }));
+                    setFormData((p) => ({ ...p, companyId: "", role: "", plan: "" }));
                   }}
                 />
                 Estate
@@ -307,7 +317,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
                   checked={inviteScope === "company"}
                   onChange={() => {
                     setInviteScope("company");
-                    setFormData((p) => ({ ...p, estateId: "", role: "" }));
+                    setFormData((p) => ({ ...p, estateId: "", role: "", plan: "" }));
                   }}
                 />
                 Company
@@ -375,6 +385,14 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
               isClearable
             />
           </div>
+
+          {inviteRequiresPlan(formData.role) ? (
+            <InvitePlanSelect
+              value={formData.plan}
+              onChange={(plan) => setFormData((prev) => ({ ...prev, plan }))}
+              disabled={submitting}
+            />
+          ) : null}
 
           <InvitePhoneNumberField
             id="phoneNumber"

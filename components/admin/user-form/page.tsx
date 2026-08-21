@@ -20,7 +20,7 @@ import {
   PHONE_E164_ERROR,
   toE164PhoneNumber,
 } from "@/lib/phone-e164";
-import { inviteRequiresDesignation, type AdminInviteRole, getAdminInviteLabel } from "@/lib/invite-user-roles";
+import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
 
 type InviteUserFormProps = {
   close: () => void;
@@ -94,18 +94,10 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
             ? rawEstateId
             : rawEstateId?._id || rawEstateId?.id || "";
 
-        const rawCompanyId = (data as any)?.companyId as
-          | string
-          | { id?: string; _id?: string }
-          | undefined;
-        const companyId =
-          typeof rawCompanyId === "string"
-            ? rawCompanyId
-            : rawCompanyId?._id ||
-              rawCompanyId?.id ||
-              (data as any)?.company?._id ||
-              (data as any)?.company?.id ||
-              "";
+        const company = parseCompanyFromUser(
+          data as Record<string, unknown>,
+        );
+        const companyId = company?.id ?? "";
 
         // Stash whatever ids we found so submit can validate later.
         setFormData((prev) => ({ ...prev, estateId, companyId }));
@@ -155,10 +147,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
   }, [dispatch]);
 
   useEffect(() => {
-    if (
-      !inviteRequiresDesignation(formData.role) ||
-      (!formData.companyId && !formData.estateId)
-    ) {
+    if (!inviteRequiresDesignation(formData.role) || !formData.companyId) {
       setDesignationOptions([]);
       return;
     }
@@ -169,8 +158,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
       try {
         const res = await dispatch(
           getDesignations({
-            companyId: formData.companyId || undefined,
-            estateId: formData.companyId ? undefined : formData.estateId,
+            companyId: formData.companyId,
             page: 1,
             limit: 200,
           }),
@@ -194,7 +182,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [dispatch, formData.role, formData.estateId, formData.companyId]);
+  }, [dispatch, formData.role, formData.companyId]);
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -351,7 +339,11 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
                     ? "Loading designations..."
                     : "Select designation"
                 }
-                noOptionsMessage={() => "No designations in this estate"}
+                noOptionsMessage={() =>
+                  formData.companyId
+                    ? "No designations for this company"
+                    : "No company linked to load designations"
+                }
               />
             </div>
           ) : null}

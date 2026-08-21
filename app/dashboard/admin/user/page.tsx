@@ -52,8 +52,8 @@ import { getDesignations } from "@/redux/slice/designations/designations";
 import {
   designationLabelForUser,
   designationNamesById,
-  normalizeEntityId,
 } from "@/lib/designations";
+import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
 
 interface AdminUserData {
   id?: string;
@@ -239,9 +239,10 @@ export default function AdminUserPage() {
       setDesignationNames({});
       return;
     }
-    const companyId = normalizeEntityId(user?.companyId ?? user?.company);
-    const estateId = selectedEstate?.value;
-    if (!companyId && !estateId) {
+    const companyId = user
+      ? parseCompanyFromUser(user as Record<string, unknown>)?.id ?? ""
+      : "";
+    if (!companyId) {
       setDesignationNames({});
       return;
     }
@@ -251,8 +252,7 @@ export default function AdminUserPage() {
       try {
         const res = await dispatch(
           getDesignations({
-            companyId: companyId || undefined,
-            estateId: companyId ? undefined : estateId,
+            companyId,
             includeInactive: true,
             page: 1,
             limit: 200,
@@ -268,7 +268,7 @@ export default function AdminUserPage() {
     return () => {
       cancelled = true;
     };
-  }, [dispatch, roleFilter, selectedEstate?.value, user]);
+  }, [dispatch, roleFilter, user]);
 
   const handleEstateModal = (user?: AdminUserData) => {
     setSelectedUser(user || null);

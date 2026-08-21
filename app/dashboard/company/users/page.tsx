@@ -65,12 +65,12 @@ import { DesignationsManager } from "@/components/designations/DesignationsManag
 type CompanyStaffPageTab = "staff" | "designations";
 
 const COMPANY_STAFF_TABS: { id: CompanyStaffPageTab; label: string }[] = [
-  { id: "staff", label: "Staff" },
   { id: "designations", label: "Designations" },
+  { id: "staff", label: "Staff" },
 ];
 
 function parseCompanyStaffTab(raw: string | null): CompanyStaffPageTab {
-  return raw === "designations" ? "designations" : "staff";
+  return raw === "staff" ? "staff" : "designations";
 }
 
 interface EstateOption {
@@ -160,7 +160,7 @@ export default function CompanyUsersPage() {
     (tab: CompanyStaffPageTab) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set("role", "staff");
-      if (tab === "designations") params.set("tab", "designations");
+      if (tab === "staff") params.set("tab", "staff");
       else params.delete("tab");
       router.replace(`/dashboard/company/users?${params.toString()}`, {
         scroll: false,

@@ -178,6 +178,11 @@ export function getDesignationScope(item: Designation): DesignationScope {
   return item.estateId ? "estate" : "company";
 }
 
+/** Company titles have a companyId and no estate (estateId is null/empty). */
+export function isCompanyScopedDesignation(item: Designation): boolean {
+  return Boolean(item.companyId) && !item.estateId;
+}
+
 export function isInheritedCompanyTitle(
   item: Designation,
   estateId: string,

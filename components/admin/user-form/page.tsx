@@ -15,7 +15,7 @@ import { iniviteUser, getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
 import type { AppDispatch } from "@/redux/store";
 import { getDesignations } from "@/redux/slice/designations/designations";
-import { DESIGNATIONS_PAGE_SIZE } from "@/lib/designations";
+import { DESIGNATIONS_PAGE_SIZE, isCompanyScopedDesignation } from "@/lib/designations";
 import {
   DEFAULT_COUNTRY_CODE,
   PHONE_E164_ERROR,
@@ -172,7 +172,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
         if (cancelled) return;
         setDesignationOptions(
           (res.items ?? [])
-            .filter((item) => item.isActive)
+            .filter((item) => item.isActive && isCompanyScopedDesignation(item))
             .map((item) => ({ value: item.id, label: item.name })),
         );
       } catch (err: unknown) {

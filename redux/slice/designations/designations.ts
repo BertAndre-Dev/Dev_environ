@@ -5,6 +5,7 @@ import {
   extractDesignation,
   extractDesignationPagination,
   extractDesignations,
+  isCompanyScopedDesignation,
   type Designation,
   type DesignationPagination,
 } from "@/lib/designations";
@@ -112,14 +113,27 @@ export const getDesignations = createAsyncThunk(
       const res = await axiosInstance.get("/api/v1/designations", {
         params: query,
       });
-      const items = extractDesignations(res.data);
+      let items = extractDesignations(res.data);
+      // Admin tokens return estate titles mixed into a companyId list.
+      // Company tokens return only company-owned titles. Keep that shape.
+      if (companyId && !estateId) {
+        items = items.filter(isCompanyScopedDesignation);
+      }
+      const pagination = extractDesignationPagination(res.data, {
+        page,
+        limit,
+        total: items.length,
+      });
+      if (companyId && !estateId) {
+        pagination.total = items.length;
+        pagination.pages = Math.max(
+          1,
+          Math.ceil(items.length / (pagination.limit || limit)),
+        );
+      }
       return {
         items,
-        pagination: extractDesignationPagination(res.data, {
-          page,
-          limit,
-          total: items.length,
-        }),
+        pagination,
       } satisfies DesignationListResult;
     } catch (error: unknown) {
       return rejectWithValue(

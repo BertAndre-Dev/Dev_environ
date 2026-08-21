@@ -33,9 +33,8 @@ import {
   type EstateData,
 } from "@/redux/slice/company/estate-mgt/company-estate";
 import CompanyEstateForm from "./components/CompanyEstateForm";
-import { CompanyEstateModulesForm } from "./components/CompanyEstateModulesForm";
 import { CompanyEstateStatusModal } from "./components/CompanyEstateStatusModal";
-import { labelForPlan } from "@/lib/plans";
+import { labelForPlan, formatVendAmount } from "@/lib/plans";
 
 type EstateTableRow = EstateData & {
   id?: string;
@@ -55,9 +54,7 @@ export default function CompanyEstatePage() {
   const [open, setOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ id: string; name?: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [modulesOpen, setModulesOpen] = useState(false);
   const [selectedEstate, setSelectedEstate] = useState<EstateTableRow | null>(null);
-  const [modulesEstate, setModulesEstate] = useState<EstateTableRow | null>(null);
   const [statusItem, setStatusItem] = useState<EstateTableRow | null>(null);
   const [statusMode, setStatusMode] = useState<"suspend" | "activate">("suspend");
   const [statusSubmitting, setStatusSubmitting] = useState(false);
@@ -122,18 +119,6 @@ export default function CompanyEstatePage() {
   const handleCloseModal = () => {
     setOpen(false);
     setSelectedEstate(null);
-  };
-
-  const handleModulesModal = (estate: EstateTableRow) => {
-    const id = rowId(estate);
-    if (!id) return;
-    setModulesEstate(estate);
-    setModulesOpen(true);
-  };
-
-  const handleCloseModulesModal = () => {
-    setModulesOpen(false);
-    setModulesEstate(null);
   };
 
   const handleSubmitEstate = async (data: EstateData) => {
@@ -241,6 +226,18 @@ export default function CompanyEstatePage() {
       exportValue: (item: EstateTableRow) => labelForPlan(item.plan),
     },
     {
+      key: "minVendAmount" as const,
+      header: "Min vend",
+      render: (item: EstateTableRow) => formatVendAmount(item.minVendAmount),
+      exportValue: (item: EstateTableRow) => formatVendAmount(item.minVendAmount),
+    },
+    {
+      key: "maxVendAmount" as const,
+      header: "Max vend",
+      render: (item: EstateTableRow) => formatVendAmount(item.maxVendAmount),
+      exportValue: (item: EstateTableRow) => formatVendAmount(item.maxVendAmount),
+    },
+    {
       key: "visitorVerificationMode" as const,
       header: "Visitor Verification",
       render: (item: EstateTableRow) => {
@@ -298,12 +295,6 @@ export default function CompanyEstatePage() {
                 className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100"
               >
                 Update Estate Details
-              </DropdownMenu.Item>
-              <DropdownMenu.Item
-                onSelect={() => handleModulesModal(item)}
-                className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100"
-              >
-                Update Estate Modules
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 onSelect={() =>
@@ -479,21 +470,6 @@ export default function CompanyEstatePage() {
                   : null
               }
               onSubmit={handleSubmitEstate}
-            />
-          </Modal>
-        )}
-
-        {modulesOpen && modulesEstate && rowId(modulesEstate) && (
-          <Modal visible={modulesOpen} onClose={handleCloseModulesModal}>
-            <CompanyEstateModulesForm
-              estateId={rowId(modulesEstate)}
-              estateName={modulesEstate.name}
-              initialModules={modulesEstate.modules}
-              onCancel={handleCloseModulesModal}
-              onSuccess={async () => {
-                handleCloseModulesModal();
-                await fetchEstates(Number(pagination?.currentPage) || 1);
-              }}
             />
           </Modal>
         )}

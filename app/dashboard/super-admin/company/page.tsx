@@ -29,7 +29,7 @@ import {
   type CreateCompanyPayload,
   type CompanyModuleKey,
 } from "@/redux/slice/super-admin/company-mgt/company";
-import { DEFAULT_PLAN, normalizePlanKey } from "@/lib/plans";
+import { DEFAULT_PLAN, labelForPlan, normalizePlanKey } from "@/lib/plans";
 
 const PAGE_SIZE = 10;
 
@@ -360,8 +360,16 @@ export default function SuperAdminCompanyPage() {
       { key: "address", header: "Address" },
       { key: "city", header: "City" },
       { key: "state", header: "State" },
-      { key: "country", header: "Country" },
-      {
+    { key: "country", header: "Country" },
+    {
+      key: "plan",
+      header: "Plan",
+      render: (item: CompanyItem) => (
+        <span className="font-medium">{labelForPlan(item.plan)}</span>
+      ),
+      exportValue: (item: CompanyItem) => labelForPlan(item.plan),
+    },
+    {
         key: "isActive",
         header: "Status",
         render: (item: CompanyItem) => (
@@ -474,7 +482,7 @@ export default function SuperAdminCompanyPage() {
               Company Management
             </h1>
             <p className="text-muted-foreground mt-1">
-              Create and manage companies, including enabled modules.
+              Create and manage companies and their plans.
             </p>
           </div>
 

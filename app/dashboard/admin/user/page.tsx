@@ -33,10 +33,7 @@ import InviteUserForm from "@/components/admin/user-form/page";
 import EditUserForm from "@/components/user-mgt/edit-user-form";
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import Loader from "@/components/ui/Loader";
-import Select from "react-select";
 import {
-  DEFAULT_ESTATE_USER_ROLE,
-  ADMIN_USER_ROLE_FILTER_OPTIONS,
   getEstateUserRoleTotalLabel,
   parseAdminUserRoleQuery,
   type EstateUserRoleFilter,
@@ -584,28 +581,6 @@ export default function AdminUserPage() {
               </span>
               .
             </p>
-
-            <div className="w-full max-w-xs">
-              <Select
-                options={ADMIN_USER_ROLE_FILTER_OPTIONS}
-                placeholder="Filter by role"
-                value={ADMIN_USER_ROLE_FILTER_OPTIONS.find(
-                  (o) => o.value === roleFilter,
-                )}
-                onChange={(option) =>
-                  applyRoleFilter(
-                    (option?.value as EstateUserRoleFilter) ??
-                      DEFAULT_ESTATE_USER_ROLE,
-                  )
-                }
-                isSearchable={false}
-                styles={{
-                  control: (base) => ({ ...base, cursor: "pointer" }),
-                  option: (base) => ({ ...base, cursor: "pointer" }),
-                  dropdownIndicator: (base) => ({ ...base, cursor: "pointer" }),
-                }}
-              />
-            </div>
           </div>
 
           {canInvite && !showDesignations ? (
@@ -788,7 +763,7 @@ export default function AdminUserPage() {
           <Modal
             visible={open}
             onClose={handleCloseModal}
-            contentClassName="px-3 py-3 md:w-[45%] lg:w-[35%] xl:w-[35%]"
+            contentClassName="p-4 md:w-[45%] xl:w-[35%]"
           >
             <InviteUserForm
               close={handleCloseModal}

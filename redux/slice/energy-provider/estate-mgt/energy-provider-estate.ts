@@ -1,6 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
-import { parseEstateModulesResponse } from "@/lib/estate-module-labels";
 import { toEstateWriteBody } from "@/lib/plans";
 
 export enum VisitorVerificationMode {
@@ -18,6 +17,8 @@ export interface EstateData {
   isActive?: boolean;
   modules?: string[];
   plan?: string;
+  minVendAmount?: number;
+  maxVendAmount?: number;
   visitorVerificationMode?: VisitorVerificationMode;
 }
 
@@ -28,68 +29,6 @@ export type GetEstatesParams = {
   startDate?: string;
   endDate?: string;
 };
-
-export type UpdateEstateModulesPayload = {
-  id: string;
-  modules: string[];
-};
-
-/** GET /api/v1/estate-mgt/{id}/modules — enabled modules for an estate */
-export const fetchEnergyProviderEstateEnabledModules = createAsyncThunk(
-  "energy-provider-estate/fetchEnergyProviderEstateEnabledModules",
-  async (estateId: string, { rejectWithValue }) => {
-    try {
-      const res = await axiosInstance.get(
-        `/api/v1/estate-mgt/${estateId}/modules`,
-      );
-      return { data: parseEstateModulesResponse(res.data) };
-    } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message ?? "Failed to load estate modules",
-      });
-    }
-  },
-);
-
-/** PUT /api/v1/estate-mgt/{id}/modules — set enabled modules for an estate */
-export const updateEnergyProviderEstateModules = createAsyncThunk(
-  "energy-provider-estate/updateEnergyProviderEstateModules",
-  async (payload: UpdateEstateModulesPayload, { rejectWithValue }) => {
-    try {
-      const { id, modules } = payload;
-      const res = await axiosInstance.put(`/api/v1/estate-mgt/${id}/modules`, {
-        modules,
-      });
-      return { ...res.data, updatedId: id, modules };
-    } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message ?? "Failed to update estate modules",
-      });
-    }
-  },
-);
-
-/** GET /api/v1/company-mgt/modules */
-export const fetchEnergyProviderEstateModules = createAsyncThunk(
-  "energy-provider-estate/fetchEnergyProviderEstateModules",
-  async (_, { rejectWithValue }) => {
-    try {
-      const res = await axiosInstance.get<{ data?: string[] }>(
-        "/api/v1/company-mgt/modules",
-      );
-      return res.data;
-    } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue({
-        message: err?.response?.data?.message ?? "Failed to load modules",
-      });
-    }
-  },
-);
 
 /** POST /api/v1/estate-mgt */
 export const createEnergyProviderEstate = createAsyncThunk(

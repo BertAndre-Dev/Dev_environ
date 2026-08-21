@@ -1,16 +1,12 @@
 import { createSlice } from "@reduxjs/toolkit";
-import type { RootState } from "@/redux/store";
 import {
   activateEnergyProviderEstate,
   createEnergyProviderEstate,
   deleteEnergyProviderEstate,
-  fetchEnergyProviderEstateEnabledModules,
-  fetchEnergyProviderEstateModules,
   getEnergyProviderEstateById,
   getEnergyProviderEstates,
   suspendEnergyProviderEstate,
   updateEnergyProviderEstate,
-  updateEnergyProviderEstateModules,
 } from "./energy-provider-estate";
 
 export interface EstateDetails {
@@ -54,12 +50,6 @@ export interface EnergyProviderEstateState {
   estate: EstateDetails | null;
   allEstates: AllEstatesResponse | null;
   error: string | null;
-  availableModules: string[];
-  modulesLoading: boolean;
-  modulesError: string | null;
-  estateModulesLoading: boolean;
-  estateModulesError: string | null;
-  updateEstateModulesStatus: AsyncStatus;
 }
 
 const initialState: EnergyProviderEstateState = {
@@ -73,12 +63,6 @@ const initialState: EnergyProviderEstateState = {
   estate: null,
   allEstates: null,
   error: null,
-  availableModules: [],
-  modulesLoading: false,
-  modulesError: null,
-  estateModulesLoading: false,
-  estateModulesError: null,
-  updateEstateModulesStatus: "idle",
 };
 
 function estateId(est: EstateDetails) {
@@ -105,60 +89,6 @@ const energyProviderEstateSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchEnergyProviderEstateModules.pending, (state) => {
-        state.modulesLoading = true;
-        state.modulesError = null;
-      })
-      .addCase(fetchEnergyProviderEstateModules.fulfilled, (state, action) => {
-        state.modulesLoading = false;
-        state.modulesError = null;
-        state.availableModules = Array.isArray(action.payload?.data)
-          ? action.payload.data
-          : [];
-      })
-      .addCase(fetchEnergyProviderEstateModules.rejected, (state, action) => {
-        state.modulesLoading = false;
-        state.modulesError =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to load modules";
-        state.availableModules = [];
-      })
-      .addCase(fetchEnergyProviderEstateEnabledModules.pending, (state) => {
-        state.estateModulesLoading = true;
-        state.estateModulesError = null;
-      })
-      .addCase(fetchEnergyProviderEstateEnabledModules.fulfilled, (state) => {
-        state.estateModulesLoading = false;
-        state.estateModulesError = null;
-      })
-      .addCase(fetchEnergyProviderEstateEnabledModules.rejected, (state, action) => {
-        state.estateModulesLoading = false;
-        state.estateModulesError =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to load estate modules";
-      })
-      .addCase(updateEnergyProviderEstateModules.pending, (state) => {
-        state.updateEstateModulesStatus = "isLoading";
-      })
-      .addCase(updateEnergyProviderEstateModules.fulfilled, (state, action) => {
-        state.updateEstateModulesStatus = "succeeded";
-        const updatedId = (action.payload as { updatedId?: string })?.updatedId;
-        const modules = (action.payload as { modules?: string[] })?.modules;
-        if (updatedId && modules && state.allEstates?.data) {
-          state.allEstates.data = state.allEstates.data.map((est) =>
-            estateId(est) === updatedId ? { ...est, modules } : est,
-          );
-        }
-      })
-      .addCase(updateEnergyProviderEstateModules.rejected, (state, action) => {
-        state.updateEstateModulesStatus = "failed";
-        state.error =
-          (action.payload as { message?: string } | undefined)?.message ??
-          action.error.message ??
-          "Failed to update estate modules";
-      })
       .addCase(getEnergyProviderEstates.pending, (state) => {
         state.getAllEstatesStatus = "isLoading";
         state.error = null;
@@ -309,14 +239,3 @@ export const {
   clearEnergyProviderEstates,
 } = energyProviderEstateSlice.actions;
 export default energyProviderEstateSlice.reducer;
-
-export const selectEnergyProviderAvailableModules = (state: RootState) =>
-  state.energyProviderEstate?.availableModules ?? [];
-export const selectEnergyProviderModulesLoading = (state: RootState) =>
-  state.energyProviderEstate?.modulesLoading ?? false;
-export const selectEnergyProviderModulesError = (state: RootState) =>
-  state.energyProviderEstate?.modulesError ?? null;
-export const selectEnergyProviderEstateModulesLoading = (state: RootState) =>
-  state.energyProviderEstate?.estateModulesLoading ?? false;
-export const selectEnergyProviderEstateModulesError = (state: RootState) =>
-  state.energyProviderEstate?.estateModulesError ?? null;

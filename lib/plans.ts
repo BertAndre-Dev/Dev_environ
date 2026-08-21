@@ -12,6 +12,12 @@ export const FALLBACK_PLANS: SubscriptionPlan[] = [
   { key: "premium", name: "Premium", staffAssignableModules: [] },
 ];
 
+export function formatVendAmount(value: unknown): string {
+  const amount = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(amount)) return "—";
+  return `₦${amount.toLocaleString("en-NG")}`;
+}
+
 export function labelForPlan(value: unknown): string {
   if (typeof value !== "string" || !value.trim()) return "—";
   const key = value.trim().toLowerCase();

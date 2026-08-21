@@ -44,8 +44,6 @@ import CompanyInviteUserForm from "./components/CompanyInviteUserForm";
 import { UserStatusModal } from "./components/UserStatusModal";
 import EditUserForm from "@/components/user-mgt/edit-user-form";
 import {
-  DEFAULT_ESTATE_USER_ROLE,
-  COMPANY_USER_ROLE_FILTER_OPTIONS,
   getCompanyUserRoleTotalLabel,
   parseCompanyUserRoleQuery,
   type CompanyUserRoleFilter,
@@ -143,19 +141,6 @@ export default function CompanyUsersPage() {
   const staffTab = parseCompanyStaffTab(searchParams.get("tab"));
   const showStaffTabs = roleFilter === "staff";
   const showDesignations = showStaffTabs && staffTab === "designations";
-
-  const applyRoleFilter = useCallback(
-    (role: CompanyUserRoleFilter) => {
-      setRoleFilter(role);
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("role", role);
-      if (role !== "staff") params.delete("tab");
-      router.replace(`/dashboard/company/users?${params.toString()}`, {
-        scroll: false,
-      });
-    },
-    [router, searchParams],
-  );
 
   const applyStaffTab = useCallback(
     (tab: CompanyStaffPageTab) => {
@@ -544,27 +529,6 @@ export default function CompanyUsersPage() {
               </span>
               .
             </p>
-            <div className="w-48 min-w-[12rem]">
-              <Select
-                options={COMPANY_USER_ROLE_FILTER_OPTIONS}
-                placeholder="Filter by role"
-                value={COMPANY_USER_ROLE_FILTER_OPTIONS.find(
-                  (o) => o.value === roleFilter,
-                )}
-                onChange={(option) =>
-                  applyRoleFilter(
-                    (option?.value as CompanyUserRoleFilter) ??
-                      DEFAULT_ESTATE_USER_ROLE,
-                  )
-                }
-                isSearchable={false}
-                styles={{
-                  control: (base) => ({ ...base, cursor: "pointer" }),
-                  option: (base) => ({ ...base, cursor: "pointer" }),
-                  dropdownIndicator: (base) => ({ ...base, cursor: "pointer" }),
-                }}
-              />
-            </div>
           </div>
 
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4">

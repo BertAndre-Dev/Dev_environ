@@ -12,6 +12,7 @@ import Table from "@/components/tables/list/page";
 import { formatDateTime } from "@/lib/format-date";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { labelForEstateModule } from "@/lib/estate-module-labels";
+import { labelForPlan } from "@/lib/plans";
 import type { AppDispatch } from "@/redux/store";
 import { getCompanyById } from "@/redux/slice/super-admin/company-mgt/company";
 import {
@@ -40,6 +41,7 @@ type CompanyDetailData = {
   country?: string;
   isActive?: boolean;
   modules?: string[];
+  plan?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -382,6 +384,7 @@ export function SuperAdminCompanyDetailView({
                 label="Status"
                 value={company.isActive ? "Active" : "Inactive"}
               />
+              <DetailRow label="Plan" value={labelForPlan(company.plan)} />
               <DetailRow label="Address" value={company.address || "—"} />
               <DetailRow label="City" value={company.city || "—"} />
               <DetailRow label="State" value={company.state || "—"} />

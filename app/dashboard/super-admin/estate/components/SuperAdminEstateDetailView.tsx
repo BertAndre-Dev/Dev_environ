@@ -12,6 +12,7 @@ import Table from "@/components/tables/list/page";
 import { formatDateTime } from "@/lib/format-date";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { labelForEstateModule, parseEstateModulesResponse } from "@/lib/estate-module-labels";
+import { formatVendAmount, labelForPlan } from "@/lib/plans";
 import type { AppDispatch } from "@/redux/store";
 import {
   fetchEstateModules,
@@ -42,6 +43,9 @@ type EstateDetailData = {
   country?: string;
   isActive?: boolean;
   modules?: string[];
+  plan?: string;
+  minVendAmount?: number;
+  maxVendAmount?: number;
   visitorVerificationMode?: string;
   companyId?: string;
   createdAt?: string | number | Date;
@@ -409,6 +413,15 @@ export function SuperAdminEstateDetailView({
               <DetailRow label="City" value={estate.city || "—"} />
               <DetailRow label="State" value={estate.state || "—"} />
               <DetailRow label="Country" value={estate.country || "—"} />
+              <DetailRow label="Plan" value={labelForPlan(estate.plan)} />
+              <DetailRow
+                label="Min vend"
+                value={formatVendAmount(estate.minVendAmount)}
+              />
+              <DetailRow
+                label="Max vend"
+                value={formatVendAmount(estate.maxVendAmount)}
+              />
               <DetailRow
                 label="Visitor verification"
                 value={formatVerificationMode(estate.visitorVerificationMode)}

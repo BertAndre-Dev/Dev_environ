@@ -153,7 +153,14 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
   }, [dispatch]);
 
   useEffect(() => {
-    if (!inviteRequiresDesignation(formData.role) || !formData.companyId) {
+    if (!inviteRequiresDesignation(formData.role)) {
+      setDesignationOptions([]);
+      return;
+    }
+
+    const companyId = formData.companyId.trim();
+    const estateId = formData.estateId.trim();
+    if (!companyId && !estateId) {
       setDesignationOptions([]);
       return;
     }
@@ -164,16 +171,18 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
       try {
         const res = await dispatch(
           getDesignations({
-            companyId: formData.companyId,
+            ...(companyId ? { companyId } : { estateId }),
             page: 1,
             limit: DESIGNATIONS_PAGE_SIZE,
           }),
         ).unwrap();
         if (cancelled) return;
+        const items = (res.items ?? []).filter((item) => item.isActive);
         setDesignationOptions(
-          (res.items ?? [])
-            .filter((item) => item.isActive && isCompanyScopedDesignation(item))
-            .map((item) => ({ value: item.id, label: item.name })),
+          (companyId
+            ? items.filter(isCompanyScopedDesignation)
+            : items
+          ).map((item) => ({ value: item.id, label: item.name })),
         );
       } catch (err: unknown) {
         if (cancelled) return;
@@ -188,7 +197,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [dispatch, formData.role, formData.companyId]);
+  }, [dispatch, formData.role, formData.companyId, formData.estateId]);
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -348,7 +357,9 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
                 noOptionsMessage={() =>
                   formData.companyId
                     ? "No designations for this company"
-                    : "No company linked to load designations"
+                    : formData.estateId
+                      ? "No designations for this estate"
+                      : "No estate linked to load designations"
                 }
               />
             </div>

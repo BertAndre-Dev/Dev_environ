@@ -276,7 +276,8 @@ export default function AdminUserPage() {
     const companyId = user
       ? parseCompanyFromUser(user as Record<string, unknown>)?.id ?? ""
       : "";
-    if (!companyId) {
+    const estateId = selectedEstate?.value ?? "";
+    if (!companyId && !estateId) {
       setDesignationNames({});
       return;
     }
@@ -286,7 +287,7 @@ export default function AdminUserPage() {
       try {
         const res = await dispatch(
           getDesignations({
-            companyId,
+            ...(companyId ? { companyId } : { estateId }),
             page: 1,
             limit: DESIGNATIONS_PAGE_SIZE,
           }),
@@ -301,7 +302,7 @@ export default function AdminUserPage() {
     return () => {
       cancelled = true;
     };
-  }, [dispatch, roleFilter, showDesignations, user]);
+  }, [dispatch, roleFilter, selectedEstate?.value, showDesignations, user]);
 
   const handleEstateModal = (user?: AdminUserData) => {
     setSelectedUser(user || null);
@@ -627,9 +628,7 @@ export default function AdminUserPage() {
               companyName={company.name}
             />
           ) : (
-            <p className="text-sm text-muted-foreground">
-              No company linked to your account.
-            </p>
+            <DesignationsManager role="estate" compact />
           )
         ) : (
           <>

@@ -54,6 +54,18 @@ import {
   designationNamesById,
 } from "@/lib/designations";
 import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
+import { DesignationsManager } from "@/components/designations/DesignationsManager";
+
+type AdminStaffPageTab = "staff" | "designations";
+
+const ADMIN_STAFF_TABS: { id: AdminStaffPageTab; label: string }[] = [
+  { id: "designations", label: "Designations" },
+  { id: "staff", label: "Staff" },
+];
+
+function parseAdminStaffTab(raw: string | null): AdminStaffPageTab {
+  return raw === "staff" ? "staff" : "designations";
+}
 
 interface AdminUserData {
   id?: string;
@@ -122,12 +134,32 @@ export default function AdminUserPage() {
     Record<string, string>
   >({});
   const canInvite = isAdminInviteRole(roleFilter);
+  const staffTab = parseAdminStaffTab(searchParams.get("tab"));
+  const showStaffTabs = roleFilter === "staff";
+  const showDesignations = showStaffTabs && staffTab === "designations";
+  const company = user
+    ? parseCompanyFromUser(user as Record<string, unknown>)
+    : null;
 
   const applyRoleFilter = useCallback(
     (role: EstateUserRoleFilter) => {
       setRoleFilter(role);
       const params = new URLSearchParams(searchParams.toString());
       params.set("role", role);
+      if (role !== "staff") params.delete("tab");
+      router.replace(`/dashboard/admin/user?${params.toString()}`, {
+        scroll: false,
+      });
+    },
+    [router, searchParams],
+  );
+
+  const applyStaffTab = useCallback(
+    (tab: AdminStaffPageTab) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("role", "staff");
+      if (tab === "staff") params.set("tab", "staff");
+      else params.delete("tab");
       router.replace(`/dashboard/admin/user?${params.toString()}`, {
         scroll: false,
       });
@@ -161,7 +193,9 @@ export default function AdminUserPage() {
   );
   const loading =
     bootstrapping ||
-    (Boolean(selectedEstate?.value) && listPending);
+    (!showDesignations &&
+      Boolean(selectedEstate?.value) &&
+      listPending);
 
   const fetchAdminUsers = useCallback(
     async (page = 1) => {
@@ -227,18 +261,20 @@ export default function AdminUserPage() {
 
   // Single fetch when estate, search, or date range changes.
   useEffect(() => {
+    if (showDesignations) return;
     if (!selectedEstate?.value) return;
     fetchAdminUsers(1).catch((err: unknown) => {
       const message = getApiErrorMessage(err);
       if (message) toast.error(message);
     });
-  }, [selectedEstate?.value, fetchAdminUsers]);
+  }, [fetchAdminUsers, selectedEstate?.value, showDesignations]);
 
   useEffect(() => {
     if (roleFilter !== "staff") {
       setDesignationNames({});
       return;
     }
+    if (showDesignations) return;
     const companyId = user
       ? parseCompanyFromUser(user as Record<string, unknown>)?.id ?? ""
       : "";
@@ -268,7 +304,7 @@ export default function AdminUserPage() {
     return () => {
       cancelled = true;
     };
-  }, [dispatch, roleFilter, user]);
+  }, [dispatch, roleFilter, showDesignations, user]);
 
   const handleEstateModal = (user?: AdminUserData) => {
     setSelectedUser(user || null);
@@ -572,7 +608,7 @@ export default function AdminUserPage() {
             </div>
           </div>
 
-          {canInvite ? (
+          {canInvite && !showDesignations ? (
             <Button
               onClick={() => handleEstateModal()}
               className="flex items-center gap-2 cursor-pointer"
@@ -582,6 +618,46 @@ export default function AdminUserPage() {
           ) : null}
         </div>
 
+        {showStaffTabs ? (
+          <div
+            className="flex space-x-4"
+            role="tablist"
+            aria-label="Staff management"
+          >
+            {ADMIN_STAFF_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={staffTab === tab.id}
+                className={`py-2 px-4 cursor-pointer ${
+                  staffTab === tab.id
+                    ? "text-primary border-b-2 border-primary font-bold"
+                    : "font-medium text-sidebar-foreground/60"
+                }`}
+                onClick={() => applyStaffTab(tab.id)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {showDesignations ? (
+          company?.id ? (
+            <DesignationsManager
+              role="company"
+              compact
+              companyId={company.id}
+              companyName={company.name}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No company linked to your account.
+            </p>
+          )
+        ) : (
+          <>
         {/* Stats Card */}
         <div className="grid grid-cols-1 gap-4">
           {(() => {
@@ -704,10 +780,16 @@ export default function AdminUserPage() {
             }
           />
         </Card>
+          </>
+        )}
 
         {/* Invite user modal */}
-        {open && canInvite && (
-          <Modal visible={open} onClose={handleCloseModal}>
+        {open && isAdminInviteRole(roleFilter) ? (
+          <Modal
+            visible={open}
+            onClose={handleCloseModal}
+            contentClassName="p-4 md:w-[45%] lg:w-[35%] xl:w-[35%]"
+          >
             <InviteUserForm
               close={handleCloseModal}
               refresh={() =>
@@ -719,7 +801,7 @@ export default function AdminUserPage() {
               role={roleFilter}
             />
           </Modal>
-        )}
+        ) : null}
 
         {editingUserId && (
           <Modal

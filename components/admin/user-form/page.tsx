@@ -20,6 +20,11 @@ import {
   PHONE_E164_ERROR,
   toE164PhoneNumber,
 } from "@/lib/phone-e164";
+import {
+  inviteRequiresDesignation,
+  getAdminInviteLabel,
+  type AdminInviteRole,
+} from "@/lib/invite-user-roles";
 import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
 
 type InviteUserFormProps = {
@@ -264,15 +269,15 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
   else if (lockedRole) submitLabel = getAdminInviteLabel(lockedRole);
 
   return (
-    <Card className="max-w-lg mx-auto mt-6">
-      <CardHeader>
+    <Card className="border-0 shadow-none bg-transparent mt-0 py-0 px-0 gap-3">
+      <CardHeader className="px-0 pb-0 pr-8">
         <CardTitle className="text-lg font-semibold">
           {lockedRole ? getAdminInviteLabel(lockedRole) : "Invite User"}
         </CardTitle>
       </CardHeader>
 
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <CardContent className="px-0">
+        <form onSubmit={handleSubmit} className="space-y-3">
 
           {(
             [

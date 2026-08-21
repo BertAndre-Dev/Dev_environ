@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 
 interface ModalProps {
   visible: boolean;
@@ -45,10 +46,10 @@ const Modal: React.FC<ModalProps> = ({
           onClick={(e) => e.target === e.currentTarget && onClose()}
         >
           <motion.div
-            className={[
+            className={cn(
               "bg-white rounded-xl shadow-xl p-5 overflow-y-auto overflow-x-hidden max-h-[70vh] flex flex-col relative min-w-0 w-full",
               contentClassName ?? "md:w-[45%] lg:w-[35%] xl:w-[35%]",
-            ].join(" ")}
+            )}
             initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}

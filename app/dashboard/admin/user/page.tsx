@@ -52,6 +52,7 @@ import { getDesignations } from "@/redux/slice/designations/designations";
 import {
   designationLabelForUser,
   designationNamesById,
+  DESIGNATIONS_PAGE_SIZE,
 } from "@/lib/designations";
 import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
 import { DesignationsManager } from "@/components/designations/DesignationsManager";
@@ -289,9 +290,8 @@ export default function AdminUserPage() {
         const res = await dispatch(
           getDesignations({
             companyId,
-            includeInactive: true,
             page: 1,
-            limit: 200,
+            limit: DESIGNATIONS_PAGE_SIZE,
           }),
         ).unwrap();
         if (cancelled) return;
@@ -788,7 +788,7 @@ export default function AdminUserPage() {
           <Modal
             visible={open}
             onClose={handleCloseModal}
-            contentClassName="p-4 md:w-[45%] lg:w-[35%] xl:w-[35%]"
+            contentClassName="px-3 py-3 md:w-[45%] lg:w-[35%] xl:w-[35%]"
           >
             <InviteUserForm
               close={handleCloseModal}

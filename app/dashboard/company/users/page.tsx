@@ -59,6 +59,7 @@ import { getDesignations } from "@/redux/slice/designations/designations";
 import {
   designationLabelForUser,
   designationNamesById,
+  DESIGNATIONS_PAGE_SIZE,
 } from "@/lib/designations";
 import { DesignationsManager } from "@/components/designations/DesignationsManager";
 
@@ -299,9 +300,8 @@ export default function CompanyUsersPage() {
         const res = await dispatch(
           getDesignations({
             companyId,
-            includeInactive: true,
             page: 1,
-            limit: 200,
+            limit: DESIGNATIONS_PAGE_SIZE,
           }),
         ).unwrap();
         if (cancelled) return;

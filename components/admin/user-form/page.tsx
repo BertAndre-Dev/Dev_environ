@@ -15,6 +15,7 @@ import { iniviteUser, getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
 import type { AppDispatch } from "@/redux/store";
 import { getDesignations } from "@/redux/slice/designations/designations";
+import { DESIGNATIONS_PAGE_SIZE } from "@/lib/designations";
 import {
   DEFAULT_COUNTRY_CODE,
   PHONE_E164_ERROR,
@@ -165,7 +166,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
           getDesignations({
             companyId: formData.companyId,
             page: 1,
-            limit: 200,
+            limit: DESIGNATIONS_PAGE_SIZE,
           }),
         ).unwrap();
         if (cancelled) return;
@@ -270,13 +271,13 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
 
   return (
     <Card className="border-0 shadow-none bg-transparent mt-0 py-0 px-0 gap-3">
-      <CardHeader className="px-0 pb-0 pr-8">
+      <CardHeader className="px-0 md:px-0 pb-0 pr-8">
         <CardTitle className="text-lg font-semibold">
           {lockedRole ? getAdminInviteLabel(lockedRole) : "Invite User"}
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="px-0">
+      <CardContent className="px-0 md:px-0">
         <form onSubmit={handleSubmit} className="space-y-3">
 
           {(

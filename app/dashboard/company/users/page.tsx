@@ -287,7 +287,7 @@ export default function CompanyUsersPage() {
   }, [fetchUsers, selectedEstate, showDesignations]);
 
   useEffect(() => {
-    if (roleFilter !== "staff" || !selectedEstate?.value) {
+    if (roleFilter !== "staff" || !companyId) {
       setDesignationNames({});
       return;
     }
@@ -298,8 +298,7 @@ export default function CompanyUsersPage() {
       try {
         const res = await dispatch(
           getDesignations({
-            estateId: selectedEstate.value,
-            companyId: companyId || undefined,
+            companyId,
             includeInactive: true,
             page: 1,
             limit: 200,
@@ -315,7 +314,7 @@ export default function CompanyUsersPage() {
     return () => {
       cancelled = true;
     };
-  }, [dispatch, roleFilter, selectedEstate?.value, companyId, showDesignations]);
+  }, [dispatch, roleFilter, companyId, showDesignations]);
 
   const closeStatusModal = () => {
     if (statusSubmitting) return;
@@ -626,9 +625,6 @@ export default function CompanyUsersPage() {
               compact
               companyId={companyId}
               companyName={companyName}
-              estateId={selectedEstate?.value}
-              estateSelectOptions={estateOptions}
-              estatesLoading={estatesLoading}
             />
           ) : null
         ) : (

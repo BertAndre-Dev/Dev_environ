@@ -20,11 +20,12 @@ import {
   PHONE_E164_ERROR,
   toE164PhoneNumber,
 } from "@/lib/phone-e164";
-import { inviteRequiresDesignation } from "@/lib/invite-user-roles";
+import { inviteRequiresDesignation, type AdminInviteRole, getAdminInviteLabel } from "@/lib/invite-user-roles";
 
 type InviteUserFormProps = {
   close: () => void;
   refresh: () => void;
+  role?: AdminInviteRole;
 };
 
 interface InviteUserFormData {
@@ -48,7 +49,11 @@ const roleOptions = [
   // { label: "Company", value: "company" },
 ];
 
-const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
+const InviteUserForm: React.FC<InviteUserFormProps> = ({
+  close,
+  refresh,
+  role: lockedRole,
+}) => {
   const dispatch = useDispatch<AppDispatch>();
 
   const [formData, setFormData] = useState<InviteUserFormData>({
@@ -59,8 +64,8 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
     email: "",
     phoneNumber: "",
     countryCode: DEFAULT_COUNTRY_CODE,
-    role: "",
-    residentType: null,
+    role: lockedRole ?? "",
+    residentType: lockedRole === "resident" ? "owner" : null,
     addressIds: [],
     designationId: "",
   });
@@ -150,7 +155,10 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
   }, [dispatch]);
 
   useEffect(() => {
-    if (!inviteRequiresDesignation(formData.role) || !formData.estateId) {
+    if (
+      !inviteRequiresDesignation(formData.role) ||
+      (!formData.companyId && !formData.estateId)
+    ) {
       setDesignationOptions([]);
       return;
     }
@@ -161,8 +169,8 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
       try {
         const res = await dispatch(
           getDesignations({
-            estateId: formData.estateId,
             companyId: formData.companyId || undefined,
+            estateId: formData.companyId ? undefined : formData.estateId,
             page: 1,
             limit: 200,
           }),
@@ -263,10 +271,16 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
     }
   };
 
+  let submitLabel = "Invite User";
+  if (loading) submitLabel = "Inviting...";
+  else if (lockedRole) submitLabel = getAdminInviteLabel(lockedRole);
+
   return (
     <Card className="max-w-lg mx-auto mt-6">
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">Invite User</CardTitle>
+        <CardTitle className="text-lg font-semibold">
+          {lockedRole ? getAdminInviteLabel(lockedRole) : "Invite User"}
+        </CardTitle>
       </CardHeader>
 
       <CardContent>
@@ -292,7 +306,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
             </div>
           ))}
 
-          {/* Role */}
+          {lockedRole ? null : (
           <div>
             <Label>Role</Label>
             <Select
@@ -313,6 +327,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
               placeholder="Select role"
             />
           </div>
+          )}
 
           {inviteRequiresDesignation(formData.role) ? (
             <div>
@@ -421,7 +436,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
           )}
 
           <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Inviting..." : "Invite User"}
+            {submitLabel}
           </Button>
 
         </form>

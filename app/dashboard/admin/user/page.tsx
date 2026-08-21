@@ -12,7 +12,7 @@ import {
   Eye,
   Edit,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Table from "@/components/tables/list/page";
 import {
   getAllUsersByEstate,
@@ -36,10 +36,15 @@ import Loader from "@/components/ui/Loader";
 import Select from "react-select";
 import {
   DEFAULT_ESTATE_USER_ROLE,
-  ESTATE_USER_ROLE_FILTER_OPTIONS,
+  ADMIN_USER_ROLE_FILTER_OPTIONS,
   getEstateUserRoleTotalLabel,
+  parseAdminUserRoleQuery,
   type EstateUserRoleFilter,
 } from "@/lib/estate-user-roles";
+import {
+  getAdminInviteLabel,
+  isAdminInviteRole,
+} from "@/lib/invite-user-roles";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { isPending } from "@/lib/async-status";
@@ -49,13 +54,6 @@ import {
   designationNamesById,
   normalizeEntityId,
 } from "@/lib/designations";
-/** Admin user management: exclude company, estate admin, and admin from role filter. */
-const ADMIN_USER_ROLE_FILTER_OPTIONS = ESTATE_USER_ROLE_FILTER_OPTIONS.filter(
-  (o) =>
-    o.value !== "company" &&
-    o.value !== "estate admin" &&
-    o.value !== "admin",
-);
 
 interface AdminUserData {
   id?: string;
@@ -95,6 +93,7 @@ const PAGE_LIMIT = 10;
 export default function AdminUserPage() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [user, setUser] = useState<any>(null);
   const [estateName, setEstateName] = useState("Estate");
@@ -115,13 +114,38 @@ export default function AdminUserPage() {
   const [suspendSubmitting, setSuspendSubmitting] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [roleFilter, setRoleFilter] = useState<EstateUserRoleFilter>(
-    DEFAULT_ESTATE_USER_ROLE,
+  const [roleFilter, setRoleFilter] = useState<EstateUserRoleFilter>(() =>
+    parseAdminUserRoleQuery(searchParams.get("role")),
   );
   const [bootstrapping, setBootstrapping] = useState(true);
   const [designationNames, setDesignationNames] = useState<
     Record<string, string>
   >({});
+  const canInvite = isAdminInviteRole(roleFilter);
+
+  const applyRoleFilter = useCallback(
+    (role: EstateUserRoleFilter) => {
+      setRoleFilter(role);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("role", role);
+      router.replace(`/dashboard/admin/user?${params.toString()}`, {
+        scroll: false,
+      });
+    },
+    [router, searchParams],
+  );
+
+  useEffect(() => {
+    const fromQuery = parseAdminUserRoleQuery(searchParams.get("role"));
+    if (fromQuery !== roleFilter) {
+      setRoleFilter(fromQuery);
+    }
+  }, [roleFilter, searchParams]);
+
+  useEffect(() => {
+    if (searchParams.get("role")) return;
+    applyRoleFilter(parseAdminUserRoleQuery(null));
+  }, [applyRoleFilter, searchParams]);
 
   const { allAdminUsers, pagination, listPending } = useSelector(
     (state: RootState) => {
@@ -211,7 +235,13 @@ export default function AdminUserPage() {
   }, [selectedEstate?.value, fetchAdminUsers]);
 
   useEffect(() => {
-    if (roleFilter !== "staff" || !selectedEstate?.value) {
+    if (roleFilter !== "staff") {
+      setDesignationNames({});
+      return;
+    }
+    const companyId = normalizeEntityId(user?.companyId ?? user?.company);
+    const estateId = selectedEstate?.value;
+    if (!companyId && !estateId) {
       setDesignationNames({});
       return;
     }
@@ -221,8 +251,8 @@ export default function AdminUserPage() {
       try {
         const res = await dispatch(
           getDesignations({
-            estateId: selectedEstate.value,
-            companyId: normalizeEntityId(user?.companyId ?? user?.company) || undefined,
+            companyId: companyId || undefined,
+            estateId: companyId ? undefined : estateId,
             includeInactive: true,
             page: 1,
             limit: 200,
@@ -527,7 +557,7 @@ export default function AdminUserPage() {
                   (o) => o.value === roleFilter,
                 )}
                 onChange={(option) =>
-                  setRoleFilter(
+                  applyRoleFilter(
                     (option?.value as EstateUserRoleFilter) ??
                       DEFAULT_ESTATE_USER_ROLE,
                   )
@@ -542,12 +572,14 @@ export default function AdminUserPage() {
             </div>
           </div>
 
-          <Button
-            onClick={() => handleEstateModal()}
-            className="flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> Invite User
-          </Button>
+          {canInvite ? (
+            <Button
+              onClick={() => handleEstateModal()}
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> {getAdminInviteLabel(roleFilter)}
+            </Button>
+          ) : null}
         </div>
 
         {/* Stats Card */}
@@ -674,7 +706,7 @@ export default function AdminUserPage() {
         </Card>
 
         {/* Invite user modal */}
-        {open && (
+        {open && canInvite && (
           <Modal visible={open} onClose={handleCloseModal}>
             <InviteUserForm
               close={handleCloseModal}
@@ -684,6 +716,7 @@ export default function AdminUserPage() {
                   if (message) toast.error(message);
                 })
               }
+              role={roleFilter}
             />
           </Modal>
         )}

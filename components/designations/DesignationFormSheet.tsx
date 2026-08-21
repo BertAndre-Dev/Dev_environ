@@ -34,6 +34,7 @@ type Props = {
   estateOptions?: EstateSelectOption[];
   estatesLoading?: boolean;
   defaultEstateId?: string;
+  companyId?: string;
   onClose: () => void;
   onSubmit: (values: DesignationFormValues) => Promise<void> | void;
 };
@@ -47,6 +48,7 @@ export function DesignationFormSheet({
   estateOptions = [],
   estatesLoading = false,
   defaultEstateId = "",
+  companyId = "",
   onClose,
   onSubmit,
 }: Readonly<Props>) {
@@ -72,8 +74,15 @@ export function DesignationFormSheet({
 
   useEffect(() => {
     if (!open) return;
+    const resolvedCompanyId = companyId.trim();
     const resolvedEstateId = estateId.trim();
-    if (!resolvedEstateId) {
+    let modulesUrl = "";
+    if (resolvedCompanyId) modulesUrl = "/api/v1/company-mgt/modules";
+    else if (resolvedEstateId) {
+      modulesUrl = `/api/v1/estate-mgt/${resolvedEstateId}/modules`;
+    }
+
+    if (!modulesUrl) {
       setAvailableModules([]);
       setModulesLoading(false);
       setModulesError(null);
@@ -85,7 +94,7 @@ export function DesignationFormSheet({
     setModulesError(null);
 
     axiosInstance
-      .get(`/api/v1/estate-mgt/${resolvedEstateId}/modules`)
+      .get(modulesUrl)
       .then((res) => {
         if (cancelled) return;
         const next = parseEstateModulesResponse(res.data);
@@ -96,7 +105,7 @@ export function DesignationFormSheet({
         if (cancelled) return;
         setAvailableModules([]);
         setModulesError(
-          getApiErrorMessage(err) ?? "Failed to load estate modules.",
+          getApiErrorMessage(err) ?? "Failed to load modules.",
         );
       })
       .finally(() => {
@@ -106,7 +115,7 @@ export function DesignationFormSheet({
     return () => {
       cancelled = true;
     };
-  }, [open, estateId]);
+  }, [open, companyId, estateId]);
 
   const editing = Boolean(initial?.id);
   const needsEstate = showEstateSelect && !editing;
@@ -131,8 +140,8 @@ export function DesignationFormSheet({
     });
   };
 
-  let modulesContent: React.ReactNode;
-  if (!estateId.trim()) {
+  let modulesContent: ReactNode;
+  if (!companyId.trim() && !estateId.trim()) {
     modulesContent = (
       <p className="text-sm text-muted-foreground">
         Select an estate to load modules.
@@ -150,7 +159,9 @@ export function DesignationFormSheet({
   } else if (availableModules.length === 0) {
     modulesContent = (
       <p className="text-sm text-muted-foreground">
-        This estate has no modules enabled.
+        {companyId.trim()
+          ? "No modules available."
+          : "This estate has no modules enabled."}
       </p>
     );
   } else {

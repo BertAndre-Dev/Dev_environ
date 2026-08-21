@@ -350,8 +350,21 @@ export const adminNav = [
   {
     label: "User Management",
     icon: UserCog,
-    path: "/dashboard/admin/user",
     moduleKey: "users",
+    children: [
+      {
+        label: "Residents",
+        path: "/dashboard/admin/user?role=resident",
+      },
+      {
+        label: "Staff",
+        path: "/dashboard/admin/user?role=staff",
+      },
+      {
+        label: "Security",
+        path: "/dashboard/admin/user?role=security",
+      },
+    ],
   },
   {
     label: "Bills Management",

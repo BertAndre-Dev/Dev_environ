@@ -28,6 +28,22 @@ export function getCompanyInviteLabel(role: CompanyInviteRole): string {
     : "Invite admin";
 }
 
+export const ADMIN_INVITE_ROLES = ["resident", "staff", "security"] as const;
+
+export type AdminInviteRole = (typeof ADMIN_INVITE_ROLES)[number];
+
+export function isAdminInviteRole(role: string): role is AdminInviteRole {
+  return (ADMIN_INVITE_ROLES as readonly string[]).includes(
+    role.trim().toLowerCase(),
+  );
+}
+
+export function getAdminInviteLabel(role: AdminInviteRole): string {
+  if (role === "staff") return "Invite staff";
+  if (role === "security") return "Invite security";
+  return "Invite resident";
+}
+
 export const ENERGY_PROVIDER_INVITE_ROLE_OPTIONS = [
   { value: "resident", label: "Home owner" },
 ] as const;

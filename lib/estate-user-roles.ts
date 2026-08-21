@@ -59,6 +59,30 @@ export function parseEstateUserRoleQuery(
     : null;
 }
 
+/** Admin user management: residents, staff, and security only. */
+export const ADMIN_USER_ROLE_FILTER_OPTIONS: {
+  label: string;
+  value: EstateUserRoleFilter;
+}[] = ESTATE_USER_ROLE_FILTER_OPTIONS.filter(
+  (o) =>
+    o.value !== "company" &&
+    o.value !== "estate admin" &&
+    o.value !== "admin",
+);
+
+export function parseAdminUserRoleQuery(
+  raw: string | null,
+): EstateUserRoleFilter {
+  const parsed = parseEstateUserRoleQuery(raw);
+  if (
+    parsed &&
+    ADMIN_USER_ROLE_FILTER_OPTIONS.some((option) => option.value === parsed)
+  ) {
+    return parsed;
+  }
+  return DEFAULT_ESTATE_USER_ROLE;
+}
+
 /** Company user management: exclude estate admin & company; include energy provider. */
 export const COMPANY_USER_ROLE_FILTER_OPTIONS: {
   label: string;

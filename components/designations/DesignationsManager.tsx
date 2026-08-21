@@ -5,7 +5,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { useReducedMotion } from "framer-motion";
 import { Pencil, Plus, Power, PowerOff, Search, Trash2 } from "lucide-react";
-import Select from "react-select";
 import DeleteModal from "@/components/resident/delete-modal/page";
 import Loader from "@/components/ui/Loader";
 import { Button } from "@/components/ui/button";
@@ -27,14 +26,8 @@ import {
 } from "@/lib/designations";
 import { labelForEstateModule } from "@/lib/estate-module-labels";
 import { parseAdminEstate } from "@/app/dashboard/admin/asset/lib/estate";
-import {
-  mapCompanyEstateRows,
-  parseCompanyEstates,
-  type EstateOption,
-} from "@/app/dashboard/company/asset/lib/estate";
 import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
-import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
 import {
   createDesignation,
   deleteDesignation,
@@ -56,12 +49,7 @@ type Props = {
   compact?: boolean;
   companyId?: string;
   companyName?: string;
-  estateId?: string;
-  estateSelectOptions?: EstateSelectOption[];
-  estatesLoading?: boolean;
 };
-
-type EstateSelectOption = { label: string; value: string };
 
 function formatDesignationDate(value?: string) {
   if (!value) return "—";
@@ -148,9 +136,6 @@ export function DesignationsManager({
   compact = false,
   companyId: injectedCompanyId,
   companyName: injectedCompanyName,
-  estateId: injectedEstateId,
-  estateSelectOptions: injectedEstateSelectOptions,
-  estatesLoading: injectedEstatesLoading,
 }: Readonly<Props>) {
   const dispatch = useDispatch<AppDispatch>();
   const reduceMotion = useReducedMotion();
@@ -175,10 +160,6 @@ export function DesignationsManager({
   const [editing, setEditing] = useState<Designation | null>(null);
   const [itemToDelete, setItemToDelete] = useState<Designation | null>(null);
   const [itemToToggle, setItemToToggle] = useState<Designation | null>(null);
-  const [estates, setEstates] = useState<EstateOption[]>([]);
-  const [estatesLoading, setEstatesLoading] = useState(false);
-  const [selectedEstate, setSelectedEstate] =
-    useState<EstateSelectOption | null>(null);
 
   const listLoading = isPending(listStatus);
   const saving = isBusy(createStatus) || isBusy(updateStatus);
@@ -193,7 +174,7 @@ export function DesignationsManager({
 
   useEffect(() => {
     setPage(1);
-  }, [search, includeInactive, scopeId, selectedEstate?.value]);
+  }, [search, includeInactive, scopeId]);
 
   useEffect(() => {
     if (!hasInjectedCompanyScope) return;
@@ -216,21 +197,6 @@ export function DesignationsManager({
           }
           setScopeId(company.id);
           setScopeName(company.name);
-          setEstatesLoading(true);
-          try {
-            const res = await dispatch(
-              getCompanyEstates({ page: 1, limit: 200 }),
-            ).unwrap();
-            let options = mapCompanyEstateRows(res?.data);
-            if (!options.length) options = parseCompanyEstates(data);
-            setEstates(options);
-          } catch (estateErr: unknown) {
-            const message = getApiErrorMessage(estateErr);
-            if (message) toast.error(message);
-            setEstates(parseCompanyEstates(data));
-          } finally {
-            setEstatesLoading(false);
-          }
           return;
         }
         const estate = parseAdminEstate(data);
@@ -249,45 +215,14 @@ export function DesignationsManager({
     })();
   }, [dispatch, hasInjectedCompanyScope, role]);
 
-  const estateSelectOptions = useMemo<EstateSelectOption[]>(
-    () =>
-      injectedEstateSelectOptions ??
-      estates.map((estate) => ({ label: estate.name, value: estate.id })),
-    [estates, injectedEstateSelectOptions],
-  );
-  const estatesBusy = injectedEstatesLoading ?? estatesLoading;
-
-  useEffect(() => {
-    if (role !== "company") return;
-    if (injectedEstateId) {
-      const match = estateSelectOptions.find(
-        (option) => option.value === injectedEstateId,
-      );
-      if (match && match.value !== selectedEstate?.value) {
-        setSelectedEstate(match);
-      }
-      return;
-    }
-    if (selectedEstate?.value) return;
-    if (!estateSelectOptions.length) return;
-    setSelectedEstate(estateSelectOptions[0]);
-  }, [
-    estateSelectOptions,
-    injectedEstateId,
-    role,
-    selectedEstate?.value,
-  ]);
-
   const loadList = useCallback(
     async (nextPage = page) => {
-      const estateId = role === "company" ? selectedEstate?.value : scopeId;
-      if (role === "company" && (!scopeId || !estateId)) return;
-      if (role === "estate" && !estateId) return;
+      if (!scopeId) return;
 
       await dispatch(
         getDesignations({
           companyId: role === "company" ? scopeId : undefined,
-          estateId,
+          estateId: role === "estate" ? scopeId : undefined,
           search: search || undefined,
           includeInactive,
           page: nextPage,
@@ -295,25 +230,16 @@ export function DesignationsManager({
         }),
       ).unwrap();
     },
-    [
-      dispatch,
-      includeInactive,
-      page,
-      role,
-      scopeId,
-      search,
-      selectedEstate?.value,
-    ],
+    [dispatch, includeInactive, page, role, scopeId, search],
   );
 
   useEffect(() => {
-    if (role === "company" && (!scopeId || !selectedEstate?.value)) return;
-    if (role === "estate" && !scopeId) return;
+    if (!scopeId) return;
     loadList(page).catch((err: unknown) => {
       const message = getApiErrorMessage(err);
       if (message) toast.error(message);
     });
-  }, [loadList, page, role, scopeId, selectedEstate?.value]);
+  }, [loadList, page, scopeId]);
 
   const openCreate = () => {
     setEditing(null);
@@ -344,15 +270,8 @@ export function DesignationsManager({
         ).unwrap();
         toast.success("Designation updated.");
       } else {
-        const estateId =
-          role === "estate"
-            ? scopeId
-            : values.estateId?.trim() ||
-              selectedEstate?.value ||
-              injectedEstateId ||
-              undefined;
-        if (role === "company" && !estateId) {
-          toast.warning("Please select an estate.");
+        if (role === "company" && !scopeId) {
+          toast.warning("No company linked to your account.");
           return;
         }
         await dispatch(
@@ -360,7 +279,7 @@ export function DesignationsManager({
             name: values.name,
             description: values.description || undefined,
             companyId: role === "company" ? scopeId : undefined,
-            estateId,
+            estateId: role === "estate" ? scopeId : undefined,
             modules: values.modules,
           }),
         ).unwrap();
@@ -426,15 +345,6 @@ export function DesignationsManager({
     pageSize: pagination?.limit ?? DESIGNATIONS_PAGE_SIZE,
   };
 
-  const estateNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const estate of estates) map.set(estate.id, estate.name);
-    for (const option of estateSelectOptions) {
-      map.set(option.value, option.label);
-    }
-    return map;
-  }, [estateSelectOptions, estates]);
-
   const columns = useMemo(
     () => [
       {
@@ -461,12 +371,6 @@ export function DesignationsManager({
         ),
         exportValue: (item: Designation) =>
           (item.modules ?? []).map(labelForEstateModule).join(", "),
-      },
-      {
-        key: "estateId",
-        header: "Estate",
-        render: (item: Designation) =>
-          item.estateId ? estateNameById.get(item.estateId) || "Estate" : "—",
       },
       {
         key: "isActive",
@@ -537,12 +441,10 @@ export function DesignationsManager({
         },
       },
     ],
-    [estateNameById, role, scopeId],
+    [role, scopeId],
   );
 
-  const canCreate =
-    Boolean(scopeId) && (role !== "company" || Boolean(selectedEstate?.value));
-  const showEstateFilter = role === "company" && !compact;
+  const canCreate = Boolean(scopeId);
 
   const toolbar = (
     <div
@@ -552,32 +454,6 @@ export function DesignationsManager({
           : "mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
       }
     >
-      {showEstateFilter ? (
-        <div className="w-full lg:w-64">
-          <Select
-            options={estateSelectOptions}
-            placeholder={estatesBusy ? "Loading estates…" : "Filter by estate"}
-            value={selectedEstate}
-            onChange={(option) => setSelectedEstate(option)}
-            isSearchable
-            isLoading={estatesBusy}
-            isDisabled={!estateSelectOptions.length}
-            styles={{
-              control: (base) => ({
-                ...base,
-                minHeight: 44,
-                borderRadius: 16,
-                cursor: "pointer",
-              }),
-              option: (base) => ({ ...base, cursor: "pointer" }),
-              dropdownIndicator: (base) => ({
-                ...base,
-                cursor: "pointer",
-              }),
-            }}
-          />
-        </div>
-      ) : null}
       <div className="relative min-w-0 flex-1">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-black/35" />
         <Input
@@ -658,11 +534,7 @@ export function DesignationsManager({
         <Table
           columns={columns}
           data={items}
-          emptyMessage={
-            role === "company" && !selectedEstate?.value
-              ? "Select an estate to view designations."
-              : "No designations found."
-          }
+          emptyMessage="No designations found."
           showPagination
           paginationInfo={paginationInfo}
           onPageChange={(nextPage) => {
@@ -681,12 +553,8 @@ export function DesignationsManager({
         saving={saving}
         initial={editing}
         scopeLabel={role === "company" ? "Company" : "Estate"}
-        showEstateSelect={role === "company" && !compact}
-        estateOptions={estateSelectOptions}
-        estatesLoading={estatesBusy}
-        defaultEstateId={
-          role === "company" ? (selectedEstate?.value ?? "") : scopeId
-        }
+        companyId={role === "company" ? scopeId : undefined}
+        defaultEstateId={role === "estate" ? scopeId : ""}
         onClose={closeSheet}
         onSubmit={handleSubmit}
       />

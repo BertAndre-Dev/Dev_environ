@@ -174,6 +174,57 @@ export function extractDesignationPagination(
   };
 }
 
+export const DESIGNATION_MODULE_KEY = "designation";
+
+function moduleListHasDesignation(modules: unknown): boolean {
+  if (!Array.isArray(modules)) return false;
+  return modules.some(
+    (key) =>
+      typeof key === "string" &&
+      key.trim().toLowerCase() === DESIGNATION_MODULE_KEY,
+  );
+}
+
+/** True when the signed-in user (or their estate/company) has the designation module. */
+export function userHasDesignationModule(user: unknown): boolean {
+  if (!user || typeof user !== "object") return false;
+  const record = user as Record<string, unknown>;
+  if (moduleListHasDesignation(record.modules)) return true;
+
+  const estate = record.estateId;
+  if (
+    estate &&
+    typeof estate === "object" &&
+    !Array.isArray(estate) &&
+    moduleListHasDesignation((estate as { modules?: unknown }).modules)
+  ) {
+    return true;
+  }
+
+  const company = record.company ?? record.companyId;
+  if (
+    company &&
+    typeof company === "object" &&
+    !Array.isArray(company) &&
+    moduleListHasDesignation((company as { modules?: unknown }).modules)
+  ) {
+    return true;
+  }
+
+  if (Array.isArray(record.memberships)) {
+    for (const membership of record.memberships) {
+      if (!membership || typeof membership !== "object") continue;
+      if (
+        moduleListHasDesignation((membership as { modules?: unknown }).modules)
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 export function getDesignationScope(item: Designation): DesignationScope {
   return item.estateId ? "estate" : "company";
 }

@@ -171,7 +171,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
       try {
         const res = await dispatch(
           getDesignations({
-            ...(companyId ? { companyId } : { estateId }),
+            ...(estateId ? { estateId } : { companyId }),
             page: 1,
             limit: DESIGNATIONS_PAGE_SIZE,
           }),
@@ -179,9 +179,9 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
         if (cancelled) return;
         const items = (res.items ?? []).filter((item) => item.isActive);
         setDesignationOptions(
-          (companyId
-            ? items.filter(isCompanyScopedDesignation)
-            : items
+          (estateId
+            ? items
+            : items.filter(isCompanyScopedDesignation)
           ).map((item) => ({ value: item.id, label: item.name })),
         );
       } catch (err: unknown) {
@@ -355,10 +355,10 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
                     : "Select designation"
                 }
                 noOptionsMessage={() =>
-                  formData.companyId
-                    ? "No designations for this company"
-                    : formData.estateId
-                      ? "No designations for this estate"
+                  formData.estateId
+                    ? "No designations for this estate"
+                    : formData.companyId
+                      ? "No designations for this company"
                       : "No estate linked to load designations"
                 }
               />

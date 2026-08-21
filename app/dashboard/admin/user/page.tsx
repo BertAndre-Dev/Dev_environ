@@ -50,8 +50,8 @@ import {
   designationLabelForUser,
   designationNamesById,
   DESIGNATIONS_PAGE_SIZE,
+  userHasDesignationModule,
 } from "@/lib/designations";
-import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
 import { DesignationsManager } from "@/components/designations/DesignationsManager";
 
 type AdminStaffPageTab = "staff" | "designations";
@@ -132,12 +132,11 @@ export default function AdminUserPage() {
     Record<string, string>
   >({});
   const canInvite = isAdminInviteRole(roleFilter);
-  const staffTab = parseAdminStaffTab(searchParams.get("tab"));
-  const showStaffTabs = roleFilter === "staff";
+  const canManageDesignations = userHasDesignationModule(user);
+  const requestedStaffTab = parseAdminStaffTab(searchParams.get("tab"));
+  const staffTab = canManageDesignations ? requestedStaffTab : "staff";
+  const showStaffTabs = roleFilter === "staff" && canManageDesignations;
   const showDesignations = showStaffTabs && staffTab === "designations";
-  const company = user
-    ? parseCompanyFromUser(user as Record<string, unknown>)
-    : null;
 
   const applyRoleFilter = useCallback(
     (role: EstateUserRoleFilter) => {
@@ -273,11 +272,8 @@ export default function AdminUserPage() {
       return;
     }
     if (showDesignations) return;
-    const companyId = user
-      ? parseCompanyFromUser(user as Record<string, unknown>)?.id ?? ""
-      : "";
     const estateId = selectedEstate?.value ?? "";
-    if (!companyId && !estateId) {
+    if (!estateId) {
       setDesignationNames({});
       return;
     }
@@ -287,7 +283,7 @@ export default function AdminUserPage() {
       try {
         const res = await dispatch(
           getDesignations({
-            ...(companyId ? { companyId } : { estateId }),
+            estateId,
             page: 1,
             limit: DESIGNATIONS_PAGE_SIZE,
           }),
@@ -302,7 +298,7 @@ export default function AdminUserPage() {
     return () => {
       cancelled = true;
     };
-  }, [dispatch, roleFilter, selectedEstate?.value, showDesignations, user]);
+  }, [dispatch, roleFilter, selectedEstate?.value, showDesignations]);
 
   const handleEstateModal = (user?: AdminUserData) => {
     setSelectedUser(user || null);
@@ -620,16 +616,12 @@ export default function AdminUserPage() {
         ) : null}
 
         {showDesignations ? (
-          company?.id ? (
-            <DesignationsManager
-              role="company"
-              compact
-              companyId={company.id}
-              companyName={company.name}
-            />
-          ) : (
-            <DesignationsManager role="estate" compact />
-          )
+          <DesignationsManager
+            role="estate"
+            compact
+            estateId={selectedEstate?.value}
+            estateName={estateName}
+          />
         ) : (
           <>
         {/* Stats Card */}

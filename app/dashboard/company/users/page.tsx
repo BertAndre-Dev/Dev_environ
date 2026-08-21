@@ -58,6 +58,7 @@ import {
   designationLabelForUser,
   designationNamesById,
   DESIGNATIONS_PAGE_SIZE,
+  userHasDesignationModule,
 } from "@/lib/designations";
 import { DesignationsManager } from "@/components/designations/DesignationsManager";
 
@@ -138,8 +139,11 @@ export default function CompanyUsersPage() {
     Record<string, string>
   >({});
 
-  const staffTab = parseCompanyStaffTab(searchParams.get("tab"));
-  const showStaffTabs = roleFilter === "staff";
+  const authUser = useSelector((state: RootState) => state.auth.user);
+  const canManageDesignations = userHasDesignationModule(authUser);
+  const requestedStaffTab = parseCompanyStaffTab(searchParams.get("tab"));
+  const staffTab = canManageDesignations ? requestedStaffTab : "staff";
+  const showStaffTabs = roleFilter === "staff" && canManageDesignations;
   const showDesignations = showStaffTabs && staffTab === "designations";
 
   const applyStaffTab = useCallback(

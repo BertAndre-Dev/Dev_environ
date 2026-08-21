@@ -49,6 +49,8 @@ type Props = {
   compact?: boolean;
   companyId?: string;
   companyName?: string;
+  estateId?: string;
+  estateName?: string;
 };
 
 function formatDesignationDate(value?: string) {
@@ -136,6 +138,8 @@ export function DesignationsManager({
   compact = false,
   companyId: injectedCompanyId,
   companyName: injectedCompanyName,
+  estateId: injectedEstateId,
+  estateName: injectedEstateName,
 }: Readonly<Props>) {
   const dispatch = useDispatch<AppDispatch>();
   const reduceMotion = useReducedMotion();
@@ -146,12 +150,21 @@ export function DesignationsManager({
   );
   const hasInjectedCompanyScope =
     role === "company" && Boolean(injectedCompanyId);
+  const hasInjectedEstateScope =
+    role === "estate" && Boolean(injectedEstateId);
+  const hasInjectedScope = hasInjectedCompanyScope || hasInjectedEstateScope;
+  const injectedScopeId = hasInjectedCompanyScope
+    ? injectedCompanyId
+    : injectedEstateId;
+  const injectedScopeName = hasInjectedCompanyScope
+    ? injectedCompanyName
+    : injectedEstateName;
 
-  const [scopeId, setScopeId] = useState(injectedCompanyId ?? "");
+  const [scopeId, setScopeId] = useState(injectedScopeId ?? "");
   const [scopeName, setScopeName] = useState(
-    injectedCompanyName || (role === "company" ? "Company" : "Estate"),
+    injectedScopeName || (role === "company" ? "Company" : "Estate"),
   );
-  const [scopeLoading, setScopeLoading] = useState(!hasInjectedCompanyScope);
+  const [scopeLoading, setScopeLoading] = useState(!hasInjectedScope);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [includeInactive, setIncludeInactive] = useState(false);
@@ -177,14 +190,16 @@ export function DesignationsManager({
   }, [search, includeInactive, scopeId]);
 
   useEffect(() => {
-    if (!hasInjectedCompanyScope) return;
-    setScopeId(injectedCompanyId ?? "");
-    setScopeName(injectedCompanyName || "Company");
+    if (!hasInjectedScope) return;
+    setScopeId(injectedScopeId ?? "");
+    setScopeName(
+      injectedScopeName || (role === "company" ? "Company" : "Estate"),
+    );
     setScopeLoading(false);
-  }, [hasInjectedCompanyScope, injectedCompanyId, injectedCompanyName]);
+  }, [hasInjectedScope, injectedScopeId, injectedScopeName, role]);
 
   useEffect(() => {
-    if (hasInjectedCompanyScope) return;
+    if (hasInjectedScope) return;
     (async () => {
       try {
         const userRes = await dispatch(getSignedInUser()).unwrap();
@@ -213,7 +228,7 @@ export function DesignationsManager({
         setScopeLoading(false);
       }
     })();
-  }, [dispatch, hasInjectedCompanyScope, role]);
+  }, [dispatch, hasInjectedScope, role]);
 
   const loadList = useCallback(
     async (nextPage = page) => {

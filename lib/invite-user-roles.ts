@@ -19,6 +19,15 @@ export const COMPANY_INVITE_ROLE_OPTIONS = [
   { value: ENERGY_PROVIDER_ROLE, label: "Energy Provider" },
 ] as const;
 
+export type CompanyInviteRole =
+  (typeof COMPANY_INVITE_ROLE_OPTIONS)[number]["value"];
+
+export function getCompanyInviteLabel(role: CompanyInviteRole): string {
+  return role === ENERGY_PROVIDER_ROLE
+    ? "Invite energy provider"
+    : "Invite admin";
+}
+
 export const ENERGY_PROVIDER_INVITE_ROLE_OPTIONS = [
   { value: "resident", label: "Home owner" },
 ] as const;
@@ -97,6 +106,8 @@ export function buildInviteUserPayload(params: {
   companyId?: string;
   designationId?: string;
   modules?: string[];
+  residentType?: string | null;
+  addressIds?: string[];
 }): InvitedUserData {
   const estateId = params.estateId?.trim();
   const companyId = params.companyId?.trim();
@@ -105,14 +116,18 @@ export function buildInviteUserPayload(params: {
   const modules = (params.modules ?? [])
     .map((item) => item.trim())
     .filter(Boolean);
+  const isResident = params.role.trim().toLowerCase() === "resident";
+  const addressIds = (params.addressIds ?? [])
+    .map((id) => String(id).trim())
+    .filter(Boolean);
 
   const base: InvitedUserData = {
     firstName: params.firstName.trim(),
     lastName: params.lastName.trim(),
     email: params.email.trim(),
     role: params.role,
-    residentType: null,
-    addressIds: [],
+    residentType: isResident ? (params.residentType ?? "owner") : null,
+    addressIds: isResident ? addressIds : [],
     ...(phoneNumber ? { phoneNumber } : {}),
     ...(designationId ? { designationId } : {}),
     ...(modules.length ? { modules } : {}),

@@ -91,7 +91,9 @@ export function mapBillReceipt(
   return {
     type: "bill",
     title: "ESTATE BILL PAYMENT RECEIPT",
-    subtitle: "Receipt for estate bill payment",
+    subtitle: billName
+      ? `Receipt for ${billName}`
+      : "Receipt for estate bill payment",
     statusLabel,
     statusTone,
     receiptDate: paymentDate,

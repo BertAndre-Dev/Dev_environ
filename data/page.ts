@@ -1,6 +1,7 @@
 import { FiSettings, FiMapPin, FiLogOut, FiHome } from "react-icons/fi";
 import { BsBuildings } from "react-icons/bs";
 import { IoSpeedometerOutline } from "react-icons/io5";
+import type { ComponentType } from "react";
 import {
   ArrowLeftRight,
   Banknote,
@@ -25,7 +26,16 @@ import {
   Wrench,
 } from "lucide-react";
 
-export const superAdminNav = [
+export type NavItem = {
+  label: string;
+  icon?: ComponentType<{ className?: string }>;
+  path?: string;
+  moduleKey?: string;
+  module?: string;
+  children?: NavItem[];
+};
+
+export const superAdminNav: NavItem[] = [
   {
     label: "Overview",
     icon: FiHome,
@@ -225,8 +235,29 @@ export const companyNav = [
   {
     label: "User Management",
     icon: UserCog,
-    path: "/dashboard/company/users",
     moduleKey: "users",
+    children: [
+      {
+        label: "Residents",
+        path: "/dashboard/company/users?role=resident",
+      },
+      {
+        label: "Admins",
+        path: "/dashboard/company/users?role=admin",
+      },
+      {
+        label: "Security",
+        path: "/dashboard/company/users?role=security",
+      },
+      {
+        label: "Staff",
+        path: "/dashboard/company/users?role=staff",
+      },
+      {
+        label: "Energy Providers",
+        path: "/dashboard/company/users?role=energy provider",
+      },
+    ],
   },
   {
     label: "Energy Provider",

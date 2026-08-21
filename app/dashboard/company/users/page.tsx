@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
 import DeleteModal from "@/components/resident/delete-modal/page";
 import Select from "react-select";
@@ -44,20 +45,21 @@ import { UserStatusModal } from "./components/UserStatusModal";
 import EditUserForm from "@/components/user-mgt/edit-user-form";
 import {
   DEFAULT_ESTATE_USER_ROLE,
-  ESTATE_USER_ROLE_FILTER_OPTIONS,
-  getEstateUserRoleTotalLabel,
-  type EstateUserRoleFilter,
+  COMPANY_USER_ROLE_FILTER_OPTIONS,
+  getCompanyUserRoleTotalLabel,
+  parseCompanyUserRoleQuery,
+  type CompanyUserRoleFilter,
 } from "@/lib/estate-user-roles";
+import {
+  ENERGY_PROVIDER_ROLE,
+  getCompanyInviteLabel,
+  type CompanyInviteRole,
+} from "@/lib/invite-user-roles";
 import { getDesignations } from "@/redux/slice/designations/designations";
 import {
   designationLabelForUser,
   designationNamesById,
 } from "@/lib/designations";
-
-/** Company user management: exclude estate admin & company from role filter. */
-const COMPANY_USER_ROLE_FILTER_OPTIONS = ESTATE_USER_ROLE_FILTER_OPTIONS.filter(
-  (o) => o.value !== "estate admin" && o.value !== "company",
-);
 
 interface EstateOption {
   label: string;
@@ -88,8 +90,17 @@ function formatInvitationStatus(value?: string) {
     .join(" ");
 }
 
+function companyInviteRole(
+  role: CompanyUserRoleFilter,
+): CompanyInviteRole | null {
+  if (role === "admin" || role === ENERGY_PROVIDER_ROLE) return role;
+  return null;
+}
+
 export default function CompanyUsersPage() {
   const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [companyId, setCompanyId] = useState("");
   const [companyName, setCompanyName] = useState("Company");
   const [open, setOpen] = useState(false);
@@ -98,8 +109,8 @@ export default function CompanyUsersPage() {
   const [selectedEstate, setSelectedEstate] = useState<EstateOption | null>(
     null,
   );
-  const [roleFilter, setRoleFilter] = useState<EstateUserRoleFilter>(
-    DEFAULT_ESTATE_USER_ROLE,
+  const [roleFilter, setRoleFilter] = useState<CompanyUserRoleFilter>(() =>
+    parseCompanyUserRoleQuery(searchParams.get("role")),
   );
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -115,6 +126,25 @@ export default function CompanyUsersPage() {
   const [designationNames, setDesignationNames] = useState<
     Record<string, string>
   >({});
+
+  const applyRoleFilter = useCallback(
+    (role: CompanyUserRoleFilter) => {
+      setRoleFilter(role);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("role", role);
+      router.replace(`/dashboard/company/users?${params.toString()}`, {
+        scroll: false,
+      });
+    },
+    [router, searchParams],
+  );
+
+  useEffect(() => {
+    const fromQuery = parseCompanyUserRoleQuery(searchParams.get("role"));
+    if (fromQuery !== roleFilter) {
+      setRoleFilter(fromQuery);
+    }
+  }, [roleFilter, searchParams]);
 
   const allUsers = useSelector((state: RootState) =>
     selectCompanyUsersList(state),
@@ -132,6 +162,7 @@ export default function CompanyUsersPage() {
   const pageSize =
     Number(pagination?.pageSize ?? (pagination as { limit?: number })?.limit) ||
     10;
+  const inviteRole = companyInviteRole(roleFilter);
 
   const fetchUsers = useCallback(
     (page = 1) => {
@@ -451,7 +482,7 @@ export default function CompanyUsersPage() {
   const stats = useMemo(
     () => [
       {
-        label: getEstateUserRoleTotalLabel(roleFilter),
+        label: getCompanyUserRoleTotalLabel(roleFilter),
         value: pagination?.total ?? 0,
         icon: UsersRound,
         color: "bg-[#FEE6D480]",
@@ -488,8 +519,8 @@ export default function CompanyUsersPage() {
                   (o) => o.value === roleFilter,
                 )}
                 onChange={(option) =>
-                  setRoleFilter(
-                    (option?.value as EstateUserRoleFilter) ??
+                  applyRoleFilter(
+                    (option?.value as CompanyUserRoleFilter) ??
                       DEFAULT_ESTATE_USER_ROLE,
                   )
                 }
@@ -520,14 +551,16 @@ export default function CompanyUsersPage() {
                 }}
               />
             </div>
-            <Button
-              onClick={() => setOpen(true)}
-              className="flex items-center gap-2 cursor-pointer shrink-0"
-              disabled={!companyId}
-            >
-              <Plus className="w-4 h-4" />
-              Invite users
-            </Button>
+            {inviteRole ? (
+              <Button
+                onClick={() => setOpen(true)}
+                className="flex items-center gap-2 cursor-pointer shrink-0"
+                disabled={!companyId}
+              >
+                <Plus className="w-4 h-4" />
+                {getCompanyInviteLabel(inviteRole)}
+              </Button>
+            ) : null}
           </div>
         </div>
 
@@ -622,10 +655,12 @@ export default function CompanyUsersPage() {
           />
         </Card>
 
-        {open && companyId && (
+        {open && companyId && inviteRole && (
           <Modal visible={open} onClose={() => setOpen(false)}>
             <CompanyInviteUserForm
               companyId={companyId}
+              role={inviteRole}
+              defaultEstateId={selectedEstate?.value}
               onClose={() => setOpen(false)}
               onSuccess={() => fetchUsers(1)}
             />

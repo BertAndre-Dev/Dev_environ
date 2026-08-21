@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useRef, Suspense } from "react";
+import { useEffect, useState, useRef, useMemo, Suspense } from "react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { Menu, X, LogOut } from "lucide-react";
+import { Menu, X, LogOut, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   adminNav,
@@ -16,6 +16,7 @@ import {
   companyNav,
   staffNav,
   energyProviderNav,
+  type NavItem,
 } from "@/data/page";
 import { AppDispatch, RootState } from "@/redux/store";
 import {
@@ -36,6 +37,46 @@ import { filterNavItemsByEstateModules } from "@/lib/nav-module-filter";
 import Image from "next/image";
 import Loader from "@/components/ui/Loader";
 
+const DEFAULT_NAV_ROLE = "resident";
+
+function parseNavHref(href: string): { pathname: string; role: string | null } {
+  const queryIndex = href.indexOf("?");
+  const pathname = queryIndex === -1 ? href : href.slice(0, queryIndex);
+  const params = new URLSearchParams(
+    queryIndex === -1 ? "" : href.slice(queryIndex + 1),
+  );
+  return { pathname, role: params.get("role") };
+}
+
+function normalizeNavRole(role: string | null): string {
+  return (role ?? DEFAULT_NAV_ROLE).trim().toLowerCase().replace(/-/g, " ");
+}
+
+function isNavHrefActive(
+  href: string,
+  pathname: string,
+  currentRole: string | null,
+): boolean {
+  const parsed = parseNavHref(href);
+  if (pathname !== parsed.pathname) return false;
+  if (parsed.role == null) {
+    return true;
+  }
+  return normalizeNavRole(currentRole) === normalizeNavRole(parsed.role);
+}
+
+function isNavGroupCurrent(item: NavItem, pathname: string): boolean {
+  const hrefs = [
+    item.path,
+    ...(item.children ?? []).map((child) => child.path),
+  ].filter((path): path is string => Boolean(path));
+
+  return hrefs.some((href) => {
+    const { pathname: itemPath } = parseNavHref(href);
+    return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
+  });
+}
+
 export default function DashboardLayout({
   children,
 }: {
@@ -43,6 +84,7 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const dispatch = useDispatch<AppDispatch>();
   const { token, user: reduxUser } = useSelector(
     (state: RootState) => state.auth,
@@ -53,6 +95,7 @@ export default function DashboardLayout({
   const [user, setUser] = useState<any>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [openNavMenus, setOpenNavMenus] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
 
@@ -197,12 +240,11 @@ export default function DashboardLayout({
     }
   };
 
-  // 🔹 Choose navigation items based on role
-  const renderNavItems = () => {
-    if (!user) return null;
+  const navItems = useMemo(() => {
+    if (!user) return [] as NavItem[];
 
     const role = (userRole || user?.role || "").toString().toLowerCase();
-    let navItems =
+    let items: NavItem[] =
       role === "super admin"
         ? superAdminNav
         : role === "company"
@@ -219,11 +261,10 @@ export default function DashboardLayout({
                   ? staffNav
                   : securityNav;
 
-    // Residents: hide Tenant Management for residentType=Tenant (owners only)
     if (role === "resident") {
       const residentType = (user?.residentType ?? "").toString().toLowerCase();
       if (residentType !== "owner") {
-        navItems = navItems.filter(
+        items = items.filter(
           (item) =>
             item.label !== "Tenant Management" &&
             !(item.path
@@ -233,7 +274,6 @@ export default function DashboardLayout({
       }
     }
 
-    // Sidebar modules come from the API (`estateModules`); super admin nav is fixed.
     const rolesWithModules = new Set([
       "admin",
       "resident",
@@ -244,23 +284,53 @@ export default function DashboardLayout({
       "energy provider",
     ]);
     if (rolesWithModules.has(role)) {
-      navItems = filterNavItemsByEstateModules(
-        navItems as Array<(typeof navItems)[number] & { label: string }>,
-        estateModules,
-        {
-          role,
-        },
-      );
+      items = filterNavItemsByEstateModules(items, estateModules, { role });
     }
+
+    return items;
+  }, [estateModules, user, userRole]);
+
+  const currentNavRole = searchParams.get("role");
+
+  useEffect(() => {
+    const labelsToOpen = navItems
+      .filter(
+        (item) =>
+          Boolean(item.children?.length) && isNavGroupCurrent(item, pathname),
+      )
+      .map((item) => item.label);
+    if (labelsToOpen.length === 0) return;
+
+    setOpenNavMenus((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const label of labelsToOpen) {
+        if (!next[label]) {
+          next[label] = true;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [navItems, pathname]);
+
+  const toggleNavMenu = (label: string) => {
+    if (!sidebarOpen) setSidebarOpen(true);
+    setOpenNavMenus((prev) => ({ ...prev, [label]: !prev[label] }));
+  };
+
+  const renderNavItems = () => {
+    if (!user) return null;
 
     const isNavPathActive = (itemPath: string) =>
       pathname === itemPath || pathname.startsWith(`${itemPath}/`);
 
     return navItems.map((item, i) => {
       const Icon = item.icon;
-      const active = item.path ? isNavPathActive(item.path) : false;
+      const children = item.children ?? [];
+      const hasChildren = children.length > 0;
+      const groupOpen = Boolean(openNavMenus[item.label]);
 
-      // Render Logout as a button so it can trigger sign out logic
       if (item.label === "Logout") {
         return (
           <button
@@ -270,7 +340,7 @@ export default function DashboardLayout({
             onClick={handleSignOut}
             className={`flex items-center w-full gap-3 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-muted/50 disabled:opacity-50 cursor-pointer`}
           >
-            <Icon className="w-4 h-4 text-[#D31510]" />
+            {Icon ? <Icon className="w-4 h-4 text-[#D31510]" /> : null}
             {sidebarOpen && (
               <span className="text-[#D31510]">{item.label}</span>
             )}
@@ -278,8 +348,58 @@ export default function DashboardLayout({
         );
       }
 
-      // ✅ Guard clause: skip rendering if path is undefined
+      if (hasChildren) {
+        return (
+          <div key={i} className="space-y-1">
+            <button
+              type="button"
+              onClick={() => toggleNavMenu(item.label)}
+              aria-expanded={groupOpen}
+              className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-muted/50 active:scale-[0.97] motion-reduce:active:scale-100"
+            >
+              {Icon ? <Icon className="h-4 w-4 shrink-0" /> : null}
+              {sidebarOpen && (
+                <>
+                  <span className="flex-1 text-left">{item.label}</span>
+                  <ChevronDown
+                    className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
+                      groupOpen ? "rotate-180" : ""
+                    }`}
+                    aria-hidden
+                  />
+                </>
+              )}
+            </button>
+            {sidebarOpen && groupOpen
+              ? children.map((child) => {
+                  if (!child.path) return null;
+                  const childActive = isNavHrefActive(
+                    child.path,
+                    pathname,
+                    currentNavRole,
+                  );
+                  return (
+                    <Link
+                      key={child.path}
+                      href={child.path}
+                      className={`flex w-full items-center gap-3 rounded-xl py-2 pr-4 pl-11 text-sm font-medium transition-all duration-200 ${
+                        childActive
+                          ? "bg-primary/10 font-semibold text-primary"
+                          : "text-muted-foreground hover:bg-muted/50"
+                      }`}
+                    >
+                      <span>{child.label}</span>
+                    </Link>
+                  );
+                })
+              : null}
+          </div>
+        );
+      }
+
       if (!item.path) return null;
+
+      const active = isNavPathActive(item.path);
 
       return (
         <Link
@@ -291,7 +411,7 @@ export default function DashboardLayout({
               : "text-muted-foreground hover:bg-muted/50"
           }`}
         >
-          <Icon className="w-4 h-4" />
+          {Icon ? <Icon className="w-4 h-4" /> : null}
           {sidebarOpen && <span>{item.label}</span>}
         </Link>
       );

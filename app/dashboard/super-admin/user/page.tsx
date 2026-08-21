@@ -47,7 +47,6 @@ import {
   getEstateUserRoleTotalLabel,
   type EstateUserRoleFilter,
 } from "@/lib/estate-user-roles";
-/** Estate scope: company users are filtered under Company, not Estate. */
 
 interface UserAddress {
   id: string;

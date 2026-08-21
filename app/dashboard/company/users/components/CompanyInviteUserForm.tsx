@@ -14,8 +14,9 @@ import { iniviteUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
 import {
   buildInviteUserPayload,
-  COMPANY_INVITE_ROLE_OPTIONS,
   validateEnergyProviderInviteScope,
+  type CompanyInviteRole,
+  getCompanyInviteLabel,
 } from "@/lib/invite-user-roles";
 import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
 import {
@@ -26,6 +27,8 @@ import {
 
 type Props = {
   companyId: string;
+  role: CompanyInviteRole;
+  defaultEstateId?: string;
   onClose: () => void;
   onSuccess?: () => void;
 };
@@ -37,23 +40,25 @@ type FormState = {
   email: string;
   phoneNumber: string;
   countryCode: string;
-  role: string;
 };
 
 export default function CompanyInviteUserForm({
   companyId,
+  role,
+  defaultEstateId,
   onClose,
   onSuccess,
 }: Readonly<Props>) {
   const dispatch = useDispatch<AppDispatch>();
+  const inviteLabel = getCompanyInviteLabel(role);
+
   const [formData, setFormData] = useState<FormState>({
-    estateId: "",
+    estateId: defaultEstateId ?? "",
     firstName: "",
     lastName: "",
     email: "",
     phoneNumber: "",
     countryCode: DEFAULT_COUNTRY_CODE,
-    role: "",
   });
   const [estates, setEstates] = useState<{ id: string; name: string }[]>([]);
   const [loadingEstates, setLoadingEstates] = useState(false);
@@ -88,7 +93,11 @@ export default function CompanyInviteUserForm({
     })();
   }, [dispatch]);
 
-  const roleOptions = [...COMPANY_INVITE_ROLE_OPTIONS];
+  useEffect(() => {
+    if (defaultEstateId) {
+      setFormData((prev) => ({ ...prev, estateId: defaultEstateId }));
+    }
+  }, [defaultEstateId]);
 
   const estateOptions = estates.map((e) => ({
     value: e.id,
@@ -101,7 +110,6 @@ export default function CompanyInviteUserForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.role) return toast.error("Please select a role.");
     if (!formData.email.trim()) return toast.error("Please provide an email.");
     if (!formData.phoneNumber.trim()) {
       return toast.error("Please provide a phone number.");
@@ -116,12 +124,14 @@ export default function CompanyInviteUserForm({
     if (!e164Phone) {
       return toast.error(PHONE_E164_ERROR);
     }
-    if (!formData.firstName.trim()) return toast.error("Please provide first name.");
-    if (!formData.lastName.trim()) return toast.error("Please provide last name.");
+    if (!formData.firstName.trim())
+      return toast.error("Please provide first name.");
+    if (!formData.lastName.trim())
+      return toast.error("Please provide last name.");
     if (!formData.estateId.trim()) return toast.error("Please select an estate.");
 
     const energyProviderError = validateEnergyProviderInviteScope({
-      role: formData.role,
+      role,
       inviteContext: "company",
       estateId: formData.estateId,
       companyId,
@@ -137,22 +147,23 @@ export default function CompanyInviteUserForm({
             lastName: formData.lastName,
             email: formData.email,
             phoneNumber: e164Phone,
-            role: formData.role,
+            role,
             inviteContext: "company",
             estateId: formData.estateId,
             companyId,
           }),
         ),
       ).unwrap();
-      toast.success((res as { message?: string })?.message ?? "User invited successfully");
+      toast.success(
+        (res as { message?: string })?.message ?? `${inviteLabel} sent`,
+      );
       setFormData({
-        estateId: "",
+        estateId: defaultEstateId ?? "",
         firstName: "",
         lastName: "",
         email: "",
         phoneNumber: "",
         countryCode: DEFAULT_COUNTRY_CODE,
-        role: "",
       });
       onSuccess?.();
       onClose();
@@ -167,7 +178,7 @@ export default function CompanyInviteUserForm({
   return (
     <Card className="max-w-lg mx-auto mt-6">
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">Invite user</CardTitle>
+        <CardTitle className="text-lg font-semibold">{inviteLabel}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -205,33 +216,6 @@ export default function CompanyInviteUserForm({
               required
             />
           </div>
-          <div>
-            <Label>Estate</Label>
-            <Select
-              options={estateOptions}
-              value={estateOptions.find((o) => o.value === formData.estateId) ?? null}
-              onChange={(opt) =>
-                setFormData((prev) => ({ ...prev, estateId: opt?.value ?? "" }))
-              }
-              isLoading={loadingEstates}
-              placeholder="Select estate"
-              isClearable
-            />
-          </div>
-          <div>
-            <Label>Role</Label>
-            <Select
-              options={roleOptions}
-              value={roleOptions.find((o) => o.value === formData.role) ?? null}
-              onChange={(opt) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  role: opt?.value ?? "",
-                }))
-              }
-              placeholder="Select role"
-            />
-          </div>
           <InvitePhoneNumberField
             id="invite-phone"
             countryCode={formData.countryCode}
@@ -241,8 +225,29 @@ export default function CompanyInviteUserForm({
             }
             onPhoneNumberChange={handleInputChange}
           />
-          <Button type="submit" className="w-full cursor-pointer" disabled={submitting}>
-            {submitting ? "Inviting..." : "Invite user"}
+          <div>
+            <Label>Estate</Label>
+            <Select
+              options={estateOptions}
+              value={
+                estateOptions.find((o) => o.value === formData.estateId) ?? null
+              }
+              onChange={(opt) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  estateId: opt?.value ?? "",
+                }))
+              }
+              isLoading={loadingEstates}
+              placeholder="Select estate"
+            />
+          </div>
+          <Button
+            type="submit"
+            className="w-full cursor-pointer"
+            disabled={submitting}
+          >
+            {submitting ? "Inviting..." : inviteLabel}
           </Button>
         </form>
       </CardContent>

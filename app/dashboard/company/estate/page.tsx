@@ -35,6 +35,7 @@ import {
 import CompanyEstateForm from "./components/CompanyEstateForm";
 import { CompanyEstateModulesForm } from "./components/CompanyEstateModulesForm";
 import { CompanyEstateStatusModal } from "./components/CompanyEstateStatusModal";
+import { labelForPlan } from "@/lib/plans";
 
 type EstateTableRow = EstateData & {
   id?: string;
@@ -231,6 +232,14 @@ export default function CompanyEstatePage() {
     { key: "city" as const, header: "City" },
     { key: "state" as const, header: "State" },
     { key: "country" as const, header: "Country" },
+    {
+      key: "plan" as const,
+      header: "Plan",
+      render: (item: EstateTableRow) => (
+        <span className="font-medium">{labelForPlan(item.plan)}</span>
+      ),
+      exportValue: (item: EstateTableRow) => labelForPlan(item.plan),
+    },
     {
       key: "visitorVerificationMode" as const,
       header: "Visitor Verification",

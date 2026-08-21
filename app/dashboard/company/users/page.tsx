@@ -60,6 +60,18 @@ import {
   designationLabelForUser,
   designationNamesById,
 } from "@/lib/designations";
+import { DesignationsManager } from "@/components/designations/DesignationsManager";
+
+type CompanyStaffPageTab = "staff" | "designations";
+
+const COMPANY_STAFF_TABS: { id: CompanyStaffPageTab; label: string }[] = [
+  { id: "staff", label: "Staff" },
+  { id: "designations", label: "Designations" },
+];
+
+function parseCompanyStaffTab(raw: string | null): CompanyStaffPageTab {
+  return raw === "designations" ? "designations" : "staff";
+}
 
 interface EstateOption {
   label: string;
@@ -127,11 +139,29 @@ export default function CompanyUsersPage() {
     Record<string, string>
   >({});
 
+  const staffTab = parseCompanyStaffTab(searchParams.get("tab"));
+  const showStaffTabs = roleFilter === "staff";
+  const showDesignations = showStaffTabs && staffTab === "designations";
+
   const applyRoleFilter = useCallback(
     (role: CompanyUserRoleFilter) => {
       setRoleFilter(role);
       const params = new URLSearchParams(searchParams.toString());
       params.set("role", role);
+      if (role !== "staff") params.delete("tab");
+      router.replace(`/dashboard/company/users?${params.toString()}`, {
+        scroll: false,
+      });
+    },
+    [router, searchParams],
+  );
+
+  const applyStaffTab = useCallback(
+    (tab: CompanyStaffPageTab) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("role", "staff");
+      if (tab === "designations") params.set("tab", "designations");
+      else params.delete("tab");
       router.replace(`/dashboard/company/users?${params.toString()}`, {
         scroll: false,
       });
@@ -158,7 +188,9 @@ export default function CompanyUsersPage() {
 
   const pageLoading =
     estatesLoading ||
-    (Boolean(selectedEstate?.value) && isPending(usersStatus));
+    (!showDesignations &&
+      Boolean(selectedEstate?.value) &&
+      isPending(usersStatus));
   const pageSize =
     Number(pagination?.pageSize ?? (pagination as { limit?: number })?.limit) ||
     10;
@@ -246,18 +278,20 @@ export default function CompanyUsersPage() {
   }, [estateOptions, selectedEstate?.value]);
 
   useEffect(() => {
+    if (showDesignations) return;
     if (!selectedEstate?.value) return;
     fetchUsers(1).catch((err: unknown) => {
       const message = getApiErrorMessage(err);
       if (message) toast.error(message);
     });
-  }, [selectedEstate, fetchUsers]);
+  }, [fetchUsers, selectedEstate, showDesignations]);
 
   useEffect(() => {
     if (roleFilter !== "staff" || !selectedEstate?.value) {
       setDesignationNames({});
       return;
     }
+    if (showDesignations) return;
 
     let cancelled = false;
     (async () => {
@@ -281,7 +315,7 @@ export default function CompanyUsersPage() {
     return () => {
       cancelled = true;
     };
-  }, [dispatch, roleFilter, selectedEstate?.value, companyId]);
+  }, [dispatch, roleFilter, selectedEstate?.value, companyId, showDesignations]);
 
   const closeStatusModal = () => {
     if (statusSubmitting) return;
@@ -564,6 +598,41 @@ export default function CompanyUsersPage() {
           </div>
         </div>
 
+        {showStaffTabs ? (
+          <div className="flex space-x-4" role="tablist" aria-label="Staff management">
+            {COMPANY_STAFF_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={staffTab === tab.id}
+                className={`py-2 px-4 cursor-pointer ${
+                  staffTab === tab.id
+                    ? "text-primary border-b-2 border-primary font-bold"
+                    : "font-medium text-sidebar-foreground/60"
+                }`}
+                onClick={() => applyStaffTab(tab.id)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {showDesignations ? (
+          companyId ? (
+            <DesignationsManager
+              role="company"
+              compact
+              companyId={companyId}
+              companyName={companyName}
+              estateId={selectedEstate?.value}
+              estateSelectOptions={estateOptions}
+              estatesLoading={estatesLoading}
+            />
+          ) : null
+        ) : (
+          <>
         <div className="grid grid-cols-1 gap-4">
           {stats.map((stat) => {
             const Icon = stat.icon;
@@ -654,6 +723,8 @@ export default function CompanyUsersPage() {
             }
           />
         </Card>
+          </>
+        )}
 
         {open && companyId && inviteRole && (
           <Modal visible={open} onClose={() => setOpen(false)}>

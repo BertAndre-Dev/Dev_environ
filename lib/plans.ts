@@ -12,6 +12,14 @@ export const FALLBACK_PLANS: SubscriptionPlan[] = [
   { key: "premium", name: "Premium", staffAssignableModules: [] },
 ];
 
+export function labelForPlan(value: unknown): string {
+  if (typeof value !== "string" || !value.trim()) return "—";
+  const key = value.trim().toLowerCase();
+  const known = FALLBACK_PLANS.find((plan) => plan.key === key);
+  if (known) return known.name;
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
 export function normalizePlanKey(value: unknown): string {
   if (typeof value === "string") {
     const plan = value.trim().toLowerCase();

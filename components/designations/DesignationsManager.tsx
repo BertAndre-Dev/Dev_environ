@@ -52,6 +52,13 @@ type Role = "company" | "estate";
 
 type Props = {
   role: Role;
+  /** Nested in another page (e.g. company staff tabs). Hides the page heading. */
+  compact?: boolean;
+  companyId?: string;
+  companyName?: string;
+  estateId?: string;
+  estateSelectOptions?: EstateSelectOption[];
+  estatesLoading?: boolean;
 };
 
 type EstateSelectOption = { label: string; value: string };
@@ -136,7 +143,15 @@ function DesignationModulesCell({
   );
 }
 
-export function DesignationsManager({ role }: Readonly<Props>) {
+export function DesignationsManager({
+  role,
+  compact = false,
+  companyId: injectedCompanyId,
+  companyName: injectedCompanyName,
+  estateId: injectedEstateId,
+  estateSelectOptions: injectedEstateSelectOptions,
+  estatesLoading: injectedEstatesLoading,
+}: Readonly<Props>) {
   const dispatch = useDispatch<AppDispatch>();
   const reduceMotion = useReducedMotion();
   const items = useSelector(selectDesignations);
@@ -144,12 +159,14 @@ export function DesignationsManager({ role }: Readonly<Props>) {
   const { listStatus, createStatus, updateStatus, deleteStatus } = useSelector(
     selectDesignationsState,
   );
+  const hasInjectedCompanyScope =
+    role === "company" && Boolean(injectedCompanyId);
 
-  const [scopeId, setScopeId] = useState("");
+  const [scopeId, setScopeId] = useState(injectedCompanyId ?? "");
   const [scopeName, setScopeName] = useState(
-    role === "company" ? "Company" : "Estate",
+    injectedCompanyName || (role === "company" ? "Company" : "Estate"),
   );
-  const [scopeLoading, setScopeLoading] = useState(true);
+  const [scopeLoading, setScopeLoading] = useState(!hasInjectedCompanyScope);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [includeInactive, setIncludeInactive] = useState(false);
@@ -179,6 +196,14 @@ export function DesignationsManager({ role }: Readonly<Props>) {
   }, [search, includeInactive, scopeId, selectedEstate?.value]);
 
   useEffect(() => {
+    if (!hasInjectedCompanyScope) return;
+    setScopeId(injectedCompanyId ?? "");
+    setScopeName(injectedCompanyName || "Company");
+    setScopeLoading(false);
+  }, [hasInjectedCompanyScope, injectedCompanyId, injectedCompanyName]);
+
+  useEffect(() => {
+    if (hasInjectedCompanyScope) return;
     (async () => {
       try {
         const userRes = await dispatch(getSignedInUser()).unwrap();
@@ -222,19 +247,36 @@ export function DesignationsManager({ role }: Readonly<Props>) {
         setScopeLoading(false);
       }
     })();
-  }, [dispatch, role]);
+  }, [dispatch, hasInjectedCompanyScope, role]);
 
   const estateSelectOptions = useMemo<EstateSelectOption[]>(
-    () => estates.map((estate) => ({ label: estate.name, value: estate.id })),
-    [estates],
+    () =>
+      injectedEstateSelectOptions ??
+      estates.map((estate) => ({ label: estate.name, value: estate.id })),
+    [estates, injectedEstateSelectOptions],
   );
+  const estatesBusy = injectedEstatesLoading ?? estatesLoading;
 
   useEffect(() => {
     if (role !== "company") return;
+    if (injectedEstateId) {
+      const match = estateSelectOptions.find(
+        (option) => option.value === injectedEstateId,
+      );
+      if (match && match.value !== selectedEstate?.value) {
+        setSelectedEstate(match);
+      }
+      return;
+    }
     if (selectedEstate?.value) return;
     if (!estateSelectOptions.length) return;
     setSelectedEstate(estateSelectOptions[0]);
-  }, [estateSelectOptions, role, selectedEstate?.value]);
+  }, [
+    estateSelectOptions,
+    injectedEstateId,
+    role,
+    selectedEstate?.value,
+  ]);
 
   const loadList = useCallback(
     async (nextPage = page) => {
@@ -303,7 +345,12 @@ export function DesignationsManager({ role }: Readonly<Props>) {
         toast.success("Designation updated.");
       } else {
         const estateId =
-          role === "estate" ? scopeId : values.estateId?.trim() || undefined;
+          role === "estate"
+            ? scopeId
+            : values.estateId?.trim() ||
+              selectedEstate?.value ||
+              injectedEstateId ||
+              undefined;
         if (role === "company" && !estateId) {
           toast.warning("Please select an estate.");
           return;
@@ -382,8 +429,11 @@ export function DesignationsManager({ role }: Readonly<Props>) {
   const estateNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const estate of estates) map.set(estate.id, estate.name);
+    for (const option of estateSelectOptions) {
+      map.set(option.value, option.label);
+    }
     return map;
-  }, [estates]);
+  }, [estateSelectOptions, estates]);
 
   const columns = useMemo(
     () => [
@@ -490,12 +540,86 @@ export function DesignationsManager({ role }: Readonly<Props>) {
     [estateNameById, role, scopeId],
   );
 
+  const canCreate =
+    Boolean(scopeId) && (role !== "company" || Boolean(selectedEstate?.value));
+  const showEstateFilter = role === "company" && !compact;
+
+  const toolbar = (
+    <div
+      className={
+        compact
+          ? "flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
+          : "mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
+      }
+    >
+      {showEstateFilter ? (
+        <div className="w-full lg:w-64">
+          <Select
+            options={estateSelectOptions}
+            placeholder={estatesBusy ? "Loading estates…" : "Filter by estate"}
+            value={selectedEstate}
+            onChange={(option) => setSelectedEstate(option)}
+            isSearchable
+            isLoading={estatesBusy}
+            isDisabled={!estateSelectOptions.length}
+            styles={{
+              control: (base) => ({
+                ...base,
+                minHeight: 44,
+                borderRadius: 16,
+                cursor: "pointer",
+              }),
+              option: (base) => ({ ...base, cursor: "pointer" }),
+              dropdownIndicator: (base) => ({
+                ...base,
+                cursor: "pointer",
+              }),
+            }}
+          />
+        </div>
+      ) : null}
+      <div className="relative min-w-0 flex-1">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-black/35" />
+        <Input
+          value={searchInput}
+          onChange={(event) => setSearchInput(event.target.value)}
+          placeholder="Search titles"
+          className="h-11 rounded-2xl bg-white/80 pl-9"
+          aria-label="Search designations"
+        />
+      </div>
+      <div className="rounded-2xl border border-black/5 bg-white/70 px-3.5 py-2.5 lg:min-w-[220px]">
+        <DesignationToggle
+          checked={includeInactive}
+          label="Show inactive"
+          onCheckedChange={setIncludeInactive}
+        />
+      </div>
+      {compact ? (
+        <Button
+          type="button"
+          onClick={openCreate}
+          disabled={!canCreate}
+          className="self-start shrink-0"
+        >
+          <Plus className="size-4" />
+          New designation
+        </Button>
+      ) : null}
+    </div>
+  );
+
   return (
     <div className="relative space-y-5">
       {showInitialLoader ? (
-        <Loader fullScreen label="Loading designations..." />
+        <div className={compact ? "min-h-[12rem]" : undefined}>
+          <Loader fullScreen={!compact} label="Loading designations..." />
+        </div>
       ) : null}
 
+      {compact ? (
+        <div className="bg-white p-4 rounded-lg">{toolbar}</div>
+      ) : (
       <header
         className={[
           "sticky top-0 z-10 -mx-1 rounded-[24px] px-4 py-4 sm:px-5",
@@ -518,65 +642,18 @@ export function DesignationsManager({ role }: Readonly<Props>) {
           <Button
             type="button"
             onClick={openCreate}
-            disabled={
-              !scopeId || (role === "company" && !selectedEstate?.value)
-            }
+            disabled={!canCreate}
             className="self-start rounded-full bg-[#0150AC] text-white active:scale-[0.97] hover:bg-[#0150AC]/90"
           >
             <Plus className="size-4" />
             New designation
           </Button>
         </div>
-
-        <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          {role === "company" ? (
-            <div className="w-full lg:w-64">
-              <Select
-                options={estateSelectOptions}
-                placeholder={
-                  estatesLoading ? "Loading estates…" : "Filter by estate"
-                }
-                value={selectedEstate}
-                onChange={(option) => setSelectedEstate(option)}
-                isSearchable
-                isLoading={estatesLoading}
-                isDisabled={!estateSelectOptions.length}
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    minHeight: 44,
-                    borderRadius: 16,
-                    cursor: "pointer",
-                  }),
-                  option: (base) => ({ ...base, cursor: "pointer" }),
-                  dropdownIndicator: (base) => ({
-                    ...base,
-                    cursor: "pointer",
-                  }),
-                }}
-              />
-            </div>
-          ) : null}
-          <div className="relative min-w-0 flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-black/35" />
-            <Input
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Search titles"
-              className="h-11 rounded-2xl bg-white/80 pl-9"
-              aria-label="Search designations"
-            />
-          </div>
-          <div className="rounded-2xl border border-black/5 bg-white/70 px-3.5 py-2.5 lg:min-w-[220px]">
-            <DesignationToggle
-              checked={includeInactive}
-              label="Show inactive"
-              onCheckedChange={setIncludeInactive}
-            />
-          </div>
-        </div>
+        {toolbar}
       </header>
+      )}
 
+      {!(compact && showInitialLoader) ? (
       <Card className="p-4">
         <Table
           columns={columns}
@@ -597,15 +674,16 @@ export function DesignationsManager({ role }: Readonly<Props>) {
           }}
         />
       </Card>
+      ) : null}
 
       <DesignationFormSheet
         open={sheetOpen}
         saving={saving}
         initial={editing}
         scopeLabel={role === "company" ? "Company" : "Estate"}
-        showEstateSelect={role === "company"}
+        showEstateSelect={role === "company" && !compact}
         estateOptions={estateSelectOptions}
-        estatesLoading={estatesLoading}
+        estatesLoading={estatesBusy}
         defaultEstateId={
           role === "company" ? (selectedEstate?.value ?? "") : scopeId
         }

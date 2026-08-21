@@ -1,7 +1,5 @@
-"use client";
-
-import { DesignationsManager } from "@/components/designations/DesignationsManager";
+import { redirect } from "next/navigation";
 
 export default function CompanyDesignationsPage() {
-  return <DesignationsManager role="company" />;
+  redirect("/dashboard/company/users?role=staff&tab=designations");
 }

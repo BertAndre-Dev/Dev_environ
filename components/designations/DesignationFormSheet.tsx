@@ -126,7 +126,7 @@ export function DesignationFormSheet({
       name: name.trim(),
       description: description.trim(),
       isActive,
-      estateId: needsEstate ? estateId : undefined,
+      estateId: estateId.trim() || undefined,
       modules,
     });
   };

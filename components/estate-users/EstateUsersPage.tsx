@@ -105,14 +105,14 @@ const PAGE_LIMIT = 10;
 
 export type EstateUsersStaffPolicy = "company-only" | "estate-always";
 
-export type EstateUsersInvitePolicy = "standard" | "staff-only";
+export type EstateUsersInvitePolicy = "standard" | "none";
 
 type Props = {
   basePath: string;
   staffPolicy: EstateUsersStaffPolicy;
   /** Estate-admin can list admins; company/estate admin pages cannot. */
   allowAdminRole?: boolean;
-  /** `staff-only` hides invite everywhere except Staff. */
+  /** `none` hides invite on every role page. */
   invitePolicy?: EstateUsersInvitePolicy;
 };
 
@@ -161,25 +161,25 @@ export function EstateUsersPage({
     ? parseEstateAdminUserRoleQuery
     : parseAdminUserRoleQuery;
   const hasCompany = Boolean(adminCompanyId);
-  const staffAllowed =
-    staffPolicy === "estate-always" ||
-    (staffPolicy === "company-only" && hasCompany);
+  const isStandaloneEstate = !bootstrapping && !hasCompany;
+  const staffAllowed = true;
   const canInvite =
-    invitePolicy === "staff-only"
-      ? roleFilter === "staff" && staffAllowed
-      : isAdminInviteRole(roleFilter) && roleFilter !== "staff";
-  const canManageDesignations = staffPolicy === "estate-always";
+    invitePolicy !== "none" &&
+    isAdminInviteRole(roleFilter) &&
+    (roleFilter !== "staff" || isStandaloneEstate);
+  const canManageDesignations =
+    staffPolicy === "company-only" && isStandaloneEstate;
   const requestedStaffTab = parseAdminStaffTab(searchParams.get("tab"));
   const staffTab = canManageDesignations ? requestedStaffTab : "staff";
   const showStaffTabs = roleFilter === "staff" && canManageDesignations;
   const showDesignations = showStaffTabs && staffTab === "designations";
   const designationScope = designationWriteScope(
-    staffPolicy === "estate-always"
-      ? { estateId: selectedEstate?.value }
-      : {
+    staffPolicy === "company-only" && hasCompany
+      ? {
           companyId: adminCompanyId,
           estateId: selectedEstate?.value,
-        },
+        }
+      : { estateId: selectedEstate?.value },
   );
 
   const applyRoleFilter = useCallback(

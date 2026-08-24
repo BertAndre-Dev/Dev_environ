@@ -44,19 +44,6 @@ export function isNavModuleEnabled(
   return estateModules.includes(moduleKey);
 }
 
-/** Drop the Staff submenu for standalone estate admins (no parent company). */
-export function stripStaffNavChildren<
-  T extends { label: string; children?: T[] },
->(items: T[]): T[] {
-  return items.map((item) => {
-    if (!item.children?.length) return item;
-    return {
-      ...item,
-      children: item.children.filter((child) => child.label !== "Staff"),
-    };
-  });
-}
-
 export function filterNavItemsByEstateModules<T extends NavItemWithModule>(
   items: T[],
   estateModules: string[],

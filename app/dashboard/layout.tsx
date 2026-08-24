@@ -33,11 +33,7 @@ import { CommunityChatSocketProvider } from "@/components/providers/CommunityCha
 import { WalletRequiredAlert } from "@/components/wallet/WalletRequiredAlert";
 import { MembershipSwitcher } from "@/components/dashboard/MembershipSwitcher";
 import { NotificationsBell } from "@/components/dashboard/NotificationsBell";
-import {
-  filterNavItemsByEstateModules,
-  stripStaffNavChildren,
-} from "@/lib/nav-module-filter";
-import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
+import { filterNavItemsByEstateModules } from "@/lib/nav-module-filter";
 import Image from "next/image";
 import Loader from "@/components/ui/Loader";
 
@@ -291,22 +287,8 @@ export default function DashboardLayout({
       items = filterNavItemsByEstateModules(items, estateModules, { role });
     }
 
-    if (role === "admin") {
-      const fromRedux =
-        reduxUser && typeof reduxUser === "object"
-          ? parseCompanyFromUser(reduxUser as Record<string, unknown>)?.id
-          : "";
-      const fromSession =
-        user && typeof user === "object"
-          ? parseCompanyFromUser(user as Record<string, unknown>)?.id
-          : "";
-      if (!fromRedux && !fromSession) {
-        items = stripStaffNavChildren(items);
-      }
-    }
-
     return items;
-  }, [estateModules, reduxUser, user, userRole]);
+  }, [estateModules, user, userRole]);
 
   const currentNavRole = searchParams.get("role");
 

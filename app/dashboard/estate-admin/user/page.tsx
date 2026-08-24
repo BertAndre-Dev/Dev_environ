@@ -8,7 +8,7 @@ export default function EstateAdminUserPage() {
       basePath="/dashboard/estate-admin/user"
       staffPolicy="estate-always"
       allowAdminRole
-      invitePolicy="staff-only"
+      invitePolicy="none"
     />
   );
 }

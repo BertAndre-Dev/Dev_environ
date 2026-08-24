@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "@/redux/store";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/redux/store";
 import { getBill, payBill } from "@/redux/slice/resident/bill-mgt/bills-mgt";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
@@ -20,6 +20,8 @@ import SwitchAddress from "@/components/resident/switch-address/page";
 import type { AddressOption } from "@/lib/address";
 import { toast } from "react-toastify";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { canUseBillInterest } from "@/lib/user-modules";
+import { selectEstateModules } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 
 interface BillsFormProps {
   billId: string;
@@ -126,6 +128,9 @@ export default function BillsForm({
   onClose,
 }: BillsFormProps) {
   const dispatch = useDispatch<AppDispatch>();
+  const authUser = useSelector((state: RootState) => state.auth.user);
+  const estateModules = useSelector(selectEstateModules);
+  const canAccrueInterest = canUseBillInterest(authUser, estateModules);
 
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -325,6 +330,7 @@ export default function BillsForm({
         )}
 
         {!loading &&
+        canAccrueInterest &&
         hasActiveInterest({ accrueInterest, interestRatePercent }) ? (
           <AlertBanner
             variant="warning"

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "@/redux/store";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/redux/store";
 import {
   BILL_FREQUENCY_OPTIONS,
   getBill,
@@ -20,8 +20,13 @@ import {
   formatAmountInput,
   parseFormattedNumber,
 } from "@/lib/format-number";
-import { AccrueInterestFields, toInterestStartDate } from "@/components/admin/bills-form/accrue-interest-fields";
+import {
+  AccrueInterestFields,
+  toInterestStartDate,
+} from "@/components/admin/bills-form/accrue-interest-fields";
 import { cn } from "@/lib/utils";
+import { canUseBillInterest } from "@/lib/user-modules";
+import { selectEstateModules } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 
 /** Form state: yearlyAmount can be string (empty input) or number */
 interface BillFormState {
@@ -73,6 +78,9 @@ function amountFromBill(data?: {
 
 export default function BillsForm({ estateId, initialData, onSubmit }: BillsFormProps) {
   const seededAmount = amountFromBill(initialData);
+  const authUser = useSelector((state: RootState) => state.auth.user);
+  const estateModules = useSelector(selectEstateModules);
+  const canAccrueInterest = canUseBillInterest(authUser, estateModules);
   const [formData, setFormData] = useState<BillFormState>({
     estateId,
     id: initialData?.id,
@@ -148,13 +156,14 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       ? Number(formData.interestRatePercent)
       : 0;
     if (
+      canAccrueInterest &&
       formData.accrueInterest &&
       (!Number.isFinite(interestRate) || interestRate < 0)
     ) {
       toast.error("Please enter a valid interest rate.");
       return;
     }
-    if (formData.accrueInterest && !formData.interestStartsAt) {
+    if (canAccrueInterest && formData.accrueInterest && !formData.interestStartsAt) {
       toast.error("Please select when interest should start.");
       return;
     }
@@ -165,11 +174,15 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       yearlyAmount: parseFormattedNumber(formData.yearlyAmount),
       frequency: formData.frequency,
       compulsory: formData.compulsory,
-      accrueInterest: formData.accrueInterest,
-      interestRatePercent: interestRate,
-      interestStartsAt: formData.accrueInterest
-        ? formData.interestStartsAt
-        : undefined,
+      ...(canAccrueInterest
+        ? {
+            accrueInterest: formData.accrueInterest,
+            interestRatePercent: interestRate,
+            interestStartsAt: formData.accrueInterest
+              ? formData.interestStartsAt
+              : undefined,
+          }
+        : {}),
     };
     onSubmit(payload);
   };
@@ -187,6 +200,7 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
           <p className="text-gray-500 italic">Loading...</p>
         ) : (
           <div className="space-y-4">
+            {canAccrueInterest ? (
             <AccrueInterestFields
               idPrefix="estate-bill"
               accrueInterest={formData.accrueInterest}
@@ -202,6 +216,7 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
                 handleChange("interestStartsAt", value)
               }
             />
+            ) : null}
 
             <div>
               <Label>Name</Label>

@@ -311,6 +311,11 @@ export function EstateBillsTab({ estateId }: Props) {
   const assignedColumns = useMemo(
     () => [
       {
+        key: "billName",
+        header: "Bill name",
+        render: (item: AssignedBillData) => item.billName || "—",
+      },
+      {
         key: "createdAt",
         header: "Created",
         render: (item: AssignedBillData) =>
@@ -321,11 +326,6 @@ export function EstateBillsTab({ estateId }: Props) {
                 year: "numeric",
               })
             : "—",
-      },
-      {
-        key: "billName",
-        header: "Bill name",
-        render: (item: AssignedBillData) => item.billName || "—",
       },
       {
         key: "frequency",
@@ -423,7 +423,9 @@ export function EstateBillsTab({ estateId }: Props) {
                 setBillsStartDate(startDate);
                 setBillsEndDate(endDate);
               }}
-              showPagination={Boolean(billsPagination && billsPagination.total > 0)}
+              showPagination={Boolean(
+                billsPagination && billsPagination.total > 0,
+              )}
               paginationInfo={
                 billsPagination
                   ? {

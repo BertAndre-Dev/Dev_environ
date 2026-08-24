@@ -94,7 +94,8 @@ function billInterestFields(data: {
   interestRatePercent?: number;
   interestStartsAt?: string;
 }) {
-  const accrueInterest = Boolean(data.accrueInterest);
+  if (typeof data.accrueInterest !== "boolean") return {};
+  const accrueInterest = data.accrueInterest;
   const interestStartsAt = accrueInterest
     ? String(data.interestStartsAt ?? "").trim().slice(0, 10)
     : "";

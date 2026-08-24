@@ -38,6 +38,8 @@ import Loader from "@/components/ui/Loader";
 import { isPending, isSettled } from "@/lib/async-status";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatDateTime } from "@/lib/format-date";
+import { canUseBillInterest } from "@/lib/user-modules";
+import { selectEstateModules } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 
 type BillsTab = "estate" | "assigned";
 
@@ -207,6 +209,9 @@ function assignedBillPayId(bill: AssignedBillData): string | null {
 
 export default function BillPage() {
   const dispatch = useDispatch<AppDispatch>();
+  const authUser = useSelector((state: RootState) => state.auth.user);
+  const estateModules = useSelector(selectEstateModules);
+  const canAccrueInterest = canUseBillInterest(authUser, estateModules);
   const [activeTab, setActiveTab] = useState<BillsTab>("estate");
   const [paidStartDate, setPaidStartDate] = useState("");
   const [paidEndDate, setPaidEndDate] = useState("");
@@ -421,15 +426,15 @@ export default function BillPage() {
 
   const columns = [
     {
-      key: "billName",
-      header: "Bill Name",
-      render: (item: PaidBillData) => item.billName || "-",
-    },
-    {
       key: "createdAt",
       header: "Created At",
       render: (item: PaidBillData) => formatDateTime(item.createdAt, "-"),
       exportValue: (item: PaidBillData) => formatDateTime(item.createdAt, ""),
+    },
+    {
+      key: "billName",
+      header: "Bill Name",
+      render: (item: PaidBillData) => item.billName || "-",
     },
     {
       key: "frequency",
@@ -568,7 +573,7 @@ export default function BillPage() {
                   )}
                   accruedInterest={Number(b.accruedInterest ?? 0)}
                   interestRatePercent={
-                    hasActiveInterest(b)
+                    canAccrueInterest && hasActiveInterest(b)
                       ? Number(b.interestRatePercent)
                       : undefined
                   }
@@ -603,7 +608,7 @@ export default function BillPage() {
                     principalDue={Number(b.principalDue ?? amount)}
                     accruedInterest={Number(b.accruedInterest ?? 0)}
                     interestRatePercent={
-                      hasActiveInterest(b)
+                      canAccrueInterest && hasActiveInterest(b)
                         ? Number(b.interestRatePercent)
                         : undefined
                     }

@@ -42,6 +42,8 @@ import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import Loader from "@/components/ui/Loader";
 import { isBusy, isPending } from "@/lib/async-status";
 import { formatAmountDisplay } from "@/lib/format-number";
+import { canUseBillInterest } from "@/lib/user-modules";
+import { selectEstateModules } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 
 interface BillData {
   createdAt?: string;
@@ -70,7 +72,7 @@ const TABS: { id: BillsTab; label: string }[] = [
 function formatFrequencyLabel(frequency?: string): string {
   if (!frequency) return "-";
   const map: Record<string, string> = {
-    oneoff: "One-off",
+    // oneoff: "One-off",
     oneOff: "One-off",
     quarterly: "Quarterly",
     yearly: "Yearly",
@@ -119,6 +121,9 @@ function YesNoBadge({ value }: { value?: boolean }) {
 
 export default function BillPage() {
   const dispatch = useDispatch<AppDispatch>();
+  const authUser = useSelector((state: RootState) => state.auth.user);
+  const estateModules = useSelector(selectEstateModules);
+  const canAccrueInterest = canUseBillInterest(authUser, estateModules);
   const [estateName, setEstateName] = useState("Estate");
   const [selectedBill, setSelectedBill] = useState<BillData | null>(null);
   const [estateId, setEstateId] = useState<string | null>(null);
@@ -572,21 +577,27 @@ export default function BillPage() {
       header: "Compulsory",
       render: (item: BillData) => <YesNoBadge value={item.compulsory} />,
     },
-    {
-      key: "accrueInterest",
-      header: "Accrue Interest",
-      render: (item: BillData) => <YesNoBadge value={item.accrueInterest} />,
-    },
-    {
-      key: "interestRatePercent",
-      header: "Interest Rate",
-      render: (item: BillData) => formatInterestRate(item),
-    },
-    {
-      key: "interestStartsAt",
-      header: "Interest Starts",
-      render: (item: BillData) => formatInterestStartsAt(item),
-    },
+    ...(canAccrueInterest
+      ? [
+          {
+            key: "accrueInterest",
+            header: "Accrue Interest",
+            render: (item: BillData) => (
+              <YesNoBadge value={item.accrueInterest} />
+            ),
+          },
+          {
+            key: "interestRatePercent",
+            header: "Interest Rate",
+            render: (item: BillData) => formatInterestRate(item),
+          },
+          {
+            key: "interestStartsAt",
+            header: "Interest Starts",
+            render: (item: BillData) => formatInterestStartsAt(item),
+          },
+        ]
+      : []),
     {
       key: "isActive",
       header: "Status",
@@ -689,21 +700,27 @@ export default function BillPage() {
       header: "Compulsory",
       render: (item) => <YesNoBadge value={item.compulsory} />,
     },
-    {
-      key: "accrueInterest",
-      header: "Accrue Interest",
-      render: (item) => <YesNoBadge value={item.accrueInterest} />,
-    },
-    {
-      key: "interestRatePercent",
-      header: "Interest Rate",
-      render: (item) => formatInterestRate(item),
-    },
-    {
-      key: "interestStartsAt",
-      header: "Interest Starts",
-      render: (item) => formatInterestStartsAt(item),
-    },
+    ...(canAccrueInterest
+      ? [
+          {
+            key: "accrueInterest",
+            header: "Accrue Interest",
+            render: (item: AssignedBillData) => (
+              <YesNoBadge value={item.accrueInterest} />
+            ),
+          },
+          {
+            key: "interestRatePercent",
+            header: "Interest Rate",
+            render: (item: AssignedBillData) => formatInterestRate(item),
+          },
+          {
+            key: "interestStartsAt",
+            header: "Interest Starts",
+            render: (item: AssignedBillData) => formatInterestStartsAt(item),
+          },
+        ]
+      : []),
     {
       key: "status",
       header: "Status",

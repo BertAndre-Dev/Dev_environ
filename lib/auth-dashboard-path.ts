@@ -15,7 +15,7 @@ export function getDashboardPathForRole(
     case "resident":
       return "/dashboard/resident/bills";
     case "company":
-      return "/dashboard/company/asset";
+      return "/dashboard/company/overview";
     case "energy provider":
       return "/dashboard/energy-provider/wallet";
     case "staff":

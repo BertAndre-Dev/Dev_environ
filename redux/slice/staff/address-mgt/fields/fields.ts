@@ -1,0 +1,112 @@
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import axiosInstance from "@/utils/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
+
+
+interface FieldData {
+  estateId: string;
+  label: string;
+  key: string;
+}
+
+
+
+// create address field
+export const createField = createAsyncThunk(
+    'staff-field/createField',
+    async(data: FieldData, { rejectWithValue }) => {
+        try {
+            const res = await axiosInstance.post('/api/v1/address-mgt/field', data);
+            return res.data;
+        } catch (error: unknown) {
+            const data = (error as { response?: { data?: unknown } })?.response?.data;
+            if (data && typeof data === "object") return rejectWithValue(data);
+            return rejectWithValue({
+                message: getApiErrorMessage(error) ?? "Failed to create field",
+            });
+        }
+    }
+);
+
+
+// get address field
+export const getField = createAsyncThunk(
+    'staff-field/getField',
+    async (fieldId: string, { rejectWithValue }) => {
+        try {
+            const res = await axiosInstance.get(`/api/v1/address-mgt/field/${fieldId}`);
+            return res.data;
+        } catch (error: unknown) {
+            const data = (error as { response?: { data?: unknown } })?.response?.data;
+            if (data && typeof data === "object") return rejectWithValue(data);
+            return rejectWithValue({
+                message: getApiErrorMessage(error) ?? "Failed to fetch field",
+            });
+        }
+    }
+);
+
+
+// get address field by estate
+export const getFieldByEstate = createAsyncThunk(
+  "staff-field/getFieldByEstate",
+  async (
+    estateId: string | { id?: string; _id?: string },
+    { rejectWithValue },
+  ) => {
+    try {
+      const normalizedEstateId =
+        typeof estateId === "string"
+          ? estateId
+          : estateId?._id || estateId?.id || "";
+
+      const res = await axiosInstance.get(
+        `/api/v1/address-mgt/estate/${normalizedEstateId}/fields`,
+      );
+      return res.data;
+    } catch (error: unknown) {
+      const data = (error as { response?: { data?: unknown } })?.response?.data;
+      if (data && typeof data === "object") return rejectWithValue(data);
+      return rejectWithValue({
+        message: getApiErrorMessage(error) ?? "Failed to fetch fields",
+      });
+    }
+  },
+);
+
+
+// update address field
+export const updateField = createAsyncThunk(
+    'staff-field/updateField',
+    async ({fieldId, data}: {fieldId: string, data: FieldData}, { rejectWithValue }) => {
+        try {
+            const res = await axiosInstance.put(`/api/v1/address-mgt/field/${fieldId}`, data);
+            return res.data;
+        } catch (error: unknown) {
+            const data = (error as { response?: { data?: unknown } })?.response?.data;
+            if (data && typeof data === "object") return rejectWithValue(data);
+            return rejectWithValue({
+                message: getApiErrorMessage(error) ?? "Failed to update field",
+            });
+        }
+    }
+);
+
+
+
+// delete address field
+export const deleteField = createAsyncThunk(
+    'staff-field/deleteField',
+    async (fieldId: string, { rejectWithValue }) => {
+        try {
+            const res = await axiosInstance.delete(`/api/v1/address-mgt/field/${fieldId}`);
+            return res.data;
+        } catch (error: unknown) {
+            const data = (error as { response?: { data?: unknown } })?.response?.data;
+            if (data && typeof data === "object") return rejectWithValue(data);
+            return rejectWithValue({
+                message: getApiErrorMessage(error) ?? "Failed to delete field",
+            });
+        }
+    }
+);

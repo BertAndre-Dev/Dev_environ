@@ -106,6 +106,27 @@ import staffMaintenanceSliceReducer from "@/redux/slice/staff/maintenance/staff-
 import staffCommunitySliceReducer from "@/redux/slice/staff/community/staff-community-slice";
 import staffAnnouncementsSliceReducer from "@/redux/slice/staff/announcements/staff-announcements-slice";
 import staffRequestSliceReducer from "@/redux/slice/staff/request/staff-request-slice";
+import staffRequestWorkflowSliceReducer from "@/redux/slice/staff/request/staff-request-workflow-slice";
+import staffFieldSliceReducer from "@/redux/slice/staff/address-mgt/fields/fields-slice";
+import staffEntrySliceReducer from "@/redux/slice/staff/address-mgt/entry/entry-slice";
+import staffBillSliceReducer from "@/redux/slice/staff/bills-mgt/bills-slice";
+import staffMeterSliceReducer from "@/redux/slice/staff/meter-mgt/meter-mgt-slice";
+import staffEnergyConsumptionSliceReducer from "@/redux/slice/staff/energy-consumption/staff-energy-consumption-slice";
+import staffEstateEnergyUsageSliceReducer from "@/redux/slice/staff/estate-energy-usage/staff-estate-energy-usage-slice";
+import staffEstateRealtimeReadingsSliceReducer from "@/redux/slice/staff/estate-realtime-readings/staff-estate-realtime-readings-slice";
+import staffUserAnalyticsSliceReducer from "@/redux/slice/staff/user-analytics/user-analytics-slice";
+import staffMeterSummarySliceReducer from "@/redux/slice/staff/meter-summary/meter-summary-slice";
+import staffBillsSummarySliceReducer from "@/redux/slice/staff/bills-summary/bills-summary-slice";
+import staffComplaintsSummarySliceReducer from "@/redux/slice/staff/complaints-summary/complaints-summary-slice";
+import staffComplaintsDashboardSliceReducer from "@/redux/slice/staff/complaints-dashboard/complaints-dashboard-slice";
+import staffVisitorSliceReducer from "@/redux/slice/staff/visitor/visitor.slice";
+import staffExpenseHeadSliceReducer from "@/redux/slice/staff/expense-head/expense-head-slice";
+import staffExpenseEntrySliceReducer from "@/redux/slice/staff/expense-entry/expense-entry-slice";
+import staffRevenueHeadSliceReducer from "@/redux/slice/staff/revenue-head/revenue-head-slice";
+import staffRevenueEntrySliceReducer from "@/redux/slice/staff/revenue-entry/revenue-entry-slice";
+import staffAssetSliceReducer from "@/redux/slice/staff/asset-mgt/staff-asset-slice";
+import staffAssetMaintenanceSliceReducer from "@/redux/slice/staff/asset-maintenance/staff-asset-maintenance-slice";
+import staffOperationsReportingSliceReducer from "@/redux/slice/staff/operations-reporting/staff-operations-reporting-slice";
 import companyRequestSliceReducer from "@/redux/slice/company/request/company-request-slice";
 import estateAdminRequestSliceReducer from "@/redux/slice/estate-admin/request/estate-admin-request-slice";
 import requestCommentsSliceReducer from "@/redux/slice/request/request-comments-slice";
@@ -304,6 +325,27 @@ const persistedStaffCommunitySliceReducer = persistReducer(
   staffCommunitySliceReducer,
 );
 
+const persistedStaffVisitorSliceReducer = persistReducer(
+  persistConfig,
+  staffVisitorSliceReducer,
+);
+const persistedStaffExpenseHeadSliceReducer = persistReducer(
+  persistConfig,
+  staffExpenseHeadSliceReducer,
+);
+const persistedStaffExpenseEntrySliceReducer = persistReducer(
+  persistConfig,
+  staffExpenseEntrySliceReducer,
+);
+const persistedStaffRevenueHeadSliceReducer = persistReducer(
+  persistConfig,
+  staffRevenueHeadSliceReducer,
+);
+const persistedStaffRevenueEntrySliceReducer = persistReducer(
+  persistConfig,
+  staffRevenueEntrySliceReducer,
+);
+
 
 export const store = configureStore({
   reducer: {
@@ -413,6 +455,27 @@ export const store = configureStore({
     staffCommunity: persistedStaffCommunitySliceReducer,
     staffAnnouncements: staffAnnouncementsSliceReducer,
     staffRequest: staffRequestSliceReducer,
+    staffRequestWorkflow: staffRequestWorkflowSliceReducer,
+    staffField: staffFieldSliceReducer,
+    staffEntry: staffEntrySliceReducer,
+    staffBill: staffBillSliceReducer,
+    staffMeter: staffMeterSliceReducer,
+    staffEnergyConsumption: staffEnergyConsumptionSliceReducer,
+    staffEstateEnergyUsage: staffEstateEnergyUsageSliceReducer,
+    staffEstateRealtimeReadings: staffEstateRealtimeReadingsSliceReducer,
+    staffUserAnalytics: staffUserAnalyticsSliceReducer,
+    staffMeterSummary: staffMeterSummarySliceReducer,
+    staffBillsSummary: staffBillsSummarySliceReducer,
+    staffComplaintsSummary: staffComplaintsSummarySliceReducer,
+    staffComplaintsDashboard: staffComplaintsDashboardSliceReducer,
+    staffVisitor: persistedStaffVisitorSliceReducer,
+    staffExpenseHead: persistedStaffExpenseHeadSliceReducer,
+    staffExpenseEntry: persistedStaffExpenseEntrySliceReducer,
+    staffRevenueHead: persistedStaffRevenueHeadSliceReducer,
+    staffRevenueEntry: persistedStaffRevenueEntrySliceReducer,
+    staffAsset: staffAssetSliceReducer,
+    staffAssetMaintenance: staffAssetMaintenanceSliceReducer,
+    staffOperationsReporting: staffOperationsReportingSliceReducer,
     companyRequest: companyRequestSliceReducer,
     estateAdminRequest: estateAdminRequestSliceReducer,
     requestComments: requestCommentsSliceReducer,

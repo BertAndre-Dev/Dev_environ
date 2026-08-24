@@ -15,6 +15,7 @@ export type NavItemWithModule = {
   label: string;
   module?: string;
   moduleKey?: string;
+  children?: NavItemWithModule[];
 };
 
 export function isNavModuleEnabled(
@@ -34,6 +35,17 @@ export function isNavModuleEnabled(
   if (moduleKey === "asset" || moduleKey === "assets") {
     return (
       estateModules.includes("asset") || estateModules.includes("assets")
+    );
+  }
+  if (
+    moduleKey === "asset-maintenance" ||
+    moduleKey === "assetMaintenance" ||
+    moduleKey === "asset_maintenance"
+  ) {
+    return (
+      estateModules.includes("asset-maintenance") ||
+      estateModules.includes("assetMaintenance") ||
+      estateModules.includes("asset_maintenance")
     );
   }
   if (moduleKey === "request" || moduleKey === "requests") {
@@ -60,12 +72,30 @@ export function filterNavItemsByEstateModules<T extends NavItemWithModule>(
     return items.filter((item) => alwaysVisible.has(item.label));
   }
 
-  return items.filter((item) => {
-    if (alwaysVisible.has(item.label)) return true;
+  return items.flatMap((item) => {
+    if (alwaysVisible.has(item.label)) return [item];
+
+    const children = item.children;
+    if (children?.length) {
+      const filteredChildren = children.filter((child) => {
+        const key = child.moduleKey ?? child.module;
+        if (!key) return true;
+        return isNavModuleEnabled(key, estateModules);
+      });
+
+      const parentKey = item.moduleKey ?? item.module;
+      const parentEnabled = parentKey
+        ? isNavModuleEnabled(parentKey, estateModules)
+        : false;
+
+      if (filteredChildren.length === 0 && !parentEnabled) return [];
+      if (filteredChildren.length === 0) return [];
+
+      return [{ ...item, children: filteredChildren }];
+    }
 
     const key = item.moduleKey ?? item.module;
-    if (!key) return false;
-
-    return isNavModuleEnabled(key, estateModules);
+    if (!key) return [];
+    return isNavModuleEnabled(key, estateModules) ? [item] : [];
   });
 }

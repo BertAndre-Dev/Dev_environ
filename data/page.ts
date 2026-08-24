@@ -174,16 +174,81 @@ export const energyProviderNav = [
 
 export const staffNav = [
   {
+    label: "Overview",
+    icon: FiHome,
+    path: "/dashboard/staff/overview",
+  },
+  {
+    label: "Address Management",
+    icon: FiMapPin,
+    path: "/dashboard/staff/address",
+    moduleKey: "address",
+  },
+  {
+    label: "User Management",
+    icon: UserCog,
+    moduleKey: "users",
+    children: [
+      {
+        label: "Residents",
+        path: "/dashboard/staff/user?role=resident",
+      },
+      {
+        label: "Staff",
+        path: "/dashboard/staff/user?role=staff",
+      },
+      {
+        label: "Security",
+        path: "/dashboard/staff/user?role=security",
+      },
+    ],
+  },
+  {
+    label: "Bills Management",
+    icon: Banknote,
+    path: "/dashboard/staff/bills",
+    module: "bills",
+    moduleKey: "bills",
+  },
+  {
+    label: "Energy Management",
+    icon: IoSpeedometerOutline,
+    path: "/dashboard/staff/meter",
+    module: "meter",
+    moduleKey: "meter",
+  },
+  {
+    label: "Request Management",
+    icon: ClipboardList,
+    path: "/dashboard/staff/request",
+    moduleKey: "requests",
+  },
+  {
+    label: "Visitors Management",
+    icon: UserPlus,
+    path: "/dashboard/staff/visitor",
+    module: "visitor",
+    moduleKey: "visitor",
+  },
+  {
+    label: "Expenses",
+    icon: CircleDollarSign,
+    path: "/dashboard/staff/expenses",
+    moduleKey: "expense",
+    module: "expense",
+  },
+  {
+    label: "Revenue",
+    icon: Banknote,
+    path: "/dashboard/staff/revenue",
+    moduleKey: "revenue",
+    module: "revenue",
+  },
+  {
     label: "Maintenance Requests",
     icon: Hammer,
     path: "/dashboard/staff/maintenance",
     moduleKey: "complaints",
-  },
-  {
-    label: "Requests Management",
-    icon: ClipboardList,
-    path: "/dashboard/staff/request",
-    moduleKey: "requests",
   },
   {
     label: "Announcements",
@@ -191,7 +256,30 @@ export const staffNav = [
     path: "/dashboard/staff/announcements",
     moduleKey: "announcements",
   },
-    {
+  {
+    label: "Asset",
+    icon: Package,
+    moduleKey: "asset",
+    children: [
+      {
+        label: "Asset Management",
+        path: "/dashboard/staff/asset",
+        moduleKey: "asset",
+      },
+      {
+        label: "Asset Maintenance",
+        path: "/dashboard/staff/asset-maintenance",
+        moduleKey: "asset-maintenance",
+      },
+    ],
+  },
+  {
+    label: "Operations Reporting",
+    icon: ClipboardList,
+    path: "/dashboard/staff/operations-reporting",
+    moduleKey: "operations-reporting",
+  },
+  {
     label: "Community Chat",
     icon: MessagesSquare,
     path: "/dashboard/staff/community",

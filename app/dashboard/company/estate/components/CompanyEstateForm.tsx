@@ -5,7 +5,6 @@ import { useSelector } from "react-redux";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CountryDropdown, RegionDropdown } from "react-country-region-selector";
 import { labelForPlan, normalizePlanKey } from "@/lib/plans";
 import type { RootState } from "@/redux/store";
@@ -78,14 +77,12 @@ export default function CompanyEstateForm({
   ];
 
   return (
-    <form onSubmit={handleSubmit}>
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold pb-4">
-          {initialData ? "Update Estate" : "Create New Estate"}
-        </CardTitle>
-      </CardHeader>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <h2 className="text-lg font-semibold pr-8">
+        {initialData ? "Update Estate" : "Create New Estate"}
+      </h2>
 
-      <CardContent className="space-y-8">
+      <div className="space-y-4">
         {textFields.map((field) => (
           <div key={field.name}>
             <Label htmlFor={field.name}>{field.label}</Label>
@@ -159,12 +156,12 @@ export default function CompanyEstateForm({
           />
         </div>
 
-        <div className="w-full pt-4">
+        <div className="w-full pt-1">
           <Button type="submit" className="w-full cursor-pointer">
             {isEditing ? "Update" : "Create Estate"}
           </Button>
         </div>
-      </CardContent>
+      </div>
     </form>
   );
 }

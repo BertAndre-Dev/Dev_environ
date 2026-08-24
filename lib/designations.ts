@@ -234,6 +234,21 @@ export function isCompanyScopedDesignation(item: Designation): boolean {
   return Boolean(item.companyId) && !item.estateId;
 }
 
+/**
+ * Create/list scope for estate admins:
+ * companyId only when the admin belongs to a company; otherwise estateId.
+ */
+export function designationWriteScope(params: {
+  companyId?: string;
+  estateId?: string;
+}): { companyId?: string; estateId?: string } {
+  const companyId = params.companyId?.trim() ?? "";
+  const estateId = params.estateId?.trim() ?? "";
+  if (companyId) return { companyId };
+  if (estateId) return { estateId };
+  return {};
+}
+
 export function isInheritedCompanyTitle(
   item: Designation,
   estateId: string,

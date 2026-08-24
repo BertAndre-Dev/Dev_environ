@@ -171,7 +171,11 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
       try {
         const res = await dispatch(
           getDesignations({
-            ...(estateId ? { estateId } : { companyId }),
+            ...(companyId
+              ? { companyId }
+              : estateId
+                ? { estateId }
+                : {}),
             page: 1,
             limit: DESIGNATIONS_PAGE_SIZE,
           }),
@@ -179,9 +183,9 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
         if (cancelled) return;
         const items = (res.items ?? []).filter((item) => item.isActive);
         setDesignationOptions(
-          (estateId
-            ? items
-            : items.filter(isCompanyScopedDesignation)
+          (companyId
+            ? items.filter(isCompanyScopedDesignation)
+            : items
           ).map((item) => ({ value: item.id, label: item.name })),
         );
       } catch (err: unknown) {

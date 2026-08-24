@@ -52,17 +52,20 @@ export const createDesignation = createAsyncThunk(
       return rejectWithValue({ message: "Name is required." });
     }
 
-    const body: Record<string, string | string[]> = { name };
-    const description = payload.description?.trim();
+    const description = payload.description?.trim() ?? "";
     const companyId = payload.companyId?.trim();
     const estateId = payload.estateId?.trim();
     const modules = (payload.modules ?? [])
       .map((module) => module.trim())
       .filter(Boolean);
-    if (description) body.description = description;
+
+    const body: Record<string, string | string[]> = {
+      name,
+      description,
+      modules,
+    };
     if (companyId) body.companyId = companyId;
     if (estateId) body.estateId = estateId;
-    body.modules = modules;
 
     try {
       const res = await axiosInstance.post("/api/v1/designations", body);
@@ -71,7 +74,7 @@ export const createDesignation = createAsyncThunk(
         item: item ?? {
           id: name,
           name,
-          description: description ?? "",
+          description,
           companyId: companyId || undefined,
           estateId: estateId || undefined,
           modules,

@@ -45,6 +45,7 @@ import { UserStatusModal } from "./components/UserStatusModal";
 import EditUserForm from "@/components/user-mgt/edit-user-form";
 import {
   getCompanyUserRoleTotalLabel,
+  getUserManagementPageTitle,
   parseCompanyUserRoleQuery,
   type CompanyUserRoleFilter,
 } from "@/lib/estate-user-roles";
@@ -105,7 +106,13 @@ function formatInvitationStatus(value?: string) {
 function companyInviteRole(
   role: CompanyUserRoleFilter,
 ): CompanyInviteRole | null {
-  if (role === "admin" || role === ENERGY_PROVIDER_ROLE) return role;
+  if (
+    role === "admin" ||
+    role === "staff" ||
+    role === ENERGY_PROVIDER_ROLE
+  ) {
+    return role;
+  }
   return null;
 }
 
@@ -523,9 +530,11 @@ export default function CompanyUsersPage() {
           pageLoading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between flex-wrap gap-4">
-          <div className="flex flex-col gap-2">
-            <h1 className="font-heading text-3xl font-bold">User Management</h1>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex min-w-0 flex-col gap-2">
+            <h1 className="font-heading text-3xl font-bold">
+              {getUserManagementPageTitle(roleFilter)}
+            </h1>
             <p className="text-muted-foreground mt-1">
               Manage users for{" "}
               <span className="text-[18px] font-bold underline uppercase text-black">
@@ -535,8 +544,8 @@ export default function CompanyUsersPage() {
             </p>
           </div>
 
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-            <div className="w-48 min-w-[12rem]">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 shrink-0 md:ml-auto">
+            <div className="w-full sm:w-48 sm:min-w-[12rem]">
               <Select
                 options={estateOptions}
                 placeholder="Filter by estate"
@@ -552,7 +561,7 @@ export default function CompanyUsersPage() {
                 }}
               />
             </div>
-            {inviteRole ? (
+            {inviteRole && !showDesignations ? (
               <Button
                 onClick={() => setOpen(true)}
                 className="flex items-center gap-2 cursor-pointer shrink-0"

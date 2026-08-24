@@ -14,6 +14,7 @@ import { iniviteUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
 import {
   buildInviteUserPayload,
+  inviteRequiresDesignation,
   validateEnergyProviderInviteScope,
   type CompanyInviteRole,
   getCompanyInviteLabel,
@@ -24,6 +25,11 @@ import {
   PHONE_E164_ERROR,
   toE164PhoneNumber,
 } from "@/lib/phone-e164";
+import { getDesignations } from "@/redux/slice/designations/designations";
+import {
+  DESIGNATIONS_PAGE_SIZE,
+  isCompanyScopedDesignation,
+} from "@/lib/designations";
 
 type Props = {
   companyId: string;
@@ -40,6 +46,7 @@ type FormState = {
   email: string;
   phoneNumber: string;
   countryCode: string;
+  designationId: string;
 };
 
 export default function CompanyInviteUserForm({
@@ -59,10 +66,16 @@ export default function CompanyInviteUserForm({
     email: "",
     phoneNumber: "",
     countryCode: DEFAULT_COUNTRY_CODE,
+    designationId: "",
   });
   const [estates, setEstates] = useState<{ id: string; name: string }[]>([]);
   const [loadingEstates, setLoadingEstates] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [designationOptions, setDesignationOptions] = useState<
+    { label: string; value: string }[]
+  >([]);
+  const [designationLoading, setDesignationLoading] = useState(false);
+  const requiresDesignation = inviteRequiresDesignation(role);
 
   useEffect(() => {
     (async () => {
@@ -99,6 +112,50 @@ export default function CompanyInviteUserForm({
     }
   }, [defaultEstateId]);
 
+  useEffect(() => {
+    if (!requiresDesignation) {
+      setDesignationOptions([]);
+      return;
+    }
+    const trimmedCompanyId = companyId.trim();
+    if (!trimmedCompanyId) {
+      setDesignationOptions([]);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      setDesignationLoading(true);
+      try {
+        const res = await dispatch(
+          getDesignations({
+            companyId: trimmedCompanyId,
+            page: 1,
+            limit: DESIGNATIONS_PAGE_SIZE,
+          }),
+        ).unwrap();
+        if (cancelled) return;
+        setDesignationOptions(
+          (res.items ?? [])
+            .filter((item) => item.isActive)
+            .filter(isCompanyScopedDesignation)
+            .map((item) => ({ value: item.id, label: item.name })),
+        );
+      } catch (err: unknown) {
+        if (cancelled) return;
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+        setDesignationOptions([]);
+      } finally {
+        if (!cancelled) setDesignationLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId, dispatch, requiresDesignation]);
+
   const estateOptions = estates.map((e) => ({
     value: e.id,
     label: e.name,
@@ -129,6 +186,9 @@ export default function CompanyInviteUserForm({
     if (!formData.lastName.trim())
       return toast.error("Please provide last name.");
     if (!formData.estateId.trim()) return toast.error("Please select an estate.");
+    if (requiresDesignation && !formData.designationId.trim()) {
+      return toast.error("Please select a designation.");
+    }
 
     const energyProviderError = validateEnergyProviderInviteScope({
       role,
@@ -151,6 +211,9 @@ export default function CompanyInviteUserForm({
             inviteContext: "company",
             estateId: formData.estateId,
             companyId,
+            ...(requiresDesignation
+              ? { designationId: formData.designationId.trim() }
+              : {}),
           }),
         ),
       ).unwrap();
@@ -164,6 +227,7 @@ export default function CompanyInviteUserForm({
         email: "",
         phoneNumber: "",
         countryCode: DEFAULT_COUNTRY_CODE,
+        designationId: "",
       });
       onSuccess?.();
       onClose();
@@ -242,6 +306,32 @@ export default function CompanyInviteUserForm({
               placeholder="Select estate"
             />
           </div>
+          {requiresDesignation ? (
+            <div>
+              <Label>Designation</Label>
+              <Select
+                options={designationOptions}
+                value={
+                  designationOptions.find(
+                    (option) => option.value === formData.designationId,
+                  ) ?? null
+                }
+                onChange={(opt) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    designationId: opt?.value ?? "",
+                  }))
+                }
+                isLoading={designationLoading}
+                placeholder={
+                  designationLoading
+                    ? "Loading designations..."
+                    : "Select designation"
+                }
+                noOptionsMessage={() => "No designations for this company"}
+              />
+            </div>
+          ) : null}
           <Button
             type="submit"
             className="w-full cursor-pointer"

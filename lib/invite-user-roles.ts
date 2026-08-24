@@ -16,6 +16,7 @@ export const SUPER_ADMIN_COMPANY_INVITE_ROLE_OPTIONS = [
 
 export const COMPANY_INVITE_ROLE_OPTIONS = [
   { value: "admin", label: "Admin" },
+  { value: "staff", label: "Staff" },
   { value: ENERGY_PROVIDER_ROLE, label: "Energy Provider" },
 ] as const;
 
@@ -23,9 +24,9 @@ export type CompanyInviteRole =
   (typeof COMPANY_INVITE_ROLE_OPTIONS)[number]["value"];
 
 export function getCompanyInviteLabel(role: CompanyInviteRole): string {
-  return role === ENERGY_PROVIDER_ROLE
-    ? "Invite energy provider"
-    : "Invite admin";
+  if (role === ENERGY_PROVIDER_ROLE) return "Invite energy provider";
+  if (role === "staff") return "Invite staff";
+  return "Invite admin";
 }
 
 export const ADMIN_INVITE_ROLES = ["resident", "staff", "security"] as const;

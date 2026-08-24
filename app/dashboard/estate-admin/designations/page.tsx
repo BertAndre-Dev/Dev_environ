@@ -1,7 +1,5 @@
-"use client";
-
-import { DesignationsManager } from "@/components/designations/DesignationsManager";
+import { redirect } from "next/navigation";
 
 export default function EstateAdminDesignationsPage() {
-  return <DesignationsManager role="estate" />;
+  redirect("/dashboard/estate-admin/user?role=staff");
 }

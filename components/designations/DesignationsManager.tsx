@@ -15,11 +15,12 @@ import {
   DesignationFormSheet,
   type DesignationFormValues,
 } from "@/components/designations/DesignationFormSheet";
-import { DesignationToggle } from "@/components/designations/DesignationToggle";
+// import { DesignationToggle } from "@/components/designations/DesignationToggle";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { isBusy, isPending } from "@/lib/async-status";
 import {
   DESIGNATIONS_PAGE_SIZE,
+  designationWriteScope,
   isInheritedCompanyTitle,
   isStaffAssignmentDeleteError,
   type Designation,
@@ -51,6 +52,8 @@ type Props = {
   companyName?: string;
   estateId?: string;
   estateName?: string;
+  /** Never resolve a company id — write and list with estateId only. */
+  lockToEstateScope?: boolean;
 };
 
 function formatDesignationDate(value?: string) {
@@ -140,6 +143,7 @@ export function DesignationsManager({
   companyName: injectedCompanyName,
   estateId: injectedEstateId,
   estateName: injectedEstateName,
+  lockToEstateScope = false,
 }: Readonly<Props>) {
   const dispatch = useDispatch<AppDispatch>();
   const reduceMotion = useReducedMotion();
@@ -148,23 +152,30 @@ export function DesignationsManager({
   const { listStatus, createStatus, updateStatus, deleteStatus } = useSelector(
     selectDesignationsState,
   );
-  const hasInjectedCompanyScope =
-    role === "company" && Boolean(injectedCompanyId);
-  const hasInjectedEstateScope =
-    role === "estate" && Boolean(injectedEstateId);
-  const hasInjectedScope = hasInjectedCompanyScope || hasInjectedEstateScope;
-  const injectedScopeId = hasInjectedCompanyScope
-    ? injectedCompanyId
-    : injectedEstateId;
-  const injectedScopeName = hasInjectedCompanyScope
-    ? injectedCompanyName
-    : injectedEstateName;
 
-  const [scopeId, setScopeId] = useState(injectedScopeId ?? "");
-  const [scopeName, setScopeName] = useState(
-    injectedScopeName || (role === "company" ? "Company" : "Estate"),
+  const [companyId, setCompanyId] = useState(
+    lockToEstateScope ? "" : injectedCompanyId?.trim() ?? "",
   );
-  const [scopeLoading, setScopeLoading] = useState(!hasInjectedScope);
+  const [estateId, setEstateId] = useState(injectedEstateId?.trim() ?? "");
+  const [scopeName, setScopeName] = useState(
+    injectedCompanyName ||
+      injectedEstateName ||
+      (role === "company" ? "Company" : "Estate"),
+  );
+  const [scopeLoading, setScopeLoading] = useState(
+    lockToEstateScope
+      ? !injectedEstateId?.trim()
+      : !injectedCompanyId?.trim(),
+  );
+
+  const writeScope = designationWriteScope({
+    companyId: lockToEstateScope ? "" : companyId,
+    estateId: role === "company" ? "" : estateId,
+  });
+  const apiCompanyId = writeScope.companyId ?? "";
+  const apiEstateId = writeScope.estateId ?? "";
+  const usesCompanyScope = Boolean(apiCompanyId);
+  const scopeId = apiCompanyId || apiEstateId;
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [includeInactive, setIncludeInactive] = useState(false);
@@ -190,37 +201,74 @@ export function DesignationsManager({
   }, [search, includeInactive, scopeId]);
 
   useEffect(() => {
-    if (!hasInjectedScope) return;
-    setScopeId(injectedScopeId ?? "");
-    setScopeName(
-      injectedScopeName || (role === "company" ? "Company" : "Estate"),
-    );
-    setScopeLoading(false);
-  }, [hasInjectedScope, injectedScopeId, injectedScopeName, role]);
+    if (!lockToEstateScope && injectedCompanyId?.trim()) {
+      setCompanyId(injectedCompanyId.trim());
+      if (injectedCompanyName) setScopeName(injectedCompanyName);
+    }
+    if (injectedEstateId?.trim()) {
+      setEstateId(injectedEstateId.trim());
+      if (
+        (lockToEstateScope || !injectedCompanyId?.trim()) &&
+        injectedEstateName
+      ) {
+        setScopeName(injectedEstateName);
+      }
+    }
+    if (
+      (role === "company" && injectedCompanyId?.trim()) ||
+      (role === "estate" && injectedCompanyId?.trim() && !lockToEstateScope) ||
+      (lockToEstateScope && injectedEstateId?.trim())
+    ) {
+      setScopeLoading(false);
+    }
+  }, [
+    injectedCompanyId,
+    injectedCompanyName,
+    injectedEstateId,
+    injectedEstateName,
+    lockToEstateScope,
+    role,
+  ]);
 
   useEffect(() => {
-    if (hasInjectedScope) return;
+    if (lockToEstateScope) {
+      if (injectedEstateId?.trim()) setScopeLoading(false);
+      return;
+    }
+    const companyAlreadyKnown =
+      Boolean(injectedCompanyId?.trim()) ||
+      (role === "company" && Boolean(injectedCompanyId?.trim()));
+    if (role === "company" && companyAlreadyKnown) return;
+    if (role === "estate" && injectedCompanyId?.trim()) return;
+
     (async () => {
       try {
         const userRes = await dispatch(getSignedInUser()).unwrap();
         const data = (userRes?.data ?? userRes) as Record<string, unknown>;
+        const company = parseCompanyFromUser(data);
+
         if (role === "company") {
-          const company = parseCompanyFromUser(data);
           if (!company) {
             toast.warning("No company linked to your account.");
             return;
           }
-          setScopeId(company.id);
+          setCompanyId(company.id);
           setScopeName(company.name);
           return;
         }
-        const estate = parseAdminEstate(data);
-        if (!estate) {
-          toast.warning("No estate linked to your account.");
-          return;
+
+        if (company) {
+          setCompanyId(company.id);
+          setScopeName(company.name);
         }
-        setScopeId(estate.id);
-        setScopeName(estate.name);
+        const estate = parseAdminEstate(data);
+        if (estate) {
+          setEstateId(estate.id);
+          if (!company) setScopeName(estate.name);
+        }
+        if (!company && !estate) {
+          toast.warning("No company or estate linked to your account.");
+        }
       } catch (err: unknown) {
         const message = getApiErrorMessage(err);
         if (message) toast.error(message);
@@ -228,16 +276,16 @@ export function DesignationsManager({
         setScopeLoading(false);
       }
     })();
-  }, [dispatch, hasInjectedScope, role]);
+  }, [dispatch, injectedCompanyId, injectedEstateId, lockToEstateScope, role]);
 
   const loadList = useCallback(
     async (nextPage = page) => {
-      if (!scopeId) return;
+      if (!apiCompanyId && !apiEstateId) return;
 
       await dispatch(
         getDesignations({
-          companyId: role === "company" ? scopeId : undefined,
-          estateId: role === "estate" ? scopeId : undefined,
+          companyId: apiCompanyId || undefined,
+          estateId: apiCompanyId ? undefined : apiEstateId || undefined,
           search: search || undefined,
           includeInactive,
           page: nextPage,
@@ -245,16 +293,16 @@ export function DesignationsManager({
         }),
       ).unwrap();
     },
-    [dispatch, includeInactive, page, role, scopeId, search],
+    [apiCompanyId, apiEstateId, dispatch, includeInactive, page, search],
   );
 
   useEffect(() => {
-    if (!scopeId) return;
+    if (scopeLoading || !scopeId) return;
     loadList(page).catch((err: unknown) => {
       const message = getApiErrorMessage(err);
       if (message) toast.error(message);
     });
-  }, [loadList, page, scopeId]);
+  }, [loadList, page, scopeId, scopeLoading]);
 
   const openCreate = () => {
     setEditing(null);
@@ -285,16 +333,20 @@ export function DesignationsManager({
         ).unwrap();
         toast.success("Designation updated.");
       } else {
-        if (role === "company" && !scopeId) {
-          toast.warning("No company linked to your account.");
+        if (!apiCompanyId && !apiEstateId) {
+          toast.warning(
+            usesCompanyScope
+              ? "No company linked to your account."
+              : "No estate linked to your account.",
+          );
           return;
         }
         await dispatch(
           createDesignation({
             name: values.name,
             description: values.description || undefined,
-            companyId: role === "company" ? scopeId : undefined,
-            estateId: role === "estate" ? scopeId : undefined,
+            companyId: apiCompanyId || undefined,
+            estateId: apiCompanyId ? undefined : apiEstateId || undefined,
             modules: values.modules,
           }),
         ).unwrap();
@@ -408,7 +460,9 @@ export function DesignationsManager({
         exportable: false,
         render: (item: Designation) => {
           const inherited =
-            role === "estate" && isInheritedCompanyTitle(item, scopeId);
+            !usesCompanyScope &&
+            role === "estate" &&
+            isInheritedCompanyTitle(item, apiEstateId);
           if (inherited) {
             return (
               <span className="text-xs text-muted-foreground">Inherited</span>
@@ -456,7 +510,7 @@ export function DesignationsManager({
         },
       },
     ],
-    [role, scopeId],
+    [role, usesCompanyScope, apiEstateId],
   );
 
   const canCreate = Boolean(scopeId);
@@ -479,13 +533,13 @@ export function DesignationsManager({
           aria-label="Search designations"
         />
       </div>
-      <div className="rounded-2xl border border-black/5 bg-white/70 px-3.5 py-2.5 lg:min-w-[220px]">
+      {/* <div className="rounded-2xl border border-black/5 bg-white/70 px-3.5 py-2.5 lg:min-w-[220px]">
         <DesignationToggle
           checked={includeInactive}
           label="Show inactive"
           onCheckedChange={setIncludeInactive}
         />
-      </div>
+      </div> */}
       {compact ? (
         <Button
           type="button"
@@ -524,7 +578,7 @@ export function DesignationsManager({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-black/45">
-              {role === "company" ? "Company" : "Estate"} · {scopeName}
+              {usesCompanyScope ? "Company" : "Estate"} · {scopeName}
             </p>
             <h1 className="mt-1 font-heading text-[32px] font-bold leading-[1.05] tracking-[-0.03em]">
               Designations
@@ -567,9 +621,9 @@ export function DesignationsManager({
         open={sheetOpen}
         saving={saving}
         initial={editing}
-        scopeLabel={role === "company" ? "Company" : "Estate"}
-        companyId={role === "company" ? scopeId : undefined}
-        defaultEstateId={role === "estate" ? scopeId : ""}
+        scopeLabel={usesCompanyScope ? "Company" : "Estate"}
+        companyId={role === "company" ? apiCompanyId : undefined}
+        defaultEstateId={role === "company" ? "" : estateId}
         onClose={closeSheet}
         onSubmit={handleSubmit}
       />

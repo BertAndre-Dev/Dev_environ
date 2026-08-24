@@ -453,7 +453,11 @@ export default function CompanyEstatePage() {
         </Card>
 
         {open && (
-          <Modal visible={open} onClose={handleCloseModal}>
+          <Modal
+            visible={open}
+            onClose={handleCloseModal}
+            contentClassName="p-4 md:w-[42%] lg:w-[36%] xl:w-[32%]"
+          >
             <CompanyEstateForm
               initialData={
                 selectedEstate

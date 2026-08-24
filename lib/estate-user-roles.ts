@@ -83,6 +83,30 @@ export function parseAdminUserRoleQuery(
   return DEFAULT_ESTATE_USER_ROLE;
 }
 
+/** Estate-admin user management: residents, staff, security, and admins. */
+export const ESTATE_ADMIN_USER_ROLE_FILTER_OPTIONS: {
+  label: string;
+  value: EstateUserRoleFilter;
+}[] = [
+  ...ADMIN_USER_ROLE_FILTER_OPTIONS,
+  { label: "Admins", value: "admin" },
+];
+
+export function parseEstateAdminUserRoleQuery(
+  raw: string | null,
+): EstateUserRoleFilter {
+  const parsed = parseEstateUserRoleQuery(raw);
+  if (
+    parsed &&
+    ESTATE_ADMIN_USER_ROLE_FILTER_OPTIONS.some(
+      (option) => option.value === parsed,
+    )
+  ) {
+    return parsed;
+  }
+  return DEFAULT_ESTATE_USER_ROLE;
+}
+
 /** Company user management: exclude estate admin & company; include energy provider. */
 export const COMPANY_USER_ROLE_FILTER_OPTIONS: {
   label: string;
@@ -118,6 +142,30 @@ export function getCompanyUserRoleTotalLabel(
 ): string {
   if (role === "energy provider") return "Total Energy providers";
   return getEstateUserRoleTotalLabel(role);
+}
+
+/** Page H1 for user-management submenus, e.g. resident → "Resident Management". */
+export function getUserManagementPageTitle(
+  role: CompanyUserRoleFilter | EstateUserRoleFilter,
+): string {
+  switch (role) {
+    case "resident":
+      return "Resident Management";
+    case "staff":
+      return "Staff Management";
+    case "security":
+      return "Security Management";
+    case "admin":
+      return "Admin Management";
+    case "estate admin":
+      return "Estate Admin Management";
+    case "company":
+      return "Company Management";
+    case "energy provider":
+      return "Energy Provider Management";
+    default:
+      return "User Management";
+  }
 }
 
 export function chatGroupRoleToApiRole(

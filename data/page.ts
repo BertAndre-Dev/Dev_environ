@@ -583,6 +583,29 @@ export const estateAdminNav = [
     path: "/dashboard/estate-admin/dashboard",
   },
   {
+    label: "User Management",
+    icon: UserCog,
+    moduleKey: "users",
+    children: [
+      {
+        label: "Residents",
+        path: "/dashboard/estate-admin/user?role=resident",
+      },
+      {
+        label: "Staff",
+        path: "/dashboard/estate-admin/user?role=staff",
+      },
+      {
+        label: "Security",
+        path: "/dashboard/estate-admin/user?role=security",
+      },
+      {
+        label: "Admins",
+        path: "/dashboard/estate-admin/user?role=admin",
+      },
+    ],
+  },
+  {
     label: "Transactions",
     icon: ArrowLeftRight,
     path: "/dashboard/estate-admin/transactions",

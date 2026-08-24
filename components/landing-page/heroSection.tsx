@@ -25,12 +25,14 @@ const FEATURE_CARDS = [
 function FeatureCard({
   src,
   alt,
-  delay,
+  enterDelay,
+  floatDelay,
   className,
 }: Readonly<{
   src: string;
   alt: string;
-  delay: string;
+  enterDelay: string;
+  floatDelay: string;
   className: string;
 }>) {
   return (
@@ -43,7 +45,7 @@ function FeatureCard({
         width={108}
         height={88}
         className="hero-float h-auto w-[92px] xl:w-[108px]"
-        style={{ animationDelay: delay }}
+        style={{ animationDelay: `${enterDelay}, ${floatDelay}` }}
       />
     </div>
   );
@@ -58,26 +60,30 @@ export default function HeroSection() {
           <FeatureCard
             src="/assets/hero/buy%20power.svg"
             alt="Buy Energy"
-            delay="0s"
-            className="left-2 top-[24%] xl:left-8"
+            enterDelay="0ms"
+            floatDelay="0s"
+            className="left-2 top-[32%] xl:left-8"
           />
           <FeatureCard
             src="/assets/hero/invite.svg"
             alt="Invite Guests"
-            delay="1.2s"
-            className="right-2 top-[24%] xl:right-8"
+            enterDelay="120ms"
+            floatDelay="2.2s"
+            className="right-2 top-[32%] xl:right-8"
           />
           <FeatureCard
             src="/assets/hero/pay%20bills.svg"
             alt="Pay Bills"
-            delay="0.6s"
-            className="left-1/2 top-[58%] -translate-x-[calc(50%+16.5rem)] xl:-translate-x-[calc(50%+18rem)]"
+            enterDelay="60ms"
+            floatDelay="1.1s"
+            className="left-1/2 top-[66%] -translate-x-[calc(50%+16.5rem)] xl:-translate-x-[calc(50%+18rem)]"
           />
           <FeatureCard
             src="/assets/hero/analytics.svg"
             alt="Analytics"
-            delay="1.8s"
-            className="left-1/2 top-[58%] translate-x-[calc(-50%+16.5rem)] xl:translate-x-[calc(-50%+18rem)]"
+            enterDelay="180ms"
+            floatDelay="3.3s"
+            className="left-1/2 top-[66%] translate-x-[calc(-50%+16.5rem)] xl:translate-x-[calc(-50%+18rem)]"
           />
 
           {/* Center copy */}
@@ -180,18 +186,36 @@ export default function HeroSection() {
       </div>
 
       <style>{`
+        @keyframes heroCardFade {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
         @keyframes heroFloat {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-8px); }
+          0%,
+          100% {
+            transform: translate3d(0, 0, 0) rotate(0deg);
+          }
+          25% {
+            transform: translate3d(3px, -6px, 0) rotate(0.35deg);
+          }
+          50% {
+            transform: translate3d(-2px, -10px, 0) rotate(-0.3deg);
+          }
+          75% {
+            transform: translate3d(2px, -5px, 0) rotate(0.2deg);
+          }
         }
 
         .hero-float {
-          animation: heroFloat 5s ease-in-out infinite;
+          animation:
+            heroCardFade 400ms cubic-bezier(0.23, 1, 0.32, 1) both,
+            heroFloat 6.5s cubic-bezier(0.77, 0, 0.175, 1) infinite;
         }
 
         @media (prefers-reduced-motion: reduce) {
           .hero-float {
-            animation: none;
+            animation: heroCardFade 200ms cubic-bezier(0.23, 1, 0.32, 1) both;
           }
         }
       `}</style>

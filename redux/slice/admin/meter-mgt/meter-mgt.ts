@@ -121,6 +121,7 @@ export const getVendingStatsByEstate = createAsyncThunk(
 export interface EstateVendLimitsDefaults {
   minVendAmount: number;
   maxVendAmount: number;
+  monthlyVendUnitCap?: number | null;
 }
 
 export interface EstateVendLimitsData {
@@ -128,6 +129,7 @@ export interface EstateVendLimitsData {
   estateName: string;
   minVendAmount: number;
   maxVendAmount: number;
+  monthlyVendUnitCap?: number | null;
   isConfigured: boolean;
   defaults: EstateVendLimitsDefaults;
 }
@@ -162,17 +164,19 @@ export const setEstateVendLimits = createAsyncThunk(
       estateId,
       minVendAmount,
       maxVendAmount,
+      monthlyVendUnitCap,
     }: {
       estateId: string;
       minVendAmount: number;
       maxVendAmount: number;
+      monthlyVendUnitCap: number | null;
     },
     { rejectWithValue },
   ) => {
     try {
       const res = await axiosInstance.put<EstateVendLimitsResponse>(
         `/api/v1/meters/estate/${estateId}/vend-limits`,
-        { minVendAmount, maxVendAmount },
+        { minVendAmount, maxVendAmount, monthlyVendUnitCap },
       );
       return res.data;
     } catch (error: unknown) {

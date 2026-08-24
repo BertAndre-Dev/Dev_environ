@@ -96,7 +96,7 @@ export default function Navbar({ embedded = false }: NavbarProps) {
               padding="px-5 py-2.5"
               className="border border-[#C5D4E8] transition-colors duration-150 ease-out hover:bg-[#E8F1FB] cursor-pointer active:scale-[0.97]"
             >
-              Login / Sign up
+              Login
             </Button>
           </Link>
 

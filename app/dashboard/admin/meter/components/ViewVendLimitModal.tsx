@@ -81,7 +81,8 @@ export function ViewVendLimitModal({ open, estateId, onClose }: Props) {
             Vend limits
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Minimum and maximum amounts residents can vend in this estate.
+            Minimum and maximum amounts residents can vend, plus any monthly
+            kWh cap per meter.
           </p>
         </div>
 
@@ -110,6 +111,14 @@ export function ViewVendLimitModal({ open, estateId, onClose }: Props) {
               label="Maximum vend amount"
               value={formatNaira(limits.maxVendAmount)}
             />
+            <DetailRow
+              label="Monthly unit cap"
+              value={
+                limits.monthlyVendUnitCap == null
+                  ? "Disabled"
+                  : `${Number(limits.monthlyVendUnitCap).toLocaleString()} kWh / meter / month`
+              }
+            />
             {!limits.isConfigured && limits.defaults ? (
               <>
                 <DetailRow
@@ -119,6 +128,14 @@ export function ViewVendLimitModal({ open, estateId, onClose }: Props) {
                 <DetailRow
                   label="Default maximum"
                   value={formatNaira(limits.defaults.maxVendAmount)}
+                />
+                <DetailRow
+                  label="Default monthly unit cap"
+                  value={
+                    limits.defaults.monthlyVendUnitCap == null
+                      ? "Disabled"
+                      : `${Number(limits.defaults.monthlyVendUnitCap).toLocaleString()} kWh / meter / month`
+                  }
                 />
               </>
             ) : null}

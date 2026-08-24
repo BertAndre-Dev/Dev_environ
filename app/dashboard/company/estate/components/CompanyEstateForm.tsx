@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CountryDropdown, RegionDropdown } from "react-country-region-selector";
-import { InvitePlanSelect } from "@/components/invite/InvitePlanSelect";
-import { DEFAULT_PLAN, normalizePlanKey } from "@/lib/plans";
+import { labelForPlan, normalizePlanKey } from "@/lib/plans";
+import type { RootState } from "@/redux/store";
 import {
   type EstateData,
   VisitorVerificationMode,
@@ -18,11 +19,17 @@ type Props = {
   onSubmit: (data: EstateData) => void;
 };
 
+function selectSignedInPlan(state: RootState): string {
+  const user = state.auth.user as { plan?: unknown } | null;
+  return normalizePlanKey(user?.plan);
+}
+
 export default function CompanyEstateForm({
   initialData = null,
   onSubmit,
 }: Readonly<Props>) {
   const isEditing = Boolean(initialData);
+  const companyPlan = useSelector(selectSignedInPlan);
 
   const [formData, setFormData] = useState<EstateData>(() => ({
     name: initialData?.name ?? "",
@@ -30,7 +37,7 @@ export default function CompanyEstateForm({
     city: initialData?.city ?? "",
     state: initialData?.state ?? "",
     country: initialData?.country ?? "",
-    plan: normalizePlanKey(initialData?.plan) || DEFAULT_PLAN,
+    plan: companyPlan,
     visitorVerificationMode:
       initialData?.visitorVerificationMode ?? VisitorVerificationMode.VIEW_AND_VERIFY,
   }));
@@ -43,12 +50,14 @@ export default function CompanyEstateForm({
         city: initialData.city,
         state: initialData.state,
         country: initialData.country,
-        plan: normalizePlanKey(initialData.plan),
+        plan: companyPlan,
         visitorVerificationMode:
           initialData.visitorVerificationMode ?? VisitorVerificationMode.VIEW_AND_VERIFY,
       });
+      return;
     }
-  }, [initialData]);
+    setFormData((prev) => ({ ...prev, plan: companyPlan }));
+  }, [initialData, companyPlan]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -58,7 +67,7 @@ export default function CompanyEstateForm({
     e.preventDefault();
     onSubmit({
       ...formData,
-      plan: normalizePlanKey(formData.plan),
+      plan: companyPlan,
     });
   };
 
@@ -137,11 +146,18 @@ export default function CompanyEstateForm({
           </select>
         </div>
 
-        <InvitePlanSelect
-          value={normalizePlanKey(formData.plan)}
-          onChange={(plan) => setFormData((prev) => ({ ...prev, plan }))}
-          description="Assigns modules and vending/bill rates from this plan. Defaults to the company plan if omitted."
-        />
+        <div>
+          <Label htmlFor="company-estate-plan">Plan</Label>
+          <p className="mb-1.5 text-sm text-muted-foreground">
+            This estate uses your company plan. It cannot be changed here.
+          </p>
+          <Input
+            id="company-estate-plan"
+            value={labelForPlan(companyPlan)}
+            readOnly
+            disabled
+          />
+        </div>
 
         <div className="w-full pt-4">
           <Button type="submit" className="w-full cursor-pointer">

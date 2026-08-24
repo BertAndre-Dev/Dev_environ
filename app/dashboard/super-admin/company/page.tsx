@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import DeleteModal from "@/components/resident/delete-modal/page";
@@ -27,106 +27,16 @@ import {
   updateCompany,
   type CompanyItem,
   type CreateCompanyPayload,
-  type CompanyModuleKey,
 } from "@/redux/slice/super-admin/company-mgt/company";
 import { DEFAULT_PLAN, labelForPlan, normalizePlanKey } from "@/lib/plans";
 
 const PAGE_SIZE = 10;
-
-const MODULE_LABELS: Record<string, string> = {
-  bills: "Bills",
-  rent: "Rent",
-  meter: "Meter",
-  marketplace: "Marketplace",
-  visitor: "Visitor",
-  complaints: "Complaints",
-  announcements: "Announcements",
-  wallet: "Wallet",
-  transactions: "Transactions",
-  comments: "Comments",
-  address: "Address",
-  expense: "Expense",
-  reporting: "Reporting",
-  users: "Users",
-};
-
-const VISIBLE_MODULE_LIMIT = 3;
-
-function ModulesCell({ mods }: { mods: CompanyModuleKey[] }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  if (!mods.length) return <span className="text-muted-foreground">—</span>;
-
-  const visible = mods.slice(0, VISIBLE_MODULE_LIMIT);
-  const overflow = mods.slice(VISIBLE_MODULE_LIMIT);
-
-  return (
-    <div className="relative flex flex-wrap items-center gap-1" ref={ref}>
-      {visible.map((m) => (
-        <span
-          key={m}
-          className="px-2 py-0.5 rounded-full text-xs bg-muted whitespace-nowrap"
-        >
-          {MODULE_LABELS[m] ?? m}
-        </span>
-      ))}
-
-      {overflow.length > 0 && (
-        <>
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors cursor-pointer whitespace-nowrap"
-          >
-            +{overflow.length} more
-          </button>
-
-          {open && (
-            <div className="absolute left-0 top-full mt-1 z-50 w-56 rounded-lg border border-border bg-popover shadow-md p-3">
-              <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
-                All Modules ({mods.length})
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {mods.map((m) => (
-                  <span
-                    key={m}
-                    className="px-2 py-0.5 rounded-full text-xs bg-muted whitespace-nowrap"
-                  >
-                    {MODULE_LABELS[m] ?? m}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
 
 function companyId(item: CompanyItem): string | undefined {
   return item.id ?? item._id;
 }
 
 type CompanyFormState = CreateCompanyPayload;
-
-function normalizeModules(mods: unknown): CompanyModuleKey[] {
-  return Array.isArray(mods)
-    ? (mods.filter(Boolean) as CompanyModuleKey[])
-    : [];
-}
 
 export default function SuperAdminCompanyPage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -386,15 +296,6 @@ export default function SuperAdminCompanyPage() {
         ),
         exportValue: (item: CompanyItem) =>
           item.isActive ? "Active" : "Inactive",
-      },
-      {
-        key: "modules",
-        header: "Modules",
-        render: (item: CompanyItem) => (
-          <ModulesCell mods={normalizeModules(item.modules)} />
-        ),
-        exportValue: (item: CompanyItem) =>
-          normalizeModules(item.modules).join("|"),
       },
       {
         key: "actions",

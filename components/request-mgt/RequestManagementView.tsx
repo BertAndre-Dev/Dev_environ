@@ -18,9 +18,7 @@ import RequestDetailModal, {
   formatCategory,
   formatDate,
   formatRequestCode,
-  formatStatusLabel,
   getActorName,
-  getStatusStyle,
 } from "./RequestDetailModal";
 import {
   getRequestScopeApi,
@@ -33,9 +31,11 @@ import {
   requestViewButtonClass,
 } from "./request-action-styles";
 import {
-  formatStepAssignees,
-  getCurrentRequestStep,
+  formatRequestStatusLabel,
+  formatRequestStepsExport,
+  getRequestStatusStyle,
 } from "@/lib/request-record";
+import { RequestStepsCell } from "./RequestStepsCell";
 
 type EstateSelectOption = { label: string; value: string };
 
@@ -164,6 +164,14 @@ export default function RequestManagementView({
   const columns = useMemo(
     () => [
       {
+        key: "createdAt",
+        header: "Created",
+        render: (item: ScopedRequestItem) =>
+          formatDate(item.createdAt || item.updatedAt),
+        exportValue: (item: ScopedRequestItem) =>
+          formatDate(item.createdAt || item.updatedAt),
+      },
+      {
         key: "code",
         header: "Code",
         render: (item: ScopedRequestItem) => (
@@ -172,14 +180,6 @@ export default function RequestManagementView({
           </span>
         ),
         exportValue: (item: ScopedRequestItem) => formatRequestCode(item.code),
-      },
-      {
-        key: "createdAt",
-        header: "Created",
-        render: (item: ScopedRequestItem) =>
-          formatDate(item.createdAt || item.updatedAt),
-        exportValue: (item: ScopedRequestItem) =>
-          formatDate(item.createdAt || item.updatedAt),
       },
       {
         key: "title",
@@ -203,48 +203,40 @@ export default function RequestManagementView({
         exportValue: (item: ScopedRequestItem) => formatCategory(item.category),
       },
       {
-        key: "currentStep",
-        header: "Current step",
-        render: (item: ScopedRequestItem) => {
-          const stepName =
+        key: "steps",
+        header: "Steps",
+        render: (item: ScopedRequestItem) => (
+          <RequestStepsCell
+            steps={item.steps}
+            fallbackName={
+              item.currentStepName?.trim() ||
+              (item.currentStepOrder != null
+                ? `Step ${item.currentStepOrder}`
+                : undefined)
+            }
+          />
+        ),
+        exportValue: (item: ScopedRequestItem) =>
+          formatRequestStepsExport(
+            item.steps,
             item.currentStepName?.trim() ||
-            (item.currentStepOrder != null
-              ? `Step ${item.currentStepOrder}`
-              : "—");
-          const assignees = formatStepAssignees(getCurrentRequestStep(item));
-          return (
-            <div>
-              <p className="font-medium text-foreground">{stepName}</p>
-              {assignees !== "—" ? (
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                  {assignees}
-                </p>
-              ) : null}
-            </div>
-          );
-        },
-        exportValue: (item: ScopedRequestItem) => {
-          const stepName =
-            item.currentStepName?.trim() ||
-            (item.currentStepOrder != null
-              ? `Step ${item.currentStepOrder}`
-              : "—");
-          const assignees = formatStepAssignees(getCurrentRequestStep(item));
-          return assignees !== "—" ? `${stepName} (${assignees})` : stepName;
-        },
+              (item.currentStepOrder != null
+                ? `Step ${item.currentStepOrder}`
+                : undefined),
+          ),
       },
       {
         key: "status",
         header: "Status",
         render: (item: ScopedRequestItem) => (
           <span
-            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStatusStyle(item.status)}`}
+            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getRequestStatusStyle(item.status)}`}
           >
-            {formatStatusLabel(item.status)}
+            {formatRequestStatusLabel(item.status)}
           </span>
         ),
         exportValue: (item: ScopedRequestItem) =>
-          formatStatusLabel(item.status),
+          formatRequestStatusLabel(item.status),
       },
       {
         key: "createdBy",

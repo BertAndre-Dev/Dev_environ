@@ -24,9 +24,11 @@ import { requestDestructiveOutlineButtonClass } from "./request-action-styles";
 import RequestComments from "./RequestComments";
 import { RequestRecordDetails } from "./RequestRecordDetails";
 import {
-  formatStepAssignees,
+  formatRequestStatusLabel,
   getCurrentRequestStep,
+  getRequestStatusStyle,
   isUserAssignedToCurrentStep,
+  formatStepAssignees,
 } from "@/lib/request-record";
 import {
   extractSignedInUserEmail,
@@ -63,9 +65,8 @@ function formatCategory(category?: string) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function formatStatusLabel(status?: ScopedRequestStatus) {
-  if (!status) return "—";
-  return STATUS_LABELS[status] ?? status;
+function formatStatusLabel(status?: ScopedRequestStatus | string) {
+  return formatRequestStatusLabel(status);
 }
 
 function formatRequestCode(code?: string) {
@@ -73,13 +74,8 @@ function formatRequestCode(code?: string) {
   return trimmed || "—";
 }
 
-function getStatusStyle(status?: ScopedRequestStatus) {
-  if (status === "approved") return "bg-[#DCFCE7] text-[#16A34A]";
-  if (status === "rejected" || status === "cancelled")
-    return "bg-[#FEE2E2] text-[#DC2626]";
-  if (status === "pending_approval") return "bg-[#FFEDD5] text-[#EA580C]";
-  if (status === "draft") return "bg-[#F3F4F6] text-[#4B5563]";
-  return "bg-[#E0E7FF] text-[#3730A3]";
+function getStatusStyle(status?: ScopedRequestStatus | string) {
+  return getRequestStatusStyle(status);
 }
 
 function getActorName(

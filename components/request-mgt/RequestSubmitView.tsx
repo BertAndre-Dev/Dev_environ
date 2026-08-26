@@ -39,8 +39,11 @@ import {
 } from "@/components/request-mgt/request-action-styles";
 import { getRequestActorDisplayName } from "@/lib/request-actor";
 import {
+  formatRequestStatusLabel,
+  formatRequestStepsExport,
   formatStepAssignees,
   getCurrentRequestStep,
+  getRequestStatusStyle,
   isUserAssignedToCurrentStep,
 } from "@/lib/request-record";
 import {
@@ -53,6 +56,7 @@ import {
 import StaffRequestFormModal from "./StaffRequestFormModal";
 import RequestComments from "./RequestComments";
 import { RequestRecordDetails } from "./RequestRecordDetails";
+import { RequestStepsCell } from "./RequestStepsCell";
 
 function formatDate(dateStr?: string) {
   if (!dateStr) return "—";
@@ -79,28 +83,6 @@ function formatCategory(
   return category
     .replaceAll("_", " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-const STATUS_LABELS: Record<StaffRequestStatus, string> = {
-  draft: "Draft",
-  pending_approval: "Pending approval",
-  approved: "Approved",
-  rejected: "Rejected",
-  cancelled: "Cancelled",
-};
-
-function formatStatusLabel(status?: StaffRequestStatus) {
-  if (!status) return "—";
-  return STATUS_LABELS[status] ?? status;
-}
-
-function getStatusStyle(status?: StaffRequestStatus) {
-  if (status === "approved") return "bg-[#DCFCE7] text-[#16A34A]";
-  if (status === "rejected" || status === "cancelled")
-    return "bg-[#FEE2E2] text-[#DC2626]";
-  if (status === "pending_approval") return "bg-[#FFEDD5] text-[#EA580C]";
-  if (status === "draft") return "bg-[#F3F4F6] text-[#4B5563]";
-  return "bg-[#E0E7FF] text-[#3730A3]";
 }
 
 function getCreatedByName(item: StaffRequestItem) {
@@ -311,6 +293,14 @@ export default function RequestSubmitView({
   const columns = useMemo(
     () => [
       {
+        key: "createdAt",
+        header: "Created",
+        render: (item: StaffRequestItem) =>
+          formatDate(item.createdAt || item.updatedAt),
+        exportValue: (item: StaffRequestItem) =>
+          formatDate(item.createdAt || item.updatedAt),
+      },
+      {
         key: "code",
         header: "Code",
         render: (item: StaffRequestItem) => (
@@ -319,14 +309,6 @@ export default function RequestSubmitView({
           </span>
         ),
         exportValue: (item: StaffRequestItem) => item.code?.trim() || "—",
-      },
-      {
-        key: "createdAt",
-        header: "Created",
-        render: (item: StaffRequestItem) =>
-          formatDate(item.createdAt || item.updatedAt),
-        exportValue: (item: StaffRequestItem) =>
-          formatDate(item.createdAt || item.updatedAt),
       },
       {
         key: "title",
@@ -352,41 +334,29 @@ export default function RequestSubmitView({
           formatCategory(item.category, categories),
       },
       {
-        key: "currentStep",
-        header: "Current step",
-        render: (item: StaffRequestItem) => {
-          const assignees = formatCurrentAssignees(item);
-          return (
-            <div>
-              <p className="font-medium text-foreground">
-                {formatCurrentStep(item)}
-              </p>
-              {assignees !== "—" ? (
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                  {assignees}
-                </p>
-              ) : null}
-            </div>
-          );
-        },
-        exportValue: (item: StaffRequestItem) => {
-          const assignees = formatCurrentAssignees(item);
-          const step = formatCurrentStep(item);
-          return assignees !== "—" ? `${step} (${assignees})` : step;
-        },
+        key: "steps",
+        header: "Steps",
+        render: (item: StaffRequestItem) => (
+          <RequestStepsCell
+            steps={item.steps}
+            fallbackName={item.currentStepName}
+          />
+        ),
+        exportValue: (item: StaffRequestItem) =>
+          formatRequestStepsExport(item.steps, item.currentStepName),
       },
       {
         key: "status",
         header: "Status",
         render: (item: StaffRequestItem) => (
           <span
-            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStatusStyle(item.status)}`}
+            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getRequestStatusStyle(item.status)}`}
           >
-            {formatStatusLabel(item.status)}
+            {formatRequestStatusLabel(item.status)}
           </span>
         ),
         exportValue: (item: StaffRequestItem) =>
-          formatStatusLabel(item.status),
+          formatRequestStatusLabel(item.status),
       },
       {
         key: "createdBy",
@@ -560,9 +530,9 @@ export default function RequestSubmitView({
                 </p>
               </div>
               <span
-                className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold shrink-0 ${getStatusStyle(viewingLive.status)}`}
+                className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold shrink-0 ${getRequestStatusStyle(viewingLive.status)}`}
               >
-                {formatStatusLabel(viewingLive.status)}
+                {formatRequestStatusLabel(viewingLive.status)}
               </span>
             </div>
 

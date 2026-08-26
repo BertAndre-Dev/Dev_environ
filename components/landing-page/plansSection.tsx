@@ -204,22 +204,27 @@ export default function PlansSection() {
         </div>
 
         {/* How to choose */}
-        <div className="mt-14 rounded-3xl bg-[#F8F8F8] p-6 sm:mt-16 sm:p-8 lg:p-10">
-          <h3 className="text-2xl font-semibold tracking-[-0.01em] text-black sm:text-[28px]">
-            How to choose
-          </h3>
-          <div className="mt-6 grid gap-4 sm:gap-5 md:grid-cols-3">
-            {HOW_TO_CHOOSE.map((item) => (
-              <div
-                key={item.name}
-                className="rounded-2xl border border-[#0150AC]/25 bg-white p-5 sm:p-6"
-              >
-                <h4 className="text-base font-bold text-black">{item.name}</h4>
-                <p className="mt-2 text-sm leading-relaxed text-[#6B7280]">
-                  {item.detail}
-                </p>
-              </div>
-            ))}
+      </div>
+
+      <div className="mt-14 sm:mt-16">
+        <div className="bg-[#F8F8F8] px-6 py-6 sm:px-8 sm:py-8 lg:px-10 lg:py-10">
+          <div className="container mx-auto max-w-[1320px] xl:max-w-[1440px]">
+            <h3 className="text-2xl font-semibold tracking-[-0.01em] text-black sm:text-[28px]">
+              How to choose
+            </h3>
+            <div className="mt-6 grid gap-4 sm:gap-5 md:grid-cols-3">
+              {HOW_TO_CHOOSE.map((item) => (
+                <div
+                  key={item.name}
+                  className="rounded-2xl border border-[#0150AC]/25 bg-white p-5 sm:p-6"
+                >
+                  <h4 className="text-base font-bold text-black">{item.name}</h4>
+                  <p className="mt-2 text-sm leading-relaxed text-[#6B7280]">
+                    {item.detail}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

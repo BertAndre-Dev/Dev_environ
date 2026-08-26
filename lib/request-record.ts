@@ -198,3 +198,48 @@ export function isFileRequestField(field: RequestRecordField): boolean {
   const path = value.split("?")[0] ?? "";
   return /\.(pdf|png|jpe?g|webp|gif|docx?|xlsx?|csv)$/i.test(path);
 }
+
+export function formatRequestStatusLabel(status?: string): string {
+  if (!status) return "—";
+  const key = status.trim().toLowerCase();
+  const labels: Record<string, string> = {
+    draft: "Draft",
+    pending: "Pending",
+    pending_approval: "Pending approval",
+    approved: "Approved",
+    rejected: "Rejected",
+    cancelled: "Cancelled",
+  };
+  if (labels[key]) return labels[key];
+  return status
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+export function getRequestStatusStyle(status?: string): string {
+  const key = (status ?? "").trim().toLowerCase();
+  if (key === "approved") return "bg-[#DCFCE7] text-[#16A34A]";
+  if (key === "rejected" || key === "cancelled") {
+    return "bg-[#FEE2E2] text-[#DC2626]";
+  }
+  if (key === "pending" || key === "pending_approval") {
+    return "bg-[#FFEDD5] text-[#EA580C]";
+  }
+  if (key === "draft") return "bg-[#F3F4F6] text-[#4B5563]";
+  return "bg-[#E0E7FF] text-[#3730A3]";
+}
+
+export function formatRequestStepsExport(
+  steps?: RequestWorkflowStep[],
+  fallbackName?: string,
+): string {
+  const list = steps ?? [];
+  if (list.length === 0) return fallbackName?.trim() || "—";
+  return list
+    .map((step) => {
+      const name = step.name?.trim() || `Step ${step.order ?? ""}`.trim();
+      const status = formatRequestStatusLabel(step.status);
+      return `${step.order != null ? `${step.order}. ` : ""}${name} (${status})`;
+    })
+    .join("; ");
+}

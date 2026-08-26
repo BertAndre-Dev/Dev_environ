@@ -6,16 +6,13 @@ import {
   openAttachmentInNewTab,
 } from "@/lib/download-attachment";
 import {
-  formatStepAssignees,
+  formatRequestStatusLabel,
+  getRequestStatusStyle,
   isFileRequestField,
+  formatStepAssignees,
   type RequestRecordField,
   type RequestWorkflowStep,
 } from "@/lib/request-record";
-
-function formatStepStatus(status?: string) {
-  if (!status) return "";
-  return status.replaceAll("_", " ");
-}
 
 export function RequestRecordDetails({
   fieldValues,
@@ -95,8 +92,10 @@ export function RequestRecordDetails({
                       ) : null}
                     </span>
                     {step.status ? (
-                      <span className="text-xs text-muted-foreground capitalize">
-                        {formatStepStatus(step.status)}
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize shrink-0 ${getRequestStatusStyle(step.status)}`}
+                      >
+                        {formatRequestStatusLabel(step.status)}
                       </span>
                     ) : null}
                   </div>

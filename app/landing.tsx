@@ -8,6 +8,7 @@ import BlogSection from "@/components/landing-page/blogSection";
 // import FeaturesShowcaseSection from "@/components/landing-page/featuresShowcaseSection";
 import BertaShowcaseSection from "@/components/landing-page/bertaShowcaseSection";
 import FeaturesSection from "@/components/landing-page/featuresSection";
+import PlansSection from "@/components/landing-page/plansSection";
 import Footer from "@/components/landing-page/footer";
 import TrustedBySection from "@/components/landing-page/trustedBy";
 import EverythingYouNeedSection from "@/components/landing-page/everythingYouNeedSection";
@@ -32,6 +33,7 @@ export default function Home() {
         <BertaShowcaseSection />
 
         <FeaturesSection />
+        <PlansSection />
         {/* <TestimonialsSection /> */}
         <FAQSection />
         <BlogSection />

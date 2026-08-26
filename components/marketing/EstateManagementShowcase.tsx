@@ -148,7 +148,7 @@ export default function EstateManagementShowcase({
       <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-2  lg:px-8">
         {/* Left */}
         <div className="min-w-0">
-          <h2 className="max-w-xl text-4xl font-normal leading-tight tracking-tight text-black sm:text-5xl">
+          <h2 className="text-[32px] font-semibold leading-tight tracking-[-0.02em] text-black sm:text-[36px] lg:text-[40px]">
             Everything estate management in one app.
           </h2>
 

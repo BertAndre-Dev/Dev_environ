@@ -105,7 +105,7 @@ export default function BlogSection() {
     >
       <div className="container mx-auto px-6 md:px-8 lg:px-10 xl:px-16 max-w-[1320px] xl:max-w-[1440px]">
         <div className="mb-8 sm:mb-10 lg:mb-12 max-w-2xl">
-          <h2 className="text-[36px] font-bold leading-tight text-black">
+          <h2 className="text-[32px] font-semibold leading-tight tracking-[-0.02em] text-black sm:text-[36px] lg:text-[40px]">
             Blog
           </h2>
           <p className="mt-3 sm:mt-4 text-base sm:text-lg font-normal text-[#4C4C4C] leading-relaxed">

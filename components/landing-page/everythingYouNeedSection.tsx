@@ -110,7 +110,7 @@ export default function EverythingYouNeedSection() {
     >
       <div className="container mx-auto px-6 md:px-8 lg:px-10 xl:px-16 max-w-[1320px] xl:max-w-[1440px]">
         <div className="mx-auto max-w-3xl text-center">
-          <h2 className="text-[32px] sm:text-[36px] font-medium leading-tight tracking-[-0.02em] text-black">
+          <h2 className="text-[32px] font-semibold leading-tight tracking-[-0.02em] text-black sm:text-[36px] lg:text-[40px]">
             Everything You Need. <br /> Nothing You Don&apos;t.
           </h2>
           <p className="mt-4 text-base sm:text-lg text-[#4C4C4C] leading-relaxed">

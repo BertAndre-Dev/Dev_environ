@@ -167,7 +167,7 @@ export default function EstateManagementShowcase({
                   aria-pressed={isActive}
                   onClick={() => setActiveTab(tab.id)}
                   className={[
-                    "inline-flex cursor-pointer items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-colors",
+                    "inline-flex cursor-pointer items-center gap-2 rounded-full px-3 md:px-5 py-2.5 text-xs md:text-sm font-medium transition-colors",
                     "active:scale-[0.97]",
                     isActive
                       ? "bg-[#0150AC] text-white"

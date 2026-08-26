@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { Check, ClipboardList, Paperclip, Plus, X } from "lucide-react";
+import { Check, ClipboardList, Paperclip, Plus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -39,7 +39,6 @@ import {
 } from "@/components/request-mgt/request-action-styles";
 import { getRequestActorDisplayName } from "@/lib/request-actor";
 import {
-  currentStepAllowsReject,
   formatStepAssignees,
   getCurrentRequestStep,
   isUserAssignedToCurrentStep,
@@ -257,9 +256,6 @@ export default function RequestSubmitView({
   );
   const canDecide =
     viewingLive?.status === "pending_approval" && assignedToCurrentStep;
-  const canReject =
-    Boolean(canDecide && viewingLive) &&
-    currentStepAllowsReject(viewingLive ?? {});
   const canCancel =
     viewingLive?.status === "pending_approval" && assignedToCurrentStep;
 
@@ -274,24 +270,18 @@ export default function RequestSubmitView({
     setConfirmCancel(false);
   };
 
-  const handleDecide = async (decision: "approve" | "reject") => {
+  const handleDecide = async () => {
     if (!viewingLive?.id) return;
-    if (decision === "reject" && comment.trim().length < 3) {
-      toast.error("A rejection reason of at least 3 characters is required.");
-      return;
-    }
     try {
       await dispatch(
         decideStaffRequest({
           id: viewingLive.id,
-          decision,
+          decision: "approve",
           comment: comment.trim() || undefined,
           estateId: estateId || viewingLive.estateId,
         }),
       ).unwrap();
-      toast.success(
-        decision === "approve" ? "Request approved." : "Request rejected.",
-      );
+      toast.success("Request approved.");
       closeViewing();
       await loadRequests();
     } catch (err: unknown) {
@@ -648,7 +638,7 @@ export default function RequestSubmitView({
                     <Label htmlFor="staff-request-decision-comment">
                       Decision note{" "}
                       <span className="text-muted-foreground font-normal">
-                        {canReject ? "(required to reject)" : "(optional)"}
+                        (optional)
                       </span>
                     </Label>
                     <Textarea
@@ -696,21 +686,10 @@ export default function RequestSubmitView({
                         Cancel request
                       </Button>
                     ) : null}
-                    {canReject ? (
-                      <Button
-                        variant="outline"
-                        className={requestDestructiveOutlineButtonClass}
-                        disabled={mutating}
-                        onClick={() => void handleDecide("reject")}
-                      >
-                        <X className="w-4 h-4 mr-2" />
-                        Reject
-                      </Button>
-                    ) : null}
                     {canDecide ? (
                       <Button
                         disabled={mutating}
-                        onClick={() => void handleDecide("approve")}
+                        onClick={() => void handleDecide()}
                       >
                         <Check className="w-4 h-4 mr-2" />
                         Approve

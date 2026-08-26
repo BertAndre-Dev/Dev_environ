@@ -5,6 +5,8 @@ import {
   EXPENSE_ENTRY_BULK_MAX,
   parseExpenseAttachments,
   toExpenseEntryBulkBody,
+  toExpenseEntryUpdateBody,
+  type ExpenseEntryUpdateArg,
   type ExpenseEntryWriteItem,
 } from "@/lib/expense-entry";
 
@@ -126,29 +128,12 @@ export const fetchCompanyExpenseEntryById = createAsyncThunk(
 
 export const updateCompanyExpenseEntry = createAsyncThunk(
   "company-expense-entry/updateCompanyExpenseEntry",
-  async (
-    {
-      id,
-      headId,
-      description,
-      documentNumber,
-      amount,
-    }: {
-      id: string;
-      headId: string;
-      description: string;
-      documentNumber: string;
-      amount: number;
-    },
-    { rejectWithValue },
-  ) => {
+  async ({ id, ...fields }: ExpenseEntryUpdateArg, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.put(`/api/v1/expense-entry/${id}`, {
-        headId,
-        description,
-        documentNumber,
-        amount,
-      });
+      const res = await axiosInstance.put(
+        `/api/v1/expense-entry/${id}`,
+        toExpenseEntryUpdateBody(fields),
+      );
       return res.data;
     } catch (error: unknown) {
       return rejectWithValue(apiErrorRejectValue(error));

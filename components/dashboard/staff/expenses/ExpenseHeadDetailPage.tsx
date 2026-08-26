@@ -39,6 +39,7 @@ import {
   AddExpenseModal,
   type AddExpenseDraftEntry,
 } from "@/components/dashboard/admin/expenses/AddExpenseModal";
+import { toDraftAttachments } from "@/components/dashboard/admin/expenses/ExpenseAttachmentsPicker";
 import { EditExpenseModal } from "@/components/dashboard/admin/expenses/EditExpenseModal";
 import { ViewExpenseEntryModal } from "@/components/dashboard/admin/expenses/ViewExpenseEntryModal";
 import Loader from "@/components/ui/Loader";
@@ -115,6 +116,9 @@ export default function ExpenseHeadDetailPage() {
   const [formDescription, setFormDescription] = useState("");
   const [formAmount, setFormAmount] = useState("");
   const [formDocumentNumber, setFormDocumentNumber] = useState("");
+  const [formAttachments, setFormAttachments] = useState<
+    AddExpenseDraftEntry["attachments"]
+  >([]);
 
   const [viewOpen, setViewOpen] = useState(false);
   const [viewItem, setViewItem] = useState<ExpenseEntry | null>(null);
@@ -219,6 +223,7 @@ export default function ExpenseHeadDetailPage() {
     setFormDescription("");
     setFormAmount("");
     setFormDocumentNumber("");
+    setFormAttachments([]);
     setSaving(false);
   };
 
@@ -301,6 +306,7 @@ export default function ExpenseHeadDetailPage() {
     setFormDescription(item.description ?? "");
     setFormAmount(String(item.amount ?? ""));
     setFormDocumentNumber(item.documentNumber ?? "");
+    setFormAttachments(toDraftAttachments(item.attachments));
     setEditOpen(true);
   };
 
@@ -326,6 +332,7 @@ export default function ExpenseHeadDetailPage() {
           description: formDescription.trim(),
           documentNumber: formDocumentNumber.trim(),
           amount,
+          attachments: formAttachments.map((file) => file.dataUrl),
         }),
       ).unwrap();
       toast.success("Expense entry updated.");
@@ -440,10 +447,12 @@ export default function ExpenseHeadDetailPage() {
           description={formDescription}
           amount={formAmount}
           documentNumber={formDocumentNumber}
+          attachments={formAttachments}
           onOpenChange={(open) => (open ? setEditOpen(true) : closeEdit())}
           onDescriptionChange={setFormDescription}
           onAmountChange={setFormAmount}
           onDocumentNumberChange={setFormDocumentNumber}
+          onAttachmentsChange={setFormAttachments}
           onSubmit={submitUpdate}
         />
 

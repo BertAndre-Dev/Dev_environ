@@ -510,16 +510,21 @@ export const adminNav = [
     moduleKey: "announcements",
   },
   {
-    label: "Asset Management",
+    label: "Asset",
     icon: Package,
-    path: "/dashboard/admin/asset",
     moduleKey: "asset",
-  },
-  {
-    label: "Asset Maintenance",
-    icon: Wrench,
-    path: "/dashboard/admin/asset-maintenance",
-    moduleKey: "asset-maintenance",
+    children: [
+      {
+        label: "Asset Management",
+        path: "/dashboard/admin/asset",
+        moduleKey: "asset",
+      },
+      {
+        label: "Asset Maintenance",
+        path: "/dashboard/admin/asset-maintenance",
+        moduleKey: "asset-maintenance",
+      },
+    ],
   },
   {
     label: "Operations Reporting",

@@ -9,12 +9,29 @@ export type ExpenseEntryWriteItem = {
   attachments?: string[];
 };
 
+export type ExpenseEntryUpdateArg = ExpenseEntryWriteItem & { id: string };
+
+function normalizedAttachments(urls: string[] | undefined): string[] {
+  return (urls ?? []).map((url) => url.trim()).filter(Boolean);
+}
+
 export function toExpenseEntryBulkBody(entries: ExpenseEntryWriteItem[]) {
   return {
     entries: entries.map(({ attachments, ...rest }) => {
-      const urls = (attachments ?? []).map((url) => url.trim()).filter(Boolean);
+      const urls = normalizedAttachments(attachments);
       return urls.length ? { ...rest, attachments: urls } : rest;
     }),
+  };
+}
+
+/** PUT body. Always includes `attachments` so removals persist. */
+export function toExpenseEntryUpdateBody(item: ExpenseEntryWriteItem) {
+  return {
+    headId: item.headId,
+    description: item.description,
+    documentNumber: item.documentNumber,
+    amount: item.amount,
+    attachments: normalizedAttachments(item.attachments),
   };
 }
 

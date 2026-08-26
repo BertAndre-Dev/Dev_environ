@@ -8,14 +8,14 @@ export type OverviewChartId =
   | "complaintsSummary"
   | "complaintsDashboard";
 
-/** Analytics widgets need `reporting` plus the domain module they describe. */
+/** Overview widgets follow the domain module the staff/admin was assigned. */
 const OVERVIEW_CHART_MODULES: Record<OverviewChartId, readonly string[]> = {
-  userSummary: ["reporting", "users"],
-  roleBreakdown: ["reporting", "users"],
-  meterSummary: ["reporting", "meter"],
-  billsSummary: ["reporting", "bills"],
-  complaintsSummary: ["reporting", "complaints"],
-  complaintsDashboard: ["reporting", "complaints"],
+  userSummary: ["users"],
+  roleBreakdown: ["users"],
+  meterSummary: ["meter"],
+  billsSummary: ["bills"],
+  complaintsSummary: ["complaints"],
+  complaintsDashboard: ["complaints"],
 };
 
 function pushModuleList(target: string[], modules: unknown) {

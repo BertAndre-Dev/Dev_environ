@@ -3,17 +3,21 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { ClipboardList, Paperclip, Plus } from "lucide-react";
+import { Check, ClipboardList, Paperclip, Plus, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import Table from "@/components/tables/list/page";
 import Loader from "@/components/ui/Loader";
 import Modal from "@/components/modal/page";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { isBusy, isPending } from "@/lib/async-status";
 import {
+  cancelStaffRequest,
   createStaffRequest,
+  decideStaffRequest,
   getStaffRequestCategories,
   getStaffRequests,
   STAFF_REQUEST_STATUS_OPTIONS,
@@ -28,14 +32,25 @@ import {
   setStaffRequestStatusFilter,
 } from "@/redux/slice/staff/request/staff-request-slice";
 import type { AppDispatch, RootState } from "@/redux/store";
-import { requestViewButtonClass } from "@/components/request-mgt/request-action-styles";
+import {
+  requestDestructiveOutlineButtonClass,
+  requestViewButtonClass,
+} from "@/components/request-mgt/request-action-styles";
 import { getRequestActorDisplayName } from "@/lib/request-actor";
+import {
+  currentStepAllowsReject,
+  formatStepAssignees,
+  getCurrentRequestStep,
+  isUserAssignedToCurrentStep,
+} from "@/lib/request-record";
+import { extractUserId } from "@/lib/user-id";
 import {
   downloadAttachment,
   getAttachmentFilename,
 } from "@/lib/download-attachment";
 import StaffRequestFormModal from "./StaffRequestFormModal";
 import RequestComments from "./RequestComments";
+import { RequestRecordDetails } from "./RequestRecordDetails";
 
 function formatDate(dateStr?: string) {
   if (!dateStr) return "—";
@@ -90,6 +105,14 @@ function getCreatedByName(item: StaffRequestItem) {
   return getRequestActorDisplayName(item.createdBy);
 }
 
+function formatCurrentStep(item: StaffRequestItem) {
+  return item.currentStepName?.trim() || "—";
+}
+
+function formatCurrentAssignees(item: StaffRequestItem) {
+  return formatStepAssignees(getCurrentRequestStep(item));
+}
+
 export interface RequestSubmitViewProps {
   estateId: string | null;
   estateName?: string;
@@ -115,6 +138,8 @@ export default function RequestSubmitView({
   const [createOpen, setCreateOpen] = useState(false);
   const [viewing, setViewing] = useState<StaffRequestItem | null>(null);
   const [searchInput, setSearchInput] = useState("");
+  const [comment, setComment] = useState("");
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   const {
     list,
@@ -124,12 +149,22 @@ export default function RequestSubmitView({
     getListStatus,
     getCategoriesStatus,
     createStatus,
+    decideStatus,
+    cancelStatus,
   } = useSelector((state: RootState) => state.staffRequest);
+  const signedInUserId = useSelector((state: RootState) =>
+    extractUserId(
+      (state.auth.user ?? null) as Record<string, unknown> | null,
+    ),
+  );
 
   const { page, pageSize, search, statusFilter } = ui;
   const listLoading = isPending(getListStatus);
   const categoriesLoading = isBusy(getCategoriesStatus);
   const creating = isBusy(createStatus);
+  const deciding = isBusy(decideStatus);
+  const cancelling = isBusy(cancelStatus);
+  const mutating = deciding || cancelling;
   const fullPageLoading = bootstrapping || listLoading;
   const showOverlayLoader = fullPageLoading && !embedded;
   const showSectionLoader = fullPageLoading && embedded;
@@ -199,6 +234,78 @@ export default function RequestSubmitView({
     }
   };
 
+  const viewingLive = useMemo(() => {
+    if (!viewing) return null;
+    return list.find((item) => item.id === viewing.id) ?? viewing;
+  }, [list, viewing]);
+
+  const assignedToCurrentStep = Boolean(
+    viewingLive &&
+      isUserAssignedToCurrentStep(viewingLive, signedInUserId),
+  );
+  const canDecide =
+    viewingLive?.status === "pending_approval" && assignedToCurrentStep;
+  const canReject =
+    Boolean(canDecide && viewingLive) &&
+    currentStepAllowsReject(viewingLive ?? {});
+  const canCancel =
+    viewingLive?.status === "pending_approval" && assignedToCurrentStep;
+
+  useEffect(() => {
+    setComment("");
+    setConfirmCancel(false);
+  }, [viewing?.id]);
+
+  const closeViewing = () => {
+    setViewing(null);
+    setComment("");
+    setConfirmCancel(false);
+  };
+
+  const handleDecide = async (decision: "approve" | "reject") => {
+    if (!viewingLive?.id) return;
+    if (decision === "reject" && comment.trim().length < 3) {
+      toast.error("A rejection reason of at least 3 characters is required.");
+      return;
+    }
+    try {
+      await dispatch(
+        decideStaffRequest({
+          id: viewingLive.id,
+          decision,
+          comment: comment.trim() || undefined,
+          estateId: estateId || viewingLive.estateId,
+        }),
+      ).unwrap();
+      toast.success(
+        decision === "approve" ? "Request approved." : "Request rejected.",
+      );
+      closeViewing();
+      await loadRequests();
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!viewingLive?.id) return;
+    try {
+      await dispatch(
+        cancelStaffRequest({
+          id: viewingLive.id,
+          estateId: estateId || viewingLive.estateId,
+        }),
+      ).unwrap();
+      toast.success("Request cancelled.");
+      closeViewing();
+      await loadRequests();
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    }
+  };
+
   const columns = useMemo(
     () => [
       {
@@ -241,6 +348,30 @@ export default function RequestSubmitView({
           formatCategory(item.category, categories),
         exportValue: (item: StaffRequestItem) =>
           formatCategory(item.category, categories),
+      },
+      {
+        key: "currentStep",
+        header: "Current step",
+        render: (item: StaffRequestItem) => {
+          const assignees = formatCurrentAssignees(item);
+          return (
+            <div>
+              <p className="font-medium text-foreground">
+                {formatCurrentStep(item)}
+              </p>
+              {assignees !== "—" ? (
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                  {assignees}
+                </p>
+              ) : null}
+            </div>
+          );
+        },
+        exportValue: (item: StaffRequestItem) => {
+          const assignees = formatCurrentAssignees(item);
+          const step = formatCurrentStep(item);
+          return assignees !== "—" ? `${step} (${assignees})` : step;
+        },
       },
       {
         key: "status",
@@ -405,31 +536,31 @@ export default function RequestSubmitView({
         />
       )}
 
-      {viewing && (
+      {viewingLive && (
         <Modal
-          visible={Boolean(viewing)}
-          onClose={() => setViewing(null)}
+          visible={Boolean(viewingLive)}
+          onClose={closeViewing}
           contentClassName="max-w-lg w-full max-h-[90vh] overflow-y-auto"
         >
           <div className="p-5 sm:p-6 space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="font-heading text-xl font-semibold">
-                  {viewing.title || "Request"}
+                  {viewingLive.title || "Request"}
                 </h2>
-                {viewing.code ? (
+                {viewingLive.code ? (
                   <p className="mt-1 text-sm font-medium tracking-[0.02em] text-muted-foreground">
-                    {viewing.code}
+                    {viewingLive.code}
                   </p>
                 ) : null}
                 <p className="text-sm text-muted-foreground mt-1">
-                  {formatDate(viewing.createdAt || viewing.updatedAt)}
+                  {formatDate(viewingLive.createdAt || viewingLive.updatedAt)}
                 </p>
               </div>
               <span
-                className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold shrink-0 ${getStatusStyle(viewing.status)}`}
+                className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold shrink-0 ${getStatusStyle(viewingLive.status)}`}
               >
-                {formatStatusLabel(viewing.status)}
+                {formatStatusLabel(viewingLive.status)}
               </span>
             </div>
 
@@ -437,27 +568,47 @@ export default function RequestSubmitView({
               <div>
                 <p className="text-muted-foreground">Category</p>
                 <p className="font-medium">
-                  {formatCategory(viewing.category, categories)}
+                  {formatCategory(viewingLive.category, categories)}
                 </p>
               </div>
               <div>
                 <p className="text-muted-foreground">Created by</p>
-                <p className="font-medium">{getCreatedByName(viewing)}</p>
+                <p className="font-medium">{getCreatedByName(viewingLive)}</p>
               </div>
+              {viewingLive.currentStepName ||
+              viewingLive.currentStepOrder != null ? (
+                <div className="col-span-2">
+                  <p className="text-muted-foreground">Current step</p>
+                  <p className="font-medium">
+                    {formatCurrentStep(viewingLive)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formatCurrentAssignees(viewingLive)}
+                  </p>
+                </div>
+              ) : null}
             </div>
 
-            {viewing.description ? (
+            {viewingLive.description ? (
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Description</p>
-                <p className="text-sm whitespace-pre-wrap">{viewing.description}</p>
+                <p className="text-sm whitespace-pre-wrap">
+                  {viewingLive.description}
+                </p>
               </div>
             ) : null}
 
-            {viewing.attachments && viewing.attachments.length > 0 ? (
+            <RequestRecordDetails
+              fieldValues={viewingLive.fieldValues}
+              steps={viewingLive.steps}
+              currentStepOrder={viewingLive.currentStepOrder}
+            />
+
+            {viewingLive.attachments && viewingLive.attachments.length > 0 ? (
               <div>
                 <p className="text-sm text-muted-foreground mb-2">Attachments</p>
                 <ul className="space-y-1.5">
-                  {viewing.attachments.map((url, index) => (
+                  {viewingLive.attachments.map((url, index) => (
                     <li key={`${url.slice(0, 24)}-${index}`}>
                       <button
                         type="button"
@@ -479,10 +630,89 @@ export default function RequestSubmitView({
             ) : null}
 
             <RequestComments
-              requestId={viewing.id}
-              estateId={estateId || viewing.estateId}
+              requestId={viewingLive.id}
+              estateId={estateId || viewingLive.estateId}
             />
-           
+
+            {canDecide || canCancel ? (
+              <div className="space-y-3 border-t border-border pt-4">
+                {canDecide ? (
+                  <div>
+                    <Label htmlFor="staff-request-decision-comment">
+                      Decision note{" "}
+                      <span className="text-muted-foreground font-normal">
+                        {canReject ? "(required to reject)" : "(optional)"}
+                      </span>
+                    </Label>
+                    <Textarea
+                      id="staff-request-decision-comment"
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      placeholder="Add a note for this decision..."
+                      disabled={mutating}
+                      className="min-h-24"
+                    />
+                  </div>
+                ) : null}
+
+                {confirmCancel ? (
+                  <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] p-3 space-y-3">
+                    <p className="text-sm text-[#991B1B]">
+                      Cancel this request? This cannot be undone.
+                    </p>
+                    <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+                      <Button
+                        variant="outline"
+                        disabled={mutating}
+                        onClick={() => setConfirmCancel(false)}
+                      >
+                        Keep request
+                      </Button>
+                      <Button
+                        className="bg-[#DC2626] hover:bg-[#B91C1C]"
+                        disabled={mutating}
+                        onClick={() => void handleCancel()}
+                      >
+                        Confirm cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+                    {canCancel ? (
+                      <Button
+                        variant="outline"
+                        className={requestDestructiveOutlineButtonClass}
+                        disabled={mutating}
+                        onClick={() => setConfirmCancel(true)}
+                      >
+                        Cancel request
+                      </Button>
+                    ) : null}
+                    {canReject ? (
+                      <Button
+                        variant="outline"
+                        className={requestDestructiveOutlineButtonClass}
+                        disabled={mutating}
+                        onClick={() => void handleDecide("reject")}
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Reject
+                      </Button>
+                    ) : null}
+                    {canDecide ? (
+                      <Button
+                        disabled={mutating}
+                        onClick={() => void handleDecide("approve")}
+                      >
+                        <Check className="w-4 h-4 mr-2" />
+                        Approve
+                      </Button>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            ) : null}
           </div>
         </Modal>
       )}

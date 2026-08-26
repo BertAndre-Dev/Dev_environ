@@ -32,6 +32,10 @@ import {
   requestDeleteIconButtonClass,
   requestViewButtonClass,
 } from "./request-action-styles";
+import {
+  formatStepAssignees,
+  getCurrentRequestStep,
+} from "@/lib/request-record";
 
 type EstateSelectOption = { label: string; value: string };
 
@@ -197,6 +201,37 @@ export default function RequestManagementView({
         header: "Category",
         render: (item: ScopedRequestItem) => formatCategory(item.category),
         exportValue: (item: ScopedRequestItem) => formatCategory(item.category),
+      },
+      {
+        key: "currentStep",
+        header: "Current step",
+        render: (item: ScopedRequestItem) => {
+          const stepName =
+            item.currentStepName?.trim() ||
+            (item.currentStepOrder != null
+              ? `Step ${item.currentStepOrder}`
+              : "—");
+          const assignees = formatStepAssignees(getCurrentRequestStep(item));
+          return (
+            <div>
+              <p className="font-medium text-foreground">{stepName}</p>
+              {assignees !== "—" ? (
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                  {assignees}
+                </p>
+              ) : null}
+            </div>
+          );
+        },
+        exportValue: (item: ScopedRequestItem) => {
+          const stepName =
+            item.currentStepName?.trim() ||
+            (item.currentStepOrder != null
+              ? `Step ${item.currentStepOrder}`
+              : "—");
+          const assignees = formatStepAssignees(getCurrentRequestStep(item));
+          return assignees !== "—" ? `${stepName} (${assignees})` : stepName;
+        },
       },
       {
         key: "status",

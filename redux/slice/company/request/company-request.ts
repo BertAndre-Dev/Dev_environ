@@ -5,6 +5,13 @@ import {
   resolveCreatedByFromRaw,
   type RequestActor,
 } from "@/lib/request-actor";
+import {
+  parseRequestFieldValues,
+  parseRequestSteps,
+  resolveCurrentStepName,
+  type RequestRecordField,
+  type RequestWorkflowStep,
+} from "@/lib/request-record";
 import axiosInstance from "@/utils/axiosInstance";
 
 export const COMPANY_REQUEST_STATUSES = [
@@ -41,11 +48,7 @@ export interface CompanyRequestStepDecision {
   decidedAt?: string;
 }
 
-export interface CompanyRequestWorkflowStepSnapshot {
-  order?: number;
-  name?: string;
-  status?: string;
-}
+export type CompanyRequestWorkflowStepSnapshot = RequestWorkflowStep;
 
 export interface CompanyRequestItem {
   id: string;
@@ -61,6 +64,7 @@ export interface CompanyRequestItem {
   currentStepOrder?: number;
   currentStepName?: string;
   steps?: CompanyRequestWorkflowStepSnapshot[];
+  fieldValues?: RequestRecordField[];
   decisions?: CompanyRequestStepDecision[];
   createdBy?: string | CompanyRequestActor;
   createdAt?: string;
@@ -165,23 +169,11 @@ function normalizeDecision(raw: unknown): CompanyRequestStepDecision | null {
   };
 }
 
-function normalizeStepSnapshot(
-  raw: unknown,
-): CompanyRequestWorkflowStepSnapshot | null {
-  if (!raw || typeof raw !== "object") return null;
-  const item = raw as Record<string, unknown>;
-  return {
-    order: item.order != null ? Number(item.order) : undefined,
-    name: item.name != null ? String(item.name) : undefined,
-    status: item.status != null ? String(item.status) : undefined,
-  };
-}
-
 export function normalizeCompanyRequestItem(
   raw: Record<string, unknown>,
 ): CompanyRequestItem {
   const id = String(raw._id ?? raw.id ?? "");
-  const stepsRaw = Array.isArray(raw.steps) ? raw.steps : [];
+  const steps = parseRequestSteps(raw.steps);
   const decisionsRaw = Array.isArray(raw.decisions)
     ? raw.decisions
     : Array.isArray(raw.history)
@@ -192,6 +184,13 @@ export function normalizeCompanyRequestItem(
     raw.currentStep && typeof raw.currentStep === "object"
       ? (raw.currentStep as Record<string, unknown>)
       : null;
+
+  const currentStepOrder =
+    raw.currentStepOrder != null
+      ? Number(raw.currentStepOrder)
+      : currentStep?.order != null
+        ? Number(currentStep.order)
+        : undefined;
 
   return {
     id,
@@ -208,21 +207,19 @@ export function normalizeCompanyRequestItem(
     workflowId:
       raw.workflowId != null ? String(raw.workflowId) : undefined,
     status: normalizeStatus(raw.status),
-    currentStepOrder:
-      raw.currentStepOrder != null
-        ? Number(raw.currentStepOrder)
-        : currentStep?.order != null
-          ? Number(currentStep.order)
-          : undefined,
-    currentStepName:
-      raw.currentStepName != null
-        ? String(raw.currentStepName)
-        : currentStep?.name != null
-          ? String(currentStep.name)
-          : undefined,
-    steps: stepsRaw
-      .map(normalizeStepSnapshot)
-      .filter((s): s is CompanyRequestWorkflowStepSnapshot => Boolean(s)),
+    currentStepOrder,
+    currentStepName: resolveCurrentStepName({
+      currentStepName:
+        raw.currentStepName != null
+          ? String(raw.currentStepName)
+          : currentStep?.name != null
+            ? String(currentStep.name)
+            : undefined,
+      currentStepOrder,
+      steps,
+    }),
+    steps,
+    fieldValues: parseRequestFieldValues(raw.fieldValues),
     decisions: decisionsRaw
       .map(normalizeDecision)
       .filter((d): d is CompanyRequestStepDecision => Boolean(d)),

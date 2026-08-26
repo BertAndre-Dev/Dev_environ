@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { Check, Paperclip } from "lucide-react";
+import { Check, Paperclip, X } from "lucide-react";
 import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,12 @@ import {
 } from "./request-scope";
 import { requestDestructiveOutlineButtonClass } from "./request-action-styles";
 import RequestComments from "./RequestComments";
+import { RequestRecordDetails } from "./RequestRecordDetails";
+import {
+  currentStepAllowsReject,
+  formatStepAssignees,
+  getCurrentRequestStep,
+} from "@/lib/request-record";
 
 const STATUS_LABELS: Record<ScopedRequestStatus, string> = {
   draft: "Draft",
@@ -143,8 +149,12 @@ export default function RequestDetailModal({
   if (!requestId) return null;
 
   const canDecide = item?.status === "pending_approval";
+  const canReject = Boolean(item && canDecide && currentStepAllowsReject(item));
   const canCancel =
     item?.status === "pending_approval" || item?.status === "draft";
+  const currentAssignees = item
+    ? formatStepAssignees(getCurrentRequestStep(item))
+    : "—";
 
   const handleApprove = async () => {
     if (!item?.id) return;
@@ -158,6 +168,30 @@ export default function RequestDetailModal({
         }),
       ).unwrap();
       toast.success("Request approved.");
+      setComment("");
+      onChanged?.();
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!item?.id) return;
+    if (comment.trim().length < 3) {
+      toast.error("A rejection reason of at least 3 characters is required.");
+      return;
+    }
+    try {
+      await dispatch(
+        api.decide({
+          id: item.id,
+          decision: "reject",
+          comment: comment.trim(),
+          estateId: resolvedEstateId,
+        }),
+      ).unwrap();
+      toast.success("Request rejected.");
       setComment("");
       onChanged?.();
     } catch (err: unknown) {
@@ -240,6 +274,11 @@ export default function RequestDetailModal({
                     {item.currentStepName ||
                       `Step ${item.currentStepOrder}`}
                   </p>
+                  {currentAssignees !== "—" ? (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {currentAssignees}
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -250,6 +289,12 @@ export default function RequestDetailModal({
                 <p className="text-sm whitespace-pre-wrap">{item.description}</p>
               </div>
             ) : null}
+
+            <RequestRecordDetails
+              fieldValues={item.fieldValues}
+              steps={item.steps}
+              currentStepOrder={item.currentStepOrder}
+            />
 
             {item.attachments && item.attachments.length > 0 ? (
               <div>
@@ -270,32 +315,6 @@ export default function RequestDetailModal({
                         <Paperclip className="h-3.5 w-3.5" />
                         Attachment {index + 1}
                       </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {item.steps && item.steps.length > 0 ? (
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">Workflow steps</p>
-                <ul className="space-y-2">
-                  {item.steps.map((step, index) => (
-                    <li
-                      key={`${step.order ?? index}-${step.name ?? "step"}`}
-                      className="rounded-lg border border-border px-3 py-2 text-sm"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium">
-                          {step.order != null ? `${step.order}. ` : ""}
-                          {step.name || `Step ${index + 1}`}
-                        </span>
-                        {step.status ? (
-                          <span className="text-xs text-muted-foreground capitalize">
-                            {step.status.replaceAll("_", " ")}
-                          </span>
-                        ) : null}
-                      </div>
                     </li>
                   ))}
                 </ul>
@@ -345,7 +364,7 @@ export default function RequestDetailModal({
                     <Label htmlFor="request-decision-comment">
                       Decision note{" "}
                       <span className="text-muted-foreground font-normal">
-                        (optional)
+                        {canReject ? "(required to reject)" : "(optional)"}
                       </span>
                     </Label>
                     <Textarea
@@ -391,6 +410,17 @@ export default function RequestDetailModal({
                         onClick={() => setConfirmCancel(true)}
                       >
                         Cancel request
+                      </Button>
+                    ) : null}
+                    {canReject ? (
+                      <Button
+                        variant="outline"
+                        className={requestDestructiveOutlineButtonClass}
+                        disabled={mutating}
+                        onClick={() => void handleReject()}
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Reject
                       </Button>
                     ) : null}
                     {canDecide ? (

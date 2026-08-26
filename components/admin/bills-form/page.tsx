@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
 import {
-  BILL_FREQUENCY_OPTIONS,
+  billFrequencyOptions,
+  coerceFrequencyForServiceCharge,
   getBill,
   normalizeBillFrequency,
   type BillFrequency,
@@ -35,6 +36,7 @@ interface BillFormState {
   description: string;
   yearlyAmount: number | string;
   frequency: BillFrequency;
+  isServiceCharge: boolean;
   compulsory: boolean;
   accrueInterest: boolean;
   interestRatePercent: string;
@@ -49,6 +51,7 @@ export interface BillSubmitData {
   description: string;
   yearlyAmount: number;
   frequency: BillFrequency;
+  isServiceCharge?: boolean;
   compulsory?: boolean;
   accrueInterest?: boolean;
   interestRatePercent?: number;
@@ -88,7 +91,11 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
     description: initialData?.description ?? "",
     yearlyAmount:
       seededAmount != null ? formatAmountInput(String(seededAmount)) : "",
-    frequency: normalizeBillFrequency(initialData?.frequency, "yearly"),
+    frequency: coerceFrequencyForServiceCharge(
+      normalizeBillFrequency(initialData?.frequency, "yearly"),
+      Boolean(initialData?.isServiceCharge),
+    ),
+    isServiceCharge: Boolean(initialData?.isServiceCharge),
     compulsory: Boolean(initialData?.compulsory),
     accrueInterest: Boolean(initialData?.accrueInterest),
     interestRatePercent:
@@ -122,7 +129,11 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
                     String(fetchData.amount ?? fetchData.yearlyAmount),
                   )
                 : "",
-            frequency: normalizeBillFrequency(fetchData.frequency, "yearly"),
+            frequency: coerceFrequencyForServiceCharge(
+              normalizeBillFrequency(fetchData.frequency, "yearly"),
+              Boolean(fetchData.isServiceCharge),
+            ),
+            isServiceCharge: Boolean(fetchData.isServiceCharge),
             compulsory: Boolean(fetchData.compulsory),
             accrueInterest: Boolean(fetchData.accrueInterest),
             interestRatePercent:
@@ -147,7 +158,20 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
     field: keyof BillFormState,
     value: string | number | boolean,
   ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      if (field === "isServiceCharge") {
+        const isServiceCharge = Boolean(value);
+        return {
+          ...prev,
+          isServiceCharge,
+          frequency: coerceFrequencyForServiceCharge(
+            prev.frequency,
+            isServiceCharge,
+          ),
+        };
+      }
+      return { ...prev, [field]: value };
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -172,7 +196,11 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       name: formData.name,
       description: formData.description,
       yearlyAmount: parseFormattedNumber(formData.yearlyAmount),
-      frequency: formData.frequency,
+      frequency: coerceFrequencyForServiceCharge(
+        formData.frequency,
+        formData.isServiceCharge,
+      ),
+      isServiceCharge: formData.isServiceCharge,
       compulsory: formData.compulsory,
       ...(canAccrueInterest
         ? {
@@ -253,6 +281,35 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
               />
             </div>
 
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="estate-bill-service-charge" className="font-medium">
+                Service charge
+              </Label>
+              <button
+                id="estate-bill-service-charge"
+                type="button"
+                role="switch"
+                aria-checked={formData.isServiceCharge}
+                aria-label="Service charge"
+                onClick={() =>
+                  handleChange("isServiceCharge", !formData.isServiceCharge)
+                }
+                className={cn(
+                  "relative inline-flex h-7 w-[44px] shrink-0 cursor-pointer items-center rounded-full p-0.5",
+                  "transition-colors duration-150 ease-out active:scale-[0.97]",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0150AC]/40",
+                  formData.isServiceCharge ? "bg-[#0150AC]" : "bg-black/15",
+                )}
+              >
+                <span
+                  className={cn(
+                    "block size-6 rounded-full bg-white shadow-sm transition-transform duration-150",
+                    formData.isServiceCharge ? "translate-x-4" : "translate-x-0",
+                  )}
+                />
+              </button>
+            </div>
+
             <div>
               <Label htmlFor="estate-bill-frequency">Frequency</Label>
               <Select
@@ -260,7 +317,7 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
                 aria-label="Select frequency"
                 value={formData.frequency}
                 onChange={(e) => handleChange("frequency", e.target.value)}
-                options={BILL_FREQUENCY_OPTIONS}
+                options={billFrequencyOptions(formData.isServiceCharge)}
                 required
               />
             </div>

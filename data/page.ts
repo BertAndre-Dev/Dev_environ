@@ -179,6 +179,20 @@ export const staffNav = [
     path: "/dashboard/staff/overview",
   },
   {
+    label: "Transactions",
+    icon: ArrowLeftRight,
+    path: "/dashboard/staff/transactions",
+    module: "transactions",
+    moduleKey: "transactions",
+  },
+  {
+    label: "Wallet",
+    icon: Wallet,
+    path: "/dashboard/staff/wallet",
+    module: "wallet",
+    moduleKey: "wallet",
+  },
+  {
     label: "Address Management",
     icon: FiMapPin,
     path: "/dashboard/staff/address",

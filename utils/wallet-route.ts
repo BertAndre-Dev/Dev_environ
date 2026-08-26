@@ -3,6 +3,7 @@ const WALLET_ROUTES: Record<string, string> = {
   resident: "/dashboard/resident/transaction",
   "estate admin": "/dashboard/estate-admin/wallet",
   "estate-admin": "/dashboard/estate-admin/wallet",
+  staff: "/dashboard/staff/wallet",
 };
 
 /** Roles that need a payout bank (withdrawal account) on their wallet. */
@@ -10,6 +11,7 @@ const WITHDRAWAL_ACCOUNT_ROLES = new Set([
   "company",
   "estate admin",
   "estate-admin",
+  "staff",
 ]);
 
 export function normalizeUserRole(role: string | null | undefined): string {

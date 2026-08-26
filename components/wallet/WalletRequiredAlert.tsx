@@ -7,6 +7,7 @@ import { AlertBanner } from "@/components/ui/alert-banner";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { selectUserRole } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 import { getWallet as getEstateWallet } from "@/redux/slice/estate-admin/wallet-mgt/wallet-mgt";
+import { getWallet as getStaffWallet } from "@/redux/slice/staff/wallet-mgt/wallet-mgt";
 import { getCompanyWallet } from "@/redux/slice/company/wallet-mgt/company-wallet-mgt";
 import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
 import { extractEstateIdFromUser } from "@/lib/user-id";
@@ -31,6 +32,12 @@ export function WalletRequiredAlert() {
   const estateWalletState = useSelector(
     (state: RootState) => state.estateAdminWallet.getWalletState,
   );
+  const staffWallet = useSelector(
+    (state: RootState) => state.staffWallet?.wallet ?? null,
+  );
+  const staffWalletState = useSelector(
+    (state: RootState) => state.staffWallet?.getWalletState ?? "idle",
+  );
   const companyWallet = useSelector(
     (state: RootState) => state.companyWallet.wallet,
   );
@@ -45,14 +52,19 @@ export function WalletRequiredAlert() {
 
   const isEstateAdmin =
     normalizedRole === "estate admin" || normalizedRole === "estate-admin";
+  const isStaff = normalizedRole === "staff";
   const isCompany = normalizedRole === "company";
-  const isEligibleRole = isEstateAdmin || isCompany;
+  const isEligibleRole = isEstateAdmin || isCompany || isStaff;
 
   useEffect(() => {
     if (!isEligibleRole) return;
 
     if (isEstateAdmin && estateId && estateWalletState === "idle") {
       dispatch(getEstateWallet(estateId));
+      return;
+    }
+    if (isStaff && estateId && staffWalletState === "idle") {
+      dispatch(getStaffWallet(estateId));
       return;
     }
     if (isCompany && companyId && companyWalletState === "idle") {
@@ -62,24 +74,30 @@ export function WalletRequiredAlert() {
     dispatch,
     isEligibleRole,
     isEstateAdmin,
+    isStaff,
     isCompany,
     estateId,
     companyId,
     estateWalletState,
+    staffWalletState,
     companyWalletState,
   ]);
 
   const activeWallet = isEstateAdmin
     ? estateWallet
-    : isCompany
-      ? companyWallet
-      : null;
+    : isStaff
+      ? staffWallet
+      : isCompany
+        ? companyWallet
+        : null;
 
   const walletFetchState = isEstateAdmin
     ? estateWalletState
-    : isCompany
-      ? companyWalletState
-      : "idle";
+    : isStaff
+      ? staffWalletState
+      : isCompany
+        ? companyWalletState
+        : "idle";
 
   const hasBank = hasWithdrawalBankAccount(activeWallet?.accountNumber);
   const walletSettled =

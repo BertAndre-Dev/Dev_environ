@@ -10,6 +10,7 @@ import { BillsSummaryChart } from "@/components/charts/BillsSummaryChart";
 import { ComplaintsSummaryStatCard } from "@/components/charts/ComplaintsSummaryStatCard";
 import { ComplaintsDashboardCard } from "@/components/charts/ComplaintsDashboardCard";
 import Loader from "@/components/ui/Loader";
+import { useOverviewChartAccess } from "@/hooks/use-overview-chart-access";
 import { areSettled } from "@/lib/async-status";
 import { getApiErrorMessage } from "@/lib/api-error";
 import {
@@ -67,6 +68,14 @@ export default function AdminOverview() {
   const [estateName, setEstateName] = useState("Estate");
   const [resolvingEstate, setResolvingEstate] = useState(true);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
+  const {
+    showUserSummary,
+    showRoleBreakdown,
+    showMeterSummary,
+    showBillsSummary,
+    showComplaintsSummary,
+    showComplaintsDashboard,
+  } = useOverviewChartAccess();
 
   const userSummary = useSelector(selectUserSummaryData);
   const userSummaryLoading = useSelector(selectUserSummaryLoading);
@@ -125,13 +134,24 @@ export default function AdminOverview() {
 
   useEffect(() => {
     if (!estateId) return;
-    void dispatch(getUserSummary({ estateId }));
-    void dispatch(getUserRoleBreakdown({ estateId }));
-    void dispatch(getMeterSummary({ estateId }));
-    void dispatch(getBillsSummary({ estateId }));
-    void dispatch(getComplaintsSummary({ estateId }));
-    void dispatch(getComplaintsDashboard({ estateId }));
-  }, [dispatch, estateId]);
+    if (showUserSummary) void dispatch(getUserSummary({ estateId }));
+    if (showRoleBreakdown) void dispatch(getUserRoleBreakdown({ estateId }));
+    if (showMeterSummary) void dispatch(getMeterSummary({ estateId }));
+    if (showBillsSummary) void dispatch(getBillsSummary({ estateId }));
+    if (showComplaintsSummary) void dispatch(getComplaintsSummary({ estateId }));
+    if (showComplaintsDashboard) {
+      void dispatch(getComplaintsDashboard({ estateId }));
+    }
+  }, [
+    dispatch,
+    estateId,
+    showUserSummary,
+    showRoleBreakdown,
+    showMeterSummary,
+    showBillsSummary,
+    showComplaintsSummary,
+    showComplaintsDashboard,
+  ]);
 
   const handleUserSummaryRetry = () => {
     if (!estateId) return;
@@ -163,16 +183,20 @@ export default function AdminOverview() {
     void dispatch(getComplaintsDashboard({ estateId }));
   };
 
+  const enabledStatuses = [
+    ...(showUserSummary ? [userSummaryStatus] : []),
+    ...(showRoleBreakdown ? [roleBreakdownStatus] : []),
+    ...(showMeterSummary ? [meterSummaryStatus] : []),
+    ...(showBillsSummary ? [billsSummaryStatus] : []),
+    ...(showComplaintsSummary ? [complaintsSummaryStatus] : []),
+    ...(showComplaintsDashboard ? [complaintsDashboardStatus] : []),
+  ];
+
+  const hasVisibleCharts = enabledStatuses.length > 0;
+
   const dashboardSettled =
     Boolean(estateId) &&
-    areSettled([
-      userSummaryStatus,
-      roleBreakdownStatus,
-      meterSummaryStatus,
-      billsSummaryStatus,
-      complaintsSummaryStatus,
-      complaintsDashboardStatus,
-    ]);
+    (!hasVisibleCharts || areSettled(enabledStatuses));
 
   useEffect(() => {
     if (dashboardSettled) setInitialLoadDone(true);
@@ -199,52 +223,66 @@ export default function AdminOverview() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <ComplaintsSummaryStatCard
-            data={complaintsSummary}
-            loading={complaintsSummaryLoading}
-            error={complaintsSummaryError}
-            onRetry={handleComplaintsSummaryRetry}
+        {showComplaintsSummary ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <ComplaintsSummaryStatCard
+              data={complaintsSummary}
+              loading={complaintsSummaryLoading}
+              error={complaintsSummaryError}
+              onRetry={handleComplaintsSummaryRetry}
+            />
+          </div>
+        ) : null}
+
+        {showUserSummary ? (
+          <UserSummaryCard
+            data={userSummary}
+            loading={userSummaryLoading}
+            error={userSummaryError}
+            onRetry={handleUserSummaryRetry}
           />
-        </div>
+        ) : null}
 
-        <UserSummaryCard
-          data={userSummary}
-          loading={userSummaryLoading}
-          error={userSummaryError}
-          onRetry={handleUserSummaryRetry}
-        />
-
-        <MeterSummaryCard
-          data={meterSummary}
-          loading={meterSummaryLoading}
-          error={meterSummaryError}
-          onRetry={handleMeterSummaryRetry}
-          estateName={estateName}
-        />
-
-        <ComplaintsDashboardCard
-          data={complaintsDashboard}
-          loading={complaintsDashboardLoading}
-          error={complaintsDashboardError}
-          onRetry={handleComplaintsDashboardRetry}
-          estateName={estateName}
-        />
-
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-          <RoleBreakdownChart
-            data={roleBreakdown}
-            loading={roleBreakdownLoading}
-            error={roleBreakdownError}
-            onRetry={handleRoleBreakdownRetry}
+        {showMeterSummary ? (
+          <MeterSummaryCard
+            data={meterSummary}
+            loading={meterSummaryLoading}
+            error={meterSummaryError}
+            onRetry={handleMeterSummaryRetry}
+            estateName={estateName}
           />
-          <BillsSummaryChart
-            data={billsSummary}
-            loading={billsSummaryLoading}
-            error={billsSummaryError}
-            onRetry={handleBillsSummaryRetry}
+        ) : null}
+
+        {showComplaintsDashboard ? (
+          <ComplaintsDashboardCard
+            data={complaintsDashboard}
+            loading={complaintsDashboardLoading}
+            error={complaintsDashboardError}
+            onRetry={handleComplaintsDashboardRetry}
+            estateName={estateName}
           />
-        </div>
+        ) : null}
+
+        {showRoleBreakdown || showBillsSummary ? (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+            {showRoleBreakdown ? (
+              <RoleBreakdownChart
+                data={roleBreakdown}
+                loading={roleBreakdownLoading}
+                error={roleBreakdownError}
+                onRetry={handleRoleBreakdownRetry}
+              />
+            ) : null}
+            {showBillsSummary ? (
+              <BillsSummaryChart
+                data={billsSummary}
+                loading={billsSummaryLoading}
+                error={billsSummaryError}
+                onRetry={handleBillsSummaryRetry}
+              />
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );

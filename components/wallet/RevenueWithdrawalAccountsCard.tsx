@@ -32,6 +32,11 @@ import {
   getEnergyProviderRevenueWithdrawalTypes,
   setEnergyProviderAutoSettlement,
 } from "@/redux/slice/energy-provider/wallet-mgt/revenue-withdrawal-account-slice";
+import {
+  getStaffRevenueWithdrawalAccounts,
+  getStaffRevenueWithdrawalTypes,
+  setStaffAutoSettlement,
+} from "@/redux/slice/staff/wallet-mgt/revenue-withdrawal-account-slice";
 import SetRevenueWithdrawalAccountModal from "@/components/wallet/SetRevenueWithdrawalAccountModal";
 import { toast } from "react-toastify";
 import { cn } from "@/lib/utils";
@@ -56,6 +61,12 @@ const ROLE_API = {
     setAutoSettlement: setEnergyProviderAutoSettlement,
     selectSlice: (state: RootState) =>
       state.energyProviderRevenueWithdrawalAccount,
+  },
+  staff: {
+    getAccounts: getStaffRevenueWithdrawalAccounts,
+    getTypes: getStaffRevenueWithdrawalTypes,
+    setAutoSettlement: setStaffAutoSettlement,
+    selectSlice: (state: RootState) => state.staffRevenueWithdrawalAccount,
   },
 } as const;
 
@@ -125,11 +136,15 @@ function useRevenueWithdrawal(
   const autoSettlementEnabled = slice?.autoSettlementEnabled ?? null;
   const setAutoSettlementState = slice?.setAutoSettlementState ?? "idle";
   const getAccountsState = slice?.getAccountsState ?? "idle";
-  const walletAutoSettlementEnabled = useSelector((state: RootState) =>
-    role === "estateAdmin"
-      ? state.estateAdminWallet?.wallet?.autoSettlementEnabled
-      : undefined,
-  );
+  const walletAutoSettlementEnabled = useSelector((state: RootState) => {
+    if (role === "estateAdmin") {
+      return state.estateAdminWallet?.wallet?.autoSettlementEnabled;
+    }
+    if (role === "staff") {
+      return state.staffWallet?.wallet?.autoSettlementEnabled;
+    }
+    return undefined;
+  });
 
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [selectedType, setSelectedType] = useState<{
@@ -518,11 +533,15 @@ export function RevenueWithdrawalOverviewProvider({
   const dispatch = useDispatch<AppDispatch>();
   const api = ROLE_API[role];
   const slice = useSelector(api.selectSlice);
-  const walletAutoSettlementEnabled = useSelector((state: RootState) =>
-    role === "estateAdmin"
-      ? state.estateAdminWallet?.wallet?.autoSettlementEnabled
-      : undefined,
-  );
+  const walletAutoSettlementEnabled = useSelector((state: RootState) => {
+    if (role === "estateAdmin") {
+      return state.estateAdminWallet?.wallet?.autoSettlementEnabled;
+    }
+    if (role === "staff") {
+      return state.staffWallet?.wallet?.autoSettlementEnabled;
+    }
+    return undefined;
+  });
   const autoEnabled = isAutoSettlementOn(
     slice?.autoSettlementEnabled,
     walletAutoSettlementEnabled,

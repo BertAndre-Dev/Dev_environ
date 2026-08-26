@@ -1,0 +1,605 @@
+"use client";
+
+import type React from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import Modal from "@/components/modal/page";
+import StaffWithdrawFundForm from "@/components/staff/transactions/fund-wallet-form/page";
+import EstateWalletOverviewCard from "@/components/estate-admin/wallet-overview-card/page";
+import SetWithdrawalAccountModal from "@/components/wallet/SetWithdrawalAccountModal";
+import RevenueWithdrawalAccountsCard from "@/components/wallet/RevenueWithdrawalAccountsCard";
+import {
+  createWallet,
+  getWallet,
+  getEstateCredits,
+} from "@/redux/slice/staff/wallet-mgt/wallet-mgt";
+import {
+  getBanks,
+  verifyBankAccount,
+} from "@/redux/slice/staff/fund-wallet/fund-wallet";
+import type { BankItem } from "@/redux/slice/staff/fund-wallet/fund-wallet";
+import { clearVerifiedAccount } from "@/redux/slice/staff/fund-wallet/fund-wallet-slice";
+import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
+import { verifyTransaction } from "@/redux/slice/staff/transaction/transaction";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState, AppDispatch } from "@/redux/store";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "react-toastify";
+import Table from "@/components/tables/list/page";
+import type { EstateCreditItem } from "@/redux/slice/staff/wallet-mgt/wallet-mgt-slice";
+import { formatDateTime } from "@/lib/format-date";
+import { TransactionsFilterBar } from "@/components/super-admin/transactions-filter-bar";
+import Loader from "@/components/ui/Loader";
+import { isPending } from "@/lib/async-status";
+
+const LIMIT = 10;
+
+function dedupeBanksByCode(banks: BankItem[]): BankItem[] {
+  const seen = new Set<string>();
+  return banks.filter((bank) => {
+    if (seen.has(bank.code)) return false;
+    seen.add(bank.code);
+    return true;
+  });
+}
+
+interface ExtendedEstateCreditItem extends EstateCreditItem {
+  serviceCharge?: number;
+  source?: string;
+}
+
+export default function StaffWalletPage() {
+  const dispatch = useDispatch<AppDispatch>();
+  const [open, setOpen] = useState(false);
+  const [createWalletModalOpen, setCreateWalletModalOpen] = useState(false);
+  const [setWithdrawalAccountModalOpen, setSetWithdrawalAccountModalOpen] =
+    useState(false);
+  const [createWalletAccountNumber, setCreateWalletAccountNumber] =
+    useState("");
+  const [createWalletBankCode, setCreateWalletBankCode] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
+  const [estateId, setEstateId] = useState<string | null>(null);
+  const [estateName, setEstateName] = useState("Estate");
+  const [creditsPage, setCreditsPage] = useState(1);
+  const [bootstrapping, setBootstrapping] = useState(true);
+
+  const [fromDate, setFromDate] = useState<string | null>(null);
+  const [toDate, setToDate] = useState<string | null>(null);
+  const [sourceFilter, setSourceFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+
+  const wallet = useSelector(
+    (state: RootState) => state.staffWallet?.wallet ?? null,
+  );
+  const withdrawableBalance = wallet?.withdrawableBalance ?? 0;
+  const getWalletState = useSelector(
+    (state: RootState) => state.staffWallet?.getWalletState ?? "idle",
+  );
+  const createWalletState = useSelector(
+    (state: RootState) => state.staffWallet?.createWalletState ?? "idle",
+  );
+  const walletLoading = isPending(getWalletState);
+  const pageLoading = bootstrapping || (!!estateId && walletLoading);
+  const estateCredits = useSelector(
+    (state: RootState) => state.staffWallet?.estateCredits ?? null,
+  );
+  const getEstateCreditsState = useSelector(
+    (state: RootState) => state.staffWallet?.getEstateCreditsState,
+  );
+  const creditsLoading = isPending(getEstateCreditsState);
+
+  const creditsData = estateCredits?.data ?? [];
+  const creditsPagination = estateCredits?.pagination ?? null;
+
+  const {
+    banks,
+    getBanksState,
+    verifyBankAccountState,
+    verifiedAccountName,
+    error: verifyError,
+  } = useSelector((state: RootState) => state.staffFundWallet);
+  const loadingBanks = getBanksState === "isLoading";
+  const bankOptions = useMemo(() => dedupeBanksByCode(banks), [banks]);
+  const verifyingAccount = verifyBankAccountState === "isLoading";
+  const accountVerified =
+    verifyBankAccountState === "succeeded" && !!verifiedAccountName;
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const userRes = await dispatch(getSignedInUser()).unwrap();
+        const user =
+          userRes?.data ?? (userRes as Record<string, unknown>) ?? null;
+        const id = user?.id || user?._id || null;
+        const rawEstateId =
+          (user?.estateId as string | { id?: string; _id?: string }) || null;
+        const estateIdFromUser =
+          typeof rawEstateId === "string"
+            ? rawEstateId
+            : rawEstateId?._id || rawEstateId?.id || null;
+
+        const estateFromId =
+          (user?.estateId as { name?: string } | undefined)?.name ?? "";
+        const estateFromObj =
+          (user?.estate as { name?: string } | undefined)?.name ?? "";
+        const fallbackEstateName = (user?.estateName as string) ?? "";
+        const name =
+          estateFromId || estateFromObj || fallbackEstateName || "Estate";
+        setEstateName(name);
+
+        if (id) setUserId(id);
+
+        if (!estateIdFromUser) {
+          toast.error("No estate ID found for this user.");
+          return;
+        }
+        setEstateId(estateIdFromUser);
+
+        await Promise.all([
+          dispatch(getWallet(estateIdFromUser)),
+          dispatch(
+            getEstateCredits({
+              estateId: estateIdFromUser,
+              page: 1,
+              limit: LIMIT,
+            }),
+          ),
+        ]);
+      } catch {
+        // When user does not have a wallet, do not show error toast
+      } finally {
+        setBootstrapping(false);
+      }
+    })();
+  }, [dispatch]);
+  useEffect(() => {
+    if (!estateId || creditsPage === 1) return;
+    dispatch(getEstateCredits({ estateId, page: creditsPage, limit: LIMIT }));
+  }, [estateId, creditsPage, dispatch]);
+
+  useEffect(() => {
+    dispatch(getBanks({ country: "NG", gatewayType: "flutterwave" }));
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (
+      !createWalletModalOpen ||
+      createWalletAccountNumber.trim().length < 10 ||
+      !createWalletBankCode
+    ) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      dispatch(
+        verifyBankAccount({
+          accountNumber: createWalletAccountNumber.trim(),
+          bankCode: createWalletBankCode,
+          gatewayType: "flutterwave",
+        }),
+      );
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [
+    createWalletModalOpen,
+    createWalletAccountNumber,
+    createWalletBankCode,
+    dispatch,
+  ]);
+
+  const resetCreateWalletForm = () => {
+    setCreateWalletAccountNumber("");
+    setCreateWalletBankCode("");
+    dispatch(clearVerifiedAccount());
+  };
+
+  const handleCloseCreateWalletModal = () => {
+    setCreateWalletModalOpen(false);
+    resetCreateWalletForm();
+  };
+
+  const handleCreateWallet = async () => {
+    if (!estateId) {
+      toast.warning("No estate found.");
+      return;
+    }
+    if (!accountVerified) {
+      if (verifyError) toast.error(verifyError);
+      return;
+    }
+    if (!createWalletAccountNumber.trim()) {
+      toast.warning("Please enter the account number you want to withdraw to.");
+      return;
+    }
+    if (!createWalletBankCode.trim()) {
+      toast.warning("Please select a bank.");
+      return;
+    }
+    try {
+      await dispatch(
+        createWallet({
+          estateId,
+          balance: 0,
+          lockedBalance: 0,
+          accountNumber: createWalletAccountNumber.trim(),
+          bankCode: createWalletBankCode.trim(),
+        }),
+      ).unwrap();
+      toast.success("Wallet created successfully.");
+      handleCloseCreateWalletModal();
+      await dispatch(getWallet(estateId));
+    } catch (error: unknown) {
+      toast.error(
+        (error as { message?: string })?.message || "Failed to create wallet.",
+      );
+    }
+  };
+
+  const handleOpenModal = () => setOpen((prev) => !prev);
+
+  const walletBankName = wallet?.bankCode
+    ? (bankOptions.find((b) => b.code === wallet.bankCode)?.name ?? "")
+    : "";
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tx_ref = urlParams.get("tx_ref") || urlParams.get("trx_ref");
+    if (!tx_ref) return;
+
+    const verifyTransactionAsync = async () => {
+      try {
+        let currentUserId = userId;
+        let currentEstateId = estateId;
+        if (!currentUserId || !currentEstateId) {
+          const userRes = await dispatch(getSignedInUser()).unwrap();
+          currentUserId = userRes?.data?.id;
+          currentEstateId =
+            userRes?.data?.estateId || userRes?.data?.estate?.id;
+          setUserId(currentUserId ?? null);
+          setEstateId(currentEstateId ?? null);
+        }
+        if (!currentUserId || !currentEstateId)
+          throw new Error("User or estate not found");
+
+        await dispatch(
+          verifyTransaction({ tx_ref, paymentType: "withdrawFund" }),
+        ).unwrap();
+        toast.success("Withdrawal successful!");
+        await dispatch(getWallet(currentEstateId));
+        await dispatch(
+          getEstateCredits({
+            estateId: currentEstateId,
+            page: creditsPage,
+            limit: LIMIT,
+          }),
+        );
+
+        const url = new URL(window.location.href);
+        ["tx_ref", "trx_ref", "transaction_id", "status"].forEach((key) =>
+          url.searchParams.delete(key),
+        );
+        window.history.replaceState({}, document.title, url.toString());
+      } catch (err: unknown) {
+        toast.error(
+          (err as { message?: string; payload?: { message?: string } })
+            ?.message ||
+            (err as { payload?: { message?: string } })?.payload?.message ||
+            "Verification failed",
+        );
+      }
+    };
+    const timer = setTimeout(verifyTransactionAsync, 800);
+    return () => clearTimeout(timer);
+  }, [dispatch, userId, estateId, creditsPage]);
+
+  const creditsColumns: Array<{
+    key: string;
+    header: string;
+    render: (item: ExtendedEstateCreditItem) => React.ReactNode;
+  }> = [
+    {
+      key: "createdAt",
+      header: "Date",
+      render: (item: ExtendedEstateCreditItem): React.ReactNode =>
+        formatDateTime(item.createdAt),
+    },
+    {
+      key: "amount",
+      header: "Amount (₦)",
+      render: (item: ExtendedEstateCreditItem): React.ReactNode =>
+        typeof item.amount === "number"
+          ? Number(item.amount).toLocaleString()
+          : "—",
+    },
+    {
+      key: "tx_ref",
+      header: "Transaction Reference",
+      render: (item: ExtendedEstateCreditItem): React.ReactNode =>
+        typeof item.tx_ref === "string" ? item.tx_ref : "—",
+    },
+    {
+      key: "source",
+      header: "Source",
+      render: (item: ExtendedEstateCreditItem): React.ReactNode =>
+        typeof item.source === "string" ? item.source : "—",
+    },
+    {
+      key: "description",
+      header: "Description",
+      render: (item: ExtendedEstateCreditItem): React.ReactNode =>
+        typeof item.description === "string" ? item.description : "—",
+    },
+  ];
+
+  const pag = creditsPagination as
+    | { total?: number; page?: number; limit?: number; pages?: number }
+    | undefined;
+  const total =
+    typeof pag?.total === "number" ? pag.total : Number(pag?.total) || 0;
+  const pageNum =
+    typeof pag?.page === "number" ? pag.page : Number(pag?.page) || creditsPage;
+  const pageSize =
+    typeof pag?.limit === "number" ? pag.limit : Number(pag?.limit) || LIMIT;
+
+  const handleCreditsFiltersChange = (filters: {
+    fromDate: string | null;
+    toDate: string | null;
+    estate: string;
+    type: string;
+  }) => {
+    setFromDate(filters.fromDate);
+    setToDate(filters.toDate);
+    setSourceFilter(filters.estate);
+    setTypeFilter(filters.type);
+  };
+
+  const filteredCreditsData = (
+    creditsData as ExtendedEstateCreditItem[]
+  ).filter((item) => {
+    const createdAt = item.createdAt ? new Date(item.createdAt) : null;
+
+    if (fromDate) {
+      const from = new Date(fromDate);
+      if (!createdAt || createdAt < from) return false;
+    }
+
+    if (toDate) {
+      const to = new Date(toDate);
+      to.setHours(23, 59, 59, 999);
+      if (!createdAt || createdAt > to) return false;
+    }
+
+    if (typeFilter) {
+      const itemType = (item as { type?: string }).type;
+      if (itemType?.toLowerCase() !== typeFilter.toLowerCase()) {
+        return false;
+      }
+    }
+
+    if (sourceFilter.trim()) {
+      const src = (item.source || "") as string;
+      if (!src.toLowerCase().includes(sourceFilter.trim().toLowerCase())) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  return (
+    <div className="relative">
+      {pageLoading && <Loader fullScreen label="Loading wallet..." />}
+
+      <div
+        className={[
+          "space-y-6",
+          pageLoading ? "pointer-events-none select-none" : "",
+        ].join(" ")}
+      >
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="font-heading text-3xl font-bold">
+              Wallet Management
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Welcome back! Here&apos;s is an overview on{" "}
+              <span className="text-[18px] font-bold underline uppercase text-black">
+                {estateName}
+              </span>
+              .
+            </p>
+          </div>
+          <RevenueWithdrawalAccountsCard
+            role="staff"
+            className="w-full shrink-0 sm:w-auto"
+          />
+        </div>
+
+        <EstateWalletOverviewCard
+          wallet={wallet}
+          onWithdraw={handleOpenModal}
+          onCreateWallet={() => setCreateWalletModalOpen(true)}
+          onSetWithdrawalAccount={() => setSetWithdrawalAccountModalOpen(true)}
+          walletLoading={walletLoading}
+          createWalletLoading={createWalletState === "isLoading"}
+          revenueSettlementRole="staff"
+          filterExportSlot={
+            <div className="space-y-3">
+              <TransactionsFilterBar
+                fromDate={fromDate}
+                toDate={toDate}
+                estate={sourceFilter}
+                type={typeFilter}
+                onFiltersChange={handleCreditsFiltersChange}
+                searchPlaceholder="Filter by source"
+                searchFieldLabel="Source"
+              />
+            </div>
+          }
+        />
+
+        <Card className="p-4">
+          <h2 className="font-semibold">Estate Credits</h2>
+          <p className="text-sm text-muted-foreground">
+            Amounts credited to wallets in this estate.
+          </p>
+          <Table<ExtendedEstateCreditItem>
+            columns={creditsColumns}
+            data={filteredCreditsData}
+            emptyMessage={
+              creditsLoading ? "Loading estate credits..." : "No credits found."
+            }
+            showPagination
+            paginationInfo={{
+              total,
+              current: pageNum,
+              pageSize,
+            }}
+            onPageChange={setCreditsPage}
+            enableExport
+            exportFileName="estate-credits"
+            onExportRequest={
+              estateId
+                ? async () => {
+                    const res = await dispatch(
+                      getEstateCredits({ estateId, page: 1, limit: 50000 }),
+                    ).unwrap();
+                    return res?.data ?? [];
+                  }
+                : undefined
+            }
+          />
+        </Card>
+
+        <Modal visible={open} onClose={handleOpenModal}>
+          <div className="bg-white rounded-md shadow-md w-full max-w-md mx-auto">
+            {userId && wallet ? (
+              <StaffWithdrawFundForm
+                userId={userId}
+                walletId={wallet.id ?? ""}
+                estateId={estateId ?? ""}
+                defaultAccountNumber={wallet.accountNumber ?? ""}
+                bankCode={wallet.bankCode ?? ""}
+                bankName={walletBankName}
+                maxWithdrawableAmount={withdrawableBalance}
+                onClose={handleOpenModal}
+              />
+            ) : (
+              <p className="text-center text-gray-500">Loading form...</p>
+            )}
+          </div>
+        </Modal>
+
+        <Modal
+          visible={createWalletModalOpen}
+          onClose={handleCloseCreateWalletModal}
+        >
+          <div className="rounded-md shadow-md w-full max-w-md mx-auto mt-12 pb-8 px-4">
+            <h2 className="text-lg font-semibold mb-4">Create Wallet</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Your withdrawal will be sent to this account number. Select the
+              bank and enter the account number.
+            </p>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="create-wallet-bank">Bank</Label>
+                <select
+                  id="create-wallet-bank"
+                  value={createWalletBankCode}
+                  onChange={(e) => {
+                    setCreateWalletBankCode(e.target.value);
+                    dispatch(clearVerifiedAccount());
+                  }}
+                  className="mt-2 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  disabled={loadingBanks}
+                  aria-label="Select bank"
+                >
+                  <option value="">
+                    {loadingBanks ? "Loading banks..." : "Select bank"}
+                  </option>
+                  {bankOptions.map((bank) => (
+                    <option key={bank.id} value={bank.code}>
+                      {bank.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="create-wallet-account">Account Number</Label>
+                <Input
+                  id="create-wallet-account"
+                  type="text"
+                  inputMode="numeric"
+                  value={createWalletAccountNumber}
+                  onChange={(e) => {
+                    const value = e.target.value
+                      .replaceAll(/\D/g, "")
+                      .slice(0, 10);
+                    setCreateWalletAccountNumber(value);
+                    dispatch(clearVerifiedAccount());
+                  }}
+                  placeholder="e.g. 0002299900"
+                  className="mt-2"
+                  maxLength={10}
+                />
+                {verifyingAccount &&
+                  createWalletAccountNumber.trim() &&
+                  createWalletBankCode && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Verifying account...
+                    </p>
+                  )}
+                {accountVerified && !verifyingAccount && (
+                  <p className="text-sm text-green-600 font-medium mt-1">
+                    Account name: {verifiedAccountName}
+                  </p>
+                )}
+                {verifyBankAccountState === "failed" &&
+                  verifyError &&
+                  !verifyingAccount &&
+                  createWalletAccountNumber.trim().length >= 10 &&
+                  createWalletBankCode && (
+                    <p className="text-sm text-red-600 mt-1">{verifyError}</p>
+                  )}
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={handleCloseCreateWalletModal}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCreateWallet}
+                  disabled={
+                    createWalletState === "isLoading" ||
+                    !createWalletAccountNumber.trim() ||
+                    !createWalletBankCode.trim() ||
+                    !accountVerified ||
+                    loadingBanks
+                  }
+                >
+                  {createWalletState === "isLoading"
+                    ? "Creating..."
+                    : "Create Wallet"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+
+        <SetWithdrawalAccountModal
+          source="staff"
+          visible={setWithdrawalAccountModalOpen}
+          onClose={() => setSetWithdrawalAccountModalOpen(false)}
+          onSuccess={() => {
+            if (estateId) dispatch(getWallet(estateId));
+          }}
+        />
+      </div>
+    </div>
+  );
+}

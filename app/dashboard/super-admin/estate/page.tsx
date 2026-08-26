@@ -10,7 +10,6 @@ import {
   Plus,
   MoreVertical,
   Search,
-  Eye,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -293,18 +292,6 @@ export default function EstatePage() {
       header: "Actions",
       render: (item: EstateTableRow) => (
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            title="View estate details"
-            className="cursor-pointer"
-            disabled={!item.id}
-            onClick={() => {
-              if (item.id) router.push(`/dashboard/super-admin/estate/${item.id}`);
-            }}
-          >
-            <Eye className="w-4 h-4 text-[#0150AC]" />
-          </Button>
           <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
             <Button

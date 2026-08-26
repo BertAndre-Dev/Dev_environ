@@ -127,6 +127,10 @@ import staffRevenueEntrySliceReducer from "@/redux/slice/staff/revenue-entry/rev
 import staffAssetSliceReducer from "@/redux/slice/staff/asset-mgt/staff-asset-slice";
 import staffAssetMaintenanceSliceReducer from "@/redux/slice/staff/asset-maintenance/staff-asset-maintenance-slice";
 import staffOperationsReportingSliceReducer from "@/redux/slice/staff/operations-reporting/staff-operations-reporting-slice";
+import staffWalletSliceReducer from "@/redux/slice/staff/wallet-mgt/wallet-mgt-slice";
+import staffTransactionSliceReducer from "@/redux/slice/staff/transaction/transaction-slice";
+import staffFundWalletSliceReducer from "@/redux/slice/staff/fund-wallet/fund-wallet-slice";
+import staffRevenueWithdrawalAccountSliceReducer from "@/redux/slice/staff/wallet-mgt/revenue-withdrawal-account-slice";
 import companyRequestSliceReducer from "@/redux/slice/company/request/company-request-slice";
 import estateAdminRequestSliceReducer from "@/redux/slice/estate-admin/request/estate-admin-request-slice";
 import requestCommentsSliceReducer from "@/redux/slice/request/request-comments-slice";
@@ -345,7 +349,18 @@ const persistedStaffRevenueEntrySliceReducer = persistReducer(
   persistConfig,
   staffRevenueEntrySliceReducer,
 );
-
+const persistedStaffWalletSliceReducer = persistReducer(
+  persistConfig,
+  staffWalletSliceReducer,
+);
+const persistedStaffTransactionSliceReducer = persistReducer(
+  persistConfig,
+  staffTransactionSliceReducer,
+);
+const persistedStaffFundWalletSliceReducer = persistReducer(
+  persistConfig,
+  staffFundWalletSliceReducer,
+);
 
 export const store = configureStore({
   reducer: {
@@ -476,6 +491,10 @@ export const store = configureStore({
     staffAsset: staffAssetSliceReducer,
     staffAssetMaintenance: staffAssetMaintenanceSliceReducer,
     staffOperationsReporting: staffOperationsReportingSliceReducer,
+    staffWallet: persistedStaffWalletSliceReducer,
+    staffTransaction: persistedStaffTransactionSliceReducer,
+    staffFundWallet: persistedStaffFundWalletSliceReducer,
+    staffRevenueWithdrawalAccount: staffRevenueWithdrawalAccountSliceReducer,
     companyRequest: companyRequestSliceReducer,
     estateAdminRequest: estateAdminRequestSliceReducer,
     requestComments: requestCommentsSliceReducer,

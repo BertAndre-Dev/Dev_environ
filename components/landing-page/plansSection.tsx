@@ -103,7 +103,7 @@ function PlanCard({ plan }: { plan: PlanTier }) {
       className={[
         "relative flex h-full flex-col rounded-3xl p-6 sm:p-7 lg:p-8 will-change-transform",
         featured
-          ? "bg-[#0150AC] text-white shadow-[0_24px_60px_rgba(1,80,172,0.35)] lg:z-10 lg:scale-[1.03]"
+          ? "bg-[#0150AC] text-white shadow-[0_24px_60px_rgba(1,80,172,0.35)] lg:z-10 lg:-mt-16"
           : "bg-white text-black shadow-[0_1px_3px_rgba(16,24,40,0.06),0_12px_32px_rgba(16,24,40,0.06)] ring-1 ring-[#EAECF0]",
       ].join(" ")}
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
@@ -197,7 +197,7 @@ export default function PlansSection() {
           </p>
         </div>
 
-        <div className="mx-auto mt-12 grid max-w-md gap-6 sm:mt-14 sm:max-w-none lg:grid-cols-3 lg:items-center lg:gap-8">
+        <div className="mx-auto mt-12 grid max-w-md gap-6 sm:mt-14 sm:max-w-none lg:mt-24 lg:grid-cols-3 lg:items-start lg:gap-8">
           {PLANS.map((plan) => (
             <PlanCard key={plan.key} plan={plan} />
           ))}

@@ -175,7 +175,7 @@ export default function RequestManagementView({
       },
       {
         key: "createdAt",
-        header: "Submitted",
+        header: "Created",
         render: (item: ScopedRequestItem) =>
           formatDate(item.createdAt || item.updatedAt),
         exportValue: (item: ScopedRequestItem) =>

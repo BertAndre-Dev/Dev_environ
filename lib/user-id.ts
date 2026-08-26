@@ -12,7 +12,7 @@ export function normalizeUserId(raw: unknown): string {
 export function isSameUserId(a: unknown, b: unknown): boolean {
   const left = normalizeUserId(a);
   const right = normalizeUserId(b);
-  return Boolean(left && right && left === right);
+  return Boolean(left && right && left.toLowerCase() === right.toLowerCase());
 }
 
 export function extractUserId(
@@ -21,6 +21,37 @@ export function extractUserId(
   if (!data) return null;
   const id = normalizeUserId(data.id ?? data._id ?? data.userId);
   return id || null;
+}
+
+/** All user ids from `/api/v1/auth-mgt/me` (id, _id, userId, nested user). */
+export function extractSignedInUserIds(
+  data: Record<string, unknown> | null | undefined,
+): string[] {
+  if (!data) return [];
+  const candidates: unknown[] = [data.id, data._id, data.userId];
+  const nested = data.user;
+  if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+    const record = nested as Record<string, unknown>;
+    candidates.push(record.id, record._id, record.userId);
+  }
+  const ids = candidates.map((value) => normalizeUserId(value)).filter(Boolean);
+  return Array.from(new Set(ids));
+}
+
+export function extractSignedInUserEmail(
+  data: Record<string, unknown> | null | undefined,
+): string | null {
+  if (!data) return null;
+  const fromRoot = typeof data.email === "string" ? data.email.trim() : "";
+  if (fromRoot) return fromRoot.toLowerCase();
+  const nested = data.user;
+  if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+    const email = (nested as Record<string, unknown>).email;
+    if (typeof email === "string" && email.trim()) {
+      return email.trim().toLowerCase();
+    }
+  }
+  return null;
 }
 
 /** Normalize estate ids from API payloads (`estateId` string or populated estate object). */

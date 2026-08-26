@@ -115,7 +115,10 @@ export function getCurrentRequestStep(item: {
 }): RequestWorkflowStep | undefined {
   const steps = item.steps ?? [];
   if (item.currentStepOrder != null) {
-    const byOrder = steps.find((step) => step.order === item.currentStepOrder);
+    const currentOrder = Number(item.currentStepOrder);
+    const byOrder = steps.find(
+      (step) => step.order != null && Number(step.order) === currentOrder,
+    );
     if (byOrder) return byOrder;
   }
   return steps.find(
@@ -150,17 +153,33 @@ export function isUserAssignedToCurrentStep(
     currentStepOrder?: number;
     steps?: RequestWorkflowStep[];
   },
-  userId: string | null | undefined,
+  userId: string | string[] | null | undefined,
+  email?: string | null,
 ): boolean {
-  if (!userId) return false;
+  const ids = (Array.isArray(userId) ? userId : [userId])
+    .map((id) => normalizeUserId(id))
+    .filter(Boolean);
+  const normalizedEmail = email?.trim().toLowerCase() ?? "";
+  if (ids.length === 0 && !normalizedEmail) return false;
+
   const step = getCurrentRequestStep(item);
   if (!step) return false;
-  if ((step.assignedTo ?? []).some((id) => isSameUserId(id, userId))) {
+
+  if (
+    (step.assignedTo ?? []).some((id) =>
+      ids.some((uid) => isSameUserId(id, uid)),
+    )
+  ) {
     return true;
   }
-  return (step.assignedRecipients ?? []).some((recipient) =>
-    isSameUserId(recipient.userId, userId),
-  );
+
+  return (step.assignedRecipients ?? []).some((recipient) => {
+    if (ids.some((uid) => isSameUserId(recipient.userId, uid))) return true;
+    const recipientEmail = recipient.email?.trim().toLowerCase();
+    return Boolean(
+      normalizedEmail && recipientEmail && recipientEmail === normalizedEmail,
+    );
+  });
 }
 
 export function currentStepAllowsReject(item: {

@@ -31,6 +31,7 @@ import {
   setStaffRequestSearch,
   setStaffRequestStatusFilter,
 } from "@/redux/slice/staff/request/staff-request-slice";
+import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import type { AppDispatch, RootState } from "@/redux/store";
 import {
   requestDestructiveOutlineButtonClass,
@@ -43,10 +44,12 @@ import {
   getCurrentRequestStep,
   isUserAssignedToCurrentStep,
 } from "@/lib/request-record";
-import { extractUserId } from "@/lib/user-id";
 import {
-  downloadAttachment,
-  getAttachmentFilename,
+  extractSignedInUserEmail,
+  extractSignedInUserIds,
+} from "@/lib/user-id";
+import {
+  openAttachmentInNewTab,
 } from "@/lib/download-attachment";
 import StaffRequestFormModal from "./StaffRequestFormModal";
 import RequestComments from "./RequestComments";
@@ -152,11 +155,12 @@ export default function RequestSubmitView({
     decideStatus,
     cancelStatus,
   } = useSelector((state: RootState) => state.staffRequest);
-  const signedInUserId = useSelector((state: RootState) =>
-    extractUserId(
+  const signedInUser = useSelector(
+    (state: RootState) =>
       (state.auth.user ?? null) as Record<string, unknown> | null,
-    ),
   );
+  const signedInUserIds = extractSignedInUserIds(signedInUser);
+  const signedInUserEmail = extractSignedInUserEmail(signedInUser);
 
   const { page, pageSize, search, statusFilter } = ui;
   const listLoading = isPending(getListStatus);
@@ -186,6 +190,10 @@ export default function RequestSubmitView({
         if (message) toast.error(message);
       });
   }, [dispatch, estateId, page, pageSize, statusFilter, search]);
+
+  useEffect(() => {
+    dispatch(getSignedInUser()).catch(() => {});
+  }, [dispatch]);
 
   useEffect(() => {
     dispatch(getStaffRequestCategories())
@@ -241,7 +249,11 @@ export default function RequestSubmitView({
 
   const assignedToCurrentStep = Boolean(
     viewingLive &&
-      isUserAssignedToCurrentStep(viewingLive, signedInUserId),
+      isUserAssignedToCurrentStep(
+        viewingLive,
+        signedInUserIds,
+        signedInUserEmail,
+      ),
   );
   const canDecide =
     viewingLive?.status === "pending_approval" && assignedToCurrentStep;
@@ -320,7 +332,7 @@ export default function RequestSubmitView({
       },
       {
         key: "createdAt",
-        header: "Submitted",
+        header: "Created",
         render: (item: StaffRequestItem) =>
           formatDate(item.createdAt || item.updatedAt),
         exportValue: (item: StaffRequestItem) =>
@@ -612,12 +624,7 @@ export default function RequestSubmitView({
                     <li key={`${url.slice(0, 24)}-${index}`}>
                       <button
                         type="button"
-                        onClick={() =>
-                          void downloadAttachment(
-                            url,
-                            getAttachmentFilename(url, index),
-                          )
-                        }
+                        onClick={() => openAttachmentInNewTab(url)}
                         className="inline-flex items-center gap-2 text-sm text-[#2563EB] hover:underline cursor-pointer"
                       >
                         <Paperclip className="h-3.5 w-3.5" />

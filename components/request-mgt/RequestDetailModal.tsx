@@ -10,12 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import Loader from "@/components/ui/Loader";
 import { getApiErrorMessage } from "@/lib/api-error";
-import {
-  downloadAttachment,
-  getAttachmentFilename,
-} from "@/lib/download-attachment";
+import { openAttachmentInNewTab } from "@/lib/download-attachment";
 import { isBusy } from "@/lib/async-status";
-import type { AppDispatch } from "@/redux/store";
+import type { AppDispatch, RootState } from "@/redux/store";
 import { getRequestActorDisplayName } from "@/lib/request-actor";
 import {
   getRequestScopeApi,
@@ -30,7 +27,12 @@ import {
   currentStepAllowsReject,
   formatStepAssignees,
   getCurrentRequestStep,
+  isUserAssignedToCurrentStep,
 } from "@/lib/request-record";
+import {
+  extractSignedInUserEmail,
+  extractSignedInUserIds,
+} from "@/lib/user-id";
 
 const STATUS_LABELS: Record<ScopedRequestStatus, string> = {
   draft: "Draft",
@@ -111,6 +113,12 @@ export default function RequestDetailModal({
 
   const { selected, getByIdStatus, decideStatus, cancelStatus } =
     useSelector(api.selectState);
+  const signedInUser = useSelector(
+    (state: RootState) =>
+      (state.auth.user ?? null) as Record<string, unknown> | null,
+  );
+  const signedInUserIds = extractSignedInUserIds(signedInUser);
+  const signedInUserEmail = extractSignedInUserEmail(signedInUser);
 
   const detailLoading = isBusy(getByIdStatus);
   const deciding = isBusy(decideStatus);
@@ -148,10 +156,16 @@ export default function RequestDetailModal({
 
   if (!requestId) return null;
 
-  const canDecide = item?.status === "pending_approval";
+  const assignedToCurrentStep = Boolean(
+    item &&
+      isUserAssignedToCurrentStep(item, signedInUserIds, signedInUserEmail),
+  );
+  const canDecide =
+    item?.status === "pending_approval" && assignedToCurrentStep;
   const canReject = Boolean(item && canDecide && currentStepAllowsReject(item));
   const canCancel =
-    item?.status === "pending_approval" || item?.status === "draft";
+    assignedToCurrentStep &&
+    (item?.status === "pending_approval" || item?.status === "draft");
   const currentAssignees = item
     ? formatStepAssignees(getCurrentRequestStep(item))
     : "—";
@@ -304,12 +318,7 @@ export default function RequestDetailModal({
                     <li key={`${url.slice(0, 24)}-${index}`}>
                       <button
                         type="button"
-                        onClick={() =>
-                          void downloadAttachment(
-                            url,
-                            getAttachmentFilename(url, index),
-                          )
-                        }
+                        onClick={() => openAttachmentInNewTab(url)}
                         className="inline-flex items-center gap-2 text-sm text-[#2563EB] hover:underline cursor-pointer"
                       >
                         <Paperclip className="h-3.5 w-3.5" />

@@ -2,8 +2,8 @@
 
 import { Paperclip } from "lucide-react";
 import {
-  downloadAttachment,
   getAttachmentFilename,
+  openAttachmentInNewTab,
 } from "@/lib/download-attachment";
 import {
   formatStepAssignees,
@@ -49,12 +49,7 @@ export function RequestRecordDetails({
                   {value && isFileRequestField(field) ? (
                     <button
                       type="button"
-                      onClick={() =>
-                        void downloadAttachment(
-                          value,
-                          getAttachmentFilename(value, index),
-                        )
-                      }
+                      onClick={() => openAttachmentInNewTab(value)}
                       className="mt-1 inline-flex items-center gap-2 text-sm text-[#2563EB] hover:underline cursor-pointer"
                     >
                       <Paperclip className="h-3.5 w-3.5" />

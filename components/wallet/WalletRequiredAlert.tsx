@@ -11,6 +11,8 @@ import { getWallet as getStaffWallet } from "@/redux/slice/staff/wallet-mgt/wall
 import { getCompanyWallet } from "@/redux/slice/company/wallet-mgt/company-wallet-mgt";
 import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
 import { extractEstateIdFromUser } from "@/lib/user-id";
+import { isNavModuleEnabled } from "@/lib/nav-module-filter";
+import { getUserAssignedModules } from "@/lib/overview-chart-modules";
 import {
   getWalletRouteForRole,
   hasWithdrawalBankAccount,
@@ -54,7 +56,12 @@ export function WalletRequiredAlert() {
     normalizedRole === "estate admin" || normalizedRole === "estate-admin";
   const isStaff = normalizedRole === "staff";
   const isCompany = normalizedRole === "company";
-  const isEligibleRole = isEstateAdmin || isCompany || isStaff;
+  const staffHasWalletPage = isNavModuleEnabled(
+    "wallet",
+    getUserAssignedModules(user) ?? [],
+  );
+  const isEligibleRole =
+    isEstateAdmin || isCompany || (isStaff && staffHasWalletPage);
 
   useEffect(() => {
     if (!isEligibleRole) return;
@@ -63,7 +70,12 @@ export function WalletRequiredAlert() {
       dispatch(getEstateWallet(estateId));
       return;
     }
-    if (isStaff && estateId && staffWalletState === "idle") {
+    if (
+      isStaff &&
+      staffHasWalletPage &&
+      estateId &&
+      staffWalletState === "idle"
+    ) {
       dispatch(getStaffWallet(estateId));
       return;
     }
@@ -75,6 +87,7 @@ export function WalletRequiredAlert() {
     isEligibleRole,
     isEstateAdmin,
     isStaff,
+    staffHasWalletPage,
     isCompany,
     estateId,
     companyId,

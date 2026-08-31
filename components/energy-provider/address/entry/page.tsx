@@ -200,13 +200,13 @@ export default function EnergyProviderFieldEntry() {
     })) || [];
 
   const columns = [
-    ...dynamicColumns,
     {
       key: "createdAt",
       header: "Created At",
       render: (item: EntryTableRow) =>
         formatAddressRecordCreatedAt(item.createdAt),
     },
+    ...dynamicColumns,
     {
       key: "actions",
       header: "Actions",

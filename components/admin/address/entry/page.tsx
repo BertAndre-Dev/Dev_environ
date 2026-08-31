@@ -201,6 +201,7 @@ export default function EntryPage() {
         id: entry.id,
         estateId: entry.estateId,
         fieldId: entry.fieldId,
+        data: entry.data,
       };
 
       fields.forEach((field) => {
@@ -219,12 +220,12 @@ export default function EntryPage() {
     })) || [];
 
   const columns = [
-    ...dynamicColumns,
     {
       key: "createdAt",
       header: "Created At",
       render: (item: any) => formatAddressRecordCreatedAt(item.createdAt),
     },
+    ...dynamicColumns,
     {
       key: "actions",
       header: "Actions",

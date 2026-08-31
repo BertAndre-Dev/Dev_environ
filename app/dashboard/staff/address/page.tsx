@@ -48,13 +48,13 @@ const AddressPage = () => {
       </div>
       <Card className="p-4">
         <Tab
-          titles={["Entries Fields", "Address Fields"]}
+          titles={["Address Fields", "Entries Fields"]}
           renderContent={(activeTab) => {
             switch (activeTab) {
-              case "Entries Fields":
-                return <FieldEntry />;
               case "Address Fields":
                 return <AddressField />;
+              case "Entries Fields":
+                return <FieldEntry />;
               default:
                 return null;
             }

@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { toAddressFieldBody } from "@/lib/address";
 
 
 interface FieldData {
@@ -16,7 +17,7 @@ export const createField = createAsyncThunk(
     'staff-field/createField',
     async(data: FieldData, { rejectWithValue }) => {
         try {
-            const res = await axiosInstance.post('/api/v1/address-mgt/field', data);
+            const res = await axiosInstance.post('/api/v1/address-mgt/field', toAddressFieldBody(data));
             return res.data;
         } catch (error: unknown) {
             const data = (error as { response?: { data?: unknown } })?.response?.data;
@@ -80,7 +81,7 @@ export const updateField = createAsyncThunk(
     'staff-field/updateField',
     async ({fieldId, data}: {fieldId: string, data: FieldData}, { rejectWithValue }) => {
         try {
-            const res = await axiosInstance.put(`/api/v1/address-mgt/field/${fieldId}`, data);
+            const res = await axiosInstance.put(`/api/v1/address-mgt/field/${fieldId}`, toAddressFieldBody(data));
             return res.data;
         } catch (error: unknown) {
             const data = (error as { response?: { data?: unknown } })?.response?.data;

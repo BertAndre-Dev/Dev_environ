@@ -15,7 +15,6 @@ interface FieldFormData {
   estateId: string;
   label: string;
   key: string;
-  id?: string;
 }
 
 interface FieldFormProps {
@@ -59,8 +58,7 @@ export default function FieldForm({
         const fetchedData = res?.data;
         if (fetchedData) {
           setFormData({
-            estateId: fetchedData.estateId || estateId,
-            id: fetchedData.id,
+            estateId,
             label: fetchedData.label || "",
             key: fetchedData.key || toCamelCase(fetchedData.label || ""),
           });
@@ -99,7 +97,11 @@ export default function FieldForm({
 
     if (!formData.label.trim()) return;
 
-    onSubmit(formData);
+    onSubmit({
+      estateId: formData.estateId,
+      label: formData.label,
+      key: formData.key,
+    });
   };
 
   return (

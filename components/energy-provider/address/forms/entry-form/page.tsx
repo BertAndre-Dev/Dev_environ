@@ -11,6 +11,7 @@ import {
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import { toast } from "react-toastify";
+import { capitalizeFirstLetter } from "@/lib/address";
 
 interface FieldDefinition {
   id: string;
@@ -43,7 +44,12 @@ export default function EnergyProviderEntryForm({
 
   useEffect(() => {
     if (initialData?.data) {
-      setFormData(initialData.data);
+      const capitalized: Record<string, unknown> = {};
+      Object.entries(initialData.data).forEach(([key, value]) => {
+        capitalized[key] =
+          typeof value === "string" ? capitalizeFirstLetter(value) : value;
+      });
+      setFormData(capitalized);
     } else {
       const initial: Record<string, unknown> = {};
       fields.forEach((f) => {
@@ -56,7 +62,7 @@ export default function EnergyProviderEntryForm({
   const handleChange = (key: string, value: unknown) => {
     setFormData((prev) => ({
       ...prev,
-      [key]: value,
+      [key]: typeof value === "string" ? capitalizeFirstLetter(value) : value,
     }));
   };
 
@@ -92,7 +98,7 @@ export default function EnergyProviderEntryForm({
       <h3 className="pt-8 pb-4 font-medium text-[24px]">Entries Field</h3>
       {fields.map((field) => (
         <div key={field.key} className="space-y-2">
-          <Label htmlFor={field.key}>{field.label}</Label>
+          <Label htmlFor={field.key}>{capitalizeFirstLetter(field.label)}</Label>
           <Input
             id={field.key}
             placeholder={`Enter ${field.label.toLowerCase()}`}

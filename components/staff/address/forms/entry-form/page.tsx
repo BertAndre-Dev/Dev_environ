@@ -12,6 +12,7 @@ import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import { toast } from "react-toastify";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { capitalizeFirstLetter } from "@/lib/address";
 
 interface FieldDefinition {
   id: string;
@@ -43,7 +44,12 @@ export default function EntryForm({
 
   useEffect(() => {
     if (initialData?.data) {
-      setFormData(initialData.data);
+      const capitalized: Record<string, any> = {};
+      Object.entries(initialData.data).forEach(([key, value]) => {
+        capitalized[key] =
+          typeof value === "string" ? capitalizeFirstLetter(value) : value;
+      });
+      setFormData(capitalized);
     } else {
       const initial: Record<string, any> = {};
       fields.forEach((f) => (initial[f.key] = ""));
@@ -54,7 +60,7 @@ export default function EntryForm({
   const handleChange = (key: string, value: any) => {
     setFormData((prev) => ({
       ...prev,
-      [key]: value,
+      [key]: typeof value === "string" ? capitalizeFirstLetter(value) : value,
     }));
   };
 
@@ -92,7 +98,7 @@ export default function EntryForm({
       <h3 className="pt-8 pb-4 font-medium text-[24px]">Entries Field</h3>
       {fields.map((field) => (
         <div key={field.key} className="space-y-2">
-          <Label htmlFor={field.key}>{field.label}</Label>
+          <Label htmlFor={field.key}>{capitalizeFirstLetter(field.label)}</Label>
           <Input
             id={field.key}
             placeholder={`Enter ${field.label.toLowerCase()}`}

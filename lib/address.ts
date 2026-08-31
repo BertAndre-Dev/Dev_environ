@@ -54,6 +54,39 @@ export function formatAddressEntryLabel(
     .join(", ");
 }
 
+/** Capitalize the first character of a string (leaves the rest unchanged). */
+export function capitalizeFirstLetter(value: string): string {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+/**
+ * Body for POST/PUT /api/v1/address-mgt/field.
+ * The API whitelist rejects extra properties such as `id`.
+ */
+export function toAddressFieldBody(data: {
+  estateId?: unknown;
+  label?: string;
+  key?: string;
+}): { estateId: string; label: string; key: string } {
+  const raw = data.estateId;
+  const estateId =
+    typeof raw === "string"
+      ? raw
+      : raw && typeof raw === "object"
+        ? String(
+            (raw as { _id?: string; id?: string })._id ||
+              (raw as { id?: string }).id ||
+              "",
+          )
+        : "";
+  return {
+    estateId,
+    label: data.label ?? "",
+    key: data.key ?? "",
+  };
+}
+
 /** Format address field/entry `createdAt` for admin tables. */
 export function formatAddressRecordCreatedAt(value?: string): string {
   if (!value) return "—";

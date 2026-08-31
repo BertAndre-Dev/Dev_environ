@@ -107,13 +107,18 @@ export default function AddressField() {
 
   const handleSubmitField = async (data: FieldData) => {
     try {
+      const payload = {
+        estateId: data.estateId,
+        label: data.label,
+        key: data.key,
+      };
       if (selectedField?.id) {
         await dispatch(
-          updateField({ fieldId: selectedField.id, data }),
+          updateField({ fieldId: selectedField.id, data: payload }),
         ).unwrap();
         toast.success("Field updated successfully!");
       } else {
-        await dispatch(createField(data)).unwrap();
+        await dispatch(createField(payload)).unwrap();
         toast.success("Field created successfully!");
       }
 
@@ -164,6 +169,11 @@ export default function AddressField() {
     })) || [];
 
   const columns = [
+    {
+      key: "createdAt",
+      header: "Created At",
+      render: (item: any) => formatAddressRecordCreatedAt(item.createdAt),
+    },
     { key: "label", header: "Field Label" },
     {
       key: "isActive",
@@ -179,11 +189,6 @@ export default function AddressField() {
           {item.isActive ? "Active" : "Inactive"}
         </span>
       ),
-    },
-    {
-      key: "createdAt",
-      header: "Created At",
-      render: (item: any) => formatAddressRecordCreatedAt(item.createdAt),
     },
     {
       key: "actions",

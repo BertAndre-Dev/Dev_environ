@@ -69,6 +69,7 @@ export default function StaffOverview() {
   const [resolvingEstate, setResolvingEstate] = useState(true);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const {
+    modulesReady,
     showUserSummary,
     showRoleBreakdown,
     showMeterSummary,
@@ -136,6 +137,10 @@ export default function StaffOverview() {
     if (!estateId) return;
     if (showUserSummary) void dispatch(getUserSummary({ estateId }));
     if (showRoleBreakdown) void dispatch(getUserRoleBreakdown({ estateId }));
+  }, [dispatch, estateId, showUserSummary, showRoleBreakdown]);
+
+  useEffect(() => {
+    if (!estateId || !modulesReady) return;
     if (showMeterSummary) void dispatch(getMeterSummary({ estateId }));
     if (showBillsSummary) void dispatch(getBillsSummary({ estateId }));
     if (showComplaintsSummary) void dispatch(getComplaintsSummary({ estateId }));
@@ -145,8 +150,7 @@ export default function StaffOverview() {
   }, [
     dispatch,
     estateId,
-    showUserSummary,
-    showRoleBreakdown,
+    modulesReady,
     showMeterSummary,
     showBillsSummary,
     showComplaintsSummary,
@@ -186,10 +190,14 @@ export default function StaffOverview() {
   const enabledStatuses = [
     ...(showUserSummary ? [userSummaryStatus] : []),
     ...(showRoleBreakdown ? [roleBreakdownStatus] : []),
-    ...(showMeterSummary ? [meterSummaryStatus] : []),
-    ...(showBillsSummary ? [billsSummaryStatus] : []),
-    ...(showComplaintsSummary ? [complaintsSummaryStatus] : []),
-    ...(showComplaintsDashboard ? [complaintsDashboardStatus] : []),
+    ...(modulesReady && showMeterSummary ? [meterSummaryStatus] : []),
+    ...(modulesReady && showBillsSummary ? [billsSummaryStatus] : []),
+    ...(modulesReady && showComplaintsSummary
+      ? [complaintsSummaryStatus]
+      : []),
+    ...(modulesReady && showComplaintsDashboard
+      ? [complaintsDashboardStatus]
+      : []),
   ];
 
   const hasVisibleCharts = enabledStatuses.length > 0;

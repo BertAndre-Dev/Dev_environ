@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import type { PaidByPerson } from "@/lib/paid-by";
 import {
   getBill,
   getBillsByEstate,
@@ -69,6 +70,10 @@ export interface PaidBillData {
   nextDueDate?: string;
   status?: string;
   isServiceCharge?: boolean;
+  paidByUserId?: string;
+  paidBy?: PaidByPerson | null;
+  paidByCurrentUser?: boolean;
+  sharedAddressPayment?: boolean;
 }
 
 export interface Pagination {

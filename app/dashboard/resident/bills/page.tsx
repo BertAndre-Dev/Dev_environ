@@ -39,6 +39,12 @@ import { isPending, isSettled } from "@/lib/async-status";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatDateTime } from "@/lib/format-date";
 import { canUseBillInterest } from "@/lib/user-modules";
+import {
+  paidByEmail,
+  paidByEmailLabel,
+  paidByName,
+  paidByNameLabel,
+} from "@/lib/paid-by";
 import { selectEstateModules } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 
 type BillsTab = "estate" | "assigned";
@@ -435,6 +441,19 @@ export default function BillPage() {
       key: "billName",
       header: "Bill Name",
       render: (item: PaidBillData) => item.billName || "-",
+    },
+    {
+      key: "paidByName",
+      header: "Paid By",
+      render: (item: PaidBillData) => paidByNameLabel(item.paidBy),
+      exportValue: (item: PaidBillData) =>
+        paidByName(item.paidBy) || paidByEmail(item.paidBy),
+    },
+    {
+      key: "paidByEmail",
+      header: "Email",
+      render: (item: PaidBillData) => paidByEmailLabel(item.paidBy),
+      exportValue: (item: PaidBillData) => paidByEmail(item.paidBy),
     },
     {
       key: "frequency",

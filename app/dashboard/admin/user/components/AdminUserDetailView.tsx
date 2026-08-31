@@ -37,6 +37,11 @@ import { CopyButton } from "@/components/ui/copy-button";
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import { MaintenanceRequestCard } from "@/components/admin/maintenance/maintenance-request-card";
 import { getApiErrorMessage } from "@/lib/api-error";
+import {
+  paidByEmailLabel,
+  paidByNameLabel,
+  type PaidByPerson,
+} from "@/lib/paid-by";
 import { cn } from "@/lib/utils";
 import { normalizeAddresses, formatAddressLabel, type AddressOption } from "@/lib/address";
 import type { AsyncThunk } from "@reduxjs/toolkit";
@@ -62,6 +67,7 @@ interface UserBillRow {
   startDate?: string;
   nextDueDate?: string;
   lastPaymentDate?: string | null;
+  paidBy?: PaidByPerson | null;
 }
 
 interface AssignedBillRow {
@@ -600,6 +606,7 @@ export default function UserDetailView({
             startDate: bill.startDate as string | undefined,
             nextDueDate: bill.nextDueDate as string | undefined,
             lastPaymentDate: bill.lastPaymentDate as string | null | undefined,
+            paidBy: (bill.paidBy as PaidByPerson | null | undefined) ?? null,
           }),
         ),
       );
@@ -793,6 +800,16 @@ export default function UserDetailView({
 
   const billColumns = [
     { key: "billName", header: "Bill Name" },
+    {
+      key: "paidByName",
+      header: "Paid By",
+      render: (item: UserBillRow) => paidByNameLabel(item.paidBy),
+    },
+    {
+      key: "paidByEmail",
+      header: "Email",
+      render: (item: UserBillRow) => paidByEmailLabel(item.paidBy),
+    },
     {
       key: "frequency",
       header: "Frequency",

@@ -486,7 +486,7 @@ export default function CompanyMeterManagement() {
     },
     {
       key: "isAssigned",
-      header: "Assigned Status",
+      header: "Assigned To Address",
       render: (item: CompanyMeterRow) => (
         <span
           className={`px-3 py-1 rounded-full text-xs font-semibold ${
@@ -495,7 +495,7 @@ export default function CompanyMeterManagement() {
               : "bg-red-100 text-red-700"
           }`}
         >
-          {item.isAssigned ? "Assigned" : "Not Assigned"}
+          {item.isAssigned ? "Assigned to address" : "Not assigned to address"}
         </span>
       ),
     },

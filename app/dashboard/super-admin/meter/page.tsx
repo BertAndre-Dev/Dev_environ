@@ -573,7 +573,7 @@ export default function AdminMeterManagement() {
     },
     {
       key: "isAssigned",
-      header: "Assigned Status",
+      header: "Assigned To Address",
       render: (item: AdminMeterData) => (
         <span
           className={`px-3 py-1 rounded-full text-xs font-semibold ${
@@ -582,7 +582,7 @@ export default function AdminMeterManagement() {
               : "bg-red-100 text-red-700"
           }`}
         >
-          {item.isAssigned ? "Assigned" : "Not Assigned"}
+          {item.isAssigned ? "Assigned to address" : "Not assigned to address"}
         </span>
       ),
     },

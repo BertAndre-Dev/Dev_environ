@@ -41,9 +41,8 @@ import { formatDateTime } from "@/lib/format-date";
 import { canUseBillInterest } from "@/lib/user-modules";
 import {
   paidByEmail,
-  paidByEmailLabel,
+  paidByExportLabel,
   paidByName,
-  paidByNameLabel,
 } from "@/lib/paid-by";
 import { selectEstateModules } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 
@@ -443,17 +442,22 @@ export default function BillPage() {
       render: (item: PaidBillData) => item.billName || "-",
     },
     {
-      key: "paidByName",
+      key: "paidBy",
       header: "Paid By",
-      render: (item: PaidBillData) => paidByNameLabel(item.paidBy),
-      exportValue: (item: PaidBillData) =>
-        paidByName(item.paidBy) || paidByEmail(item.paidBy),
-    },
-    {
-      key: "paidByEmail",
-      header: "Email",
-      render: (item: PaidBillData) => paidByEmailLabel(item.paidBy),
-      exportValue: (item: PaidBillData) => paidByEmail(item.paidBy),
+      render: (item: PaidBillData) => {
+        const name = paidByName(item.paidBy);
+        const email = paidByEmail(item.paidBy);
+        if (!name && !email) return "-";
+        return (
+          <div className="min-w-0">
+            <p className="truncate">{name || email}</p>
+            {name && email ? (
+              <p className="truncate text-xs text-muted-foreground">{email}</p>
+            ) : null}
+          </div>
+        );
+      },
+      exportValue: (item: PaidBillData) => paidByExportLabel(item.paidBy),
     },
     {
       key: "frequency",

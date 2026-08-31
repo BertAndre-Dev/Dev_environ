@@ -38,8 +38,8 @@ import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import { MaintenanceRequestCard } from "@/components/admin/maintenance/maintenance-request-card";
 import { getApiErrorMessage } from "@/lib/api-error";
 import {
-  paidByEmailLabel,
-  paidByNameLabel,
+  paidByEmail,
+  paidByName,
   type PaidByPerson,
 } from "@/lib/paid-by";
 import { cn } from "@/lib/utils";
@@ -801,14 +801,21 @@ export default function UserDetailView({
   const billColumns = [
     { key: "billName", header: "Bill Name" },
     {
-      key: "paidByName",
+      key: "paidBy",
       header: "Paid By",
-      render: (item: UserBillRow) => paidByNameLabel(item.paidBy),
-    },
-    {
-      key: "paidByEmail",
-      header: "Email",
-      render: (item: UserBillRow) => paidByEmailLabel(item.paidBy),
+      render: (item: UserBillRow) => {
+        const name = paidByName(item.paidBy);
+        const email = paidByEmail(item.paidBy);
+        if (!name && !email) return "—";
+        return (
+          <div className="min-w-0">
+            <p className="truncate">{name || email}</p>
+            {name && email ? (
+              <p className="truncate text-xs text-muted-foreground">{email}</p>
+            ) : null}
+          </div>
+        );
+      },
     },
     {
       key: "frequency",

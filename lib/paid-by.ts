@@ -21,3 +21,10 @@ export function paidByNameLabel(person?: PaidByPerson | null): string {
 export function paidByEmailLabel(person?: PaidByPerson | null): string {
   return paidByEmail(person) || "-";
 }
+
+export function paidByExportLabel(person?: PaidByPerson | null): string {
+  const name = paidByName(person);
+  const email = paidByEmail(person);
+  if (name && email) return `${name} (${email})`;
+  return name || email || "";
+}

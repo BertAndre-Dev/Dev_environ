@@ -272,7 +272,12 @@ export default function StaffOverview() {
         ) : null}
 
         {showRoleBreakdown || showBillsSummary ? (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+          <div
+            className={[
+              "grid grid-cols-1 gap-4 lg:gap-6",
+              showRoleBreakdown && showBillsSummary ? "lg:grid-cols-2" : "",
+            ].join(" ")}
+          >
             {showRoleBreakdown ? (
               <RoleBreakdownChart
                 data={roleBreakdown}

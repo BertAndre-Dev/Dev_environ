@@ -434,19 +434,35 @@ export default function CompanyMeterManagement() {
       header: "Estate",
       render: (item: CompanyMeterRow) => {
         const label = resolveEstateDisplayName(item.estateId, estateNameById);
-        if (!label) return <span className="text-muted-foreground">—</span>;
+        if (!label) {
+          return (
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+              Not assigned
+            </span>
+          );
+        }
         return <span className="font-medium">{label}</span>;
       },
       exportValue: (item: CompanyMeterRow) =>
-        resolveEstateDisplayName(item.estateId, estateNameById) ?? "",
+        resolveEstateDisplayName(item.estateId, estateNameById) ??
+        "Not assigned",
     },
     {
       key: "address",
       header: "Address",
-      render: (item: CompanyMeterRow) =>
-        formatAddressData(toAddressData(item.addressId)),
+      render: (item: CompanyMeterRow) => {
+        const label = formatAddressEntryLabel(toAddressData(item.addressId));
+        if (!label) {
+          return (
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+              Not assigned
+            </span>
+          );
+        }
+        return label;
+      },
       exportValue: (item: CompanyMeterRow) =>
-        formatAddressEntryLabel(toAddressData(item.addressId)),
+        formatAddressEntryLabel(toAddressData(item.addressId)) || "Not assigned",
     },
     {
       key: "isActive",

@@ -54,6 +54,25 @@ export function extractSignedInUserEmail(
   return null;
 }
 
+/** Display name from a populated API ref (`{ id, name }`), or null if the value is only an id. */
+export function extractPopulatedName(raw: unknown): string | null {
+  if (raw == null || typeof raw !== "object") return null;
+  const name = (raw as Record<string, unknown>).name;
+  return typeof name === "string" && name.trim() ? name.trim() : null;
+}
+
+/** Estate label from a populated `{ id, name }` ref, then a name map, then the id. */
+export function resolveEstateDisplayName(
+  estateId: unknown,
+  nameById?: Record<string, string>,
+): string | null {
+  const populated = extractPopulatedName(estateId);
+  if (populated) return populated;
+  const id = extractEstateId(estateId);
+  if (!id) return null;
+  return nameById?.[id] ?? id;
+}
+
 /** Normalize estate ids from API payloads (`estateId` string or populated estate object). */
 export function extractEstateId(raw: unknown): string | null {
   if (raw == null) return null;

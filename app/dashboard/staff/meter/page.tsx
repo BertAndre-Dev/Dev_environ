@@ -39,6 +39,8 @@ import Tab from "@/components/tabs/page";
 import { IoSpeedometerOutline } from "react-icons/io5";
 import Loader from "@/components/ui/Loader";
 import { isPending } from "@/lib/async-status";
+import { resolveEstateDisplayName } from "@/lib/user-id";
+import { formatAddressRecordCreatedAt, formatAddressEntryLabel } from "@/lib/address";
 import { ViewVendLimitModal } from "./components/ViewVendLimitModal";
 import { SetVendLimitModal } from "./components/SetVendLimitModal";
 
@@ -60,7 +62,7 @@ interface AdminMeterData {
   meterNumber: string;
   isActive?: boolean;
   isAssigned?: boolean;
-  estateId?: string;
+  estateId?: string | { id?: string; _id?: string; name?: string };
   lastCredit?: number;
   createdAt?: string;
   updatedAt?: string;
@@ -446,33 +448,35 @@ export default function StaffMeterManagement() {
       });
   }, [dispatch, usageModalOpen, usageMeterNumber, meterUsageRange]);
 
-  const getAllAddressKeys = (data: AdminMeterData[]) => {
-    const keys = new Set<string>();
-    data.forEach((item) => {
-      if (item.addressId?.data) {
-        Object.keys(item.addressId.data).forEach((key) => keys.add(key));
-      }
-    });
-    return Array.from(keys);
-  };
-
-  const getAddressColumns = (data: AdminMeterData[]) => {
-    if (!data.length) return [];
-    const addressKeys = getAllAddressKeys(data);
-    return addressKeys.map((key) => ({
-      key: `address_${key}`,
-      header: key
-        .replace(/([A-Z])/g, " $1")
-        .replace(/^./, (c) => c.toUpperCase()),
-      render: (item: AdminMeterData) => item.addressId?.data?.[key] ?? "-",
-      exportValue: (item: AdminMeterData) => item.addressId?.data?.[key] ?? "",
-    }));
-  };
-
   const columns = [
-    { key: "createdAt", header: "Created Date" },
+    {
+      key: "createdAt",
+      header: "Created Date",
+      render: (item: AdminMeterData) =>
+        formatAddressRecordCreatedAt(item.createdAt),
+      exportValue: (item: AdminMeterData) =>
+        formatAddressRecordCreatedAt(item.createdAt),
+    },
     { key: "meterNumber", header: "Meter Number" },
-    ...getAddressColumns(allAdminMeters),
+    {
+      key: "estateId",
+      header: "Estate",
+      render: (item: AdminMeterData) => {
+        const label = resolveEstateDisplayName(item.estateId);
+        if (!label) return <span className="text-muted-foreground">—</span>;
+        return <span className="font-medium">{label}</span>;
+      },
+      exportValue: (item: AdminMeterData) =>
+        resolveEstateDisplayName(item.estateId) ?? "",
+    },
+    {
+      key: "address",
+      header: "Address",
+      render: (item: AdminMeterData) =>
+        formatAddressEntryLabel(item.addressId?.data) || "—",
+      exportValue: (item: AdminMeterData) =>
+        formatAddressEntryLabel(item.addressId?.data),
+    },
     {
       key: "isActive",
       header: "Status",

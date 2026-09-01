@@ -16,6 +16,30 @@ export type BlogPostMeta = {
 
 export const blogPosts: BlogPostMeta[] = [
   {
+    slug: "creating-safer-communities-through-smart-technology",
+    title: "Creating Safer Communities Through Smart Technology",
+    excerpt:
+      "A safe community is built on more than gates and security personnel. Here's how connected property technology helps managers create communities that are more organized, responsive and accountable.",
+    hook: "A safe community is built on more than gates, security personnel and physical infrastructure.",
+    publishedAt: "2026-09-01",
+    readTimeMinutes: 4,
+    wordCount: 480,
+    category: "Estate Management",
+    author: "Bertahub Team",
+    featuredImage: "/assets/blog/blog-9.jpeg",
+    featuredImageAlt:
+      "Creating Safer Communities Through Smart Technology, Bertahub article banner",
+    keywords: [
+      "safer communities smart technology",
+      "community safety property management",
+      "digital property management",
+      "estate communication platform",
+      "connected property operations",
+      "Berta Hub",
+      "Bertahub",
+    ],
+  },
+  {
     slug: "why-digital-efficiency-matters-more-than-ever",
     title: "Why Digital Efficiency Matters More Than Ever",
     excerpt:

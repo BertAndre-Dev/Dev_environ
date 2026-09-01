@@ -47,6 +47,13 @@ import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/sup
 import { getCompanies } from "@/redux/slice/super-admin/company-mgt/company";
 import axiosInstance from "@/utils/axiosInstance";
 import { getApiErrorMessage } from "@/lib/api-error";
+import {
+  extractEstateId,
+  extractPopulatedName,
+  normalizeUserId,
+  resolveEstateDisplayName,
+} from "@/lib/user-id";
+import { formatAddressRecordCreatedAt, formatAddressEntryLabel } from "@/lib/address";
 
 /** addressId from list API can be a string or populated object with id */
 type AddressIdInput = string | { id: string; data?: Record<string, unknown> };
@@ -56,8 +63,8 @@ interface AdminMeterData {
   meterNumber: string;
   isActive?: boolean;
   isAssigned?: boolean;
-  estateId?: string;
-  companyId?: string;
+  estateId?: string | { id?: string; _id?: string; name?: string };
+  companyId?: string | { id?: string; _id?: string; name?: string };
   lastCredit?: number;
   createdAt?: string;
   updatedAt?: string;
@@ -86,43 +93,7 @@ function toAddressData(addressId: AddressIdInput | null | undefined): Record<
 function formatAddressData(
   data: Record<string, unknown> | null | undefined,
 ): string {
-  if (!data) return "—";
-  const entries = Object.entries(data).filter(
-    ([, v]) => v != null && String(v).trim() !== "",
-  );
-  if (entries.length === 0) return "—";
-  return entries.map(([k, v]) => `${k}: ${String(v)}`).join(", ");
-}
-
-function getAllAddressKeys(data: AdminMeterData[]): string[] {
-  const keys = new Set<string>();
-  data.forEach((item) => {
-    const addressData = toAddressData(item.addressId);
-    if (addressData) {
-      Object.keys(addressData).forEach((key) => keys.add(key));
-    }
-  });
-  return Array.from(keys);
-}
-
-function getAddressColumns(data: AdminMeterData[]) {
-  if (!data.length) return [];
-  const addressKeys = getAllAddressKeys(data);
-  return addressKeys.map((key) => ({
-    key: `address_${key}`,
-    header: key
-      .replace(/([A-Z])/g, " $1")
-      .replace(/^./, (c) => c.toUpperCase()),
-    render: (item: AdminMeterData) => {
-      const value = toAddressData(item.addressId)?.[key];
-      if (value == null || String(value).trim() === "") return "—";
-      return String(value);
-    },
-    exportValue: (item: AdminMeterData) => {
-      const value = toAddressData(item.addressId)?.[key];
-      return value == null ? "" : String(value);
-    },
-  }));
+  return formatAddressEntryLabel(data) || "—";
 }
 
 type EstateOption = { label: string; value: string };
@@ -132,17 +103,21 @@ const COMPANY_FILTER_FETCH_LIMIT = 500;
 const METER_TAB_TITLES = ["Meter Management", "Chart Overview"] as const;
 
 function resolveEstateOrCompanyLabel(
-  item: { estateId?: string; companyId?: string },
+  item: { estateId?: unknown; companyId?: unknown },
   estateNameById: Record<string, string>,
   companyNameById: Record<string, string>,
 ): string | null {
-  if (item.estateId) {
-    return estateNameById[item.estateId] ?? item.estateId;
+  const estateLabel = resolveEstateDisplayName(item.estateId, estateNameById);
+  if (estateLabel) return estateLabel;
+  const companyId = normalizeUserId(item.companyId);
+  if (companyId) {
+    return (
+      companyNameById[companyId] ??
+      extractPopulatedName(item.companyId) ??
+      companyId
+    );
   }
-  if (item.companyId) {
-    return companyNameById[item.companyId] ?? item.companyId;
-  }
-  return null;
+  return extractPopulatedName(item.companyId);
 }
 
 export default function AdminMeterManagement() {
@@ -430,7 +405,7 @@ export default function AdminMeterManagement() {
       await dispatch(
         removeEstateMeter({
           meterNumber: selectedMeter.meterNumber,
-          estateId: selectedMeter.estateId || "",
+          estateId: extractEstateId(selectedMeter.estateId) || "",
         }),
       ).unwrap();
 
@@ -537,9 +512,15 @@ export default function AdminMeterManagement() {
   };
 
   const columns = [
-    { key: "createdAt", header: "Created Date" },
+    {
+      key: "createdAt",
+      header: "Created Date",
+      render: (item: AdminMeterData) =>
+        formatAddressRecordCreatedAt(item.createdAt),
+      exportValue: (item: AdminMeterData) =>
+        formatAddressRecordCreatedAt(item.createdAt),
+    },
     { key: "meterNumber", header: "Meter Number" },
-    ...getAddressColumns(allSuperAdminMeters),
     {
       key: "estateId",
       header: "Estate/Company",
@@ -555,6 +536,14 @@ export default function AdminMeterManagement() {
       exportValue: (item: AdminMeterData) =>
         resolveEstateOrCompanyLabel(item, estateNameById, companyNameById) ??
         "",
+    },
+    {
+      key: "address",
+      header: "Address",
+      render: (item: AdminMeterData) =>
+        formatAddressData(toAddressData(item.addressId)),
+      exportValue: (item: AdminMeterData) =>
+        formatAddressEntryLabel(toAddressData(item.addressId)),
     },
     {
       key: "isActive",
@@ -601,7 +590,8 @@ export default function AdminMeterManagement() {
           >
             <Eye className="w-4 h-4" />
           </Button>
-          {(item.estateId || item.companyId) && (
+          {(extractEstateId(item.estateId) ||
+            normalizeUserId(item.companyId)) && (
             <div className="relative group/reassign">
               <Button
                 variant="outline"
@@ -932,14 +922,16 @@ export default function AdminMeterManagement() {
           >
             <ReassignMeterForm
               meterNumber={reassignMeterRow.meterNumber}
-              estateId={reassignMeterRow.estateId}
-              companyId={reassignMeterRow.companyId}
+              estateId={extractEstateId(reassignMeterRow.estateId) ?? undefined}
+              companyId={
+                normalizeUserId(reassignMeterRow.companyId) || undefined
+              }
               estateOptions={estateOptions}
               estatesLoading={estatesLoading}
               close={handleCloseReassignMeter}
               refresh={handleRefresh}
               title={
-                reassignMeterRow.estateId
+                extractEstateId(reassignMeterRow.estateId)
                   ? "Reassign to estate"
                   : "Assign to estate"
               }

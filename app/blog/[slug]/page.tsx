@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import BlogArticleLayout from "@/components/blog/blog-article-layout";
 import { BlogArticleJsonLd } from "@/components/blog/blog-json-ld";
+import CreatingSaferCommunitiesArticle from "@/components/blog/articles/creating-safer-communities-article";
 import WhyDigitalEfficiencyMattersArticle from "@/components/blog/articles/why-digital-efficiency-matters-article";
 import DigitalEfficiencyPropertyManagementArticle from "@/components/blog/articles/digital-efficiency-property-management-article";
 import SustainabilityRedefiningEstateManagementArticle from "@/components/blog/articles/sustainability-redefining-estate-management-article";
@@ -13,6 +14,8 @@ import { getBlogPost, getAllBlogSlugs } from "@/lib/blog/posts";
 import { createBlogPostMetadata } from "@/lib/blog/seo";
 
 const articleComponents: Record<string, React.ComponentType> = {
+  "creating-safer-communities-through-smart-technology":
+    CreatingSaferCommunitiesArticle,
   "why-digital-efficiency-matters-more-than-ever":
     WhyDigitalEfficiencyMattersArticle,
   "digital-efficiency-why-it-matters-more-than-ever-in-property-management":

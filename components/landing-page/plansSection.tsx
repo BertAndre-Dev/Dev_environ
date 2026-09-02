@@ -100,10 +100,10 @@ function PlanCard({ plan }: { plan: PlanTier }) {
   return (
     <motion.article
       className={[
-        "relative flex h-full flex-col rounded-3xl p-6 sm:p-7 lg:p-8 will-change-transform",
+        "relative flex flex-col rounded-3xl p-6 sm:p-7 will-change-transform",
         featured
-          ? "bg-[#0150AC] text-white shadow-[0_24px_60px_rgba(1,80,172,0.35)]"
-          : "bg-white text-black shadow-[0_1px_3px_rgba(16,24,40,0.06),0_12px_32px_rgba(16,24,40,0.06)] ring-1 ring-[#EAECF0]",
+          ? "bg-[#0150AC] text-white shadow-[0_24px_60px_rgba(1,80,172,0.35)] lg:z-10 lg:-mt-16 lg:px-8 lg:pt-10 lg:pb-14"
+          : "bg-white text-black shadow-[0_1px_3px_rgba(16,24,40,0.06),0_12px_32px_rgba(16,24,40,0.06)] ring-1 ring-[#EAECF0] lg:p-8",
       ].join(" ")}
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -196,7 +196,7 @@ export default function PlansSection() {
           </p>
         </div>
 
-        <div className="mx-auto mt-12 grid max-w-md gap-6 sm:mt-14 sm:max-w-none lg:mt-14 lg:grid-cols-3 lg:items-stretch lg:gap-8">
+        <div className="mx-auto mt-12 grid max-w-md gap-6 sm:mt-14 sm:max-w-none lg:mt-24 lg:grid-cols-3 lg:items-start lg:gap-8">
           {PLANS.map((plan) => (
             <PlanCard key={plan.key} plan={plan} />
           ))}

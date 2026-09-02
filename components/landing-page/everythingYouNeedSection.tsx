@@ -6,6 +6,7 @@ import { motion, useReducedMotion } from "framer-motion";
 type FeatureItem = Readonly<{
   title: string;
   description: string;
+  icon: string;
 }>;
 
 const LEFT_FEATURES: readonly FeatureItem[] = [
@@ -13,11 +14,13 @@ const LEFT_FEATURES: readonly FeatureItem[] = [
     title: "Insight",
     description:
       "Real-time visibility into everything happening across your properties, one dashboard, every metric that matters.",
+    icon: "/assets/everything/insight.svg",
   },
   {
     title: "Energy Intelligence",
     description:
       "Live, unit-level energy consumption data that catches irregular usage early and turns billing disputes into billing certainty.",
+    icon: "/assets/everything/energy.svg",
   },
 ];
 
@@ -26,11 +29,13 @@ const RIGHT_FEATURES: readonly FeatureItem[] = [
     title: "Property Management",
     description:
       "Manage assets, tenants, and operations from a single source of truth, no more spreadsheets, no more guesswork.",
+    icon: "/assets/everything/property.svg",
   },
   {
     title: "Energy Vending",
     description:
       "Sell prepaid power with configurable limits and controls, protecting your energy budget while keeping tenants powered up.",
+    icon: "/assets/everything/vending.svg",
   },
 ];
 
@@ -38,14 +43,15 @@ const CENTER_FEATURE: FeatureItem = {
   title: "Financial Reporting",
   description:
     "Automated expense and revenue recognition that keeps your books audit-ready and your monthly-end close fast.",
+  icon: "/assets/everything/financials.svg",
 };
 
 const spring = { type: "spring" as const, bounce: 0, duration: 0.4 };
 
-function FeatureIcon() {
+function FeatureIcon({ src }: { src: string }) {
   return (
     <Image
-      src="/assets/energy.svg"
+      src={src}
       alt=""
       width={40}
       height={40}
@@ -55,7 +61,7 @@ function FeatureIcon() {
   );
 }
 
-function FeatureCard({ title, description }: FeatureItem) {
+function FeatureCard({ title, description, icon }: FeatureItem) {
   const reduceMotion = useReducedMotion();
 
   return (
@@ -69,7 +75,7 @@ function FeatureCard({ title, description }: FeatureItem) {
       whileTap={reduceMotion ? undefined : { scale: 0.97 }}
       transition={spring}
     >
-      <FeatureIcon />
+      <FeatureIcon src={icon} />
       <h3 className="text-lg sm:text-xl font-bold text-black tracking-[-0.01em] leading-snug">
         {title}
       </h3>

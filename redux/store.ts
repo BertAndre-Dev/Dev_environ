@@ -132,6 +132,7 @@ import staffTransactionSliceReducer from "@/redux/slice/staff/transaction/transa
 import staffFundWalletSliceReducer from "@/redux/slice/staff/fund-wallet/fund-wallet-slice";
 import staffRevenueWithdrawalAccountSliceReducer from "@/redux/slice/staff/wallet-mgt/revenue-withdrawal-account-slice";
 import companyRequestSliceReducer from "@/redux/slice/company/request/company-request-slice";
+import companyAnnouncementsSliceReducer from "@/redux/slice/company/announcements/company-announcements-slice";
 import estateAdminRequestSliceReducer from "@/redux/slice/estate-admin/request/estate-admin-request-slice";
 import requestCommentsSliceReducer from "@/redux/slice/request/request-comments-slice";
 import designationsSliceReducer from "@/redux/slice/designations/designations-slice";
@@ -496,6 +497,7 @@ export const store = configureStore({
     staffFundWallet: persistedStaffFundWalletSliceReducer,
     staffRevenueWithdrawalAccount: staffRevenueWithdrawalAccountSliceReducer,
     companyRequest: companyRequestSliceReducer,
+    companyAnnouncements: companyAnnouncementsSliceReducer,
     estateAdminRequest: estateAdminRequestSliceReducer,
     requestComments: requestCommentsSliceReducer,
     designations: designationsSliceReducer,

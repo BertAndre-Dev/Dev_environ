@@ -43,10 +43,28 @@ function extractEstateId(data: Record<string, unknown>): string {
   return "";
 }
 
+function stringName(value: unknown): string {
+  return typeof value === "string" && value.trim() ? value.trim() : "";
+}
+
+function resolveCompanyDisplayName(
+  refs: { id: string; name?: string }[],
+  preferredId: string,
+  extras: unknown[],
+): string {
+  const fromSameId = refs.find((r) => r.id === preferredId && r.name)?.name;
+  const fromAny = refs.find((r) => r.name)?.name;
+  const extra = extras.map(stringName).find(Boolean);
+  return fromSameId || fromAny || extra || "Company";
+}
+
 /**
  * Resolve company id/name from `/api/v1/auth-mgt/me` user payload.
  * Prefers active membership, then nested estate.companyId. Never returns the
  * estate id itself as the company id.
+ *
+ * `activeContext.companyId` is often a bare id string; the display name lives
+ * on the populated `companyId` object or current membership.
  */
 export function parseCompanyFromUser(data: Record<string, unknown>): {
   id: string;
@@ -76,23 +94,27 @@ export function parseCompanyFromUser(data: Record<string, unknown>): {
   }
   candidates.push(data.company, data.companyId);
 
-  let resolved: { id: string; name?: string } | null = null;
+  const refs: { id: string; name?: string }[] = [];
   for (const candidate of candidates) {
     const next = extractCompanyRef(candidate);
     if (!next) continue;
     if (estateId && next.id === estateId) continue;
-    resolved = next;
-    break;
+    refs.push(next);
   }
 
-  if (!resolved) return null;
+  if (!refs.length) return null;
 
-  const name =
-    resolved.name ||
-    (typeof data.companyName === "string" && data.companyName.trim()
-      ? data.companyName.trim()
-      : undefined) ||
-    "Company";
+  const preferredId = refs[0].id;
+  const membershipName =
+    currentMembership && typeof currentMembership === "object"
+      ? (currentMembership as Record<string, unknown>).companyName
+      : undefined;
 
-  return { id: resolved.id, name };
+  return {
+    id: preferredId,
+    name: resolveCompanyDisplayName(refs, preferredId, [
+      membershipName,
+      data.companyName,
+    ]),
+  };
 }

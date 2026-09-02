@@ -23,6 +23,7 @@ import { isPending } from "@/lib/async-status";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
+import { parseCompanyFromUser } from "../lib/company";
 import {
   activateCompanyEstate,
   createCompanyEstate,
@@ -90,13 +91,9 @@ export default function CompanyEstatePage() {
     (async () => {
       try {
         const userRes = await dispatch(getSignedInUser()).unwrap();
-        const data = userRes?.data ?? (userRes as Record<string, unknown>);
-        const companyFromId =
-          (data?.companyId as { name?: string } | undefined)?.name ?? "";
-        const companyFromObj =
-          (data?.company as { name?: string } | undefined)?.name ?? "";
-        const fallback = (data?.companyName as string) ?? "";
-        setCompanyName(companyFromId || companyFromObj || fallback || "Company");
+        const data = (userRes?.data ?? userRes) as Record<string, unknown>;
+        const company = parseCompanyFromUser(data);
+        if (company?.name) setCompanyName(company.name);
       } catch {
         // keep default
       }

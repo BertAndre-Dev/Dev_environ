@@ -2,10 +2,14 @@
 
 import { useState } from "react";
 import { X } from "lucide-react";
+import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { IMAGE_ACCEPT_ATTR } from "@/lib/uploads/constants";
+import { fileToRawBase64 } from "@/lib/uploads/fileToDataUri";
+import { validateFile } from "@/lib/uploads/validate";
 
 const DEFAULT_ESTATE_PLACEHOLDER = "your estate";
 
@@ -21,23 +25,6 @@ type Props = {
     profileImage?: string;
   }) => void | Promise<void>;
 };
-
-function readFileAsBase64Payload(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const r = reader.result;
-      if (typeof r !== "string") {
-        reject(new Error("Could not read file."));
-        return;
-      }
-      const i = r.indexOf("base64,");
-      resolve(i >= 0 ? r.slice(i + "base64,".length) : r);
-    };
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
 
 export function CreateGroupChatModal({
   open,
@@ -90,7 +77,12 @@ export function CreateGroupChatModal({
               raw instanceof File && raw.size > 0 ? raw : null;
             let profileImage: string | undefined;
             if (file) {
-              profileImage = await readFileAsBase64Payload(file);
+              const validation = validateFile(file, { kind: "image" });
+              if (!validation.ok) {
+                toast.error(validation.error);
+                return;
+              }
+              profileImage = await fileToRawBase64(file);
             }
             await onCreate?.({ name, description, profileImage });
           }}
@@ -122,7 +114,7 @@ export function CreateGroupChatModal({
               id="group-image"
               name="profileImage"
               type="file"
-              accept="image/*"
+              accept={IMAGE_ACCEPT_ATTR}
               className="mt-1 cursor-pointer rounded-lg file:cursor-pointer"
               disabled={isSubmitting}
               onChange={(ev) => {

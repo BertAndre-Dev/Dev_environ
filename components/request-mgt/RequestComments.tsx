@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { isBusy } from "@/lib/async-status";
-import { fileToBase64 } from "@/lib/file-to-base64";
+import { useFileUpload } from "@/hooks/useFileUpload";
 import {
   requestCommentAuthorName,
   type RequestCommentItem,
@@ -23,7 +23,6 @@ import {
 import { clearRequestComments } from "@/redux/slice/request/request-comments-slice";
 import type { AppDispatch, RootState } from "@/redux/store";
 
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const IMAGE_ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
 
 function formatCommentDate(dateStr?: string) {
@@ -176,8 +175,8 @@ export default function RequestComments({
   const dispatch = useDispatch<AppDispatch>();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const imageUpload = useFileUpload({ kind: "general", accept: "image" });
 
   const currentUserId = useSelector(
     (state: RootState) =>
@@ -193,7 +192,7 @@ export default function RequestComments({
 
   const loadingComments =
     isBusy(getStatus) && activeRequestId === requestId && comments.length === 0;
-  const submitting = isBusy(createStatus);
+  const submitting = isBusy(createStatus) || imageUpload.isUploading;
 
   const resolvedEstateId = estateId?.trim() || undefined;
 
@@ -226,24 +225,23 @@ export default function RequestComments({
 
   const clearImage = () => {
     if (imagePreview) URL.revokeObjectURL(imagePreview);
-    setImageFile(null);
     setImagePreview(null);
+    imageUpload.reset();
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleImagePick = (file: File | undefined) => {
+  const handleImagePick = async (file: File | undefined) => {
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please choose a JPEG, PNG, WebP, or GIF image.");
-      return;
+    const preview = URL.createObjectURL(file);
+    setImagePreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return preview;
+    });
+    const url = await imageUpload.upload(file);
+    if (!url) {
+      URL.revokeObjectURL(preview);
+      setImagePreview(null);
     }
-    if (file.size > MAX_IMAGE_BYTES) {
-      toast.error("Image must be 5MB or smaller.");
-      return;
-    }
-    if (imagePreview) URL.revokeObjectURL(imagePreview);
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -256,16 +254,12 @@ export default function RequestComments({
     }
 
     try {
-      let image: string | undefined;
-      if (imageFile) {
-        image = await fileToBase64(imageFile);
-      }
       await dispatch(
         createRequestComment({
           requestId,
           estateId: resolvedEstateId,
           text: trimmed,
-          image,
+          image: imageUpload.fileUrl ?? undefined,
         }),
       ).unwrap();
       setText("");
@@ -322,6 +316,12 @@ export default function RequestComments({
             </button>
           </div>
         ) : null}
+        {imageUpload.error ? (
+          <p className="text-xs text-destructive">{imageUpload.error}</p>
+        ) : null}
+        {imageUpload.isUploading ? (
+          <p className="text-xs text-muted-foreground">Uploading image…</p>
+        ) : null}
 
         <div className="flex items-center gap-2 rounded-full border border-border/70 bg-muted/50 p-1 pl-4">
           <Input
@@ -338,7 +338,9 @@ export default function RequestComments({
             type="file"
             accept={IMAGE_ACCEPT}
             className="hidden"
-            onChange={(e) => handleImagePick(e.target.files?.[0])}
+            onChange={(e) => {
+              void handleImagePick(e.target.files?.[0]);
+            }}
           />
           <Button
             type="button"

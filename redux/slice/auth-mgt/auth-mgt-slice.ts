@@ -251,6 +251,8 @@ const authSlice = createSlice({
 export const { resetAuthState, logoutLocally, hydrateAuthFromStorage, setToken } = authSlice.actions;
 export default authSlice.reducer;
 
+export const selectAuthToken = (state: RootState) => state.auth.token;
+
 export const selectUserRole = (state: RootState) =>
   (state.auth.user?.role ?? '').toString().toLowerCase();
 

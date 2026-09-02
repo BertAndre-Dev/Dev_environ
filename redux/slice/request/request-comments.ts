@@ -21,6 +21,7 @@ export interface CreateRequestCommentPayload {
   requestId: string;
   estateId?: string;
   text: string;
+  /** Public https:// URL from POST /api/v1/uploads. Never send base64 here. */
   image?: string;
 }
 

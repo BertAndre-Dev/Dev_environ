@@ -31,7 +31,7 @@ export default function CompanyAssetPage() {
   const [selectedEstate, setSelectedEstate] =
     useState<EstateSelectOption | null>(null);
   const [estatesLoading, setEstatesLoading] = useState(true);
-  const [activeAssetTab, setActiveAssetTab] = useState("Assets");
+  const [activeAssetTab, setActiveAssetTab] = useState("Asset Categories");
 
   const selectedEstateId = selectedEstate?.value ?? "";
 
@@ -127,9 +127,9 @@ export default function CompanyAssetPage() {
             <h1 className="font-heading text-3xl font-bold">Assets</h1>
             <p className="text-muted-foreground mt-1">
               Manage assets for{" "}
-              <span className="text-[18px] font-bold underline uppercase text-black">
+              {/* <span className="text-[18px] font-bold underline uppercase text-black">
                 {companyName}
-              </span>
+              </span> */}
               .
             </p>
           </div>
@@ -160,10 +160,12 @@ export default function CompanyAssetPage() {
 
         <Card className="p-4">
           <Tab
-            titles={["Assets", "Asset Categories"]}
+            titles={["Asset Categories", "Assets"]}
             onTabChange={(_index, title) => setActiveAssetTab(title)}
             renderContent={(activeTab) => {
               switch (activeTab) {
+                case "Asset Categories":
+                  return <AssetCategoriesTab estateId={selectedEstateId} />;
                 case "Assets":
                   return (
                     <AssetsTab
@@ -171,8 +173,6 @@ export default function CompanyAssetPage() {
                       selectedEstateId={selectedEstateId}
                     />
                   );
-                case "Asset Categories":
-                  return <AssetCategoriesTab estateId={selectedEstateId} />;
                 default:
                   return null;
               }

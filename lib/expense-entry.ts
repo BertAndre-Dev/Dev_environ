@@ -5,7 +5,7 @@ export type ExpenseEntryWriteItem = {
   description: string;
   documentNumber: string;
   amount: number;
-  /** File/image URLs or data URLs. Omitted when empty. */
+  /** Hosted https:// file URLs from POST /api/v1/uploads. Omitted when empty. */
   attachments?: string[];
 };
 

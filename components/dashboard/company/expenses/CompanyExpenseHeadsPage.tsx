@@ -331,9 +331,9 @@ export default function CompanyExpenseHeadsPage() {
             <h1 className="font-heading text-3xl font-bold">Expenses</h1>
             <p className="text-muted-foreground mt-1">
               Manage expense heads across estates under{" "}
-              <span className="text-[18px] font-bold underline uppercase text-black">
+              {/* <span className="text-[18px] font-bold underline uppercase text-black">
                 {companyName}
-              </span>
+              </span> */}
               .
             </p>
           </div>

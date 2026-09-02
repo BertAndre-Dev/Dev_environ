@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,12 @@ export function EditExpenseModal({
   onAttachmentsChange,
   onSubmit,
 }: Readonly<EditExpenseModalProps>) {
+  const [attachmentsBusy, setAttachmentsBusy] = useState(false);
+  const submitDisabled = saving || attachmentsBusy;
+  let submitLabel = "Update";
+  if (saving) submitLabel = "Saving...";
+  else if (attachmentsBusy) submitLabel = "Uploading...";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[80vh] max-w-2xl overflow-y-auto">
@@ -99,6 +105,7 @@ export function EditExpenseModal({
             attachments={attachments}
             disabled={saving}
             onChange={onAttachmentsChange}
+            onBusyChange={setAttachmentsBusy}
           />
 
           <div className="flex items-center justify-between gap-3 pt-2">
@@ -106,12 +113,12 @@ export function EditExpenseModal({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={saving}
+              disabled={submitDisabled}
             >
               Cancel
             </Button>
-            <Button type="button" onClick={onSubmit} disabled={saving}>
-              {saving ? "Saving..." : "Update"}
+            <Button type="button" onClick={onSubmit} disabled={submitDisabled}>
+              {submitLabel}
             </Button>
           </div>
         </div>

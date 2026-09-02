@@ -1,5 +1,13 @@
 /** Extract `message` from API / rejectWithValue payloads without inventing fallbacks. */
 export function getApiErrorMessage(error: unknown): string | undefined {
+  const message = readApiErrorMessage(error);
+  if (message && looksLikeEntityTooLargeHtml(message)) {
+    return ENTITY_TOO_LARGE_MESSAGE;
+  }
+  return message;
+}
+
+function readApiErrorMessage(error: unknown): string | undefined {
   if (error == null) return undefined;
 
   if (typeof error === "string") {
@@ -13,13 +21,13 @@ export function getApiErrorMessage(error: unknown): string | undefined {
   const responseData = (error as { response?: { data?: unknown } }).response
     ?.data;
   if (responseData && responseData !== error) {
-    const fromResponse = getApiErrorMessage(responseData);
+    const fromResponse = readApiErrorMessage(responseData);
     if (fromResponse) return fromResponse;
   }
 
   const nestedData = (error as { data?: unknown }).data;
   if (nestedData && nestedData !== error && typeof nestedData === "object") {
-    const fromData = getApiErrorMessage(nestedData);
+    const fromData = readApiErrorMessage(nestedData);
     if (fromData) return fromData;
   }
 
@@ -36,6 +44,13 @@ export function getApiErrorMessage(error: unknown): string | undefined {
   }
 
   return undefined;
+}
+
+const ENTITY_TOO_LARGE_MESSAGE =
+  "This file is too large for the server. Try a smaller image or a compressed PDF.";
+
+function looksLikeEntityTooLargeHtml(value: string): boolean {
+  return /request entity too large|\b413\b/i.test(value);
 }
 
 export function getApiSuccessMessage(payload: unknown): string | undefined {

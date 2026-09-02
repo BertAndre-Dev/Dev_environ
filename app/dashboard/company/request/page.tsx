@@ -93,9 +93,9 @@ export default function CompanyRequestPage() {
             </div>
             <p className="text-muted-foreground mt-2 leading-snug">
               Review requests or configure the approval workflow for{" "}
-              <span className="font-bold uppercase underline text-foreground">
+              {/* <span className="font-bold uppercase underline text-foreground">
                 {companyName}
-              </span>
+              </span> */}
               .
             </p>
           </div>

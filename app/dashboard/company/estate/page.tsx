@@ -361,9 +361,9 @@ export default function CompanyEstatePage() {
             <h1 className="font-heading text-3xl font-bold">Estate Management</h1>
             <p className="text-muted-foreground mt-1">
               Manage estates for{" "}
-              <span className="text-[18px] font-bold underline uppercase text-black">
+              {/* <span className="text-[18px] font-bold underline uppercase text-black">
                 {companyName}
-              </span>
+              </span> */}
               .
             </p>
           </div>

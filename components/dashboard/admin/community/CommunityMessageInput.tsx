@@ -5,6 +5,8 @@ import { Paperclip, SendHorizontal, X } from "lucide-react";
 import { toast } from "react-toastify";
 import ChatFilePreview from "@/components/chat/ChatFilePreview";
 import { Input } from "@/components/ui/input";
+import { fileToDataUri } from "@/lib/uploads/fileToDataUri";
+import { MAX_FILE_SIZE_BYTES } from "@/lib/uploads/constants";
 import type { GroupMessageType } from "@/types/community-group";
 import type { CommunityReplyTarget } from "@/types/community-chat-ui";
 
@@ -23,15 +25,6 @@ type Props = Readonly<{
   replyingTo?: CommunityReplyTarget | null;
   onCancelReply?: () => void;
 }>;
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Failed to read file."));
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.readAsDataURL(file);
-  });
-}
 
 export function CommunityMessageInput({
   value,
@@ -70,8 +63,12 @@ export function CommunityMessageInput({
   const handleFileChange = useCallback(async () => {
     const file = fileInputRef.current?.files?.[0];
     if (!file) return;
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      toast.error(`${file.name} exceeds 10MB.`);
+      return;
+    }
     try {
-      const base64 = await fileToBase64(file);
+      const base64 = await fileToDataUri(file);
       setFileData(base64);
       setFileName(file.name);
       setFileMimeType(file.type || undefined);

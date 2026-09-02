@@ -7,14 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
-import { fileToBase64 } from "@/lib/file-to-base64";
+import { fileToDataUri } from "@/lib/uploads/fileToDataUri";
+import { GENERAL_ACCEPT_ATTR } from "@/lib/uploads/constants";
+import { validateFile } from "@/lib/uploads/validate";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { toast } from "react-toastify";
 import type { RequestWorkflowField } from "@/redux/slice/admin/request/admin-request";
-
-const MAX_FILE_BYTES = 10 * 1024 * 1024;
-const FILE_ACCEPT =
-  "image/jpeg,image/png,image/webp,image/gif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,application/pdf";
 
 type Props = {
   fields: RequestWorkflowField[];
@@ -70,13 +68,14 @@ export default function WorkflowRequestFields({
     file: File | undefined,
   ) => {
     if (!file) return;
-    if (file.size > MAX_FILE_BYTES) {
-      toast.error(`${file.name} exceeds 10MB.`);
+    const validation = validateFile(file, { kind: "general" });
+    if (!validation.ok) {
+      toast.error(validation.error);
       return;
     }
     onEncodingChange?.(true);
     try {
-      const dataUrl = await fileToBase64(file);
+      const dataUrl = await fileToDataUri(file);
       onValueChange(field.key, dataUrl);
       onFileNameChange(field.key, file.name);
     } catch (err: unknown) {
@@ -161,7 +160,7 @@ export default function WorkflowRequestFields({
                 }}
                 id={id}
                 type="file"
-                accept={FILE_ACCEPT}
+                accept={GENERAL_ACCEPT_ATTR}
                 className="hidden"
                 disabled={disabled || encoding}
                 onChange={(e) => {

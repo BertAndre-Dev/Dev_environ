@@ -4,6 +4,10 @@ const API_ORIGIN = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "
 
 const nextConfig: NextConfig = {
   reactStrictMode: false,
+  experimental: {
+    // Rewrites buffer the body; default 10MB is tight once multipart overhead is added.
+    proxyClientMaxBodySize: "12mb",
+  },
   images: {
     remotePatterns: [
       {

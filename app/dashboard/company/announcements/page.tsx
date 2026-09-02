@@ -233,9 +233,9 @@ export default function CompanyAnnouncementsPage() {
             <h1 className="font-heading text-3xl font-bold">Announcements</h1>
             <p className="mt-1 text-muted-foreground">
               Updates and notices for estates under{" "}
-              <span className="text-[18px] font-bold uppercase text-black underline">
+              {/* <span className="text-[18px] font-bold uppercase text-black underline">
                 {companyName}
-              </span>
+              </span> */}
               {estateId ? (
                 <>
                   {" "}

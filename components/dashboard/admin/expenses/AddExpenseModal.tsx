@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useCallback, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +61,20 @@ export function AddExpenseModal({
   date = "",
   onDateChange,
 }: Readonly<AddExpenseModalProps>) {
+  const [busyRows, setBusyRows] = useState<Record<string, boolean>>({});
+  const attachmentsBusy = Object.values(busyRows).some(Boolean);
+  const submitDisabled = saving || attachmentsBusy;
+  let submitLabel = "Add Expense";
+  if (saving) submitLabel = "Saving...";
+  else if (attachmentsBusy) submitLabel = "Uploading...";
+
+  const onPickerBusyChange = useCallback((rowId: string, busy: boolean) => {
+    setBusyRows((prev) => {
+      if (prev[rowId] === busy) return prev;
+      return { ...prev, [rowId]: busy };
+    });
+  }, []);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[80vh] min-h-[30vh] max-w-2xl overflow-y-auto">
@@ -166,6 +180,7 @@ export function AddExpenseModal({
                   attachments={row.attachments}
                   disabled={saving}
                   onChange={(next) => onAttachmentsChange(row.id, next)}
+                  onBusyChange={(busy) => onPickerBusyChange(row.id, busy)}
                 />
 
                 {drafts.length > 1 && (
@@ -189,12 +204,12 @@ export function AddExpenseModal({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={saving}
+              disabled={submitDisabled}
             >
               Cancel
             </Button>
-            <Button type="button" onClick={onSubmit} disabled={saving}>
-              {saving ? "Saving..." : "Add Expense"}
+            <Button type="button" onClick={onSubmit} disabled={submitDisabled}>
+              {submitLabel}
             </Button>
           </div>
         </div>

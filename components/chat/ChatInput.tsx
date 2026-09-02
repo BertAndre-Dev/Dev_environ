@@ -11,18 +11,12 @@ import ChatFilePreview from "@/components/chat/ChatFilePreview";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { sendMessage } from "@/redux/slice/chat/chat-thunks";
 
+import { fileToDataUri } from "@/lib/uploads/fileToDataUri";
+import { MAX_FILE_SIZE_BYTES } from "@/lib/uploads/constants";
+
 type Props = {
   chatId: string;
 };
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Failed to read file."));
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.readAsDataURL(file);
-  });
-}
 
 export default function ChatInput({ chatId }: Readonly<Props>) {
   const dispatch = useDispatch<AppDispatch>();
@@ -58,11 +52,20 @@ export default function ChatInput({ chatId }: Readonly<Props>) {
   const handleFileChange = useCallback(async () => {
     const file = fileInputRef.current?.files?.[0];
     if (!file) return;
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      toast.error(`${file.name} exceeds 10MB.`);
+      return;
+    }
     try {
-      const base64 = await fileToBase64(file);
+      const base64 = await fileToDataUri(file);
+      const mimeFromUri = /^data:([^;]+);/i.exec(base64)?.[1];
       setFileData(base64);
-      setFileName(file.name);
-      setFileMimeType(file.type || undefined);
+      setFileName(
+        mimeFromUri === "image/jpeg" && !/\.jpe?g$/i.test(file.name)
+          ? `${file.name.replace(/\.[^.]+$/, "")}.jpg`
+          : file.name,
+      );
+      setFileMimeType(mimeFromUri ?? (file.type || undefined));
     } catch (err: unknown) {
       const msg =
         (err as { message?: string })?.message ?? "Failed to attach file.";

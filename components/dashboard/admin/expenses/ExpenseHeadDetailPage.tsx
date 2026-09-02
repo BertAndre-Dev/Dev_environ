@@ -258,7 +258,7 @@ export default function ExpenseHeadDetailPage() {
       description: d.description.trim(),
       documentNumber: d.documentNumber.trim(),
       amount: Number(d.amount),
-      attachments: d.attachments.map((file) => file.dataUrl),
+      attachments: d.attachments.map((file) => file.url),
     }));
 
     for (const [idx, e] of entriesPayload.entries()) {
@@ -332,7 +332,7 @@ export default function ExpenseHeadDetailPage() {
           description: formDescription.trim(),
           documentNumber: formDocumentNumber.trim(),
           amount,
-          attachments: formAttachments.map((file) => file.dataUrl),
+          attachments: formAttachments.map((file) => file.url),
         }),
       ).unwrap();
       toast.success("Expense entry updated.");

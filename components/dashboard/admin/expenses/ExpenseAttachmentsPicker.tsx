@@ -1,22 +1,26 @@
 "use client";
 
-import React, { useRef, useState } from "react";
-import { Paperclip, X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
 
-import { Button } from "@/components/ui/button";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { MultiFileUploadInput } from "@/components/upload/MultiFileUploadInput";
 import { getAttachmentFilename } from "@/lib/download-attachment";
-import { fileToBase64 } from "@/lib/file-to-base64";
+import { getApiErrorMessage } from "@/lib/api-error";
+import { GENERAL_ACCEPT_ATTR } from "@/lib/uploads/constants";
+import { uploadFile } from "@/lib/uploads/uploadFile";
+import { validateFile } from "@/lib/uploads/validate";
+import {
+  type MultiFileUploadItem,
+} from "@/hooks/useMultiFileUpload";
+import { selectAuthToken } from "@/redux/slice/auth-mgt/auth-mgt-slice";
+import type { RootState } from "@/redux/store";
 
-const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_ATTACHMENTS = 5;
-const FILE_ACCEPT =
-  "image/jpeg,image/png,image/webp,image/gif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,application/pdf";
 
 export type ExpenseDraftAttachment = {
   name: string;
-  dataUrl: string;
+  url: string;
 };
 
 export function toDraftAttachments(
@@ -25,107 +29,147 @@ export function toDraftAttachments(
   return (urls ?? [])
     .map((url) => url.trim())
     .filter(Boolean)
-    .map((dataUrl, index) => ({
-      name: getAttachmentFilename(dataUrl, index),
-      dataUrl,
+    .map((url, index) => ({
+      name: getAttachmentFilename(url, index),
+      url,
     }));
+}
+
+let uploadIdSeq = 0;
+
+function newId(): string {
+  uploadIdSeq += 1;
+  return `upload-${Date.now()}-${uploadIdSeq}`;
 }
 
 export function ExpenseAttachmentsPicker({
   attachments,
   disabled,
   onChange,
+  onBusyChange,
 }: Readonly<{
   attachments: ExpenseDraftAttachment[];
   disabled: boolean;
   onChange: (next: ExpenseDraftAttachment[]) => void;
+  onBusyChange?: (busy: boolean) => void;
 }>) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [reading, setReading] = useState(false);
+  const token = useSelector((state: RootState) => selectAuthToken(state));
+  const [pending, setPending] = useState<MultiFileUploadItem[]>([]);
+  const isUploading = pending.some((item) => item.status === "uploading");
 
-  const handleFilesSelected = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const files = Array.from(e.target.files ?? []);
-    if (!files.length) return;
+  useEffect(() => {
+    onBusyChange?.(isUploading);
+  }, [isUploading, onBusyChange]);
 
-    const remaining = MAX_ATTACHMENTS - attachments.length;
-    if (remaining <= 0) {
-      toast.error(`You can attach up to ${MAX_ATTACHMENTS} files per entry.`);
-      e.target.value = "";
-      return;
-    }
+  const items: MultiFileUploadItem[] = [
+    ...attachments.map((file, index) => ({
+      id: `done-${index}-${file.url}`,
+      name: file.name,
+      url: file.url,
+      status: "succeeded" as const,
+      progress: 100,
+      error: null,
+    })),
+    ...pending,
+  ];
 
-    const selected = files.slice(0, remaining);
-    setReading(true);
-    try {
-      const next: ExpenseDraftAttachment[] = [];
+  const addFiles = useCallback(
+    async (files: File[]) => {
+      if (!files.length) return [];
+      const remaining = MAX_ATTACHMENTS - attachments.length - pending.filter((item) => item.status !== "failed").length;
+      if (remaining <= 0) {
+        toast.error(`You can attach up to ${MAX_ATTACHMENTS} files per entry.`);
+        return [];
+      }
+      if (!token) {
+        toast.error("You must be signed in to upload a file.");
+        return [];
+      }
+
+      const selected = files.slice(0, remaining);
+      const uploaded: string[] = [];
+      let nextAttachments = [...attachments];
+
       for (const file of selected) {
-        if (file.size > MAX_FILE_BYTES) {
-          toast.error(`${file.name} exceeds 10MB.`);
+        const id = newId();
+        const validation = validateFile(file, { kind: "general" });
+        if (!validation.ok) {
+          toast.error(validation.error);
           continue;
         }
-        const dataUrl = await fileToBase64(file);
-        next.push({ name: file.name, dataUrl });
+
+        setPending((prev) => [
+          ...prev,
+          {
+            id,
+            name: file.name,
+            url: null,
+            status: "uploading",
+            progress: 0,
+            error: null,
+          },
+        ]);
+
+        try {
+          const result = await uploadFile(file, token, "general", {
+            onProgress: (percent) => {
+              setPending((prev) =>
+                prev.map((item) =>
+                  item.id === id ? { ...item, progress: percent } : item,
+                ),
+              );
+            },
+          });
+          setPending((prev) => prev.filter((item) => item.id !== id));
+          nextAttachments = [
+            ...nextAttachments,
+            { name: file.name, url: result.file_url },
+          ];
+          onChange(nextAttachments);
+          uploaded.push(result.file_url);
+        } catch (err: unknown) {
+          const message =
+            getApiErrorMessage(err) || "Failed to upload file.";
+          setPending((prev) =>
+            prev.map((item) =>
+              item.id === id
+                ? { ...item, status: "failed", error: message }
+                : item,
+            ),
+          );
+          toast.error(message);
+        }
       }
-      if (next.length) onChange([...attachments, ...next]);
-    } catch (err: unknown) {
-      const message = getApiErrorMessage(err) || "Failed to read file.";
-      toast.error(message);
-    } finally {
-      setReading(false);
-      e.target.value = "";
+
+      return uploaded;
+    },
+    [attachments, pending, token, onChange],
+  );
+
+  const remove = (id: string) => {
+    if (id.startsWith("done-")) {
+      const index = attachments.findIndex(
+        (file, i) => `done-${i}-${file.url}` === id,
+      );
+      if (index >= 0) {
+        onChange(attachments.filter((_, i) => i !== index));
+      }
+      return;
     }
+    setPending((prev) => prev.filter((item) => item.id !== id));
   };
 
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium">Attachments</p>
-      {attachments.length > 0 ? (
-        <ul className="space-y-1.5">
-          {attachments.map((file, index) => (
-            <li
-              key={`${file.name}-${index}`}
-              className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
-            >
-              <span className="flex min-w-0 items-center gap-2 truncate">
-                <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <span className="truncate">{file.name}</span>
-              </span>
-              <button
-                type="button"
-                onClick={() =>
-                  onChange(attachments.filter((_, i) => i !== index))
-                }
-                disabled={disabled}
-                className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted"
-                aria-label={`Remove ${file.name}`}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      <input
-        ref={inputRef}
-        type="file"
-        accept={FILE_ACCEPT}
-        multiple
-        className="hidden"
-        onChange={handleFilesSelected}
-        disabled={disabled || attachments.length >= MAX_ATTACHMENTS}
-      />
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={disabled || attachments.length >= MAX_ATTACHMENTS}
-        onClick={() => inputRef.current?.click()}
-      >
-        <Paperclip className="mr-2 h-4 w-4" />
-        {reading ? "Reading files..." : "Add files"}
-      </Button>
-    </div>
+    <MultiFileUploadInput
+      items={items}
+      onAddFiles={addFiles}
+      onRemove={remove}
+      acceptAttr={GENERAL_ACCEPT_ATTR}
+      maxFiles={MAX_ATTACHMENTS}
+      isUploading={isUploading}
+      disabled={disabled}
+      label="Attachments"
+      hint={`Up to ${MAX_ATTACHMENTS} files, 10MB each. Images, PDF, DOC, DOCX, XLS, XLSX.`}
+    />
   );
 }

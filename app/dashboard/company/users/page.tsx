@@ -537,9 +537,9 @@ export default function CompanyUsersPage() {
             </h1>
             <p className="text-muted-foreground mt-1">
               Manage users for{" "}
-              <span className="text-[18px] font-bold underline uppercase text-black">
+              {/* <span className="text-[18px] font-bold underline uppercase text-black">
                 {companyName}
-              </span>
+              </span> */}
               .
             </p>
           </div>

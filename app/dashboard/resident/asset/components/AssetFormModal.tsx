@@ -84,7 +84,11 @@ export default function AssetFormModal({
     Boolean(form.datePurchased);
 
   return (
-    <Modal visible={visible} onClose={onClose}>
+    <Modal
+      visible={visible}
+      onClose={onClose}
+      contentClassName="w-full max-w-lg md:max-w-2xl lg:max-w-3xl max-h-[90vh]"
+    >
       <div className="space-y-4">
         <div>
           <h2 className="text-xl font-semibold text-gray-900">
@@ -96,8 +100,8 @@ export default function AssetFormModal({
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-3">
-          <div className="space-y-2 sm:col-span-2">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="space-y-2 md:col-span-2">
             <label htmlFor="resident-asset-name" className="text-sm font-medium">
               Name
             </label>
@@ -174,7 +178,7 @@ export default function AssetFormModal({
             />
           </div>
 
-          <div className="space-y-2 sm:col-span-2">
+          <div className="space-y-2 md:col-span-2">
             <label htmlFor="resident-asset-date" className="text-sm font-medium">
               Date purchased
             </label>
@@ -191,7 +195,7 @@ export default function AssetFormModal({
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={onClose} disabled={loading}>
             Cancel
           </Button>

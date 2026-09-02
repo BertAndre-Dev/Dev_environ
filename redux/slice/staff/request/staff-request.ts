@@ -65,8 +65,10 @@ export interface CreateStaffRequestPayload {
   description?: string;
   category: string;
   estateId: string;
+  /** Hosted https:// URLs from POST /api/v1/uploads. Never send base64 here. */
   attachments?: string[];
   workflowId?: string;
+  /** For file/image workflow fields, `value` is a base64 data URI (or a hosted URL). */
   fieldValues?: RequestFieldValue[];
 }
 

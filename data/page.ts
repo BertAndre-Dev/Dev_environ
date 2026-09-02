@@ -379,16 +379,21 @@ export const companyNav = [
     moduleKey: "estate",
   },
   {
-    label: "Asset Management",
-    icon: Building2,
-    path: "/dashboard/company/asset",
+    label: "Asset",
+    icon: Package,
     moduleKey: "asset",
-  },
-  {
-    label: "Asset Maintenance",
-    icon: Wrench,
-    path: "/dashboard/company/asset-mgt",
-    moduleKey: "asset-maintenance",
+    children: [
+      {
+        label: "Asset Management",
+        path: "/dashboard/company/asset",
+        moduleKey: "asset",
+      },
+      {
+        label: "Asset Maintenance",
+        path: "/dashboard/company/asset-mgt",
+        moduleKey: "asset-maintenance",
+      },
+    ],
   },
   // {
   //   label: "Expenses",

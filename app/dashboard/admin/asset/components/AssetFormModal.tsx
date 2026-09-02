@@ -133,7 +133,11 @@ export default function AssetFormModal({
   };
 
   return (
-    <Modal visible={visible} onClose={onClose}>
+    <Modal
+      visible={visible}
+      onClose={onClose}
+      contentClassName="w-full max-w-lg md:max-w-2xl lg:max-w-3xl max-h-[90vh]"
+    >
       <div className="pr-8 space-y-5">
         <div className="flex flex-col items-start gap-2">
           <h2 className="text-xl font-semibold text-gray-900">Add Asset</h2>
@@ -159,7 +163,7 @@ export default function AssetFormModal({
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
           <div className="space-y-2">
             <label
               htmlFor="add-asset-amount"
@@ -256,7 +260,7 @@ export default function AssetFormModal({
           {rows.map((row, idx) => (
             <div
               key={row.id}
-              className="grid grid-cols-1 md:grid-cols-3 items-center gap-2"
+              className="grid grid-cols-1 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_2.25rem_minmax(0,1fr)]"
             >
               <Input
                 value={row.name}

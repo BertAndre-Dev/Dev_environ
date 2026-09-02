@@ -165,7 +165,7 @@ export function NotificationsInbox() {
           <p className="mt-1 text-sm text-muted-foreground">
             {unreadCount > 0
               ? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}`
-              : "You are all caught up"}
+              : "You have no notifications"}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">

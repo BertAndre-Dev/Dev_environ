@@ -8,7 +8,8 @@ type PlanTier = Readonly<{
   key: string;
   name: string;
   rate: string;
-  modules: readonly string[];
+  featuresHeading: string;
+  features: readonly string[];
   featured?: boolean;
 }>;
 
@@ -23,44 +24,42 @@ const PLANS: readonly PlanTier[] = [
   {
     key: "standard",
     name: "Standard",
-    rate: "Vending 2% – Bills 3% – 16 Modules",
-    modules: [
-      "Bills & service charges",
-      "Metering & vending",
-      "Rent management",
-      "Marketplace",
-      "Visitor management",
-      "Complaints",
-      "Announcements",
-      "Wallet, others.",
+    rate: "Vending 2% - Bills 3%",
+    featuresHeading: "Features",
+    features: [
+      "Bills & Payments",
+      "Vending & Metering",
+      "Visitor Management",
+      "Community Engagement",
+      "Unit Management",
+      "Estate Administration",
     ],
   },
   {
     key: "classic",
     name: "Classic",
-    rate: "Vending 3.25% – Bills 2.85% – 21 Modules",
+    rate: "Vending 3.25% - Bills 2.85%",
     featured: true,
-    modules: [
-      "All in standard package",
-      "Expense tracking",
-      "Revenue tracking",
-      "Financial reporting",
-      "Bill interest",
-      "Operations reporting",
+    featuresHeading: "Features (Everything in Standard)",
+    features: [
+      "Expense Tracking",
+      "Revenue Insights",
+      "Financial Reporting",
+      "Bill Interest",
+      "Operations Reporting & Dashboard",
     ],
   },
   {
     key: "premium",
     name: "Premium",
-    rate: "Vending 4.25% – Bills 2.65% – 28 Modules",
-    modules: [
-      "All in classic package",
-      "Asset maintenance",
-      "Estate administration",
-      "Requests / workflows",
-      "Rate configuration",
-      "Bill interest",
-      "Support",
+    rate: "Vending 4.25% - Bills 2.65%",
+    featuresHeading: "Features (Everything in Classic)",
+    features: [
+      "Asset Management & Maintenance",
+      "Workflow & Request Management",
+      "Custom Pricing",
+      "Staff Management & Designation",
+      "Company Administration",
     ],
   },
 ];
@@ -103,7 +102,7 @@ function PlanCard({ plan }: { plan: PlanTier }) {
       className={[
         "relative flex h-full flex-col rounded-3xl p-6 sm:p-7 lg:p-8 will-change-transform",
         featured
-          ? "bg-[#0150AC] text-white shadow-[0_24px_60px_rgba(1,80,172,0.35)] lg:z-10 lg:-mt-16"
+          ? "bg-[#0150AC] text-white shadow-[0_24px_60px_rgba(1,80,172,0.35)]"
           : "bg-white text-black shadow-[0_1px_3px_rgba(16,24,40,0.06),0_12px_32px_rgba(16,24,40,0.06)] ring-1 ring-[#EAECF0]",
       ].join(" ")}
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
@@ -150,11 +149,11 @@ function PlanCard({ plan }: { plan: PlanTier }) {
           featured ? "text-white/70" : "text-[#6B7280]",
         ].join(" ")}
       >
-        Modules
+        {plan.featuresHeading}
       </p>
-      <ul className="mt-3 flex flex-col gap-3">
-        {plan.modules.map((module) => (
-          <li key={module} className="flex items-start gap-3">
+      <ul className="mt-3 flex flex-1 flex-col gap-3">
+        {plan.features.map((feature) => (
+          <li key={feature} className="flex items-start gap-3">
             <ModuleCheck featured={featured} />
             <span
               className={[
@@ -162,7 +161,7 @@ function PlanCard({ plan }: { plan: PlanTier }) {
                 featured ? "text-white" : "text-[#374151]",
               ].join(" ")}
             >
-              {module}
+              {feature}
             </span>
           </li>
         ))}
@@ -193,11 +192,11 @@ export default function PlansSection() {
             Choose Your Subscription Plan
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-base leading-relaxed text-[#6B7280] sm:text-lg">
-            Pick the plan that best fits your estate&apos;s size
+            Pick the plan that best fits your estate&apos;s size.
           </p>
         </div>
 
-        <div className="mx-auto mt-12 grid max-w-md gap-6 sm:mt-14 sm:max-w-none lg:mt-24 lg:grid-cols-3 lg:items-start lg:gap-8">
+        <div className="mx-auto mt-12 grid max-w-md gap-6 sm:mt-14 sm:max-w-none lg:mt-14 lg:grid-cols-3 lg:items-stretch lg:gap-8">
           {PLANS.map((plan) => (
             <PlanCard key={plan.key} plan={plan} />
           ))}

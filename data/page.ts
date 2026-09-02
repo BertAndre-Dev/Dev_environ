@@ -415,6 +415,12 @@ export const companyNav = [
     moduleKey: "requests",
   },
   {
+    label: "Announcements",
+    icon: Bell,
+    path: "/dashboard/company/announcements",
+    moduleKey: "announcements",
+  },
+  {
     label: "Report",
     icon: BarChart,
     path: "/dashboard/company/reports",

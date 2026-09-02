@@ -6,8 +6,8 @@ import OperationsReportingFillReportPanel from "./OperationsReportingFillReportP
 type Props = {
   estateId: string;
   fillReportTabNonce: number;
-  onEditType: (type: OperationsReportingType) => void;
-  onDeleteType: (type: OperationsReportingType) => void;
+  onEditType?: (type: OperationsReportingType) => void;
+  onDeleteType?: (type: OperationsReportingType) => void;
 };
 
 export default function OperationsReportingReportsTab({

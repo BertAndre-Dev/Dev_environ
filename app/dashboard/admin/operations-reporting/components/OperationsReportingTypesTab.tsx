@@ -19,6 +19,15 @@ import {
   type OperationsReportingType,
 } from "@/redux/slice/admin/operations-reporting/admin-operations-reporting";
 import { selectAdminOperationsReporting } from "@/redux/slice/admin/operations-reporting/admin-operations-reporting-slice";
+import {
+  createCompanyOperationsReportingField,
+  deleteCompanyOperationsReportingField,
+  fetchCompanyOperationsReportingFields,
+  fetchCompanyOperationsReportingTypes,
+  updateCompanyOperationsReportingField,
+  type CompanyOperationsReportingField,
+} from "@/redux/slice/company/operations-reporting/company-operations-reporting";
+import { selectCompanyOperationsReporting } from "@/redux/slice/company/operations-reporting/company-operations-reporting-slice";
 import Pagination from "@/components/pagination/page";
 import {
   OPERATIONS_REPORT_TYPES_PAGE_SIZE,
@@ -33,14 +42,18 @@ function getId(v: { id?: string; _id?: string } | undefined) {
   return v?.id || v?._id || "";
 }
 
+type ReportField = OperationsReportingField | CompanyOperationsReportingField;
+
 type Props = {
   estateId: string;
+  variant?: "admin" | "company";
   onEditType: (type: OperationsReportingType) => void;
   onDeleteType: (type: OperationsReportingType) => void;
 };
 
 export default function OperationsReportingTypesTab({
   estateId,
+  variant = "admin",
   onEditType,
   onDeleteType,
 }: Readonly<Props>) {
@@ -48,7 +61,7 @@ export default function OperationsReportingTypesTab({
   const [typesPage, setTypesPage] = useState(1);
   const [expandedTypeId, setExpandedTypeId] = useState("");
   const [fieldsByType, setFieldsByType] = useState<
-    Record<string, OperationsReportingField[]>
+    Record<string, ReportField[]>
   >({});
   const [fieldsLoadingByType, setFieldsLoadingByType] = useState<
     Record<string, boolean>
@@ -56,13 +69,15 @@ export default function OperationsReportingTypesTab({
   const [configureModalOpen, setConfigureModalOpen] = useState(false);
   const [configureTypeId, setConfigureTypeId] = useState("");
   const [fieldModalOpen, setFieldModalOpen] = useState(false);
-  const [editingField, setEditingField] = useState<OperationsReportingField | null>(
+  const [editingField, setEditingField] = useState<ReportField | null>(
     null,
   );
-  const [fieldToDelete, setFieldToDelete] = useState<OperationsReportingField | null>(
+  const [fieldToDelete, setFieldToDelete] = useState<ReportField | null>(
     null,
   );
 
+  const adminState = useSelector(selectAdminOperationsReporting);
+  const companyState = useSelector(selectCompanyOperationsReporting);
   const {
     types,
     typesPagination,
@@ -70,22 +85,28 @@ export default function OperationsReportingTypesTab({
     createFieldStatus,
     updateFieldStatus,
     deleteFieldStatus,
-  } = useSelector(selectAdminOperationsReporting);
+  } = variant === "company" ? companyState : adminState;
 
   const configureType = types.find((t) => getId(t) === configureTypeId) ?? null;
 
   const loadTypes = useCallback(
     async (page = typesPage) => {
       if (!estateId) return;
-      await dispatch(
-        getOperationsReportingTypes({
-          estateId,
-          page,
-          limit: OPERATIONS_REPORT_TYPES_PAGE_SIZE,
-        }),
-      ).unwrap();
+      const action =
+        variant === "company"
+          ? fetchCompanyOperationsReportingTypes({
+              estateId,
+              page,
+              limit: OPERATIONS_REPORT_TYPES_PAGE_SIZE,
+            })
+          : getOperationsReportingTypes({
+              estateId,
+              page,
+              limit: OPERATIONS_REPORT_TYPES_PAGE_SIZE,
+            });
+      await dispatch(action).unwrap();
     },
-    [dispatch, estateId, typesPage],
+    [dispatch, estateId, typesPage, variant],
   );
 
   useEffect(() => {
@@ -105,9 +126,11 @@ export default function OperationsReportingTypesTab({
       if (!typeId) return;
       setFieldsLoadingByType((prev) => ({ ...prev, [typeId]: true }));
       try {
-        const res = await dispatch(
-          getOperationsReportingFields({ typeId, page: 1, limit: 50 }),
-        ).unwrap();
+        const action =
+          variant === "company"
+            ? fetchCompanyOperationsReportingFields({ typeId, page: 1, limit: 50 })
+            : getOperationsReportingFields({ typeId, page: 1, limit: 50 });
+        const res = await dispatch(action).unwrap();
         setFieldsByType((prev) => ({
           ...prev,
           [typeId]: res?.data ?? [],
@@ -120,7 +143,7 @@ export default function OperationsReportingTypesTab({
         setFieldsLoadingByType((prev) => ({ ...prev, [typeId]: false }));
       }
     },
-    [dispatch],
+    [dispatch, variant],
   );
 
   useEffect(() => {
@@ -139,14 +162,21 @@ export default function OperationsReportingTypesTab({
     if (!estateId || !configureTypeId) return;
     try {
       for (const field of fields) {
-        await dispatch(
-          createOperationsReportingField({
-            estateId,
-            typeId: configureTypeId,
-            label: field.label,
-            key: field.key,
-          }),
-        ).unwrap();
+        const action =
+          variant === "company"
+            ? createCompanyOperationsReportingField({
+                estateId,
+                typeId: configureTypeId,
+                label: field.label,
+                key: field.key,
+              })
+            : createOperationsReportingField({
+                estateId,
+                typeId: configureTypeId,
+                label: field.label,
+                key: field.key,
+              });
+        await dispatch(action).unwrap();
       }
       toast.success(
         fields.length === 1
@@ -174,13 +204,19 @@ export default function OperationsReportingTypesTab({
       if (editingField) {
         const id = getId(editingField);
         if (!id) return;
-        await dispatch(
-          updateOperationsReportingField({
-            fieldId: id,
-            label: trimmedLabel,
-            key,
-          }),
-        ).unwrap();
+        const action =
+          variant === "company"
+            ? updateCompanyOperationsReportingField({
+                fieldId: id,
+                label: trimmedLabel,
+                key,
+              })
+            : updateOperationsReportingField({
+                fieldId: id,
+                label: trimmedLabel,
+                key,
+              });
+        await dispatch(action).unwrap();
         toast.success("Report field updated.");
       }
       setFieldModalOpen(false);
@@ -335,7 +371,11 @@ export default function OperationsReportingTypesTab({
           const id = getId(fieldToDelete ?? undefined);
           const typeId = expandedTypeId || configureTypeId;
           if (!id || !typeId) return;
-          await dispatch(deleteOperationsReportingField(id)).unwrap();
+          const action =
+            variant === "company"
+              ? deleteCompanyOperationsReportingField(id)
+              : deleteOperationsReportingField(id);
+          await dispatch(action).unwrap();
           toast.success("Report field deleted.");
           setFieldToDelete(null);
           await loadFieldsForType(typeId);

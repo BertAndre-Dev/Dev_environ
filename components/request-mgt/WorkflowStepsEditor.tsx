@@ -34,6 +34,28 @@ interface WorkflowStepsEditorProps {
   readonly disabled?: boolean;
 }
 
+function AddStepButton({
+  disabled,
+  onClick,
+}: Readonly<{
+  disabled?: boolean;
+  onClick: () => void;
+}>) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={onClick}
+      disabled={disabled}
+      className="w-full sm:w-auto active:scale-[0.97] transition-transform duration-100 ease-out"
+    >
+      <Plus className="h-4 w-4 mr-1.5" />
+      Add step
+    </Button>
+  );
+}
+
 function SettingToggle({
   checked,
   disabled,
@@ -195,32 +217,24 @@ export default function WorkflowStepsEditor({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-foreground">
-            Approval steps
-          </h3>
-          <p className="mt-0.5 text-sm text-muted-foreground leading-snug">
-            Add ordered approval steps, then pick users for each step.
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={addStep}
-          disabled={disabled}
-          className="shrink-0 active:scale-[0.97] transition-transform duration-100 ease-out"
-        >
-          <Plus className="h-4 w-4 mr-1.5" />
-          Add step
-        </Button>
+      <div>
+        <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-foreground">
+          Approval steps
+        </h3>
+        <p className="mt-0.5 text-sm text-muted-foreground leading-snug">
+          Add ordered approval steps, then pick users for each step.
+        </p>
       </div>
 
       {steps.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-black/10 bg-[#F7F8FA] px-4 py-8 text-center text-sm text-muted-foreground">
-          No steps yet. Click Add step to configure an approval step.
-        </p>
+        <div className="rounded-2xl border border-dashed border-black/10 bg-[#F7F8FA] px-4 py-8 text-center">
+          <p className="text-sm text-muted-foreground">
+            No steps yet. Add an approval step to get started.
+          </p>
+          <div className="mt-4 flex justify-center">
+            <AddStepButton disabled={disabled} onClick={addStep} />
+          </div>
+        </div>
       ) : null}
 
       <ol className="space-y-3">
@@ -562,6 +576,10 @@ export default function WorkflowStepsEditor({
                   </div>
                 </div>
               )}
+
+              {index === steps.length - 1 ? (
+                <AddStepButton disabled={disabled} onClick={addStep} />
+              ) : null}
             </li>
           );
         })}

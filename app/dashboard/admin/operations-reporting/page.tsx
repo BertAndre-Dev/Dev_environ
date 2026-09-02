@@ -54,7 +54,6 @@ export default function AdminOperationsReportingPage() {
   const [typeToDelete, setTypeToDelete] =
     useState<OperationsReportingType | null>(null);
   const [listRefreshKey, setListRefreshKey] = useState(0);
-  const [fillReportTabNonce, setFillReportTabNonce] = useState(0);
 
   const {
     createTypeStatus,
@@ -272,8 +271,8 @@ export default function AdminOperationsReportingPage() {
           </p>
         ) : (
           <>
-            <div className="space-y-3 border-b border-border pb-4">
-              {hasCompanyId ? null : (
+            {hasCompanyId ? null : (
+              <div className="space-y-3 border-b border-border pb-4">
                 <div className="flex space-x-4">
                   {TABS.map((title) => (
                     <button
@@ -290,20 +289,8 @@ export default function AdminOperationsReportingPage() {
                     </button>
                   ))}
                 </div>
-              )}
-
-              {hasCompanyId || activeTab === "Fill Report" ? (
-                <div className="flex justify-end">
-                  <Button
-                    onClick={() => setFillReportTabNonce((n) => n + 1)}
-                    className="shrink-0 text-white"
-                    style={{ backgroundColor: "#0150AC" }}
-                  >
-                    Fill report
-                  </Button>
-                </div>
-              ) : null}
-            </div>
+              </div>
+            )}
 
             <div className="mt-2">
               {!hasCompanyId && activeTab === "Configure Report" ? (
@@ -317,7 +304,6 @@ export default function AdminOperationsReportingPage() {
                 <OperationsReportingReportsTab
                   key={`fill-${listRefreshKey}`}
                   estateId={estateId}
-                  fillReportTabNonce={fillReportTabNonce}
                   onEditType={hasCompanyId ? undefined : handleEditType}
                   onDeleteType={hasCompanyId ? undefined : handleDeleteType}
                 />

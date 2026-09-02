@@ -105,13 +105,7 @@ export default function OperationsReportingConfigureFieldsModal({
         ) : null}
 
         <div className="mt-4 min-h-0 flex-1 overflow-y-auto">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-sm font-semibold text-foreground">Add fields</p>
-            <Button type="button" variant="outline" size="sm" onClick={addRow}>
-              <Plus className="mr-1 h-4 w-4" />
-              Add field
-            </Button>
-          </div>
+          <p className="mb-2 text-sm font-semibold text-foreground">Add fields</p>
 
           <div className="space-y-3">
             {rows.map((row, index) => (
@@ -127,7 +121,7 @@ export default function OperationsReportingConfigureFieldsModal({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-destructive"
+                    className="h-8 w-8 text-destructive active:scale-[0.97] transition-transform duration-100 ease-out"
                     onClick={() => removeRow(row.id)}
                     disabled={rows.length <= 1}
                     aria-label={`Remove field ${index + 1}`}
@@ -142,6 +136,17 @@ export default function OperationsReportingConfigureFieldsModal({
                 />
               </div>
             ))}
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addRow}
+              className="w-full sm:w-auto active:scale-[0.97] transition-transform duration-100 ease-out"
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              Add field
+            </Button>
           </div>
         </div>
 

@@ -5,14 +5,12 @@ import OperationsReportingFillReportPanel from "./OperationsReportingFillReportP
 
 type Props = {
   estateId: string;
-  fillReportTabNonce: number;
   onEditType: (type: OperationsReportingType) => void;
   onDeleteType: (type: OperationsReportingType) => void;
 };
 
 export default function OperationsReportingReportsTab({
   estateId,
-  fillReportTabNonce,
   onEditType,
   onDeleteType,
 }: Readonly<Props>) {
@@ -20,7 +18,6 @@ export default function OperationsReportingReportsTab({
     <OperationsReportingFillReportPanel
       estateId={estateId}
       variant="admin"
-      fillReportTabNonce={fillReportTabNonce}
       onEditType={onEditType}
       onDeleteType={onDeleteType}
     />

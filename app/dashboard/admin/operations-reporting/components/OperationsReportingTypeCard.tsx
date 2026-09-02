@@ -13,6 +13,7 @@ type Props = {
   createdAt?: string;
   expanded: boolean;
   onToggle: () => void;
+  onFill?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
   deleteDisabled?: boolean;
@@ -26,6 +27,7 @@ export default function OperationsReportingTypeCard({
   createdAt,
   expanded,
   onToggle,
+  onFill,
   onEdit,
   onDelete,
   deleteDisabled = false,
@@ -73,63 +75,79 @@ export default function OperationsReportingTypeCard({
           </button>
         )}
 
-        <div className="flex shrink-0 items-center gap-1">
-          {expanded ? (
+        <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
+          {onFill ? (
             <Button
               type="button"
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-full"
-              onClick={onToggle}
-              aria-expanded="true"
-              aria-label="Collapse"
-            >
-              <ChevronUp className="h-5 w-5 text-muted-foreground" />
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-full"
-              onClick={onToggle}
-              aria-expanded="false"
-              aria-label="Expand"
-            >
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
-            </Button>
-          )}
-          {!readOnly && onEdit ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-full text-[#0150AC]"
+              size="sm"
               onClick={(e) => {
                 e.stopPropagation();
-                onEdit();
+                onFill();
               }}
-              aria-label="Edit"
+              className="h-9 rounded-full px-3.5 text-white active:scale-[0.97] transition-transform duration-100 ease-out"
+              style={{ backgroundColor: "#0150AC" }}
             >
-              <Pencil className="h-4 w-4" />
+              Fill report
             </Button>
           ) : null}
-          {!readOnly && onDelete ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-full text-destructive"
-              disabled={deleteDisabled}
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              aria-label="Delete"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          ) : null}
+          <div className="flex items-center gap-1">
+            {expanded ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-full"
+                onClick={onToggle}
+                aria-expanded="true"
+                aria-label="Collapse"
+              >
+                <ChevronUp className="h-5 w-5 text-muted-foreground" />
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-full"
+                onClick={onToggle}
+                aria-expanded="false"
+                aria-label="Expand"
+              >
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              </Button>
+            )}
+            {!readOnly && onEdit ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-full text-[#0150AC]"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+                aria-label="Edit"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            ) : null}
+            {!readOnly && onDelete ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-full text-destructive"
+                disabled={deleteDisabled}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                aria-label="Delete"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            ) : null}
+          </div>
         </div>
       </div>
 

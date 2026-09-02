@@ -52,7 +52,6 @@ export default function StaffOperationsReportingPage() {
   const [typeToDelete, setTypeToDelete] =
     useState<OperationsReportingType | null>(null);
   const [listRefreshKey, setListRefreshKey] = useState(0);
-  const [fillReportTabNonce, setFillReportTabNonce] = useState(0);
 
   const {
     createTypeStatus,
@@ -269,18 +268,6 @@ export default function StaffOperationsReportingPage() {
                   </button>
                 ))}
               </div>
-
-              {activeTab === "Fill Report" ? (
-                <div className="flex justify-end">
-                  <Button
-                    onClick={() => setFillReportTabNonce((n) => n + 1)}
-                    className="shrink-0 text-white"
-                    style={{ backgroundColor: "#0150AC" }}
-                  >
-                    Fill report
-                  </Button>
-                </div>
-              ) : null}
             </div>
 
             <div className="mt-2">
@@ -295,7 +282,6 @@ export default function StaffOperationsReportingPage() {
                 <OperationsReportingReportsTab
                   key={`fill-${listRefreshKey}`}
                   estateId={estateId}
-                  fillReportTabNonce={fillReportTabNonce}
                   onEditType={handleEditType}
                   onDeleteType={handleDeleteType}
                 />

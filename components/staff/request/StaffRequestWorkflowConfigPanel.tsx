@@ -116,8 +116,12 @@ export default function StaffRequestWorkflowConfigPanel({
   const resolvedEstateId = selectedEstate?.value ?? estateId;
   const resolvedEstateLabel = selectedEstate?.label ?? estateLabel;
 
-    const { workflows, getWorkflowStatus, upsertWorkflowStatus, deleteWorkflowStatus } =
-    useSelector((state: RootState) => state.staffRequestWorkflow);
+  const {
+    workflows,
+    getWorkflowStatus,
+    upsertWorkflowStatus,
+    deleteWorkflowStatus,
+  } = useSelector((state: RootState) => state.staffRequestWorkflow);
 
   const loadingWorkflow = isPending(getWorkflowStatus);
   const saving = isBusy(upsertWorkflowStatus);
@@ -186,7 +190,9 @@ export default function StaffRequestWorkflowConfigPanel({
         }),
       ).unwrap();
       toast.success(
-        editingWorkflow ? "Request workflow updated." : "Request workflow saved.",
+        editingWorkflow
+          ? "Request workflow updated."
+          : "Request workflow saved.",
       );
       setModalOpen(false);
       setEditingWorkflow(null);
@@ -216,7 +222,9 @@ export default function StaffRequestWorkflowConfigPanel({
 
   const handleDeleteWorkflow = async () => {
     const workflowId = (
-      workflowToDelete?.id ?? workflowToDelete?._id ?? ""
+      workflowToDelete?.id ??
+      workflowToDelete?._id ??
+      ""
     ).trim();
     if (!workflowId) return;
     try {
@@ -418,7 +426,9 @@ export default function StaffRequestWorkflowConfigPanel({
                               {field.label}
                             </span>
                             {field.required ? (
-                              <span className="text-muted-foreground">· required</span>
+                              <span className="text-muted-foreground">
+                                · required
+                              </span>
                             ) : null}
                           </li>
                         ))}
@@ -440,7 +450,9 @@ export default function StaffRequestWorkflowConfigPanel({
                               {field.label}
                             </span>
                             {field.required ? (
-                              <span className="text-muted-foreground">· required</span>
+                              <span className="text-muted-foreground">
+                                · required
+                              </span>
                             ) : null}
                           </li>
                         ))}

@@ -106,7 +106,8 @@ export default function WorkflowFieldsEditor({
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5"> */}
+            <div>
               {/* <div>
                 <Label htmlFor={`workflow-field-label-${index}`}>Label</Label>
                 <Input

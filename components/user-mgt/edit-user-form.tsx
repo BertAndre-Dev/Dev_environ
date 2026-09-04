@@ -23,8 +23,7 @@ import {
   splitPhoneFields,
   toE164PhoneNumber,
 } from "@/lib/phone-e164";
-import { formatAddressEntryLabel } from "@/lib/address";
-import { getAddressIdsFromUser } from "@/lib/user-address-meters";
+import { formatAddressEntryLabel, normalizeAddresses } from "@/lib/address";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getFieldByEstate } from "@/redux/slice/admin/address-mgt/fields/fields";
 import { getEntriesByField } from "@/redux/slice/admin/address-mgt/entry/entry";
@@ -217,7 +216,9 @@ export default function EditUserForm({
         setFormData(mapUserToForm(user));
         setRole(user.role);
         setResidentType(user.residentType);
-        const selectedIds = getAddressIdsFromUser(user);
+        const selectedIds = normalizeAddresses(
+          user as Record<string, unknown>,
+        ).map((addr) => addr.id);
         setAddressIds(selectedIds);
 
         const userAddressOptions = optionsFromUserAddresses(user);

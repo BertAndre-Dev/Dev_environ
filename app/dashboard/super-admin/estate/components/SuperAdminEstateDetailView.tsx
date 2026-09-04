@@ -91,6 +91,64 @@ function formatVerificationMode(mode?: string | null) {
   return mode?.trim() || "—";
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+function toOptionalNumber(value: unknown): number | undefined {
+  if (value == null || value === "") return undefined;
+  const amount = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(amount) ? amount : undefined;
+}
+
+function unwrapEstatePayload(payload: unknown): EstateDetailData | null {
+  const root = asRecord(payload);
+  if (!root) return null;
+  const nested = asRecord(root.data);
+  const source =
+    nested &&
+    (nested.name != null ||
+      nested.minVendAmount != null ||
+      nested.maxVendAmount != null ||
+      nested.id != null)
+      ? nested
+      : root;
+
+  return {
+    id: source.id != null ? String(source.id) : undefined,
+    _id: source._id != null ? String(source._id) : undefined,
+    name: source.name != null ? String(source.name) : undefined,
+    address: source.address != null ? String(source.address) : undefined,
+    city: source.city != null ? String(source.city) : undefined,
+    state: source.state != null ? String(source.state) : undefined,
+    country: source.country != null ? String(source.country) : undefined,
+    isActive: Boolean(source.isActive),
+    modules: Array.isArray(source.modules)
+      ? (source.modules as string[])
+      : undefined,
+    plan: source.plan != null ? String(source.plan) : undefined,
+    minVendAmount: toOptionalNumber(
+      source.minVendAmount ?? source.min_vend_amount,
+    ),
+    maxVendAmount: toOptionalNumber(
+      source.maxVendAmount ?? source.max_vend_amount,
+    ),
+    visitorVerificationMode:
+      source.visitorVerificationMode != null
+        ? String(source.visitorVerificationMode)
+        : undefined,
+    companyId:
+      source.companyId != null && source.companyId !== ""
+        ? String(source.companyId)
+        : undefined,
+    createdAt: source.createdAt as string | number | Date | undefined,
+    updatedAt: source.updatedAt as string | number | Date | undefined,
+  };
+}
+
 function DetailRow({
   label,
   value,
@@ -149,7 +207,7 @@ export function SuperAdminEstateDetailView({
         dispatch(getEstate(estateId)).unwrap(),
         dispatch(fetchEstateModules(estateId)).unwrap(),
       ]);
-      const details = (estateRes?.data ?? estateRes) as EstateDetailData | null;
+      const details = unwrapEstatePayload(estateRes);
       setEstate(details);
       const fromApi = parseEstateModulesResponse(
         modulesRes?.data ?? modulesRes,
@@ -371,6 +429,12 @@ export function SuperAdminEstateDetailView({
                       >
                         {estate.isActive ? "Active" : "Inactive"}
                       </span>
+                      <span className="inline-flex items-center rounded-full bg-[#0150AC]/10 px-2.5 py-0.5 text-xs font-medium text-[#0150AC]">
+                        Min vend {formatVendAmount(estate.minVendAmount)}
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-[#0150AC]/10 px-2.5 py-0.5 text-xs font-medium text-[#0150AC]">
+                        Max vend {formatVendAmount(estate.maxVendAmount)}
+                      </span>
                     </div>
                   ) : null}
                 </div>
@@ -415,11 +479,11 @@ export function SuperAdminEstateDetailView({
               <DetailRow label="Country" value={estate.country || "—"} />
               <DetailRow label="Plan" value={labelForPlan(estate.plan)} />
               <DetailRow
-                label="Min vend"
+                label="Min vend amount"
                 value={formatVendAmount(estate.minVendAmount)}
               />
               <DetailRow
-                label="Max vend"
+                label="Max vend amount"
                 value={formatVendAmount(estate.maxVendAmount)}
               />
               <DetailRow

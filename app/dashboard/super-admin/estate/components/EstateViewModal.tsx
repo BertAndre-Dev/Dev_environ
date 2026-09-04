@@ -118,7 +118,17 @@ export function EstateViewModal({
         if (cancelled) return;
 
         const details = (estateRes?.data ?? estateRes) as EstateViewData | null;
-        setEstate(details);
+        if (!details) {
+          setEstate(null);
+        } else {
+          const min = Number(details.minVendAmount);
+          const max = Number(details.maxVendAmount);
+          setEstate({
+            ...details,
+            minVendAmount: Number.isFinite(min) ? min : details.minVendAmount,
+            maxVendAmount: Number.isFinite(max) ? max : details.maxVendAmount,
+          });
+        }
         const fromApi = parseEstateModulesResponse(
           modulesRes?.data ?? modulesRes,
         );
@@ -211,11 +221,11 @@ export function EstateViewModal({
                   <DetailRow label="Country" value={display.country || "—"} />
                   <DetailRow label="Plan" value={labelForPlan(display.plan)} />
                   <DetailRow
-                    label="Min vend"
+                    label="Min vend amount"
                     value={formatVendAmount(display.minVendAmount)}
                   />
                   <DetailRow
-                    label="Max vend"
+                    label="Max vend amount"
                     value={formatVendAmount(display.maxVendAmount)}
                   />
                   <DetailRow

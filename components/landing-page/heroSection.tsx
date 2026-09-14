@@ -76,14 +76,14 @@ export default function HeroSection() {
             alt="Pay Bills"
             enterDelay="60ms"
             floatDelay="1.1s"
-            className="left-1/2 top-[55%] -translate-x-[calc(50%+16.5rem)] xl:-translate-x-[calc(50%+18rem)]"
+            className="left-1/2 top-[45%] -translate-x-[calc(50%+16.5rem)] xl:-translate-x-[calc(50%+18rem)]"
           />
           <FeatureCard
             src="/assets/hero/analytics.svg"
             alt="Analytics"
             enterDelay="180ms"
             floatDelay="3.3s"
-            className="left-1/2 top-[55%] translate-x-[calc(-50%+16.5rem)] xl:translate-x-[calc(-50%+18rem)]"
+            className="left-1/2 top-[45%] translate-x-[calc(-50%+16.5rem)] xl:translate-x-[calc(-50%+18rem)]"
           />
 
           {/* Center copy */}

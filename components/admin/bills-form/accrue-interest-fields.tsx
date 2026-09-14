@@ -14,12 +14,8 @@ export function toInterestStartDate(value?: string | null): string {
 
 const RECURRING_FREQUENCIES = new Set(["monthly", "quarterly", "yearly"]);
 
-/** Hide start date for recurring bills (monthly, quarterly, yearly) and service charges. */
-export function shouldHideInterestStartsAt(
-  frequency?: string,
-  isServiceCharge = false,
-): boolean {
-  if (isServiceCharge) return true;
+/** Hide start date for recurring bills (monthly, quarterly, yearly). */
+export function shouldHideInterestStartsAt(frequency?: string): boolean {
   const normalized = (frequency ?? "").toLowerCase().replace(/[_-]/g, "");
   return RECURRING_FREQUENCIES.has(normalized);
 }
@@ -33,7 +29,7 @@ type AccrueInterestFieldsProps = {
   onInterestStartsAtChange: (value: string) => void;
   disabled?: boolean;
   idPrefix: string;
-  /** Hide the interest starts date (recurring frequencies and service charges). */
+  /** Hide the interest starts date (recurring frequencies). */
   hideInterestStartsAt?: boolean;
 };
 
@@ -104,7 +100,7 @@ export function AccrueInterestFields({
           </div>
           {!hideInterestStartsAt ? (
             <div>
-              <Label htmlFor={startsAtId}>Interest starts date</Label>
+              <Label htmlFor={startsAtId}>Interest starts at</Label>
               <div className="mt-1">
                 <IsoDatePicker
                   id={startsAtId}
@@ -112,7 +108,7 @@ export function AccrueInterestFields({
                   onChange={onInterestStartsAtChange}
                   placeholder="Select start date"
                   disabled={disabled}
-                  ariaLabel="Interest starts date"
+                  ariaLabel="Interest starts at"
                 />
               </div>
             </div>

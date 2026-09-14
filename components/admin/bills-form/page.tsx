@@ -181,13 +181,7 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
     });
   };
 
-  const isServiceChargeBill =
-    formData.isServiceCharge ||
-    formData.name.trim().toLowerCase() === "service charge";
-  const hideInterestStartsAt = shouldHideInterestStartsAt(
-    formData.frequency,
-    isServiceChargeBill,
-  );
+  const hideInterestStartsAt = shouldHideInterestStartsAt(formData.frequency);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -203,7 +197,6 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       return;
     }
     if (
-      canAccrueInterest &&
       formData.accrueInterest &&
       !hideInterestStartsAt &&
       !formData.interestStartsAt
@@ -216,22 +209,14 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       name: formData.name,
       description: formData.description,
       yearlyAmount: parseFormattedNumber(formData.yearlyAmount),
-      frequency: coerceFrequencyForServiceCharge(
-        formData.frequency,
-        isServiceChargeBill,
-      ),
-      isServiceCharge: formData.isServiceCharge,
-      compulsory: isServiceChargeBill ? false : formData.compulsory,
-      ...(canAccrueInterest
-        ? {
-            accrueInterest: formData.accrueInterest,
-            interestRatePercent: interestRate,
-            interestStartsAt:
-              formData.accrueInterest && !hideInterestStartsAt
-                ? formData.interestStartsAt
-                : undefined,
-          }
-        : {}),
+      frequency: formData.frequency,
+      compulsory: formData.compulsory,
+      accrueInterest: formData.accrueInterest,
+      interestRatePercent: interestRate,
+      interestStartsAt:
+        formData.accrueInterest && !hideInterestStartsAt
+          ? formData.interestStartsAt
+          : undefined,
     };
     onSubmit(payload);
   };
@@ -283,6 +268,35 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
                 required
               />
             </div>
+
+            <div>
+              <Label htmlFor="estate-bill-frequency">Frequency</Label>
+              <Select
+                id="estate-bill-frequency"
+                aria-label="Select frequency"
+                value={formData.frequency}
+                onChange={(e) => handleChange("frequency", e.target.value)}
+                options={BILL_FREQUENCY_OPTIONS}
+                required
+              />
+            </div>
+
+            <AccrueInterestFields
+              idPrefix="estate-bill"
+              accrueInterest={formData.accrueInterest}
+              interestRatePercent={formData.interestRatePercent}
+              interestStartsAt={formData.interestStartsAt}
+              hideInterestStartsAt={hideInterestStartsAt}
+              onAccrueInterestChange={(value) =>
+                handleChange("accrueInterest", value)
+              }
+              onInterestRateChange={(value) =>
+                handleChange("interestRatePercent", value)
+              }
+              onInterestStartsAtChange={(value) =>
+                handleChange("interestStartsAt", value)
+              }
+            />
 
             <div className="flex items-center justify-between gap-3">
               <Label htmlFor="estate-bill-service-charge" className="font-medium">

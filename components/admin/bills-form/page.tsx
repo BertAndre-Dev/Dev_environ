@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { AppDispatch, RootState } from "@/redux/store";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "@/redux/store";
 import {
   billFrequencyOptions,
   coerceFrequencyForServiceCharge,
@@ -27,8 +27,6 @@ import {
   toInterestStartDate,
 } from "@/components/admin/bills-form/accrue-interest-fields";
 import { cn } from "@/lib/utils";
-import { canUseBillInterest } from "@/lib/user-modules";
-import { selectEstateModules } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 
 /** Form state: yearlyAmount can be string (empty input) or number */
 interface BillFormState {
@@ -82,9 +80,6 @@ function amountFromBill(data?: {
 
 export default function BillsForm({ estateId, initialData, onSubmit }: BillsFormProps) {
   const seededAmount = amountFromBill(initialData);
-  const authUser = useSelector((state: RootState) => state.auth.user);
-  const estateModules = useSelector(selectEstateModules);
-  const canAccrueInterest = canUseBillInterest(authUser, estateModules);
   const [formData, setFormData] = useState<BillFormState>({
     estateId,
     id: initialData?.id,
@@ -195,7 +190,6 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       ? Number(formData.interestRatePercent)
       : 0;
     if (
-      canAccrueInterest &&
       formData.accrueInterest &&
       (!Number.isFinite(interestRate) || interestRate < 0)
     ) {
@@ -203,7 +197,6 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       return;
     }
     if (
-      canAccrueInterest &&
       formData.accrueInterest &&
       !hideInterestStartsAt &&
       !formData.interestStartsAt
@@ -222,16 +215,12 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       ),
       isServiceCharge: formData.isServiceCharge,
       compulsory: isServiceChargeBill ? false : formData.compulsory,
-      ...(canAccrueInterest
-        ? {
-            accrueInterest: formData.accrueInterest,
-            interestRatePercent: interestRate,
-            interestStartsAt:
-              formData.accrueInterest && !hideInterestStartsAt
-                ? formData.interestStartsAt
-                : undefined,
-          }
-        : {}),
+      accrueInterest: formData.accrueInterest,
+      interestRatePercent: interestRate,
+      interestStartsAt:
+        formData.accrueInterest && !hideInterestStartsAt
+          ? formData.interestStartsAt
+          : undefined,
     };
     onSubmit(payload);
   };
@@ -325,24 +314,22 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
               />
             </div>
 
-            {canAccrueInterest ? (
-              <AccrueInterestFields
-                idPrefix="estate-bill"
-                accrueInterest={formData.accrueInterest}
-                interestRatePercent={formData.interestRatePercent}
-                interestStartsAt={formData.interestStartsAt}
-                hideInterestStartsAt={hideInterestStartsAt}
-                onAccrueInterestChange={(value) =>
-                  handleChange("accrueInterest", value)
-                }
-                onInterestRateChange={(value) =>
-                  handleChange("interestRatePercent", value)
-                }
-                onInterestStartsAtChange={(value) =>
-                  handleChange("interestStartsAt", value)
-                }
-              />
-            ) : null}
+            <AccrueInterestFields
+              idPrefix="estate-bill"
+              accrueInterest={formData.accrueInterest}
+              interestRatePercent={formData.interestRatePercent}
+              interestStartsAt={formData.interestStartsAt}
+              hideInterestStartsAt={hideInterestStartsAt}
+              onAccrueInterestChange={(value) =>
+                handleChange("accrueInterest", value)
+              }
+              onInterestRateChange={(value) =>
+                handleChange("interestRatePercent", value)
+              }
+              onInterestStartsAtChange={(value) =>
+                handleChange("interestStartsAt", value)
+              }
+            />
 
             {!isServiceChargeBill ? (
               <div className="flex items-center justify-between gap-3">

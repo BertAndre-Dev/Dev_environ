@@ -132,7 +132,7 @@ export default function InvitePhoneNumberField({
 
       <div
         className={cn(
-          "flex h-10 w-full min-w-0 overflow-hidden rounded-md border bg-background shadow-xs",
+          "flex h-10 w-full min-w-0 flex-nowrap items-stretch overflow-hidden rounded-md border bg-background shadow-xs",
           "transition-[border-color,box-shadow] duration-100 ease-out",
           "focus-within:ring-[3px]",
           inlineError
@@ -167,7 +167,7 @@ export default function InvitePhoneNumberField({
           disabled={disabled}
           aria-invalid={inlineError ? true : undefined}
           aria-describedby={`${id}-phone-hint`}
-          className="h-full rounded-none border-0 bg-transparent shadow-none focus-visible:border-0 focus-visible:ring-0"
+          className="h-full min-w-0 flex-1 rounded-none border-0 bg-transparent shadow-none focus-visible:border-0 focus-visible:ring-0"
         />
       </div>
 

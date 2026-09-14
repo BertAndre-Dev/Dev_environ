@@ -34,6 +34,7 @@ import EditUserForm, {
   type UpdateUserDetailsData,
 } from "@/components/user-mgt/edit-user-form";
 import { CopyButton } from "@/components/ui/copy-button";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import { MaintenanceRequestCard } from "@/components/admin/maintenance/maintenance-request-card";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -150,12 +151,6 @@ function formatLabel(value?: string) {
     .split(/[\s_-]+/)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(" ");
-}
-
-function getInitials(user: DashboardUserDetails) {
-  const first = user.firstName?.charAt(0) ?? "";
-  const last = user.lastName?.charAt(0) ?? "";
-  return (first + last).toUpperCase() || "?";
 }
 
 function getUserAddresses(user: DashboardUserDetails): AddressOption[] {
@@ -988,17 +983,11 @@ export default function UserDetailView({
               <div className="flex min-w-0 items-start gap-3 sm:items-center">
                 {user ? (
                   <>
-                    {user.image ? (
-                      <img
-                        src={user.image}
-                        alt={displayName}
-                        className="h-11 w-11 shrink-0 rounded-full object-cover sm:h-12 sm:w-12"
-                      />
-                    ) : (
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground sm:h-12 sm:w-12">
-                        {getInitials(user)}
-                      </div>
-                    )}
+                    <UserAvatar
+                      src={user.image}
+                      alt={displayName}
+                      size={48}
+                    />
                     <div className="min-w-0 flex-1">
                       <h1 className="font-heading text-lg font-bold break-words sm:text-xl lg:text-2xl">
                         {displayName}

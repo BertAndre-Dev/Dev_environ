@@ -39,6 +39,7 @@ import EditUserForm from "@/app/dashboard/super-admin/user/components/EditUserFo
 import Loader from "@/components/ui/Loader";
 import { isPending } from "@/lib/async-status";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { UserNameWithAvatar } from "@/components/ui/user-avatar";
 import { formatUserAddresses } from "@/lib/address";
 import { UserStatusModal } from "./components/UserStatusModal";
 import {
@@ -476,7 +477,14 @@ export default function SuperAdminUserPage() {
       exportValue: (item: SuperAdminUserData) =>
         item.createdAt ? String(item.createdAt) : "",
     },
-    { key: "firstName", header: "First Name" },
+    {
+      key: "firstName",
+      header: "First Name",
+      render: (item: SuperAdminUserData) => (
+        <UserNameWithAvatar image={item.image} name={item.firstName} />
+      ),
+      exportValue: (item: SuperAdminUserData) => item.firstName || "",
+    },
     { key: "lastName", header: "Last Name" },
     { key: "email", header: "Email" },
     {

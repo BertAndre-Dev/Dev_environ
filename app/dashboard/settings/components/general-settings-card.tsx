@@ -10,10 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { IsoDatePicker } from "@/components/ui/iso-date-picker";
 import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
+import { ProfilePhotoField } from "@/components/settings/profile-photo-field";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { resetUserProfileState } from "@/redux/slice/resident/user-profile/user-profile-slice";
-import { getUserProfile } from "@/redux/slice/resident/user-profile/user-profile";
-import { updateUserProfile } from "@/redux/slice/settings/user-profile";
+import {
+  getUserProfile,
+  updateUserProfile,
+} from "@/redux/slice/resident/user-profile/user-profile";
+import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { isBusy, isPending } from "@/lib/async-status";
 import {
   getPhoneValidationError,
@@ -31,6 +35,7 @@ type UserFormState = {
   gender: string;
   role: string;
   residentType: string;
+  image: string;
 };
 
 // ✅ Helper: extract a clean, non-empty MongoDB ObjectId string or return null
@@ -70,6 +75,7 @@ export function GeneralSettingsCard() {
     gender: "",
     role: "",
     residentType: "owner",
+    image: "",
   });
   const [formError, setFormError] = useState("");
 
@@ -101,6 +107,7 @@ export function GeneralSettingsCard() {
       gender: user.gender || "",
       role: user.role || "",
       residentType: u.residentType || "owner",
+      image: user.image || "",
     });
   }, [user]);
 
@@ -158,9 +165,11 @@ export function GeneralSettingsCard() {
             gender: formData.gender,
             phoneNumber: e164Phone ?? "",
             role: formData.role || undefined,
+            image: formData.image || undefined,
           },
         }),
       ).unwrap();
+      await dispatch(getSignedInUser());
       toast.success(res?.message || "Profile updated successfully");
     } catch (err: any) {
       const message = err?.message || err?.payload || "Failed to update profile";
@@ -185,13 +194,19 @@ export function GeneralSettingsCard() {
   return (
     <div className="space-y-6">
       <Card className="pt-6 md:pt-8 px-8 md:px-16 pb-12 md:pb-18 w-full md:w-3/4 lg:w-2/3 mx-auto">
-        <h2 className="font-heading text-xl font-bold text-center">
+        <h2 className="font-heading text-xl font-bold text-center tracking-tight">
           Update Profile
         </h2>
         <p className="text-sm text-gray-500 text-center">
           This is your profile information. You can update your profile here.
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <ProfilePhotoField
+            src={formData.image}
+            alt={`${formData.firstName} ${formData.lastName}`.trim() || "Profile photo"}
+            onChange={(image) => setFormData((prev) => ({ ...prev, image }))}
+            disabled={isLoading}
+          />
           {(formError || error) && (
             <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
               {formError || error}

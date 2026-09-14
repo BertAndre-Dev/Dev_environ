@@ -17,6 +17,7 @@ import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import type { AppDispatch, RootState } from "@/redux/store";
 import type { StaffComplaintItem } from "@/redux/slice/staff/maintenance/staff-maintenance-slice";
 import {
@@ -32,7 +33,6 @@ import {
   getAddressDisplay,
   getAssignedToEmail,
   getAssignedToName,
-  getInitials,
   getResidentEmail,
   getResidentImage,
   getResidentName,
@@ -244,20 +244,7 @@ export default function StaffMaintenanceViewModal({
             Requested by
           </p>
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center text-sm font-semibold shrink-0">
-              {requesterImage ? (
-                <Image
-                  src={requesterImage}
-                  alt={requesterName}
-                  width={44}
-                  height={44}
-                  className="w-full h-full object-cover"
-                  unoptimized
-                />
-              ) : (
-                getInitials(requesterName)
-              )}
-            </div>
+            <UserAvatar src={requesterImage} alt={requesterName} size={44} />
             <div className="min-w-0">
               <p className="font-semibold text-foreground">{requesterName}</p>
               <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5 break-all">

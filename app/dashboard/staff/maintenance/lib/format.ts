@@ -230,12 +230,3 @@ export function getStatusStyle(status?: string) {
       ?.className ?? "bg-[#D0DFF2] text-[#1E4F91]"
   );
 }
-
-export function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}

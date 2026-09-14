@@ -33,6 +33,7 @@ import {
   suspendEnergyProviderUser,
 } from "@/redux/slice/energy-provider/user-mgt/energy-provider-user";
 import type { EnergyProviderUserDetails } from "@/redux/slice/energy-provider/user-mgt/energy-provider-user-slice";
+import { UserNameWithAvatar } from "@/components/ui/user-avatar";
 import {
   selectEnergyProviderUserState,
   selectEnergyProviderUsersList,
@@ -328,7 +329,14 @@ export default function EnergyProviderUserPage() {
         exportValue: (item: EnergyProviderUserDetails) =>
           item.createdAt ? String(item.createdAt) : "",
       },
-      { key: "firstName" as const, header: "First Name" },
+      {
+        key: "firstName" as const,
+        header: "First Name",
+        render: (item: EnergyProviderUserDetails) => (
+          <UserNameWithAvatar image={item.image} name={item.firstName} />
+        ),
+        exportValue: (item: EnergyProviderUserDetails) => item.firstName || "",
+      },
       { key: "lastName" as const, header: "Last Name" },
       { key: "email" as const, header: "Email" },
       {

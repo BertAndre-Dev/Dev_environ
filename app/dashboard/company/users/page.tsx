@@ -36,6 +36,7 @@ import {
   updateCompanyUser,
 } from "@/redux/slice/company/user-mgt/company-user";
 import type { CompanyUserDetails } from "@/redux/slice/company/user-mgt/company-user-slice";
+import { UserNameWithAvatar } from "@/components/ui/user-avatar";
 import {
   selectCompanyUserState,
   selectCompanyUsersList,
@@ -404,7 +405,14 @@ export default function CompanyUsersPage() {
         exportValue: (item: CompanyUserDetails) =>
           item.createdAt ? String(item.createdAt) : "",
       },
-      { key: "firstName" as const, header: "First Name" },
+      {
+        key: "firstName" as const,
+        header: "First Name",
+        render: (item: CompanyUserDetails) => (
+          <UserNameWithAvatar image={item.image} name={item.firstName} />
+        ),
+        exportValue: (item: CompanyUserDetails) => item.firstName || "",
+      },
       { key: "lastName" as const, header: "Last Name" },
       { key: "email" as const, header: "Email" },
       {

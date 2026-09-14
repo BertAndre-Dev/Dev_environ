@@ -36,6 +36,7 @@ import { NotificationsBell } from "@/components/dashboard/NotificationsBell";
 import { filterNavItemsByEstateModules } from "@/lib/nav-module-filter";
 import Image from "next/image";
 import Loader from "@/components/ui/Loader";
+import { UserAvatar } from "@/components/ui/user-avatar";
 
 const DEFAULT_NAV_ROLE = "resident";
 
@@ -497,15 +498,11 @@ export default function DashboardLayout({
                   : undefined
               }
             >
-              <div className="bg-[#4E61E5] rounded-full overflow-hidden w-8 h-8 flex-shrink-0">
-                <Image
-                  src={user?.image || "/profile.svg"}
-                  alt="User image"
-                  width={40}
-                  height={40}
-                  className="rounded-full object-cover w-full h-full"
-                />
-              </div>
+              <UserAvatar
+                src={user?.image}
+                alt={`${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim() || "User image"}
+                size={32}
+              />
               {sidebarOpen && (
                 <div className="flex-1 text-left">
                   <p className="text-base font-semibold">

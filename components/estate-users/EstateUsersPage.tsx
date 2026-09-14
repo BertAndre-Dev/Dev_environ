@@ -48,6 +48,7 @@ import { formatUserAddresses } from "@/lib/address";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { isPending } from "@/lib/async-status";
+import { UserNameWithAvatar } from "@/components/ui/user-avatar";
 import { getDesignations } from "@/redux/slice/designations/designations";
 import {
   designationLabelForUser,
@@ -75,6 +76,7 @@ interface AdminUserData {
   lastName: string;
   createdAt: string;
   email: string;
+  image?: string;
   phoneNumber?: string;
   // Single primary address id from backend (kept for backwards compatibility)
   addressId?: string;
@@ -490,7 +492,17 @@ export function EstateUsersPage({
             })
           : "-",
     },
-    { key: "firstName", header: "First Name" },
+    {
+      key: "firstName",
+      header: "First Name",
+      render: (item: AdminUserData) => (
+        <UserNameWithAvatar
+          image={item.image}
+          name={item.firstName}
+        />
+      ),
+      exportValue: (item: AdminUserData) => item.firstName || "",
+    },
     { key: "lastName", header: "Last Name" },
     { key: "email", header: "Email" },
     {

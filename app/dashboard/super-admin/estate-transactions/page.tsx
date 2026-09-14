@@ -54,6 +54,12 @@ export default function SuperAdminEstateTransactionsPage() {
   const [vendsStartDate, setVendsStartDate] = useState<string>("");
   const [vendsEndDate, setVendsEndDate] = useState<string>("");
   const [paidBillsData, setPaidBillsData] = useState<any[]>([]);
+  const [paidBillsPagination, setPaidBillsPagination] = useState<{
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  } | null>(null);
   const [paidBillsPage, setPaidBillsPage] = useState(1);
   const [loadingPaidBills, setLoadingPaidBills] = useState(false);
   const [paidBillsStartDate, setPaidBillsStartDate] = useState<string>("");
@@ -172,7 +178,6 @@ export default function SuperAdminEstateTransactionsPage() {
     vendsEndDate,
   ]);
 
-  const PAID_BILLS_FETCH_LIMIT = 10;
   useEffect(() => {
     if (activeTab !== "paid-bills" || !selectedEstateId) return;
     (async () => {
@@ -181,20 +186,45 @@ export default function SuperAdminEstateTransactionsPage() {
         const res = await dispatch(
           getSuperAdminEstatePaidBills({
             estateId: selectedEstateId,
-            page: 1,
-            limit: PAID_BILLS_FETCH_LIMIT,
+            page: paidBillsPage,
+            limit,
             startDate: paidBillsStartDate || undefined,
             endDate: paidBillsEndDate || undefined,
           }),
         ).unwrap();
         setPaidBillsData(res?.data ?? []);
+        const apiPagination = res?.pagination ?? {};
+        const total =
+          apiPagination.total ??
+          res?.totals?.totalRecords ??
+          (Array.isArray(res?.data) ? res.data.length : 0);
+        const pageSize = apiPagination.limit ?? limit;
+        const page = apiPagination.page ?? paidBillsPage;
+        const pages =
+          apiPagination.pages ??
+          Math.max(1, Math.ceil((Number(total) || 0) / (pageSize || 1)));
+        setPaidBillsPagination({
+          total: Number(total) || 0,
+          page,
+          limit: pageSize,
+          pages,
+        });
       } catch {
         setPaidBillsData([]);
+        setPaidBillsPagination(null);
       } finally {
         setLoadingPaidBills(false);
       }
     })();
-  }, [activeTab, selectedEstateId, dispatch, paidBillsStartDate, paidBillsEndDate]);
+  }, [
+    activeTab,
+    selectedEstateId,
+    paidBillsPage,
+    dispatch,
+    limit,
+    paidBillsStartDate,
+    paidBillsEndDate,
+  ]);
 
   const handlePageChange = async (newPage: number) => {
     if (!selectedEstateId) return;
@@ -220,15 +250,13 @@ export default function SuperAdminEstateTransactionsPage() {
     });
   }, [paidBillsData, filterFrequency, filterBill, filterBillStatus]);
 
-  const paidBillsPageSize = 10;
+  const paidBillsPageSize = paidBillsPagination?.limit ?? limit;
   const paidBillsTotalPages = Math.max(
     1,
-    Math.ceil(filteredPaidBills.length / paidBillsPageSize),
+    paidBillsPagination?.pages ??
+      Math.ceil((paidBillsPagination?.total ?? 0) / paidBillsPageSize) ??
+      1,
   );
-  const paginatedPaidBills = useMemo(() => {
-    const start = (paidBillsPage - 1) * paidBillsPageSize;
-    return filteredPaidBills.slice(start, start + paidBillsPageSize);
-  }, [filteredPaidBills, paidBillsPage, paidBillsPageSize]);
 
   const paidBillsFrequencyOptions = useMemo(() => {
     const set = new Set<string>();
@@ -265,12 +293,11 @@ export default function SuperAdminEstateTransactionsPage() {
   };
 
   useEffect(() => {
-    const total = Math.max(
-      1,
-      Math.ceil(filteredPaidBills.length / paidBillsPageSize),
-    );
-    if (paidBillsPage > total) setPaidBillsPage(total);
-  }, [filteredPaidBills.length, paidBillsPageSize, paidBillsPage]);
+    if (!paidBillsPagination) return;
+    if (paidBillsPage > paidBillsPagination.pages) {
+      setPaidBillsPage(Math.max(1, paidBillsPagination.pages));
+    }
+  }, [paidBillsPagination, paidBillsPage]);
 
   const paidBillsEmptyMessage =
     filteredPaidBills.length === 0
@@ -703,7 +730,7 @@ export default function SuperAdminEstateTransactionsPage() {
             onFiltersChange={handlePaidBillsFiltersChange}
             frequencyOptions={paidBillsFrequencyOptions}
             billOptions={paidBillsBillOptions}
-            data={paginatedPaidBills}
+            data={filteredPaidBills}
             columns={paidBillsColumns}
             emptyMessage={paidBillsEmptyMessage}
             startDate={paidBillsStartDate}
@@ -720,18 +747,52 @@ export default function SuperAdminEstateTransactionsPage() {
               setPaidBillsPage(1);
             }}
             paginationInfo={{
-              total: filteredPaidBills.length,
+              total: paidBillsPagination?.total ?? filteredPaidBills.length,
               current: paidBillsPage,
               pageSize: paidBillsPageSize,
             }}
             onPageChange={(p: number) => setPaidBillsPage(p)}
             currentPage={paidBillsPage}
             totalPages={paidBillsTotalPages}
-            onPrev={() => setPaidBillsPage((p) => p - 1)}
-            onNext={() => setPaidBillsPage((p) => p + 1)}
+            onPrev={() => setPaidBillsPage((p) => Math.max(1, p - 1))}
+            onNext={() =>
+              setPaidBillsPage((p) => Math.min(paidBillsTotalPages, p + 1))
+            }
             onExportRequest={
-              filteredPaidBills.length > 0
-                ? async () => filteredPaidBills
+              selectedEstateId
+                ? async () => {
+                    const res = await dispatch(
+                      getSuperAdminEstatePaidBills({
+                        estateId: selectedEstateId,
+                        page: 1,
+                        limit: 50000,
+                        startDate: paidBillsStartDate || undefined,
+                        endDate: paidBillsEndDate || undefined,
+                      }),
+                    ).unwrap();
+                    const rows = res?.data ?? [];
+                    return rows.filter((item: any) => {
+                      if (filterFrequency) {
+                        const freq = (item.frequency ?? "")
+                          .toString()
+                          .toLowerCase();
+                        if (freq !== filterFrequency.toLowerCase()) return false;
+                      }
+                      if (filterBill) {
+                        const billName = item.bill?.name ?? item.billName ?? "";
+                        if (billName !== filterBill) return false;
+                      }
+                      if (filterBillStatus) {
+                        const status = (item.status ?? "")
+                          .toString()
+                          .toLowerCase();
+                        if (status !== filterBillStatus.toLowerCase()) {
+                          return false;
+                        }
+                      }
+                      return true;
+                    });
+                  }
                 : undefined
             }
           />

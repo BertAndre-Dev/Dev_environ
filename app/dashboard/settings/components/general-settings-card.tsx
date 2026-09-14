@@ -24,6 +24,7 @@ import {
   splitPhoneFields,
   toE164PhoneNumber,
 } from "@/lib/phone-e164";
+import { isBase64Image } from "@/lib/uploads/fileToDataUri";
 
 type UserFormState = {
   firstName: string;
@@ -165,7 +166,9 @@ export function GeneralSettingsCard() {
             gender: formData.gender,
             phoneNumber: e164Phone ?? "",
             role: formData.role || undefined,
-            image: formData.image || undefined,
+            ...(isBase64Image(formData.image)
+              ? { image: formData.image }
+              : {}),
           },
         }),
       ).unwrap();

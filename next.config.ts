@@ -14,6 +14,14 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "res.cloudinary.com",
       },
+      {
+        protocol: "https",
+        hostname: "*.digitaloceanspaces.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.fra1.digitaloceanspaces.com",
+      },
     ],
   },
   async rewrites() {

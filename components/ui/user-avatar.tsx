@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -46,7 +45,9 @@ export function UserAvatar({
       )}
       style={{ width: size, height: size }}
     >
-      <Image
+      {/* Native img: avatars come from Cloudinary, Spaces, or a data URI preview. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
         key={imageSrc}
         src={imageSrc}
         alt={alt}

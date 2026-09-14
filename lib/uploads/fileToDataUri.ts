@@ -27,6 +27,11 @@ export async function fileToDataUri(file: File): Promise<string> {
   });
 }
 
+/** True when the value is a data URI the user-mgt image field accepts. */
+export function isBase64Image(value?: string | null): boolean {
+  return /^data:image\/[a-z0-9.+-]+;base64,/i.test(value?.trim() ?? "");
+}
+
 /** Read a file as raw base64 payload (no `data:*;base64,` prefix). */
 export function fileToRawBase64(file: File): Promise<string> {
   return fileToDataUri(file).then((dataUrl) => {

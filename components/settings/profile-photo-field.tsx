@@ -1,15 +1,18 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useState } from "react";
 import { Camera } from "lucide-react";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { useFileUpload } from "@/hooks/useFileUpload";
+import { acceptAttrFor } from "@/lib/uploads/constants";
+import { fileToDataUri } from "@/lib/uploads/fileToDataUri";
+import { validateFile } from "@/lib/uploads/validate";
 import { cn } from "@/lib/utils";
 
 type ProfilePhotoFieldProps = {
   src?: string | null;
   alt: string;
-  onChange: (url: string) => void;
+  /** Called with a `data:image/...;base64,...` value for PUT /user-mgt. */
+  onChange: (base64: string) => void;
   disabled?: boolean;
 };
 
@@ -20,10 +23,9 @@ export function ProfilePhotoField({
   disabled,
 }: Readonly<ProfilePhotoFieldProps>) {
   const inputId = useId();
-  const { isUploading, error, upload, acceptAttr } = useFileUpload({
-    kind: "avatar",
-  });
-  const busy = disabled || isUploading;
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const blocked = disabled || busy;
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -33,7 +35,7 @@ export function ProfilePhotoField({
           "relative cursor-pointer rounded-full",
           "transition-transform duration-100 ease-out active:scale-[0.97]",
           "motion-reduce:transition-none motion-reduce:active:scale-100",
-          busy && "pointer-events-none opacity-60",
+          blocked && "pointer-events-none opacity-60",
         )}
       >
         <UserAvatar
@@ -51,21 +53,37 @@ export function ProfilePhotoField({
         <input
           id={inputId}
           type="file"
-          accept={acceptAttr}
+          accept={acceptAttrFor("image")}
           className="sr-only"
-          disabled={busy}
+          disabled={blocked}
           aria-label="Change profile photo"
           onChange={async (event) => {
             const file = event.target.files?.[0];
             event.target.value = "";
             if (!file) return;
-            const url = await upload(file);
-            if (url) onChange(url);
+
+            const validation = validateFile(file, { kind: "avatar" });
+            if (!validation.ok) {
+              setError(validation.error);
+              return;
+            }
+
+            setBusy(true);
+            setError(null);
+            try {
+              onChange(await fileToDataUri(file));
+            } catch (err: unknown) {
+              setError(
+                err instanceof Error ? err.message : "Failed to read image.",
+              );
+            } finally {
+              setBusy(false);
+            }
           }}
         />
       </label>
       <p className="text-xs tracking-wide text-muted-foreground">
-        {isUploading ? "Uploading photo…" : "Tap to change photo"}
+        {busy ? "Preparing photo…" : "Tap to change photo"}
       </p>
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>

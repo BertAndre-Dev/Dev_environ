@@ -56,6 +56,7 @@ import type { ResidentMeterData } from "@/redux/slice/resident/meter-mgt/meter-m
 import { getComplaintsByAddress } from "@/redux/slice/resident/maintenance/resident-complaints";
 import type { ResidentComplaintItem } from "@/redux/slice/resident/maintenance/resident-complaints";
 import { getVisitorsByResident } from "@/redux/slice/resident/visitor/visitor";
+import { UserWalletBalanceCard } from "@/components/user-mgt/UserWalletBalanceCard";
 
 type DetailTab = "bills" | "complaints" | "visitors";
 
@@ -435,6 +436,7 @@ export interface UserDetailViewProps {
   userLoading: boolean;
   listPath: string;
   actions: UserMgtActions;
+  showWalletBalance?: boolean;
 }
 
 export default function UserDetailView({
@@ -443,6 +445,7 @@ export default function UserDetailView({
   userLoading,
   listPath,
   actions,
+  showWalletBalance = false,
 }: UserDetailViewProps) {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
@@ -1112,6 +1115,10 @@ export default function UserDetailView({
 
         {user ? (
           <>
+            {showWalletBalance ? (
+              <UserWalletBalanceCard userId={getUserId(user) || userId} />
+            ) : null}
+
             {/* Quick stats */}
             <div className="grid grid-cols-1 gap-3 pt-8 sm:grid-cols-3">
               <SummaryCard

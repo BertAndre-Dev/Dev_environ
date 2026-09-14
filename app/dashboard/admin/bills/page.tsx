@@ -838,7 +838,7 @@ export default function BillPage() {
           </DropdownMenu.Root>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 max-w-sm">
+        <div className="grid grid-cols-1 gap-4">
           <Card className="p-6">
             <div className="flex items-start justify-between">
               <div>

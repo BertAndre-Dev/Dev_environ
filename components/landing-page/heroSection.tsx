@@ -83,7 +83,7 @@ export default function HeroSection() {
             alt="Analytics"
             enterDelay="180ms"
             floatDelay="3.3s"
-            className="left-1/2 xl:left-2/3 top-[40%] xl:top-[60%] translate-x-[calc(-50%+16.5rem)] xl:translate-x-[calc(-50%+18rem)]"
+            className="left-1/2 top-[40%] xl:top-[60%] translate-x-[calc(-50%+16.5rem)] xl:translate-x-[calc(-50%+18rem)]"
           />
 
           {/* Center copy */}

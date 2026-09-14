@@ -14,13 +14,27 @@ import { iniviteUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
 import {
   buildInviteUserPayload,
-  COMPANY_INVITE_ROLE_OPTIONS,
+  inviteRequiresDesignation,
   validateEnergyProviderInviteScope,
+  type CompanyInviteRole,
+  getCompanyInviteLabel,
 } from "@/lib/invite-user-roles";
 import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
+import {
+  DEFAULT_COUNTRY_CODE,
+  getPhoneValidationError,
+  toE164PhoneNumber,
+} from "@/lib/phone-e164";
+import { getDesignations } from "@/redux/slice/designations/designations";
+import {
+  DESIGNATIONS_PAGE_SIZE,
+  isCompanyScopedDesignation,
+} from "@/lib/designations";
 
 type Props = {
   companyId: string;
+  role: CompanyInviteRole;
+  defaultEstateId?: string;
   onClose: () => void;
   onSuccess?: () => void;
 };
@@ -31,26 +45,37 @@ type FormState = {
   lastName: string;
   email: string;
   phoneNumber: string;
-  role: string;
+  countryCode: string;
+  designationId: string;
 };
 
 export default function CompanyInviteUserForm({
   companyId,
+  role,
+  defaultEstateId,
   onClose,
   onSuccess,
 }: Readonly<Props>) {
   const dispatch = useDispatch<AppDispatch>();
+  const inviteLabel = getCompanyInviteLabel(role);
+
   const [formData, setFormData] = useState<FormState>({
-    estateId: "",
+    estateId: defaultEstateId ?? "",
     firstName: "",
     lastName: "",
     email: "",
     phoneNumber: "",
-    role: "",
+    countryCode: DEFAULT_COUNTRY_CODE,
+    designationId: "",
   });
   const [estates, setEstates] = useState<{ id: string; name: string }[]>([]);
   const [loadingEstates, setLoadingEstates] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [designationOptions, setDesignationOptions] = useState<
+    { label: string; value: string }[]
+  >([]);
+  const [designationLoading, setDesignationLoading] = useState(false);
+  const requiresDesignation = inviteRequiresDesignation(role);
 
   useEffect(() => {
     (async () => {
@@ -81,7 +106,55 @@ export default function CompanyInviteUserForm({
     })();
   }, [dispatch]);
 
-  const roleOptions = [...COMPANY_INVITE_ROLE_OPTIONS];
+  useEffect(() => {
+    if (defaultEstateId) {
+      setFormData((prev) => ({ ...prev, estateId: defaultEstateId }));
+    }
+  }, [defaultEstateId]);
+
+  useEffect(() => {
+    if (!requiresDesignation) {
+      setDesignationOptions([]);
+      return;
+    }
+    const trimmedCompanyId = companyId.trim();
+    if (!trimmedCompanyId) {
+      setDesignationOptions([]);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      setDesignationLoading(true);
+      try {
+        const res = await dispatch(
+          getDesignations({
+            companyId: trimmedCompanyId,
+            page: 1,
+            limit: DESIGNATIONS_PAGE_SIZE,
+          }),
+        ).unwrap();
+        if (cancelled) return;
+        setDesignationOptions(
+          (res.items ?? [])
+            .filter((item) => item.isActive)
+            .filter(isCompanyScopedDesignation)
+            .map((item) => ({ value: item.id, label: item.name })),
+        );
+      } catch (err: unknown) {
+        if (cancelled) return;
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+        setDesignationOptions([]);
+      } finally {
+        if (!cancelled) setDesignationLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId, dispatch, requiresDesignation]);
 
   const estateOptions = estates.map((e) => ({
     value: e.id,
@@ -94,17 +167,36 @@ export default function CompanyInviteUserForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.role) return toast.error("Please select a role.");
     if (!formData.email.trim()) return toast.error("Please provide an email.");
     if (!formData.phoneNumber.trim()) {
       return toast.error("Please provide a phone number.");
     }
-    if (!formData.firstName.trim()) return toast.error("Please provide first name.");
-    if (!formData.lastName.trim()) return toast.error("Please provide last name.");
+    if (!formData.countryCode.trim()) {
+      return toast.error("Please select a country code.");
+    }
+    const e164Phone = toE164PhoneNumber(
+      formData.phoneNumber,
+      formData.countryCode,
+    );
+    if (!e164Phone) {
+      return toast.error(
+        getPhoneValidationError(
+          formData.phoneNumber,
+          formData.countryCode,
+        ),
+      );
+    }
+    if (!formData.firstName.trim())
+      return toast.error("Please provide first name.");
+    if (!formData.lastName.trim())
+      return toast.error("Please provide last name.");
     if (!formData.estateId.trim()) return toast.error("Please select an estate.");
+    if (requiresDesignation && !formData.designationId.trim()) {
+      return toast.error("Please select a designation.");
+    }
 
     const energyProviderError = validateEnergyProviderInviteScope({
-      role: formData.role,
+      role,
       inviteContext: "company",
       estateId: formData.estateId,
       companyId,
@@ -119,22 +211,28 @@ export default function CompanyInviteUserForm({
             firstName: formData.firstName,
             lastName: formData.lastName,
             email: formData.email,
-            phoneNumber: formData.phoneNumber,
-            role: formData.role,
+            phoneNumber: e164Phone,
+            role,
             inviteContext: "company",
             estateId: formData.estateId,
             companyId,
+            ...(requiresDesignation
+              ? { designationId: formData.designationId.trim() }
+              : {}),
           }),
         ),
       ).unwrap();
-      toast.success((res as { message?: string })?.message ?? "User invited successfully");
+      toast.success(
+        (res as { message?: string })?.message ?? `${inviteLabel} sent`,
+      );
       setFormData({
-        estateId: "",
+        estateId: defaultEstateId ?? "",
         firstName: "",
         lastName: "",
         email: "",
         phoneNumber: "",
-        role: "",
+        countryCode: DEFAULT_COUNTRY_CODE,
+        designationId: "",
       });
       onSuccess?.();
       onClose();
@@ -149,7 +247,7 @@ export default function CompanyInviteUserForm({
   return (
     <Card className="max-w-lg mx-auto mt-6">
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">Invite user</CardTitle>
+        <CardTitle className="text-lg font-semibold">{inviteLabel}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -187,40 +285,64 @@ export default function CompanyInviteUserForm({
               required
             />
           </div>
+          <InvitePhoneNumberField
+            id="invite-phone"
+            countryCode={formData.countryCode}
+            phoneNumber={formData.phoneNumber}
+            onCountryCodeChange={(countryCode) =>
+              setFormData((prev) => ({ ...prev, countryCode }))
+            }
+            onPhoneNumberChange={handleInputChange}
+          />
           <div>
             <Label>Estate</Label>
             <Select
               options={estateOptions}
-              value={estateOptions.find((o) => o.value === formData.estateId) ?? null}
-              onChange={(opt) =>
-                setFormData((prev) => ({ ...prev, estateId: opt?.value ?? "" }))
+              value={
+                estateOptions.find((o) => o.value === formData.estateId) ?? null
               }
-              isLoading={loadingEstates}
-              placeholder="Select estate"
-              isClearable
-            />
-          </div>
-          <div>
-            <Label>Role</Label>
-            <Select
-              options={roleOptions}
-              value={roleOptions.find((o) => o.value === formData.role) ?? null}
               onChange={(opt) =>
                 setFormData((prev) => ({
                   ...prev,
-                  role: opt?.value ?? "",
+                  estateId: opt?.value ?? "",
                 }))
               }
-              placeholder="Select role"
+              isLoading={loadingEstates}
+              placeholder="Select estate"
             />
           </div>
-          <InvitePhoneNumberField
-            id="invite-phone"
-            value={formData.phoneNumber}
-            onChange={handleInputChange}
-          />
-          <Button type="submit" className="w-full cursor-pointer" disabled={submitting}>
-            {submitting ? "Inviting..." : "Invite user"}
+          {requiresDesignation ? (
+            <div>
+              <Label>Designation</Label>
+              <Select
+                options={designationOptions}
+                value={
+                  designationOptions.find(
+                    (option) => option.value === formData.designationId,
+                  ) ?? null
+                }
+                onChange={(opt) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    designationId: opt?.value ?? "",
+                  }))
+                }
+                isLoading={designationLoading}
+                placeholder={
+                  designationLoading
+                    ? "Loading designations..."
+                    : "Select designation"
+                }
+                noOptionsMessage={() => "No designations for this company"}
+              />
+            </div>
+          ) : null}
+          <Button
+            type="submit"
+            className="w-full cursor-pointer"
+            disabled={submitting}
+          >
+            {submitting ? "Inviting..." : inviteLabel}
           </Button>
         </form>
       </CardContent>

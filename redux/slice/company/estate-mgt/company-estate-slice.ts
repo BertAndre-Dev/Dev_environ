@@ -1,17 +1,13 @@
 import { createSlice } from "@reduxjs/toolkit";
-import type { RootState } from "@/redux/store";
 import { getApiErrorMessage } from "@/lib/api-error";
 import {
   activateCompanyEstate,
   createCompanyEstate,
   deleteCompanyEstate,
-  fetchCompanyEstateEnabledModules,
-  fetchCompanyEstateModules,
   getCompanyEstateById,
   getCompanyEstates,
   suspendCompanyEstate,
   updateCompanyEstate,
-  updateCompanyEstateModules,
 } from "./company-estate";
 
 export interface EstateDetails {
@@ -55,12 +51,6 @@ export interface CompanyEstateState {
   estate: EstateDetails | null;
   allEstates: AllEstatesResponse | null;
   error: string | null;
-  availableModules: string[];
-  modulesLoading: boolean;
-  modulesError: string | null;
-  estateModulesLoading: boolean;
-  estateModulesError: string | null;
-  updateEstateModulesStatus: AsyncStatus;
 }
 
 const initialState: CompanyEstateState = {
@@ -74,12 +64,6 @@ const initialState: CompanyEstateState = {
   estate: null,
   allEstates: null,
   error: null,
-  availableModules: [],
-  modulesLoading: false,
-  modulesError: null,
-  estateModulesLoading: false,
-  estateModulesError: null,
-  updateEstateModulesStatus: "idle",
 };
 
 function estateId(est: EstateDetails) {
@@ -100,51 +84,6 @@ const companyEstateSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchCompanyEstateModules.pending, (state) => {
-        state.modulesLoading = true;
-        state.modulesError = null;
-      })
-      .addCase(fetchCompanyEstateModules.fulfilled, (state, action) => {
-        state.modulesLoading = false;
-        state.modulesError = null;
-        state.availableModules = Array.isArray(action.payload?.data)
-          ? action.payload.data
-          : [];
-      })
-      .addCase(fetchCompanyEstateModules.rejected, (state, action) => {
-        state.modulesLoading = false;
-        state.modulesError = getApiErrorMessage(action.payload) ?? null;
-        state.availableModules = [];
-      })
-      .addCase(fetchCompanyEstateEnabledModules.pending, (state) => {
-        state.estateModulesLoading = true;
-        state.estateModulesError = null;
-      })
-      .addCase(fetchCompanyEstateEnabledModules.fulfilled, (state) => {
-        state.estateModulesLoading = false;
-        state.estateModulesError = null;
-      })
-      .addCase(fetchCompanyEstateEnabledModules.rejected, (state, action) => {
-        state.estateModulesLoading = false;
-        state.estateModulesError = getApiErrorMessage(action.payload) ?? null;
-      })
-      .addCase(updateCompanyEstateModules.pending, (state) => {
-        state.updateEstateModulesStatus = "isLoading";
-      })
-      .addCase(updateCompanyEstateModules.fulfilled, (state, action) => {
-        state.updateEstateModulesStatus = "succeeded";
-        const updatedId = (action.payload as { updatedId?: string })?.updatedId;
-        const modules = (action.payload as { modules?: string[] })?.modules;
-        if (updatedId && modules && state.allEstates?.data) {
-          state.allEstates.data = state.allEstates.data.map((est) =>
-            estateId(est) === updatedId ? { ...est, modules } : est,
-          );
-        }
-      })
-      .addCase(updateCompanyEstateModules.rejected, (state, action) => {
-        state.updateEstateModulesStatus = "failed";
-        state.error = getApiErrorMessage(action.payload) ?? null;
-      })
       .addCase(getCompanyEstates.pending, (state) => {
         state.getAllEstatesStatus = "isLoading";
         state.error = null;
@@ -271,14 +210,3 @@ const companyEstateSlice = createSlice({
 export const { clearCompanyEstateError, resetCompanyEstateState } =
   companyEstateSlice.actions;
 export default companyEstateSlice.reducer;
-
-export const selectCompanyAvailableModules = (state: RootState) =>
-  state.companyEstate?.availableModules ?? [];
-export const selectCompanyModulesLoading = (state: RootState) =>
-  state.companyEstate?.modulesLoading ?? false;
-export const selectCompanyModulesError = (state: RootState) =>
-  state.companyEstate?.modulesError ?? null;
-export const selectCompanyEstateModulesLoading = (state: RootState) =>
-  state.companyEstate?.estateModulesLoading ?? false;
-export const selectCompanyEstateModulesError = (state: RootState) =>
-  state.companyEstate?.estateModulesError ?? null;

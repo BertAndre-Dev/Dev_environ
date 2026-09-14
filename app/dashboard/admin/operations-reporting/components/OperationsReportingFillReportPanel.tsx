@@ -54,7 +54,6 @@ type Props = {
   estateId: string;
   variant: "admin" | "company";
   readOnly?: boolean;
-  fillReportTabNonce?: number;
   emptyTypesMessage?: string;
   onEditType?: (type: ReportType) => void;
   onDeleteType?: (type: ReportType) => void;
@@ -64,7 +63,6 @@ export default function OperationsReportingFillReportPanel({
   estateId,
   variant,
   readOnly = false,
-  fillReportTabNonce = 0,
   emptyTypesMessage,
   onEditType,
   onDeleteType,
@@ -244,49 +242,43 @@ export default function OperationsReportingFillReportPanel({
     void loadFieldsAndEntriesForType(expandedTypeId);
   }, [expandedTypeId, loadFieldsAndEntriesForType]);
 
-  useEffect(() => {
-    if (readOnly || fillReportTabNonce <= 0) return;
-    if (!expandedTypeId) {
-      toast.info("Expand a report type first, then click Fill report.");
-      return;
-    }
+  const openFillForType = async (type: ReportType) => {
+    if (readOnly) return;
+    const typeId = getId(type);
+    if (!typeId) return;
 
-    (async () => {
-      let fields = fieldsByType[expandedTypeId] ?? [];
-      if (!fields.length) {
-        try {
-          const action =
-            variant === "admin"
-              ? getOperationsReportingFields({ typeId: expandedTypeId, page: 1, limit: 50 })
-              : fetchCompanyOperationsReportingFields({
-                  typeId: expandedTypeId,
-                  page: 1,
-                  limit: 50,
-                });
-          const res = await dispatch(action).unwrap();
-          fields = res?.data ?? [];
-          setFieldsByType((prev) => ({ ...prev, [expandedTypeId]: fields }));
-        } catch (err: unknown) {
-          const message = getApiErrorMessage(err);
-          if (message) toast.error(message);
-          return;
-        }
-      }
-      if (!fields.length) {
-        toast.info("Configure at least one field for this report type.");
+    let fields = fieldsByType[typeId] ?? [];
+    if (!fields.length) {
+      try {
+        const action =
+          variant === "admin"
+            ? getOperationsReportingFields({ typeId, page: 1, limit: 50 })
+            : fetchCompanyOperationsReportingFields({
+                typeId,
+                page: 1,
+                limit: 50,
+              });
+        const res = await dispatch(action).unwrap();
+        fields = res?.data ?? [];
+        setFieldsByType((prev) => ({ ...prev, [typeId]: fields }));
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
         return;
       }
-      const type = types.find((t) => getId(t) === expandedTypeId);
-      setFillTypeId(expandedTypeId);
-      setFillTypeName(type?.name ?? "Report type");
-      setFillTypeDescription(type?.description);
-      setFillFields(fields);
-      setEditingFieldId("");
-      setEditing(null);
-      setModalOpen(true);
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- nonce-driven
-  }, [fillReportTabNonce]);
+    }
+    if (!fields.length) {
+      toast.info("Configure at least one field for this report type.");
+      return;
+    }
+    setFillTypeId(typeId);
+    setFillTypeName(type.name);
+    setFillTypeDescription(type.description);
+    setFillFields(fields);
+    setEditingFieldId("");
+    setEditing(null);
+    setModalOpen(true);
+  };
 
   const handleToggle = (typeId: string) => {
     setExpandedTypeId((prev) => (prev === typeId ? "" : typeId));
@@ -395,6 +387,7 @@ export default function OperationsReportingFillReportPanel({
                 expanded={expanded}
                 onToggle={() => handleToggle(typeId)}
                 readOnly={readOnly}
+                onFill={readOnly ? undefined : () => void openFillForType(type)}
                 onEdit={onEditType ? () => onEditType(type) : undefined}
                 onDelete={onDeleteType ? () => onDeleteType(type) : undefined}
               >

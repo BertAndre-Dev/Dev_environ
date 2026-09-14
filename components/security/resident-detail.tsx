@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { Copy, Check, Phone, CheckCircle } from "lucide-react";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import Modal from "@/components/modal/page";
 
 export interface VisitorDetailsForResident {
@@ -62,8 +63,6 @@ export default function ResidentDetails({
     };
   }, [visitorDetails, nameProp, blockProp, apartmentProp, phoneProp]);
 
-  const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=1D4ED8&color=fff&size=128`;
-
   useEffect(() => {
     if (!feedbackOpen) return;
     const timer = window.setTimeout(() => setFeedbackOpen(false), 3000);
@@ -104,16 +103,7 @@ export default function ResidentDetails({
         <div className="px-8 py-7 flex flex-col gap-8">
           {/* Profile Row */}
           <div className="flex items-center gap-5">
-            <div className="w-16 h-16 rounded-full border-2 border-blue-700 overflow-hidden flex-shrink-0 bg-blue-100">
-              <img
-                src={avatarUrl || fallbackAvatar}
-                alt={name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = fallbackAvatar;
-                }}
-              />
-            </div>
+            <UserAvatar src={avatarUrl} alt={name} size={64} />
             <div className="flex flex-col gap-1">
               <p className="text-xl font-bold text-gray-900 tracking-tight">
                 {name}

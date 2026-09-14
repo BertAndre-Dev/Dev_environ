@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useDispatch } from "react-redux";
-import type { AppDispatch } from "@/redux/store";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "@/redux/store";
 import { getFieldByEstate } from "@/redux/slice/admin/address-mgt/fields/fields";
 import { getEntriesByField } from "@/redux/slice/admin/address-mgt/entry/entry";
 import { getAllUsersByEstate } from "@/redux/slice/admin/user-mgt/user";
@@ -18,8 +18,13 @@ import {
   parseFormattedNumber,
 } from "@/lib/format-number";
 import { formatAddressEntryLabel, normalizeAddresses } from "@/lib/address";
-import { AccrueInterestFields, toInterestStartDate } from "@/components/admin/bills-form/accrue-interest-fields";
+import {
+  AccrueInterestFields,
+  toInterestStartDate,
+} from "@/components/admin/bills-form/accrue-interest-fields";
 import { cn } from "@/lib/utils";
+import { canUseBillInterest } from "@/lib/user-modules";
+import { selectEstateModules } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 
 export interface BillForAddressFormData {
   addressId: string;
@@ -28,8 +33,8 @@ export interface BillForAddressFormData {
   amount: number;
   frequency: "oneoff";
   compulsory: boolean;
-  accrueInterest: boolean;
-  interestRatePercent: number;
+  accrueInterest?: boolean;
+  interestRatePercent?: number;
   interestStartsAt?: string;
 }
 
@@ -85,6 +90,9 @@ interface BillForAddressFormProps {
 export default function BillForAddressForm(props: BillForAddressFormProps) {
   const { estateId, initialData = null, onSubmit, onClose } = props;
   const dispatch = useDispatch<AppDispatch>();
+  const authUser = useSelector((state: RootState) => state.auth.user);
+  const estateModules = useSelector(selectEstateModules);
+  const canAccrueInterest = canUseBillInterest(authUser, estateModules);
   const isEditing = Boolean(initialData?.id || initialData?.billId);
 
   const [addressOptions, setAddressOptions] = useState<
@@ -282,13 +290,14 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
       ? Number(form.interestRatePercent)
       : 0;
     if (
+      canAccrueInterest &&
       form.accrueInterest &&
       (!Number.isFinite(interestRate) || interestRate < 0)
     ) {
       toast.error("Please enter a valid interest rate.");
       return;
     }
-    if (form.accrueInterest && !form.interestStartsAt) {
+    if (canAccrueInterest && form.accrueInterest && !form.interestStartsAt) {
       toast.error("Please select when interest should start.");
       return;
     }
@@ -302,11 +311,15 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
         amount,
         frequency: "oneoff",
         compulsory: form.compulsory,
-        accrueInterest: form.accrueInterest,
-        interestRatePercent: interestRate,
-        interestStartsAt: form.accrueInterest
-          ? form.interestStartsAt
-          : undefined,
+        ...(canAccrueInterest
+          ? {
+              accrueInterest: form.accrueInterest,
+              interestRatePercent: interestRate,
+              interestStartsAt: form.accrueInterest
+                ? form.interestStartsAt
+                : undefined,
+            }
+          : {}),
       });
     } finally {
       setSubmitting(false);
@@ -325,6 +338,7 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
           <p className="text-gray-500 italic">Loading bill...</p>
         ) : (
           <>
+            {canAccrueInterest ? (
             <AccrueInterestFields
               idPrefix="address-bill"
               accrueInterest={form.accrueInterest}
@@ -340,6 +354,7 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
                 handleChange("interestStartsAt", value)
               }
             />
+            ) : null}
 
             <div className="space-y-2">
               <Label htmlFor="addressId">Address</Label>

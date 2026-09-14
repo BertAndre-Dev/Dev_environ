@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Paperclip, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import Modal from "@/components/modal/page";
-import { fileToBase64 } from "@/lib/file-to-base64";
 import { getApiErrorMessage } from "@/lib/api-error";
 import axiosInstance from "@/utils/axiosInstance";
 import {
@@ -19,11 +17,11 @@ import type {
   CreateStaffRequestPayload,
   StaffRequestCategory,
 } from "@/redux/slice/staff/request/staff-request";
+import WorkflowRequestFields from "@/components/request-mgt/WorkflowRequestFields";
+import { MultiFileUploadInput } from "@/components/upload/MultiFileUploadInput";
+import { useMultiFileUpload } from "@/hooks/useMultiFileUpload";
 
-const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10MB
 const MAX_ATTACHMENTS = 5;
-const FILE_ACCEPT =
-  "image/jpeg,image/png,image/webp,image/gif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,application/pdf";
 
 type FormPayload = Omit<CreateStaffRequestPayload, "estateId">;
 
@@ -46,17 +44,21 @@ export default function StaffRequestFormModal({
   onSubmit,
   loading = false,
 }: StaffRequestFormModalProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const attachmentsUpload = useMultiFileUpload({
+    kind: "general",
+    maxFiles: MAX_ATTACHMENTS,
+  });
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [workflowId, setWorkflowId] = useState("");
   const [workflows, setWorkflows] = useState<RequestWorkflow[]>([]);
   const [workflowsLoading, setWorkflowsLoading] = useState(false);
-  const [attachments, setAttachments] = useState<
-    { name: string; dataUrl: string }[]
-  >([]);
   const [encoding, setEncoding] = useState(false);
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [fieldFileNames, setFieldFileNames] = useState<Record<string, string>>(
+    {},
+  );
 
   const categoryOptions = categories.map((c) => ({
     value: c.value,
@@ -88,6 +90,16 @@ export default function StaffRequestFormModal({
 
     return [{ value: "", label: "Use estate default" }, ...named];
   }, [workflows, workflowsLoading]);
+
+  const selectedWorkflow = useMemo(
+    () =>
+      workflows.find(
+        (workflow) =>
+          (workflow.id ?? workflow._id ?? "").trim() === workflowId.trim(),
+      ) ?? null,
+    [workflows, workflowId],
+  );
+  const extraFields = selectedWorkflow?.fields ?? [];
 
   useEffect(() => {
     if (!categories.length) {
@@ -141,65 +153,48 @@ export default function StaffRequestFormModal({
     };
   }, [visible, estateId]);
 
+  useEffect(() => {
+    setFieldValues({});
+    setFieldFileNames({});
+  }, [workflowId]);
+
   const resetForm = () => {
     setTitle("");
     setDescription("");
     setCategory(categories[0]?.value ?? "");
     setWorkflowId("");
-    setAttachments([]);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    attachmentsUpload.reset();
+    setFieldValues({});
+    setFieldFileNames({});
   };
 
   const handleClose = () => {
-    if (loading || encoding) return;
+    if (loading || encoding || attachmentsUpload.isUploading) return;
     resetForm();
     onClose();
-  };
-
-  const handleFilesSelected = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const files = Array.from(e.target.files ?? []);
-    if (!files.length) return;
-
-    const remaining = MAX_ATTACHMENTS - attachments.length;
-    if (remaining <= 0) {
-      toast.error(`You can attach up to ${MAX_ATTACHMENTS} files.`);
-      e.target.value = "";
-      return;
-    }
-
-    const selected = files.slice(0, remaining);
-    setEncoding(true);
-    try {
-      const next: { name: string; dataUrl: string }[] = [];
-      for (const file of selected) {
-        if (file.size > MAX_FILE_BYTES) {
-          toast.error(`${file.name} exceeds 10MB.`);
-          continue;
-        }
-        const dataUrl = await fileToBase64(file);
-        next.push({ name: file.name, dataUrl });
-      }
-      if (next.length) {
-        setAttachments((prev) => [...prev, ...next]);
-      }
-    } catch (err: unknown) {
-      const message = getApiErrorMessage(err) || "Failed to read file.";
-      toast.error(message);
-    } finally {
-      setEncoding(false);
-      e.target.value = "";
-    }
-  };
-
-  const removeAttachment = (index: number) => {
-    setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !category || !estateId) return;
+
+    const missing = extraFields.find(
+      (field) => field.required && !(fieldValues[field.key] ?? "").trim(),
+    );
+    if (missing) {
+      toast.error(`${missing.label} is required.`);
+      return;
+    }
+
+    const fieldValuePayload = extraFields
+      .map((field) => {
+        const raw = fieldValues[field.key] ?? "";
+        return {
+          key: field.key,
+          value: field.type === "file" ? raw : raw.trim(),
+        };
+      })
+      .filter((field) => field.value);
 
     try {
       await onSubmit({
@@ -207,10 +202,11 @@ export default function StaffRequestFormModal({
         description: description.trim() || undefined,
         category,
         attachments:
-          attachments.length > 0
-            ? attachments.map((a) => a.dataUrl)
+          attachmentsUpload.fileUrls.length > 0
+            ? attachmentsUpload.fileUrls
             : undefined,
         workflowId: workflowId.trim() || undefined,
+        fieldValues: fieldValuePayload.length > 0 ? fieldValuePayload : undefined,
       });
       resetForm();
     } catch {
@@ -219,11 +215,17 @@ export default function StaffRequestFormModal({
   };
 
   const valid = Boolean(
-    title.trim() && category && estateId && categories.length > 0,
+    title.trim() &&
+      category &&
+      estateId &&
+      categories.length > 0 &&
+      extraFields.every(
+        (field) => !field.required || (fieldValues[field.key] ?? "").trim(),
+      ),
   );
   // Only block the whole form while submitting or encoding files.
   // Category loading should not disable title/description/etc.
-  const busy = loading || encoding;
+  const busy = loading || encoding || attachmentsUpload.isUploading;
 
   return (
     <Modal
@@ -295,56 +297,40 @@ export default function StaffRequestFormModal({
             />
           </div>
 
+          {extraFields.length > 0 ? (
+            <WorkflowRequestFields
+              fields={extraFields}
+              values={fieldValues}
+              fileNames={fieldFileNames}
+              onValueChange={(key, value) =>
+                setFieldValues((prev) => ({ ...prev, [key]: value }))
+              }
+              onFileNameChange={(key, fileName) =>
+                setFieldFileNames((prev) => ({ ...prev, [key]: fileName }))
+              }
+              disabled={busy}
+              encoding={encoding}
+              onEncodingChange={setEncoding}
+            />
+          ) : null}
+
           <div>
-            <Label>Attachments</Label>
-            <div className="mt-1 space-y-2">
-              {attachments.length > 0 && (
-                <ul className="space-y-1.5">
-                  {attachments.map((file, index) => (
-                    <li
-                      key={`${file.name}-${index}`}
-                      className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
-                    >
-                      <span className="truncate flex items-center gap-2 min-w-0">
-                        <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        <span className="truncate">{file.name}</span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeAttachment(index)}
-                        disabled={busy}
-                        className="shrink-0 p-1 rounded hover:bg-muted text-muted-foreground"
-                        aria-label={`Remove ${file.name}`}
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept={FILE_ACCEPT}
-                multiple
-                className="hidden"
-                onChange={handleFilesSelected}
-                disabled={busy || attachments.length >= MAX_ATTACHMENTS}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={busy || attachments.length >= MAX_ATTACHMENTS}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Paperclip className="h-4 w-4 mr-2" />
-                {encoding ? "Reading files..." : "Add files"}
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                Up to {MAX_ATTACHMENTS} files, 10MB each.
+            <MultiFileUploadInput
+              items={attachmentsUpload.items}
+              onAddFiles={attachmentsUpload.addFiles}
+              onRemove={attachmentsUpload.remove}
+              acceptAttr={attachmentsUpload.acceptAttr}
+              maxFiles={MAX_ATTACHMENTS}
+              isUploading={attachmentsUpload.isUploading}
+              disabled={busy}
+              label="Attachments"
+              hint={`Up to ${MAX_ATTACHMENTS} files, 10MB each. Images, PDF, DOC, DOCX, XLS, XLSX.`}
+            />
+            {attachmentsUpload.error ? (
+              <p className="mt-1 text-xs text-destructive">
+                {attachmentsUpload.error}
               </p>
-            </div>
+            ) : null}
           </div>
 
           <div className="flex gap-2 pt-2 justify-end">

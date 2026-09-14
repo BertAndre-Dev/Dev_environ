@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import Table from "@/components/tables/list/page";
 import { formatDateTime } from "@/lib/format-date";
 import { formatTransactionAmount } from "@/lib/transaction-summary-chart";
+import { computeWalletTotalBalance } from "@/lib/wallet-balance";
 
 export type SuperAdminWalletSummary = {
   balance?: number;
@@ -129,13 +130,20 @@ export function SuperAdminWalletPanel({
         </p>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <BalanceCard
+          label="Total balance"
+          value={computeWalletTotalBalance(wallet)}
+        />
         <BalanceCard label="Available balance" value={wallet.availableBalance} />
         <BalanceCard
           label="Withdrawable balance"
           value={wallet.withdrawableBalance}
         />
-        <BalanceCard label="Total balance" value={wallet.balance} />
+        <BalanceCard
+          label="Temporary balance"
+          value={wallet.temporaryBalance}
+        />
         <BalanceCard label="Locked balance" value={wallet.lockedBalance} />
       </div>
 

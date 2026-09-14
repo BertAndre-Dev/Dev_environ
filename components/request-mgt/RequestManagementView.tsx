@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { ClipboardList, Trash2 } from "lucide-react";
@@ -18,9 +19,7 @@ import RequestDetailModal, {
   formatCategory,
   formatDate,
   formatRequestCode,
-  formatStatusLabel,
   getActorName,
-  getStatusStyle,
 } from "./RequestDetailModal";
 import {
   getRequestScopeApi,
@@ -32,6 +31,12 @@ import {
   requestDeleteIconButtonClass,
   requestViewButtonClass,
 } from "./request-action-styles";
+import {
+  formatRequestStatusLabel,
+  formatRequestStepsExport,
+  getRequestStatusStyle,
+} from "@/lib/request-record";
+import { RequestStepsCell } from "./RequestStepsCell";
 
 type EstateSelectOption = { label: string; value: string };
 
@@ -73,6 +78,9 @@ export default function RequestManagementView({
   hideHeading = false,
 }: RequestManagementViewProps) {
   const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const api = useMemo(() => getRequestScopeApi(scope), [scope]);
   const [searchInput, setSearchInput] = useState("");
   const [viewingId, setViewingId] = useState<string | null>(null);
@@ -80,6 +88,48 @@ export default function RequestManagementView({
     useState<ScopedRequestItem | null>(null);
   const [requestToDelete, setRequestToDelete] =
     useState<ScopedRequestItem | null>(null);
+
+  const clearRequestQuery = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (!params.has("id")) return;
+    params.delete("id");
+    params.delete("estateId");
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
+
+  const closeDetail = useCallback(() => {
+    setViewingId(null);
+    setViewingFallback(null);
+    clearRequestQuery();
+  }, [clearRequestQuery]);
+
+  // Deep-link from notifications: /request?id=…&estateId=…
+  useEffect(() => {
+    const idFromUrl = searchParams.get("id")?.trim() || "";
+    const estateFromUrl = searchParams.get("estateId")?.trim() || "";
+
+    if (
+      estateFromUrl &&
+      onEstateChange &&
+      estateOptions?.length &&
+      selectedEstate?.value !== estateFromUrl
+    ) {
+      const match = estateOptions.find((opt) => opt.value === estateFromUrl);
+      if (match) onEstateChange(match);
+    }
+
+    if (idFromUrl && viewingId !== idFromUrl) {
+      setViewingId(idFromUrl);
+      setViewingFallback(null);
+    }
+  }, [
+    estateOptions,
+    onEstateChange,
+    searchParams,
+    selectedEstate?.value,
+    viewingId,
+  ]);
 
   const { list, pagination, ui, getListStatus, deleteStatus } =
     useSelector(api.selectState);
@@ -160,6 +210,14 @@ export default function RequestManagementView({
   const columns = useMemo(
     () => [
       {
+        key: "createdAt",
+        header: "Created",
+        render: (item: ScopedRequestItem) =>
+          formatDate(item.createdAt || item.updatedAt),
+        exportValue: (item: ScopedRequestItem) =>
+          formatDate(item.createdAt || item.updatedAt),
+      },
+      {
         key: "code",
         header: "Code",
         render: (item: ScopedRequestItem) => (
@@ -168,14 +226,6 @@ export default function RequestManagementView({
           </span>
         ),
         exportValue: (item: ScopedRequestItem) => formatRequestCode(item.code),
-      },
-      {
-        key: "createdAt",
-        header: "Submitted",
-        render: (item: ScopedRequestItem) =>
-          formatDate(item.createdAt || item.updatedAt),
-        exportValue: (item: ScopedRequestItem) =>
-          formatDate(item.createdAt || item.updatedAt),
       },
       {
         key: "title",
@@ -199,17 +249,40 @@ export default function RequestManagementView({
         exportValue: (item: ScopedRequestItem) => formatCategory(item.category),
       },
       {
+        key: "steps",
+        header: "Steps",
+        render: (item: ScopedRequestItem) => (
+          <RequestStepsCell
+            steps={item.steps}
+            fallbackName={
+              item.currentStepName?.trim() ||
+              (item.currentStepOrder != null
+                ? `Step ${item.currentStepOrder}`
+                : undefined)
+            }
+          />
+        ),
+        exportValue: (item: ScopedRequestItem) =>
+          formatRequestStepsExport(
+            item.steps,
+            item.currentStepName?.trim() ||
+              (item.currentStepOrder != null
+                ? `Step ${item.currentStepOrder}`
+                : undefined),
+          ),
+      },
+      {
         key: "status",
         header: "Status",
         render: (item: ScopedRequestItem) => (
           <span
-            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStatusStyle(item.status)}`}
+            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getRequestStatusStyle(item.status)}`}
           >
-            {formatStatusLabel(item.status)}
+            {formatRequestStatusLabel(item.status)}
           </span>
         ),
         exportValue: (item: ScopedRequestItem) =>
-          formatStatusLabel(item.status),
+          formatRequestStatusLabel(item.status),
       },
       {
         key: "createdBy",
@@ -378,10 +451,7 @@ export default function RequestManagementView({
           requestId={viewingId}
           estateId={estateId}
           fallback={viewingFallback}
-          onClose={() => {
-            setViewingId(null);
-            setViewingFallback(null);
-          }}
+          onClose={closeDetail}
           onChanged={() => {
             void loadRequests();
           }}

@@ -50,16 +50,23 @@ import { isPending } from "@/lib/async-status";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { parseCompanyFromUser } from "../lib/company";
+import {
+  extractEstateId,
+  normalizeUserId,
+  resolveEstateDisplayName,
+} from "@/lib/user-id";
+import { formatAddressRecordCreatedAt, formatAddressEntryLabel } from "@/lib/address";
 
 type AddressIdInput = string | { id: string; data?: Record<string, unknown> };
+type IdRef = string | { id?: string; _id?: string; name?: string };
 
 interface CompanyMeterRow {
   id?: string;
   meterNumber: string;
   isActive?: boolean;
   isAssigned?: boolean;
-  estateId?: string;
-  companyId?: string;
+  estateId?: IdRef;
+  companyId?: IdRef;
   lastCredit?: number;
   createdAt?: string;
   updatedAt?: string;
@@ -91,43 +98,7 @@ function toAddressData(addressId: AddressIdInput | null | undefined): Record<
 function formatAddressData(
   data: Record<string, unknown> | null | undefined,
 ): string {
-  if (!data) return "—";
-  const entries = Object.entries(data).filter(
-    ([, v]) => v != null && String(v).trim() !== "",
-  );
-  if (entries.length === 0) return "—";
-  return entries.map(([k, v]) => `${k}: ${String(v)}`).join(", ");
-}
-
-function getAllAddressKeys(data: CompanyMeterRow[]): string[] {
-  const keys = new Set<string>();
-  data.forEach((item) => {
-    const addressData = toAddressData(item.addressId);
-    if (addressData) {
-      Object.keys(addressData).forEach((key) => keys.add(key));
-    }
-  });
-  return Array.from(keys);
-}
-
-function getAddressColumns(data: CompanyMeterRow[]) {
-  if (!data.length) return [];
-  const addressKeys = getAllAddressKeys(data);
-  return addressKeys.map((key) => ({
-    key: `address_${key}`,
-    header: key
-      .replace(/([A-Z])/g, " $1")
-      .replace(/^./, (c) => c.toUpperCase()),
-    render: (item: CompanyMeterRow) => {
-      const value = toAddressData(item.addressId)?.[key];
-      if (value == null || String(value).trim() === "") return "—";
-      return String(value);
-    },
-    exportValue: (item: CompanyMeterRow) => {
-      const value = toAddressData(item.addressId)?.[key];
-      return value == null ? "" : String(value);
-    },
-  }));
+  return formatAddressEntryLabel(data) || "—";
 }
 
 type EstateOption = { label: string; value: string };
@@ -449,26 +420,50 @@ export default function CompanyMeterManagement() {
   };
 
   const columns = [
-    { key: "createdAt", header: "Created Date" },
+    {
+      key: "createdAt",
+      header: "Created Date",
+      render: (item: CompanyMeterRow) =>
+        formatAddressRecordCreatedAt(item.createdAt),
+      exportValue: (item: CompanyMeterRow) =>
+        formatAddressRecordCreatedAt(item.createdAt),
+    },
     { key: "meterNumber", header: "Meter Number" },
-    ...getAddressColumns(meters),
-    ...(!isAllEstates
-      ? [
-          {
-            key: "estateId",
-            header: "Estate",
-            render: (item: CompanyMeterRow) => {
-              const id = item.estateId;
-              if (!id) return <span className="text-muted-foreground">—</span>;
-              return (
-                <span className="font-medium">
-                  {estateNameById[id] ?? id}
-                </span>
-              );
-            },
-          },
-        ]
-      : []),
+    {
+      key: "estateId",
+      header: "Estate",
+      render: (item: CompanyMeterRow) => {
+        const label = resolveEstateDisplayName(item.estateId, estateNameById);
+        if (!label) {
+          return (
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+              Not assigned
+            </span>
+          );
+        }
+        return <span className="font-medium">{label}</span>;
+      },
+      exportValue: (item: CompanyMeterRow) =>
+        resolveEstateDisplayName(item.estateId, estateNameById) ??
+        "Not assigned",
+    },
+    {
+      key: "address",
+      header: "Address",
+      render: (item: CompanyMeterRow) => {
+        const label = formatAddressEntryLabel(toAddressData(item.addressId));
+        if (!label) {
+          return (
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+              Not assigned
+            </span>
+          );
+        }
+        return label;
+      },
+      exportValue: (item: CompanyMeterRow) =>
+        formatAddressEntryLabel(toAddressData(item.addressId)) || "Not assigned",
+    },
     {
       key: "isActive",
       header: "Status",
@@ -486,7 +481,7 @@ export default function CompanyMeterManagement() {
     },
     {
       key: "isAssigned",
-      header: "Assigned Status",
+      header: "Assigned To Address",
       render: (item: CompanyMeterRow) => (
         <span
           className={`px-3 py-1 rounded-full text-xs font-semibold ${
@@ -495,7 +490,7 @@ export default function CompanyMeterManagement() {
               : "bg-red-100 text-red-700"
           }`}
         >
-          {item.isAssigned ? "Assigned" : "Not Assigned"}
+          {item.isAssigned ? "Assigned to address" : "Not assigned to address"}
         </span>
       ),
     },
@@ -504,9 +499,10 @@ export default function CompanyMeterManagement() {
       header: "Actions",
       exportable: false,
       render: (item: CompanyMeterRow) => {
-        const hasEstate = Boolean(item.estateId?.trim());
+        const hasEstate = Boolean(extractEstateId(item.estateId));
         const canAssignOrReassign =
-          hasEstate || Boolean(item.companyId?.trim() || companyId);
+          hasEstate ||
+          Boolean(normalizeUserId(item.companyId) || companyId);
         const canView = Boolean(toAddressIdString(item.addressId));
 
         return (
@@ -545,7 +541,7 @@ export default function CompanyMeterManagement() {
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   onSelect={() => handleDeleteMeter(item.id!)}
-                  className="cursor-pointer select-none rounded px-3 py-2 text-sm text-red-600 outline-none hover:bg-gray-100 focus:bg-gray-100"
+                  className="cursor-pointer select-none rounded px-3 py-2 text-sm text-red-600 outline-none hover:bg-gray-100 focus:bg-gray-100 hover:text-red-700"
                 >
                   Delete
                 </DropdownMenu.Item>
@@ -806,9 +802,9 @@ export default function CompanyMeterManagement() {
           <CompanyAssignMeterToEstateForm
             meterNumber={reassignMeterRow.meterNumber}
             companyId={
-              reassignMeterRow.companyId?.trim() || companyId
+              normalizeUserId(reassignMeterRow.companyId) || companyId
             }
-            estateId={reassignMeterRow.estateId}
+            estateId={extractEstateId(reassignMeterRow.estateId) ?? undefined}
             close={handleCloseReassignMeter}
             refresh={handleRefresh}
           />
@@ -837,10 +833,10 @@ export default function CompanyMeterManagement() {
               <div>
                 <dt className="text-muted-foreground">Estate</dt>
                 <dd className="font-medium">
-                  {meterDetails.estateId
-                    ? (estateNameById[meterDetails.estateId] ??
-                      meterDetails.estateId)
-                    : "—"}
+                  {resolveEstateDisplayName(
+                    meterDetails.estateId,
+                    estateNameById,
+                  ) ?? "—"}
                 </dd>
               </div>
               <div>

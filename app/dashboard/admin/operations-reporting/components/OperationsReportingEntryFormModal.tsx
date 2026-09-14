@@ -202,7 +202,7 @@ export default function OperationsReportingEntryFormModal({
                       placeholder={`Enter ${field.label}`}
                     />
                   )}
-                  <p className="text-xs text-muted-foreground font-mono">{key}</p>
+                  {/* <p className="text-xs text-muted-foreground font-mono">{key}</p> */}
                 </div>
               );
             })

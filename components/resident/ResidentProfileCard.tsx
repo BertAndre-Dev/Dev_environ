@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import Image from "next/image";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Building2,
@@ -162,7 +162,7 @@ export function ResidentProfileCard() {
   const fullName =
     `${asString(display.firstName)} ${asString(display.lastName)}`.trim() ||
     "Resident";
-  const image = asString(display.image) || "/profile.svg";
+  const image = asString(display.image);
   const role = asString(display.role) || "resident";
   const residentType = asString(display.residentType);
   const email = asString(display.email);
@@ -249,15 +249,7 @@ export function ResidentProfileCard() {
       {!loading && !(profileError && !profileUser) ? (
         <>
           <div className="flex flex-col md:flex-row md:items-center gap-4">
-            <div className="bg-primary rounded-full overflow-hidden w-16 h-16 shrink-0">
-              <Image
-                src={image}
-                alt={fullName}
-                width={64}
-                height={64}
-                className="rounded-full object-cover w-full h-full"
-              />
-            </div>
+            <UserAvatar src={image} alt={fullName} size={64} />
             <div className="min-w-0 flex-1 space-y-2">
               <div>
                 <p className="text-lg font-semibold truncate">{fullName}</p>

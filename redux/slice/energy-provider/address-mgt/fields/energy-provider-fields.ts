@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
+import { toAddressFieldBody } from "@/lib/address";
 
 interface FieldData {
   estateId: string;
@@ -18,7 +19,7 @@ export const createEnergyProviderField = createAsyncThunk(
   "energy-provider-field/createField",
   async (data: FieldData, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.post("/api/v1/address-mgt/field", data);
+      const res = await axiosInstance.post("/api/v1/address-mgt/field", toAddressFieldBody(data));
       return res.data;
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
@@ -79,7 +80,7 @@ export const updateEnergyProviderField = createAsyncThunk(
     try {
       const res = await axiosInstance.put(
         `/api/v1/address-mgt/field/${fieldId}`,
-        data,
+        toAddressFieldBody(data),
       );
       return res.data;
     } catch (error: unknown) {

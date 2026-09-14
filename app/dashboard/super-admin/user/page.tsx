@@ -39,15 +39,17 @@ import EditUserForm from "@/app/dashboard/super-admin/user/components/EditUserFo
 import Loader from "@/components/ui/Loader";
 import { isPending } from "@/lib/async-status";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { UserNameWithAvatar } from "@/components/ui/user-avatar";
+import { formatUserAddresses } from "@/lib/address";
 import { UserStatusModal } from "./components/UserStatusModal";
 import {
   DEFAULT_ESTATE_USER_ROLE,
-  ESTATE_USER_ROLE_FILTER_OPTIONS,
+  DEFAULT_SUPER_ADMIN_COMPANY_SCOPE_ROLE,
   ESTATE_SCOPE_ROLE_FILTER_OPTIONS,
-  getEstateUserRoleTotalLabel,
-  type EstateUserRoleFilter,
+  SUPER_ADMIN_COMPANY_SCOPE_ROLE_FILTER_OPTIONS,
+  getCompanyUserRoleTotalLabel,
+  type CompanyUserRoleFilter,
 } from "@/lib/estate-user-roles";
-/** Estate scope: company users are filtered under Company, not Estate. */
 
 interface UserAddress {
   id: string;
@@ -78,6 +80,9 @@ interface SuperAdminUserData {
   residentType?: string | null;
   addressIds?: UserAddress[];
   serviceChargesPaidForAddresses?: string[];
+  suspendedAt?: string | null;
+  suspendedBy?: string | null;
+  suspensionReason?: string | null;
 }
 
 function formatAddressLabel(data?: UserAddress["data"]) {
@@ -184,7 +189,7 @@ export default function SuperAdminUserPage() {
   );
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [roleFilter, setRoleFilter] = useState<EstateUserRoleFilter>(
+  const [roleFilter, setRoleFilter] = useState<CompanyUserRoleFilter>(
     DEFAULT_ESTATE_USER_ROLE,
   );
   const [editingUser, setEditingUser] = useState<SuperAdminUserData | null>(
@@ -350,20 +355,29 @@ export default function SuperAdminUserPage() {
     if (scope === "estate") {
       setSelectedCompany(null);
       if (estateOptions.length) setSelectedEstate(estateOptions[0]);
-      // Company role is not valid under estate filter.
-      if (roleFilter === "company") {
+      // Company / energy provider roles are not valid under estate filter.
+      if (
+        roleFilter === "company" ||
+        roleFilter === "energy provider"
+      ) {
         setRoleFilter(DEFAULT_ESTATE_USER_ROLE);
       }
     } else {
       setSelectedEstate(null);
       if (companyOptions.length) setSelectedCompany(companyOptions[0]);
+      const companyRoleValid = SUPER_ADMIN_COMPANY_SCOPE_ROLE_FILTER_OPTIONS.some(
+        (o) => o.value === roleFilter,
+      );
+      if (!companyRoleValid) {
+        setRoleFilter(DEFAULT_SUPER_ADMIN_COMPANY_SCOPE_ROLE);
+      }
     }
   };
 
   const roleFilterOptions =
     filterScope === "estate"
       ? ESTATE_SCOPE_ROLE_FILTER_OPTIONS
-      : ESTATE_USER_ROLE_FILTER_OPTIONS;
+      : SUPER_ADMIN_COMPANY_SCOPE_ROLE_FILTER_OPTIONS;
 
   const handleInviteModal = () => {
     setInviteOpen(true);
@@ -406,16 +420,16 @@ export default function SuperAdminUserPage() {
     user.email ||
     "this user";
 
-  const handleConfirmStatus = async () => {
+  const handleConfirmStatus = async (text: string) => {
     const user = statusItem;
     if (!user?.id) return;
     setStatusSubmitting(true);
     try {
       if (statusMode === "suspend") {
-        await dispatch(suspendUser(user.id)).unwrap();
+        await dispatch(suspendUser({ id: user.id, reason: text })).unwrap();
         toast.info(`${user.firstName ?? "User"} has been suspended.`);
       } else {
-        await dispatch(activateUser(user.id)).unwrap();
+        await dispatch(activateUser({ id: user.id, note: text })).unwrap();
         toast.success(`${user.firstName ?? "User"} has been activated.`);
       }
       closeStatusModal();
@@ -425,6 +439,7 @@ export default function SuperAdminUserPage() {
     } catch (err: unknown) {
       const message = getApiErrorMessage(err);
       if (message) toast.error(message);
+      throw err;
     } finally {
       setStatusSubmitting(false);
     }
@@ -462,7 +477,14 @@ export default function SuperAdminUserPage() {
       exportValue: (item: SuperAdminUserData) =>
         item.createdAt ? String(item.createdAt) : "",
     },
-    { key: "firstName", header: "First Name" },
+    {
+      key: "firstName",
+      header: "First Name",
+      render: (item: SuperAdminUserData) => (
+        <UserNameWithAvatar image={item.image} name={item.firstName} />
+      ),
+      exportValue: (item: SuperAdminUserData) => item.firstName || "",
+    },
     { key: "lastName", header: "Last Name" },
     { key: "email", header: "Email" },
     {
@@ -470,6 +492,14 @@ export default function SuperAdminUserPage() {
       header: "Phone",
       render: (item: SuperAdminUserData) => item.phoneNumber?.trim() || "—",
       exportValue: (item: SuperAdminUserData) => item.phoneNumber?.trim() || "",
+    },
+    {
+      key: "address",
+      header: "Address",
+      render: (item: SuperAdminUserData) =>
+        formatUserAddresses(item.addressIds) || "—",
+      exportValue: (item: SuperAdminUserData) =>
+        formatUserAddresses(item.addressIds),
     },
     ...(showResidentColumns
       ? [
@@ -536,9 +566,44 @@ export default function SuperAdminUserPage() {
               : "bg-red-100 text-red-700"
           }`}
         >
-          {item.isActive ? "Active" : "Inactive"}
+          {item.isActive ? "Active" : "Suspended"}
         </span>
       ),
+      exportValue: (item: SuperAdminUserData) =>
+        item.isActive ? "Active" : "Suspended",
+    },
+    {
+      key: "suspension",
+      header: "Suspension",
+      render: (item: SuperAdminUserData) => {
+        if (item.isActive !== false) return "—";
+        const reason = item.suspensionReason?.trim();
+        const when =
+          item.suspendedAt && !Number.isNaN(new Date(item.suspendedAt).getTime())
+            ? new Date(item.suspendedAt).toLocaleString("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "";
+        if (reason && when) {
+          return (
+            <div className="min-w-[10rem]">
+              <p className="text-sm text-foreground">{reason}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{when}</p>
+            </div>
+          );
+        }
+        return reason || when || "—";
+      },
+      exportValue: (item: SuperAdminUserData) => {
+        if (item.isActive !== false) return "";
+        return [item.suspensionReason?.trim(), item.suspendedAt]
+          .filter(Boolean)
+          .join(" | ");
+      },
     },
     {
       key: "actions",
@@ -547,7 +612,7 @@ export default function SuperAdminUserPage() {
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
-            className="cursor-pointer"
+            className="text-[#0150AC] hover:text-[#01408A] cursor-pointer"
             size="sm"
             onClick={() => {
               const id = item.id || (item as { _id?: string })._id;
@@ -556,45 +621,45 @@ export default function SuperAdminUserPage() {
             title="View user details"
             disabled={!item.id && !(item as { _id?: string })._id}
           >
-            <Eye className="w-4 h-4 text-[#0150AC]" />
+            <Eye className="w-4 h-4" />
           </Button>
           <Button
             variant="ghost"
-            className="cursor-pointer"
+            className="text-blue-600 hover:text-blue-700 cursor-pointer"
             size="sm"
             onClick={() => handleEditUser(item)}
             title="Edit user details"
           >
-            <Edit className="w-4 h-4 text-blue-600" />
+            <Edit className="w-4 h-4" />
           </Button>
           {item.isActive ? (
             <Button
               variant="ghost"
-              className="cursor-pointer"
+              className="text-red-600 hover:text-red-700 cursor-pointer"
               size="sm"
               onClick={() => openSuspendModal(item)}
               title="Suspend user"
             >
-              <PowerOff className="w-4 h-4 text-red-600" />
+              <PowerOff className="w-4 h-4" />
             </Button>
           ) : (
             <Button
               variant="ghost"
-              className="cursor-pointer"
+              className="text-green-600 hover:text-green-700 cursor-pointer"
               size="sm"
               onClick={() => openActivateModal(item)}
               title="Activate user"
             >
-              <Power className="w-4 h-4 text-green-600" />
+              <Power className="w-4 h-4" />
             </Button>
           )}
           <Button
             variant="ghost"
-            className="cursor-pointer"
+            className="text-red-600 hover:text-red-700 cursor-pointer"
             size="sm"
             onClick={() => handleDeleteUser(item.id, item.firstName)}
           >
-            <Trash2 className="w-4 h-4 text-red-600" />
+            <Trash2 className="w-4 h-4" />
           </Button>
         </div>
       ),
@@ -682,8 +747,10 @@ export default function SuperAdminUserPage() {
                   value={roleFilterOptions.find((o) => o.value === roleFilter)}
                   onChange={(option) =>
                     setRoleFilter(
-                      (option?.value as EstateUserRoleFilter) ??
-                        DEFAULT_ESTATE_USER_ROLE,
+                      (option?.value as CompanyUserRoleFilter) ??
+                        (filterScope === "company"
+                          ? DEFAULT_SUPER_ADMIN_COMPANY_SCOPE_ROLE
+                          : DEFAULT_ESTATE_USER_ROLE),
                     )
                   }
                   isSearchable={false}
@@ -706,7 +773,7 @@ export default function SuperAdminUserPage() {
           {(() => {
             const stats = [
               {
-                label: getEstateUserRoleTotalLabel(roleFilter),
+                label: getCompanyUserRoleTotalLabel(roleFilter),
                 value: userPagination?.total ?? 0,
                 icon: UsersRound,
                 color: "bg-[#FEE6D480]",

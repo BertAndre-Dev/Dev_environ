@@ -10,11 +10,16 @@ import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/redux/store";
 import {
-  getBanks,
-  verifyBankAccount,
+  getBanks as getEstateAdminBanks,
+  verifyBankAccount as verifyEstateAdminBankAccount,
   type BankItem,
 } from "@/redux/slice/estate-admin/fund-wallet/fund-wallet";
-import { clearVerifiedAccount } from "@/redux/slice/estate-admin/fund-wallet/fund-wallet-slice";
+import { clearVerifiedAccount as clearEstateAdminVerifiedAccount } from "@/redux/slice/estate-admin/fund-wallet/fund-wallet-slice";
+import {
+  getBanks as getStaffBanks,
+  verifyBankAccount as verifyStaffBankAccount,
+} from "@/redux/slice/staff/fund-wallet/fund-wallet";
+import { clearVerifiedAccount as clearStaffVerifiedAccount } from "@/redux/slice/staff/fund-wallet/fund-wallet-slice";
 import type { RevenueWithdrawalRole } from "@/redux/slice/wallet-mgt/create-revenue-withdrawal-module";
 import {
   resetSetRevenueWithdrawalAccountState as resetCompanySetState,
@@ -28,6 +33,10 @@ import {
   resetSetRevenueWithdrawalAccountState as resetEnergyProviderSetState,
   setEnergyProviderRevenueWithdrawalAccount,
 } from "@/redux/slice/energy-provider/wallet-mgt/revenue-withdrawal-account-slice";
+import {
+  resetSetRevenueWithdrawalAccountState as resetStaffSetState,
+  setStaffRevenueWithdrawalAccount,
+} from "@/redux/slice/staff/wallet-mgt/revenue-withdrawal-account-slice";
 import { ChevronDown, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +61,39 @@ const ROLE_API = {
     selectSetState: (state: RootState) =>
       state.energyProviderRevenueWithdrawalAccount?.setAccountState ?? "idle",
   },
+  staff: {
+    setAccount: setStaffRevenueWithdrawalAccount,
+    resetSetState: resetStaffSetState,
+    selectSetState: (state: RootState) =>
+      state.staffRevenueWithdrawalAccount?.setAccountState ?? "idle",
+  },
+} as const;
+
+const BANK_API = {
+  company: {
+    getBanks: getEstateAdminBanks,
+    verifyBankAccount: verifyEstateAdminBankAccount,
+    clearVerifiedAccount: clearEstateAdminVerifiedAccount,
+    selectSlice: (state: RootState) => state.estateAdminFundWallet,
+  },
+  estateAdmin: {
+    getBanks: getEstateAdminBanks,
+    verifyBankAccount: verifyEstateAdminBankAccount,
+    clearVerifiedAccount: clearEstateAdminVerifiedAccount,
+    selectSlice: (state: RootState) => state.estateAdminFundWallet,
+  },
+  energyProvider: {
+    getBanks: getEstateAdminBanks,
+    verifyBankAccount: verifyEstateAdminBankAccount,
+    clearVerifiedAccount: clearEstateAdminVerifiedAccount,
+    selectSlice: (state: RootState) => state.estateAdminFundWallet,
+  },
+  staff: {
+    getBanks: getStaffBanks,
+    verifyBankAccount: verifyStaffBankAccount,
+    clearVerifiedAccount: clearStaffVerifiedAccount,
+    selectSlice: (state: RootState) => state.staffFundWallet,
+  },
 } as const;
 
 export interface SetRevenueWithdrawalAccountModalProps {
@@ -73,13 +115,14 @@ export default function SetRevenueWithdrawalAccountModal({
 }: Readonly<SetRevenueWithdrawalAccountModalProps>) {
   const dispatch = useDispatch<AppDispatch>();
   const api = ROLE_API[role];
+  const banksApi = BANK_API[role];
   const {
     banks,
     getBanksState,
     verifyBankAccountState,
     verifiedAccountName,
     error: paymentError,
-  } = useSelector((state: RootState) => state.estateAdminFundWallet);
+  } = useSelector(banksApi.selectSlice);
   const setState = useSelector(api.selectSetState);
 
   const [accountNumber, setAccountNumber] = useState("");
@@ -105,12 +148,12 @@ export default function SetRevenueWithdrawalAccountModal({
 
   useEffect(() => {
     if (!visible) return;
-    dispatch(getBanks({ country: COUNTRY, gatewayType: "flutterwave" }));
+    dispatch(banksApi.getBanks({ country: COUNTRY, gatewayType: "flutterwave" }));
     return () => {
-      dispatch(clearVerifiedAccount());
+      dispatch(banksApi.clearVerifiedAccount());
       dispatch(ROLE_API[role].resetSetState());
     };
-  }, [visible, dispatch, role]);
+  }, [visible, dispatch, role, banksApi]);
 
   useEffect(() => {
     if (!visible) {
@@ -154,7 +197,7 @@ export default function SetRevenueWithdrawalAccountModal({
     ) {
       const timeoutId = setTimeout(() => {
         dispatch(
-          verifyBankAccount({
+          banksApi.verifyBankAccount({
             accountNumber: accountNumber.trim(),
             bankCode: selectedBankCode,
             gatewayType: "flutterwave",
@@ -163,8 +206,8 @@ export default function SetRevenueWithdrawalAccountModal({
       }, 500);
       return () => clearTimeout(timeoutId);
     }
-    dispatch(clearVerifiedAccount());
-  }, [accountNumber, selectedBankCode, dispatch, visible]);
+    dispatch(banksApi.clearVerifiedAccount());
+  }, [accountNumber, selectedBankCode, dispatch, visible, banksApi]);
 
   useEffect(() => {
     if (verifiedAccountName?.trim()) {
@@ -179,7 +222,7 @@ export default function SetRevenueWithdrawalAccountModal({
   }, [getBanksState, paymentError]);
 
   const handleClose = () => {
-    dispatch(clearVerifiedAccount());
+    dispatch(banksApi.clearVerifiedAccount());
     onClose();
   };
 
@@ -297,7 +340,7 @@ export default function SetRevenueWithdrawalAccountModal({
                             className="w-full cursor-pointer rounded-none px-3 py-2 text-left text-sm outline-none hover:bg-accent focus:bg-accent"
                             onClick={() => {
                               setSelectedBankCode(bank.code);
-                              dispatch(clearVerifiedAccount());
+                              dispatch(banksApi.clearVerifiedAccount());
                               setBankDropdownOpen(false);
                             }}
                           >

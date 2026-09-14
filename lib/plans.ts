@@ -1,0 +1,140 @@
+export type SubscriptionPlan = {
+  key: string;
+  name: string;
+  staffAssignableModules: string[];
+};
+
+export const DEFAULT_PLAN = "standard";
+
+export const FALLBACK_PLANS: SubscriptionPlan[] = [
+  { key: "standard", name: "Standard", staffAssignableModules: [] },
+  { key: "classic", name: "Classic", staffAssignableModules: [] },
+  { key: "premium", name: "Premium", staffAssignableModules: [] },
+];
+
+export function formatVendAmount(value: unknown): string {
+  const amount = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(amount)) return "—";
+  return `₦${amount.toLocaleString("en-NG")}`;
+}
+
+export function labelForPlan(value: unknown): string {
+  if (typeof value !== "string" || !value.trim()) return "—";
+  const key = value.trim().toLowerCase();
+  const known = FALLBACK_PLANS.find((plan) => plan.key === key);
+  if (known) return known.name;
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+export function normalizePlanKey(value: unknown): string {
+  if (typeof value === "string") {
+    const plan = value.trim().toLowerCase();
+    if (plan) return plan;
+  }
+  return DEFAULT_PLAN;
+}
+
+export function toCompanyWriteBody(data: {
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+  isActive?: boolean;
+  plan?: string;
+}) {
+  return {
+    name: data.name.trim(),
+    address: data.address.trim(),
+    city: data.city.trim(),
+    state: data.state.trim(),
+    country: data.country.trim(),
+    isActive: data.isActive ?? true,
+    plan: normalizePlanKey(data.plan),
+  };
+}
+
+export function toEstateWriteBody(data: {
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+  isActive?: boolean;
+  plan?: string;
+  visitorVerificationMode?: string;
+}) {
+  return {
+    ...toCompanyWriteBody(data),
+    ...(data.visitorVerificationMode
+      ? { visitorVerificationMode: data.visitorVerificationMode }
+      : {}),
+  };
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return null;
+}
+
+function asString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function extractArray(raw: unknown): unknown[] {
+  if (Array.isArray(raw)) return raw;
+  const record = asRecord(raw);
+  if (!record) return [];
+  const nested = record.data;
+  if (Array.isArray(nested)) return nested;
+  const nestedRecord = asRecord(nested);
+  if (nestedRecord) {
+    for (const key of ["plans", "items", "docs", "results", "rows"]) {
+      const value = nestedRecord[key];
+      if (Array.isArray(value)) return value;
+    }
+  }
+  for (const key of ["plans", "items", "docs", "results", "rows"]) {
+    const value = record[key];
+    if (Array.isArray(value)) return value;
+  }
+  return [];
+}
+
+export function parseSubscriptionPlan(raw: unknown): SubscriptionPlan | null {
+  const record = asRecord(raw);
+  if (!record) {
+    if (typeof raw === "string" && raw.trim()) {
+      const key = raw.trim().toLowerCase();
+      return { key, name: raw.trim(), staffAssignableModules: [] };
+    }
+    return null;
+  }
+
+  const key = asString(
+    record.key ?? record.plan ?? record.slug ?? record.code ?? record.id,
+  ).toLowerCase();
+  if (!key) return null;
+
+  const name = asString(record.name ?? record.label) || key;
+  const modulesRaw = record.staffAssignableModules ?? record.modules;
+  const staffAssignableModules = Array.isArray(modulesRaw)
+    ? modulesRaw.filter((item): item is string => typeof item === "string" && Boolean(item.trim()))
+    : [];
+
+  return { key, name, staffAssignableModules };
+}
+
+export function extractSubscriptionPlans(payload: unknown): SubscriptionPlan[] {
+  const seen = new Set<string>();
+  const plans: SubscriptionPlan[] = [];
+  for (const item of extractArray(payload)) {
+    const plan = parseSubscriptionPlan(item);
+    if (!plan || seen.has(plan.key)) continue;
+    seen.add(plan.key);
+    plans.push(plan);
+  }
+  return plans;
+}

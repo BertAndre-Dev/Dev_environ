@@ -16,8 +16,34 @@ export const SUPER_ADMIN_COMPANY_INVITE_ROLE_OPTIONS = [
 
 export const COMPANY_INVITE_ROLE_OPTIONS = [
   { value: "admin", label: "Admin" },
+  { value: "staff", label: "Staff" },
   { value: ENERGY_PROVIDER_ROLE, label: "Energy Provider" },
 ] as const;
+
+export type CompanyInviteRole =
+  (typeof COMPANY_INVITE_ROLE_OPTIONS)[number]["value"];
+
+export function getCompanyInviteLabel(role: CompanyInviteRole): string {
+  if (role === ENERGY_PROVIDER_ROLE) return "Invite energy provider";
+  if (role === "staff") return "Invite staff";
+  return "Invite admin";
+}
+
+export const ADMIN_INVITE_ROLES = ["resident", "staff", "security"] as const;
+
+export type AdminInviteRole = (typeof ADMIN_INVITE_ROLES)[number];
+
+export function isAdminInviteRole(role: string): role is AdminInviteRole {
+  return (ADMIN_INVITE_ROLES as readonly string[]).includes(
+    role.trim().toLowerCase(),
+  );
+}
+
+export function getAdminInviteLabel(role: AdminInviteRole): string {
+  if (role === "staff") return "Invite staff";
+  if (role === "security") return "Invite security";
+  return "Invite resident";
+}
 
 export const ENERGY_PROVIDER_INVITE_ROLE_OPTIONS = [
   { value: "resident", label: "Home owner" },
@@ -61,6 +87,10 @@ export function inviteRoleRequiresPhoneNumber(_role?: string): boolean {
   return true;
 }
 
+export function inviteRequiresDesignation(role: string): boolean {
+  return role.trim().toLowerCase() === "staff";
+}
+
 export function validateEnergyProviderInviteScope(params: {
   role: string;
   inviteContext: "estate" | "company";
@@ -91,19 +121,33 @@ export function buildInviteUserPayload(params: {
   inviteContext: "estate" | "company";
   estateId?: string;
   companyId?: string;
+  designationId?: string;
+  modules?: string[];
+  residentType?: string | null;
+  addressIds?: string[];
 }): InvitedUserData {
   const estateId = params.estateId?.trim();
   const companyId = params.companyId?.trim();
   const phoneNumber = params.phoneNumber?.trim();
+  const designationId = params.designationId?.trim();
+  const modules = (params.modules ?? [])
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const isResident = params.role.trim().toLowerCase() === "resident";
+  const addressIds = (params.addressIds ?? [])
+    .map((id) => String(id).trim())
+    .filter(Boolean);
 
   const base: InvitedUserData = {
     firstName: params.firstName.trim(),
     lastName: params.lastName.trim(),
     email: params.email.trim(),
     role: params.role,
-    residentType: null,
-    addressIds: [],
+    residentType: isResident ? (params.residentType ?? "owner") : null,
+    addressIds: isResident ? addressIds : [],
     ...(phoneNumber ? { phoneNumber } : {}),
+    ...(designationId ? { designationId } : {}),
+    ...(modules.length ? { modules } : {}),
   };
 
   if (isEnergyProviderRole(params.role)) {

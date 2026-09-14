@@ -8,14 +8,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type {
   RequestWorkflow,
+  RequestWorkflowField,
   WorkflowStep,
 } from "@/redux/slice/admin/request/admin-request";
 import WorkflowStepsEditor from "@/components/request-mgt/WorkflowStepsEditor";
+import WorkflowFieldsEditor from "@/components/request-mgt/WorkflowFieldsEditor";
 
 function cloneSteps(steps: WorkflowStep[] = []): WorkflowStep[] {
   return steps.map((step) => ({
     ...step,
     userIds: [...(step.userIds ?? [])],
+  }));
+}
+
+function cloneFields(fields: RequestWorkflowField[] = []): RequestWorkflowField[] {
+  return fields.map((field) => ({
+    ...field,
+    options: [...(field.options ?? [])],
   }));
 }
 
@@ -31,6 +40,7 @@ interface WorkflowConfigModalProps {
     name: string;
     description?: string;
     steps: WorkflowStep[];
+    fields: RequestWorkflowField[];
   }) => Promise<void>;
 }
 
@@ -52,6 +62,9 @@ export default function WorkflowConfigModal({
   const [steps, setSteps] = useState<WorkflowStep[]>(
     cloneSteps(initialWorkflow?.steps),
   );
+  const [fields, setFields] = useState<RequestWorkflowField[]>(
+    cloneFields(initialWorkflow?.fields),
+  );
 
   const busy = loading || saving;
   let saveLabel = "Save workflow";
@@ -71,6 +84,7 @@ export default function WorkflowConfigModal({
         name: name.trim(),
         description: description.trim() || undefined,
         steps,
+        fields,
       });
     } catch {
       // Parent surfaces the error toast; keep form values for retry.
@@ -90,7 +104,7 @@ export default function WorkflowConfigModal({
           </h2>
           <p className="text-sm text-muted-foreground mt-1 leading-snug">
             {isEditing
-              ? "Update this workflow’s steps, approvers, and users."
+              ? "Update this workflow’s steps, approvers, and form fields."
               : "Use an existing workflow name to update it, or a new name to create another workflow."}
           </p>
         </div>
@@ -136,6 +150,12 @@ export default function WorkflowConfigModal({
                 onChange={setSteps}
                 estateId={estateId}
                 companyId={companyId}
+                disabled={busy}
+              />
+
+              <WorkflowFieldsEditor
+                fields={fields}
+                onChange={setFields}
                 disabled={busy}
               />
             </form>

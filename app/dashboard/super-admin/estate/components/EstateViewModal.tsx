@@ -17,6 +17,7 @@ import {
 } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
 import { EstateRatesTab } from "./EstateRatesTab";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { formatVendAmount, labelForPlan } from "@/lib/plans";
 
 type EstateViewData = {
   id?: string;
@@ -27,6 +28,9 @@ type EstateViewData = {
   country?: string;
   isActive?: boolean;
   modules?: string[];
+  plan?: string;
+  minVendAmount?: number;
+  maxVendAmount?: number;
   visitorVerificationMode?: string;
   createdAt?: string | number | Date;
   updatedAt?: string | number | Date;
@@ -114,7 +118,17 @@ export function EstateViewModal({
         if (cancelled) return;
 
         const details = (estateRes?.data ?? estateRes) as EstateViewData | null;
-        setEstate(details);
+        if (!details) {
+          setEstate(null);
+        } else {
+          const min = Number(details.minVendAmount);
+          const max = Number(details.maxVendAmount);
+          setEstate({
+            ...details,
+            minVendAmount: Number.isFinite(min) ? min : details.minVendAmount,
+            maxVendAmount: Number.isFinite(max) ? max : details.maxVendAmount,
+          });
+        }
         const fromApi = parseEstateModulesResponse(
           modulesRes?.data ?? modulesRes,
         );
@@ -205,6 +219,15 @@ export function EstateViewModal({
                   <DetailRow label="City" value={display.city || "—"} />
                   <DetailRow label="State" value={display.state || "—"} />
                   <DetailRow label="Country" value={display.country || "—"} />
+                  <DetailRow label="Plan" value={labelForPlan(display.plan)} />
+                  <DetailRow
+                    label="Min vend amount"
+                    value={formatVendAmount(display.minVendAmount)}
+                  />
+                  <DetailRow
+                    label="Max vend amount"
+                    value={formatVendAmount(display.maxVendAmount)}
+                  />
                   <DetailRow
                     label="Visitor verification"
                     value={formatVerificationMode(

@@ -14,10 +14,24 @@ import { getEntriesByField } from "@/redux/slice/admin/address-mgt/entry/entry";
 import { iniviteUser, getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
 import type { AppDispatch } from "@/redux/store";
+import { getDesignations } from "@/redux/slice/designations/designations";
+import { DESIGNATIONS_PAGE_SIZE, isCompanyScopedDesignation } from "@/lib/designations";
+import {
+  DEFAULT_COUNTRY_CODE,
+  getPhoneValidationError,
+  toE164PhoneNumber,
+} from "@/lib/phone-e164";
+import {
+  inviteRequiresDesignation,
+  getAdminInviteLabel,
+  type AdminInviteRole,
+} from "@/lib/invite-user-roles";
+import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
 
 type InviteUserFormProps = {
   close: () => void;
   refresh: () => void;
+  role?: AdminInviteRole;
 };
 
 interface InviteUserFormData {
@@ -27,9 +41,11 @@ interface InviteUserFormData {
   lastName: string;
   email: string;
   phoneNumber: string;
+  countryCode: string;
   role: "resident" | "security" | "staff" | "company" | "";
   residentType: string | null;
   addressIds: string[];
+  designationId: string;
 }
 
 const roleOptions = [
@@ -39,7 +55,11 @@ const roleOptions = [
   // { label: "Company", value: "company" },
 ];
 
-const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
+const InviteUserForm: React.FC<InviteUserFormProps> = ({
+  close,
+  refresh,
+  role: lockedRole,
+}) => {
   const dispatch = useDispatch<AppDispatch>();
 
   const [formData, setFormData] = useState<InviteUserFormData>({
@@ -49,13 +69,19 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
     lastName: "",
     email: "",
     phoneNumber: "",
-    role: "",
-    residentType: null,
+    countryCode: DEFAULT_COUNTRY_CODE,
+    role: lockedRole ?? "",
+    residentType: lockedRole === "resident" ? "owner" : null,
     addressIds: [],
+    designationId: "",
   });
 
   const [loading, setLoading] = useState(false);
   const [entryOptions, setEntryOptions] = useState<any[]>([]);
+  const [designationOptions, setDesignationOptions] = useState<
+    { label: string; value: string }[]
+  >([]);
+  const [designationLoading, setDesignationLoading] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -74,18 +100,10 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
             ? rawEstateId
             : rawEstateId?._id || rawEstateId?.id || "";
 
-        const rawCompanyId = (data as any)?.companyId as
-          | string
-          | { id?: string; _id?: string }
-          | undefined;
-        const companyId =
-          typeof rawCompanyId === "string"
-            ? rawCompanyId
-            : rawCompanyId?._id ||
-              rawCompanyId?.id ||
-              (data as any)?.company?._id ||
-              (data as any)?.company?.id ||
-              "";
+        const company = parseCompanyFromUser(
+          data as Record<string, unknown>,
+        );
+        const companyId = company?.id ?? "";
 
         // Stash whatever ids we found so submit can validate later.
         setFormData((prev) => ({ ...prev, estateId, companyId }));
@@ -134,6 +152,57 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
     load();
   }, [dispatch]);
 
+  useEffect(() => {
+    if (!inviteRequiresDesignation(formData.role)) {
+      setDesignationOptions([]);
+      return;
+    }
+
+    const companyId = formData.companyId.trim();
+    const estateId = formData.estateId.trim();
+    if (!companyId && !estateId) {
+      setDesignationOptions([]);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      setDesignationLoading(true);
+      try {
+        const res = await dispatch(
+          getDesignations({
+            ...(companyId
+              ? { companyId }
+              : estateId
+                ? { estateId }
+                : {}),
+            page: 1,
+            limit: DESIGNATIONS_PAGE_SIZE,
+          }),
+        ).unwrap();
+        if (cancelled) return;
+        const items = (res.items ?? []).filter((item) => item.isActive);
+        setDesignationOptions(
+          (companyId
+            ? items.filter(isCompanyScopedDesignation)
+            : items
+          ).map((item) => ({ value: item.id, label: item.name })),
+        );
+      } catch (err: unknown) {
+        if (cancelled) return;
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+        setDesignationOptions([]);
+      } finally {
+        if (!cancelled) setDesignationLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch, formData.role, formData.companyId, formData.estateId]);
+
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
@@ -151,11 +220,30 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
     if (!formData.phoneNumber.trim()) {
       return toast.error("Please provide a phone number.");
     }
+    if (!formData.countryCode.trim()) {
+      return toast.error("Please select a country code.");
+    }
+    const e164Phone = toE164PhoneNumber(
+      formData.phoneNumber,
+      formData.countryCode,
+    );
+    if (!e164Phone) {
+      return toast.error(
+        getPhoneValidationError(
+          formData.phoneNumber,
+          formData.countryCode,
+        ),
+      );
+    }
 
     if (formData.role === "resident") {
       if (!formData.addressIds?.length) {
         return toast.error("Please select at least one address");
       }
+    }
+
+    if (inviteRequiresDesignation(formData.role) && !formData.designationId.trim()) {
+      return toast.error("Please select a designation.");
     }
 
     // companyId is optional on the invite endpoint — only include it when we
@@ -168,9 +256,12 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
       firstName: formData.firstName,
       lastName: formData.lastName,
       email: formData.email,
-      phoneNumber: formData.phoneNumber.trim(),
+      phoneNumber: e164Phone,
       role: formData.role,
-      residentType: formData.role === "resident" ? "owner" : "owner",
+      residentType: formData.role === "resident" ? "owner" : null,
+      ...(inviteRequiresDesignation(formData.role)
+        ? { designationId: formData.designationId.trim() }
+        : {}),
       // Guard against accidental empty ids (prevents backend ObjectId cast errors)
       addressIds:
         formData.role === "resident"
@@ -192,14 +283,20 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
     }
   };
 
+  let submitLabel = "Invite User";
+  if (loading) submitLabel = "Inviting...";
+  else if (lockedRole) submitLabel = getAdminInviteLabel(lockedRole);
+
   return (
-    <Card className="max-w-lg mx-auto mt-6">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold">Invite User</CardTitle>
+    <Card className="border-0 shadow-none bg-transparent mt-0 py-0 px-0 gap-3">
+      <CardHeader className="px-0 md:px-0 pb-0 pr-8">
+        <CardTitle className="text-lg font-semibold">
+          {lockedRole ? getAdminInviteLabel(lockedRole) : "Invite User"}
+        </CardTitle>
       </CardHeader>
 
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <CardContent className="px-0 md:px-0">
+        <form onSubmit={handleSubmit} className="space-y-3">
 
           {(
             [
@@ -221,7 +318,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
             </div>
           ))}
 
-          {/* Role */}
+          {lockedRole ? null : (
           <div>
             <Label>Role</Label>
             <Select
@@ -234,16 +331,57 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
                   role,
                   residentType: role === "resident" ? prev.residentType ?? "owner" : null,
                   addressIds: role === "resident" ? prev.addressIds : [],
+                  designationId: inviteRequiresDesignation(role)
+                    ? prev.designationId
+                    : "",
                 }));
               }}
               placeholder="Select role"
             />
           </div>
+          )}
+
+          {inviteRequiresDesignation(formData.role) ? (
+            <div>
+              <Label>Designation</Label>
+              <Select
+                options={designationOptions}
+                value={
+                  designationOptions.find(
+                    (option) => option.value === formData.designationId,
+                  ) ?? null
+                }
+                onChange={(opt) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    designationId: opt?.value ?? "",
+                  }))
+                }
+                isLoading={designationLoading}
+                placeholder={
+                  designationLoading
+                    ? "Loading designations..."
+                    : "Select designation"
+                }
+                noOptionsMessage={() =>
+                  formData.estateId
+                    ? "No designations for this estate"
+                    : formData.companyId
+                      ? "No designations for this company"
+                      : "No estate linked to load designations"
+                }
+              />
+            </div>
+          ) : null}
 
           <InvitePhoneNumberField
             id="phoneNumber"
-            value={formData.phoneNumber}
-            onChange={handleInput}
+            countryCode={formData.countryCode}
+            phoneNumber={formData.phoneNumber}
+            onCountryCodeChange={(countryCode) =>
+              setFormData((prev) => ({ ...prev, countryCode }))
+            }
+            onPhoneNumberChange={handleInput}
           />
 
           {/* Address(es) – checkboxes for Resident (one email, multiple apartments) */}
@@ -316,7 +454,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close, refresh }) => {
           )}
 
           <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Inviting..." : "Invite User"}
+            {submitLabel}
           </Button>
 
         </form>

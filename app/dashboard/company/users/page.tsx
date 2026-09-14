@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
 import DeleteModal from "@/components/resident/delete-modal/page";
 import Select from "react-select";
@@ -13,6 +14,7 @@ import {
   UsersRound,
   Search,
   Edit,
+  Eye,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +23,7 @@ import Modal from "@/components/modal/page";
 import Loader from "@/components/ui/Loader";
 import { isPending } from "@/lib/async-status";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { formatUserAddresses } from "@/lib/address";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
@@ -33,6 +36,7 @@ import {
   updateCompanyUser,
 } from "@/redux/slice/company/user-mgt/company-user";
 import type { CompanyUserDetails } from "@/redux/slice/company/user-mgt/company-user-slice";
+import { UserNameWithAvatar } from "@/components/ui/user-avatar";
 import {
   selectCompanyUserState,
   selectCompanyUsersList,
@@ -43,16 +47,35 @@ import CompanyInviteUserForm from "./components/CompanyInviteUserForm";
 import { UserStatusModal } from "./components/UserStatusModal";
 import EditUserForm from "@/components/user-mgt/edit-user-form";
 import {
-  DEFAULT_ESTATE_USER_ROLE,
-  ESTATE_USER_ROLE_FILTER_OPTIONS,
-  getEstateUserRoleTotalLabel,
-  type EstateUserRoleFilter,
+  getCompanyUserRoleTotalLabel,
+  getUserManagementPageTitle,
+  parseCompanyUserRoleQuery,
+  type CompanyUserRoleFilter,
 } from "@/lib/estate-user-roles";
+import {
+  ENERGY_PROVIDER_ROLE,
+  getCompanyInviteLabel,
+  type CompanyInviteRole,
+} from "@/lib/invite-user-roles";
+import { getDesignations } from "@/redux/slice/designations/designations";
+import {
+  designationLabelForUser,
+  designationNamesById,
+  DESIGNATIONS_PAGE_SIZE,
+  userHasDesignationModule,
+} from "@/lib/designations";
+import { DesignationsManager } from "@/components/designations/DesignationsManager";
 
-/** Company user management: exclude estate admin & company from role filter. */
-const COMPANY_USER_ROLE_FILTER_OPTIONS = ESTATE_USER_ROLE_FILTER_OPTIONS.filter(
-  (o) => o.value !== "estate admin" && o.value !== "company",
-);
+type CompanyStaffPageTab = "staff" | "designations";
+
+const COMPANY_STAFF_TABS: { id: CompanyStaffPageTab; label: string }[] = [
+  { id: "designations", label: "Designations" },
+  { id: "staff", label: "Staff" },
+];
+
+function parseCompanyStaffTab(raw: string | null): CompanyStaffPageTab {
+  return raw === "staff" ? "staff" : "designations";
+}
 
 interface EstateOption {
   label: string;
@@ -83,8 +106,23 @@ function formatInvitationStatus(value?: string) {
     .join(" ");
 }
 
+function companyInviteRole(
+  role: CompanyUserRoleFilter,
+): CompanyInviteRole | null {
+  if (
+    role === "admin" ||
+    role === "staff" ||
+    role === ENERGY_PROVIDER_ROLE
+  ) {
+    return role;
+  }
+  return null;
+}
+
 export default function CompanyUsersPage() {
   const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [companyId, setCompanyId] = useState("");
   const [companyName, setCompanyName] = useState("Company");
   const [open, setOpen] = useState(false);
@@ -93,8 +131,8 @@ export default function CompanyUsersPage() {
   const [selectedEstate, setSelectedEstate] = useState<EstateOption | null>(
     null,
   );
-  const [roleFilter, setRoleFilter] = useState<EstateUserRoleFilter>(
-    DEFAULT_ESTATE_USER_ROLE,
+  const [roleFilter, setRoleFilter] = useState<CompanyUserRoleFilter>(() =>
+    parseCompanyUserRoleQuery(searchParams.get("role")),
   );
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -107,6 +145,36 @@ export default function CompanyUsersPage() {
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [estatesLoading, setEstatesLoading] = useState(true);
   const [estateOptions, setEstateOptions] = useState<EstateOption[]>([]);
+  const [designationNames, setDesignationNames] = useState<
+    Record<string, string>
+  >({});
+
+  const authUser = useSelector((state: RootState) => state.auth.user);
+  const canManageDesignations = userHasDesignationModule(authUser);
+  const requestedStaffTab = parseCompanyStaffTab(searchParams.get("tab"));
+  const staffTab = canManageDesignations ? requestedStaffTab : "staff";
+  const showStaffTabs = roleFilter === "staff" && canManageDesignations;
+  const showDesignations = showStaffTabs && staffTab === "designations";
+
+  const applyStaffTab = useCallback(
+    (tab: CompanyStaffPageTab) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("role", "staff");
+      if (tab === "staff") params.set("tab", "staff");
+      else params.delete("tab");
+      router.replace(`/dashboard/company/users?${params.toString()}`, {
+        scroll: false,
+      });
+    },
+    [router, searchParams],
+  );
+
+  useEffect(() => {
+    const fromQuery = parseCompanyUserRoleQuery(searchParams.get("role"));
+    if (fromQuery !== roleFilter) {
+      setRoleFilter(fromQuery);
+    }
+  }, [roleFilter, searchParams]);
 
   const allUsers = useSelector((state: RootState) =>
     selectCompanyUsersList(state),
@@ -120,10 +188,13 @@ export default function CompanyUsersPage() {
 
   const pageLoading =
     estatesLoading ||
-    (Boolean(selectedEstate?.value) && isPending(usersStatus));
+    (!showDesignations &&
+      Boolean(selectedEstate?.value) &&
+      isPending(usersStatus));
   const pageSize =
     Number(pagination?.pageSize ?? (pagination as { limit?: number })?.limit) ||
     10;
+  const inviteRole = companyInviteRole(roleFilter);
 
   const fetchUsers = useCallback(
     (page = 1) => {
@@ -207,12 +278,42 @@ export default function CompanyUsersPage() {
   }, [estateOptions, selectedEstate?.value]);
 
   useEffect(() => {
+    if (showDesignations) return;
     if (!selectedEstate?.value) return;
     fetchUsers(1).catch((err: unknown) => {
       const message = getApiErrorMessage(err);
       if (message) toast.error(message);
     });
-  }, [selectedEstate, fetchUsers]);
+  }, [fetchUsers, selectedEstate, showDesignations]);
+
+  useEffect(() => {
+    if (roleFilter !== "staff" || !companyId) {
+      setDesignationNames({});
+      return;
+    }
+    if (showDesignations) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await dispatch(
+          getDesignations({
+            companyId,
+            page: 1,
+            limit: DESIGNATIONS_PAGE_SIZE,
+          }),
+        ).unwrap();
+        if (cancelled) return;
+        setDesignationNames(designationNamesById(res.items ?? []));
+      } catch {
+        if (!cancelled) setDesignationNames({});
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch, roleFilter, companyId, showDesignations]);
 
   const closeStatusModal = () => {
     if (statusSubmitting) return;
@@ -234,17 +335,17 @@ export default function CompanyUsersPage() {
     user.email ||
     "this user";
 
-  const handleConfirmStatus = async () => {
+  const handleConfirmStatus = async (text: string) => {
     const user = statusItem;
     const id = user ? userRowId(user) : "";
     if (!id) return;
     setStatusSubmitting(true);
     try {
       if (statusMode === "suspend") {
-        await dispatch(suspendCompanyUser(id)).unwrap();
+        await dispatch(suspendCompanyUser({ id, reason: text })).unwrap();
         toast.info(`${user?.firstName ?? "User"} has been suspended.`);
       } else {
-        await dispatch(activateCompanyUser(id)).unwrap();
+        await dispatch(activateCompanyUser({ id, note: text })).unwrap();
         toast.success(`${user?.firstName ?? "User"} has been activated.`);
       }
       closeStatusModal();
@@ -252,6 +353,7 @@ export default function CompanyUsersPage() {
     } catch (err: unknown) {
       const message = getApiErrorMessage(err);
       if (message) toast.error(message);
+      throw err;
     } finally {
       setStatusSubmitting(false);
     }
@@ -289,6 +391,10 @@ export default function CompanyUsersPage() {
   };
 
   const showResidentColumns = roleFilter === "resident";
+  const showStaffColumns = roleFilter === "staff";
+  // Admin & security: Actions column removed.
+  const hideActionsColumn =
+    roleFilter === "admin" || roleFilter === "security";
 
   const columns = useMemo(
     () => [
@@ -299,7 +405,14 @@ export default function CompanyUsersPage() {
         exportValue: (item: CompanyUserDetails) =>
           item.createdAt ? String(item.createdAt) : "",
       },
-      { key: "firstName" as const, header: "First Name" },
+      {
+        key: "firstName" as const,
+        header: "First Name",
+        render: (item: CompanyUserDetails) => (
+          <UserNameWithAvatar image={item.image} name={item.firstName} />
+        ),
+        exportValue: (item: CompanyUserDetails) => item.firstName || "",
+      },
       { key: "lastName" as const, header: "Last Name" },
       { key: "email" as const, header: "Email" },
       {
@@ -307,6 +420,14 @@ export default function CompanyUsersPage() {
         header: "Phone",
         render: (item: CompanyUserDetails) => item.phoneNumber?.trim() || "—",
         exportValue: (item: CompanyUserDetails) => item.phoneNumber?.trim() || "",
+      },
+      {
+        key: "address" as const,
+        header: "Address",
+        render: (item: CompanyUserDetails) =>
+          formatUserAddresses(item.addressIds) || "—",
+        exportValue: (item: CompanyUserDetails) =>
+          formatUserAddresses(item.addressIds),
       },
       { key: "role" as const, header: "Role" },
       ...(showResidentColumns
@@ -318,6 +439,18 @@ export default function CompanyUsersPage() {
                 String(Boolean(item.serviceCharge)),
               exportValue: (item: CompanyUserDetails) =>
                 String(Boolean(item.serviceCharge)),
+            },
+          ]
+        : []),
+      ...(showStaffColumns
+        ? [
+            {
+              key: "designation" as const,
+              header: "Designation",
+              render: (item: CompanyUserDetails) =>
+                designationLabelForUser(item, designationNames),
+              exportValue: (item: CompanyUserDetails) =>
+                designationLabelForUser(item, designationNames),
             },
           ]
         : []),
@@ -340,67 +473,182 @@ export default function CompanyUsersPage() {
                 : "bg-red-100 text-red-700"
             }`}
           >
-            {item.isActive ? "Active" : "Inactive"}
+            {item.isActive ? "Active" : "Suspended"}
           </span>
         ),
+        exportValue: (item: CompanyUserDetails) =>
+          item.isActive ? "Active" : "Suspended",
       },
       {
-        key: "actions" as const,
-        header: "Actions",
-        exportable: false,
-        render: (item: CompanyUserDetails) => (
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="cursor-pointer"
-              onClick={() => handleEditUser(item)}
-              title="Edit user details"
-            >
-              <Edit className="w-4 h-4 text-blue-600" />
-            </Button>
-            {item.isActive ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="cursor-pointer"
-                onClick={() => openSuspendModal(item)}
-                title="Suspend user"
-              >
-                <PowerOff className="w-4 h-4 text-red-600" />
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="cursor-pointer"
-                onClick={() => openActivateModal(item)}
-                title="Activate user"
-              >
-                <Power className="w-4 h-4 text-green-600" />
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="cursor-pointer"
-              onClick={() => handleDeleteUser(userRowId(item), item.firstName)}
-              title="Delete user"
-            >
-              <Trash2 className="w-4 h-4 text-red-600" />
-            </Button>
-          </div>
-        ),
+        key: "suspension" as const,
+        header: "Suspension",
+        render: (item: CompanyUserDetails) => {
+          if (item.isActive !== false) return "—";
+          const reason = item.suspensionReason?.trim();
+          const when =
+            item.suspendedAt && !Number.isNaN(new Date(item.suspendedAt).getTime())
+              ? new Date(item.suspendedAt).toLocaleString("en-GB", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "";
+          if (reason && when) {
+            return (
+              <div className="min-w-[10rem]">
+                <p className="text-sm text-foreground">{reason}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{when}</p>
+              </div>
+            );
+          }
+          return reason || when || "—";
+        },
+        exportValue: (item: CompanyUserDetails) => {
+          if (item.isActive !== false) return "";
+          return [item.suspensionReason?.trim(), item.suspendedAt]
+            .filter(Boolean)
+            .join(" | ");
+        },
       },
+      // Admin & security: hide Actions column
+      ...(!hideActionsColumn
+        ? [
+            {
+              key: "actions" as const,
+              header: "Actions",
+              exportable: false,
+              render: (item: CompanyUserDetails) => (
+                <div className="flex items-center gap-1">
+                  {roleFilter === "resident" ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-[#0150AC] hover:bg-blue-50 hover:text-[#01408A] cursor-pointer"
+                      onClick={() => {
+                        const id = userRowId(item);
+                        if (id) router.push(`/dashboard/company/users/${id}`);
+                      }}
+                      title="View user details"
+                      disabled={!userRowId(item)}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  ) : null}
+                  {/* Resident: edit / suspend / delete commented out */}
+                  {roleFilter !== "resident" ? (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-blue-600 hover:text-blue-700 cursor-pointer"
+                        onClick={() => handleEditUser(item)}
+                        title="Edit user details"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      {item.isActive ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700 cursor-pointer"
+                          onClick={() => openSuspendModal(item)}
+                          title="Suspend user"
+                        >
+                          <PowerOff className="w-4 h-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-green-600 hover:text-green-700 cursor-pointer"
+                          onClick={() => openActivateModal(item)}
+                          title="Activate user"
+                        >
+                          <Power className="w-4 h-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700 cursor-pointer"
+                        onClick={() =>
+                          handleDeleteUser(userRowId(item), item.firstName)
+                        }
+                        title="Delete user"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </>
+                  ) : null}
+                  {/* <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-blue-600 hover:text-blue-700 cursor-pointer"
+                    onClick={() => handleEditUser(item)}
+                    title="Edit user details"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                  {item.isActive ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700 cursor-pointer"
+                      onClick={() => openSuspendModal(item)}
+                      title="Suspend user"
+                    >
+                      <PowerOff className="w-4 h-4" />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-green-600 hover:text-green-700 cursor-pointer"
+                      onClick={() => openActivateModal(item)}
+                      title="Activate user"
+                    >
+                      <Power className="w-4 h-4" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-600 hover:text-red-700 cursor-pointer"
+                    onClick={() =>
+                      handleDeleteUser(userRowId(item), item.firstName)
+                    }
+                    title="Delete user"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button> */}
+                </div>
+              ),
+            },
+          ]
+        : []),
+      // {
+      //   key: "actions" as const,
+      //   header: "Actions",
+      //   ...
+      // },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pagination?.currentPage, showResidentColumns],
+    [
+      pagination?.currentPage,
+      showResidentColumns,
+      showStaffColumns,
+      designationNames,
+      hideActionsColumn,
+      roleFilter,
+    ],
   );
 
   const stats = useMemo(
     () => [
       {
-        label: getEstateUserRoleTotalLabel(roleFilter),
+        label: getCompanyUserRoleTotalLabel(roleFilter),
         value: pagination?.total ?? 0,
         icon: UsersRound,
         color: "bg-[#FEE6D480]",
@@ -419,41 +667,22 @@ export default function CompanyUsersPage() {
           pageLoading ? "pointer-events-none select-none" : "",
         ].join(" ")}
       >
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between flex-wrap gap-4">
-          <div className="flex flex-col gap-2">
-            <h1 className="font-heading text-3xl font-bold">User Management</h1>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex min-w-0 flex-col gap-2">
+            <h1 className="font-heading text-3xl font-bold">
+              {getUserManagementPageTitle(roleFilter)}
+            </h1>
             <p className="text-muted-foreground mt-1">
               Manage users for{" "}
-              <span className="text-[18px] font-bold underline uppercase text-black">
+              {/* <span className="text-[18px] font-bold underline uppercase text-black">
                 {companyName}
-              </span>
+              </span> */}
               .
             </p>
-            <div className="w-48 min-w-[12rem]">
-              <Select
-                options={COMPANY_USER_ROLE_FILTER_OPTIONS}
-                placeholder="Filter by role"
-                value={COMPANY_USER_ROLE_FILTER_OPTIONS.find(
-                  (o) => o.value === roleFilter,
-                )}
-                onChange={(option) =>
-                  setRoleFilter(
-                    (option?.value as EstateUserRoleFilter) ??
-                      DEFAULT_ESTATE_USER_ROLE,
-                  )
-                }
-                isSearchable={false}
-                styles={{
-                  control: (base) => ({ ...base, cursor: "pointer" }),
-                  option: (base) => ({ ...base, cursor: "pointer" }),
-                  dropdownIndicator: (base) => ({ ...base, cursor: "pointer" }),
-                }}
-              />
-            </div>
           </div>
 
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-            <div className="w-48 min-w-[12rem]">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 shrink-0 md:ml-auto">
+            <div className="w-full sm:w-48 sm:min-w-[12rem]">
               <Select
                 options={estateOptions}
                 placeholder="Filter by estate"
@@ -469,17 +698,51 @@ export default function CompanyUsersPage() {
                 }}
               />
             </div>
-            <Button
-              onClick={() => setOpen(true)}
-              className="flex items-center gap-2 cursor-pointer shrink-0"
-              disabled={!companyId}
-            >
-              <Plus className="w-4 h-4" />
-              Invite users
-            </Button>
+            {inviteRole && !showDesignations ? (
+              <Button
+                onClick={() => setOpen(true)}
+                className="flex items-center gap-2 cursor-pointer shrink-0"
+                disabled={!companyId}
+              >
+                <Plus className="w-4 h-4" />
+                {getCompanyInviteLabel(inviteRole)}
+              </Button>
+            ) : null}
           </div>
         </div>
 
+        {showStaffTabs ? (
+          <div className="flex space-x-4" role="tablist" aria-label="Staff management">
+            {COMPANY_STAFF_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={staffTab === tab.id}
+                className={`py-2 px-4 cursor-pointer ${
+                  staffTab === tab.id
+                    ? "text-primary border-b-2 border-primary font-bold"
+                    : "font-medium text-sidebar-foreground/60"
+                }`}
+                onClick={() => applyStaffTab(tab.id)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {showDesignations ? (
+          companyId ? (
+            <DesignationsManager
+              role="company"
+              compact
+              companyId={companyId}
+              companyName={companyName}
+            />
+          ) : null
+        ) : (
+          <>
         <div className="grid grid-cols-1 gap-4">
           {stats.map((stat) => {
             const Icon = stat.icon;
@@ -570,11 +833,15 @@ export default function CompanyUsersPage() {
             }
           />
         </Card>
+          </>
+        )}
 
-        {open && companyId && (
+        {open && companyId && inviteRole && (
           <Modal visible={open} onClose={() => setOpen(false)}>
             <CompanyInviteUserForm
               companyId={companyId}
+              role={inviteRole}
+              defaultEstateId={selectedEstate?.value}
               onClose={() => setOpen(false)}
               onSuccess={() => fetchUsers(1)}
             />

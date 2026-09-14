@@ -3,19 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { Check, Paperclip } from "lucide-react";
+import { Check, Paperclip, X } from "lucide-react";
 import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import Loader from "@/components/ui/Loader";
 import { getApiErrorMessage } from "@/lib/api-error";
-import {
-  downloadAttachment,
-  getAttachmentFilename,
-} from "@/lib/download-attachment";
+import { openAttachmentInNewTab } from "@/lib/download-attachment";
 import { isBusy } from "@/lib/async-status";
-import type { AppDispatch } from "@/redux/store";
+import type { AppDispatch, RootState } from "@/redux/store";
 import { getRequestActorDisplayName } from "@/lib/request-actor";
 import {
   getRequestScopeApi,
@@ -24,6 +19,22 @@ import {
   type ScopedRequestStatus,
 } from "./request-scope";
 import { requestDestructiveOutlineButtonClass } from "./request-action-styles";
+import RequestComments from "./RequestComments";
+import RequestRejectModal from "./RequestRejectModal";
+import { RequestRecordDetails } from "./RequestRecordDetails";
+import {
+  formatRequestStatusLabel,
+  getCurrentRequestStep,
+  getRequestStatusStyle,
+  isUserAssignedToCurrentStep,
+  canUserCancelRequest,
+  formatStepAssignees,
+} from "@/lib/request-record";
+import {
+  extractSignedInUserEmail,
+  extractSignedInUserIds,
+} from "@/lib/user-id";
+import { selectUserRole } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 
 const STATUS_LABELS: Record<ScopedRequestStatus, string> = {
   draft: "Draft",
@@ -55,9 +66,8 @@ function formatCategory(category?: string) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function formatStatusLabel(status?: ScopedRequestStatus) {
-  if (!status) return "—";
-  return STATUS_LABELS[status] ?? status;
+function formatStatusLabel(status?: ScopedRequestStatus | string) {
+  return formatRequestStatusLabel(status);
 }
 
 function formatRequestCode(code?: string) {
@@ -65,13 +75,8 @@ function formatRequestCode(code?: string) {
   return trimmed || "—";
 }
 
-function getStatusStyle(status?: ScopedRequestStatus) {
-  if (status === "approved") return "bg-[#DCFCE7] text-[#16A34A]";
-  if (status === "rejected" || status === "cancelled")
-    return "bg-[#FEE2E2] text-[#DC2626]";
-  if (status === "pending_approval") return "bg-[#FFEDD5] text-[#EA580C]";
-  if (status === "draft") return "bg-[#F3F4F6] text-[#4B5563]";
-  return "bg-[#E0E7FF] text-[#3730A3]";
+function getStatusStyle(status?: ScopedRequestStatus | string) {
+  return getRequestStatusStyle(status);
 }
 
 function getActorName(
@@ -99,11 +104,18 @@ export default function RequestDetailModal({
 }: RequestDetailModalProps) {
   const dispatch = useDispatch<AppDispatch>();
   const api = useMemo(() => getRequestScopeApi(scope), [scope]);
-  const [comment, setComment] = useState("");
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
 
   const { selected, getByIdStatus, decideStatus, cancelStatus } =
     useSelector(api.selectState);
+  const signedInUser = useSelector(
+    (state: RootState) =>
+      (state.auth.user ?? null) as Record<string, unknown> | null,
+  );
+  const signedInUserIds = extractSignedInUserIds(signedInUser);
+  const signedInUserEmail = extractSignedInUserEmail(signedInUser);
+  const role = useSelector(selectUserRole);
 
   const detailLoading = isBusy(getByIdStatus);
   const deciding = isBusy(decideStatus);
@@ -120,8 +132,8 @@ export default function RequestDetailModal({
 
   useEffect(() => {
     if (!requestId) return;
-    setComment("");
     setConfirmCancel(false);
+    setRejectOpen(false);
     dispatch(
       api.getById({
         id: requestId,
@@ -141,9 +153,20 @@ export default function RequestDetailModal({
 
   if (!requestId) return null;
 
-  const canDecide = item?.status === "pending_approval";
-  const canCancel =
-    item?.status === "pending_approval" || item?.status === "draft";
+  const assignedToCurrentStep = Boolean(
+    item &&
+      isUserAssignedToCurrentStep(item, signedInUserIds, signedInUserEmail),
+  );
+  const canDecide =
+    item?.status === "pending_approval" && assignedToCurrentStep;
+  const canCancel = canUserCancelRequest(item, {
+    userId: signedInUserIds,
+    email: signedInUserEmail,
+    role,
+  });
+  const currentAssignees = item
+    ? formatStepAssignees(getCurrentRequestStep(item))
+    : "—";
 
   const handleApprove = async () => {
     if (!item?.id) return;
@@ -152,12 +175,30 @@ export default function RequestDetailModal({
         api.decide({
           id: item.id,
           decision: "approve",
-          comment: comment.trim() || undefined,
           estateId: resolvedEstateId,
         }),
       ).unwrap();
       toast.success("Request approved.");
-      setComment("");
+      onChanged?.();
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    }
+  };
+
+  const handleReject = async (reason: string) => {
+    if (!item?.id) return;
+    try {
+      await dispatch(
+        api.decide({
+          id: item.id,
+          decision: "reject",
+          comment: reason,
+          estateId: resolvedEstateId,
+        }),
+      ).unwrap();
+      toast.success("Request rejected.");
+      setRejectOpen(false);
       onChanged?.();
     } catch (err: unknown) {
       const message = getApiErrorMessage(err);
@@ -239,6 +280,11 @@ export default function RequestDetailModal({
                     {item.currentStepName ||
                       `Step ${item.currentStepOrder}`}
                   </p>
+                  {currentAssignees !== "—" ? (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {currentAssignees}
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -250,6 +296,12 @@ export default function RequestDetailModal({
               </div>
             ) : null}
 
+            <RequestRecordDetails
+              fieldValues={item.fieldValues}
+              steps={item.steps}
+              currentStepOrder={item.currentStepOrder}
+            />
+
             {item.attachments && item.attachments.length > 0 ? (
               <div>
                 <p className="text-sm text-muted-foreground mb-2">Attachments</p>
@@ -258,43 +310,12 @@ export default function RequestDetailModal({
                     <li key={`${url.slice(0, 24)}-${index}`}>
                       <button
                         type="button"
-                        onClick={() =>
-                          void downloadAttachment(
-                            url,
-                            getAttachmentFilename(url, index),
-                          )
-                        }
+                        onClick={() => openAttachmentInNewTab(url)}
                         className="inline-flex items-center gap-2 text-sm text-[#2563EB] hover:underline cursor-pointer"
                       >
                         <Paperclip className="h-3.5 w-3.5" />
                         Attachment {index + 1}
                       </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {item.steps && item.steps.length > 0 ? (
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">Workflow steps</p>
-                <ul className="space-y-2">
-                  {item.steps.map((step, index) => (
-                    <li
-                      key={`${step.order ?? index}-${step.name ?? "step"}`}
-                      className="rounded-lg border border-border px-3 py-2 text-sm"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium">
-                          {step.order != null ? `${step.order}. ` : ""}
-                          {step.name || `Step ${index + 1}`}
-                        </span>
-                        {step.status ? (
-                          <span className="text-xs text-muted-foreground capitalize">
-                            {step.status.replaceAll("_", " ")}
-                          </span>
-                        ) : null}
-                      </div>
                     </li>
                   ))}
                 </ul>
@@ -332,27 +353,13 @@ export default function RequestDetailModal({
               </div>
             ) : null}
 
+            <RequestComments
+              requestId={item.id}
+              estateId={resolvedEstateId}
+            />
+
             {canDecide || canCancel || item ? (
               <div className="space-y-3 border-t border-border pt-4">
-                {canDecide ? (
-                  <div>
-                    <Label htmlFor="request-decision-comment">
-                      Comment{" "}
-                      <span className="text-muted-foreground font-normal">
-                        (optional)
-                      </span>
-                    </Label>
-                    <Textarea
-                      id="request-decision-comment"
-                      value={comment}
-                      onChange={(e) => setComment(e.target.value)}
-                      placeholder="Add a note for this decision..."
-                      disabled={mutating}
-                      className="min-h-24"
-                    />
-                  </div>
-                ) : null}
-
                 {confirmCancel ? (
                   <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] p-3 space-y-3">
                     <p className="text-sm text-[#991B1B]">
@@ -388,13 +395,24 @@ export default function RequestDetailModal({
                       </Button>
                     ) : null}
                     {canDecide ? (
-                      <Button
-                        disabled={mutating}
-                        onClick={() => void handleApprove()}
-                      >
-                        <Check className="w-4 h-4 mr-2" />
-                        Approve
-                      </Button>
+                      <>
+                        <Button
+                          variant="outline"
+                          className={requestDestructiveOutlineButtonClass}
+                          disabled={mutating}
+                          onClick={() => setRejectOpen(true)}
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Reject
+                        </Button>
+                        <Button
+                          disabled={mutating}
+                          onClick={() => void handleApprove()}
+                        >
+                          <Check className="w-4 h-4 mr-2" />
+                          Approve
+                        </Button>
+                      </>
                     ) : null}
                   </div>
                 )}
@@ -403,6 +421,13 @@ export default function RequestDetailModal({
           </>
         )}
       </div>
+
+      <RequestRejectModal
+        open={rejectOpen}
+        loading={deciding}
+        onClose={() => setRejectOpen(false)}
+        onConfirm={handleReject}
+      />
     </Modal>
   );
 }

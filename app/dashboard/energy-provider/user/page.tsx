@@ -33,6 +33,7 @@ import {
   suspendEnergyProviderUser,
 } from "@/redux/slice/energy-provider/user-mgt/energy-provider-user";
 import type { EnergyProviderUserDetails } from "@/redux/slice/energy-provider/user-mgt/energy-provider-user-slice";
+import { UserNameWithAvatar } from "@/components/ui/user-avatar";
 import {
   selectEnergyProviderUserState,
   selectEnergyProviderUsersList,
@@ -266,17 +267,21 @@ export default function EnergyProviderUserPage() {
     user.email ||
     "this user";
 
-  const handleConfirmStatus = async () => {
+  const handleConfirmStatus = async (text: string) => {
     const user = statusItem;
     const id = user ? userRowId(user) : "";
     if (!id) return;
     setStatusSubmitting(true);
     try {
       if (statusMode === "suspend") {
-        await dispatch(suspendEnergyProviderUser(id)).unwrap();
+        await dispatch(
+          suspendEnergyProviderUser({ id, reason: text }),
+        ).unwrap();
         toast.info(`${user?.firstName ?? "User"} has been suspended.`);
       } else {
-        await dispatch(activateEnergyProviderUser(id)).unwrap();
+        await dispatch(
+          activateEnergyProviderUser({ id, note: text }),
+        ).unwrap();
         toast.success(`${user?.firstName ?? "User"} has been activated.`);
       }
       closeStatusModal();
@@ -286,6 +291,7 @@ export default function EnergyProviderUserPage() {
         (err as { message?: string })?.message ??
           "Failed to update user status.",
       );
+      throw err;
     } finally {
       setStatusSubmitting(false);
     }
@@ -323,7 +329,14 @@ export default function EnergyProviderUserPage() {
         exportValue: (item: EnergyProviderUserDetails) =>
           item.createdAt ? String(item.createdAt) : "",
       },
-      { key: "firstName" as const, header: "First Name" },
+      {
+        key: "firstName" as const,
+        header: "First Name",
+        render: (item: EnergyProviderUserDetails) => (
+          <UserNameWithAvatar image={item.image} name={item.firstName} />
+        ),
+        exportValue: (item: EnergyProviderUserDetails) => item.firstName || "",
+      },
       { key: "lastName" as const, header: "Last Name" },
       { key: "email" as const, header: "Email" },
       {
@@ -376,31 +389,31 @@ export default function EnergyProviderUserPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="cursor-pointer"
+                className="text-red-600 hover:text-red-700 cursor-pointer"
                 onClick={() => openSuspendModal(item)}
                 title="Suspend user"
               >
-                <PowerOff className="w-4 h-4 text-red-600" />
+                <PowerOff className="w-4 h-4" />
               </Button>
             ) : (
               <Button
                 variant="ghost"
                 size="sm"
-                className="cursor-pointer"
+                className="text-green-600 hover:text-green-700 cursor-pointer"
                 onClick={() => openActivateModal(item)}
                 title="Activate user"
               >
-                <Power className="w-4 h-4 text-green-600" />
+                <Power className="w-4 h-4" />
               </Button>
             )}
             <Button
               variant="ghost"
               size="sm"
-              className="cursor-pointer"
+              className="text-red-600 hover:text-red-700 cursor-pointer"
               onClick={() => handleDeleteUser(userRowId(item), item.firstName)}
               title="Delete user"
             >
-              <Trash2 className="w-4 h-4 text-red-600" />
+              <Trash2 className="w-4 h-4" />
             </Button>
           </div>
         ),

@@ -157,12 +157,13 @@ export default function SuperAdminTransactionsPage() {
       }
 
       if (format === "csv") {
-        const header = ["Date","Type","Amount","Status","User Details","Email","Estate","Description","Reference"];
+        const header = ["Date","Type","Amount","Service Charge","Status","User Details","Email","Estate","Description","Reference"];
         const csvRows = rows.map((item) => {
           const date = formatDateTime(item.createdAt, "");
           const name = getResidentName(item.userId);
           const values = [
             date, item.type || "", item.amount ?? "",
+            item.serviceCharge ?? 0,
             item.paymentStatus || "", name,
             item.userId?.email || "",
             item.estateId?.name || "", item.description || "", item.tx_ref || "",
@@ -193,6 +194,7 @@ export default function SuperAdminTransactionsPage() {
           const name = getResidentName(item.userId);
           return `<tr>
             <td>${date}</td><td>${item.type || ""}</td><td>${item.amount ?? ""}</td>
+            <td>${item.serviceCharge ?? 0}</td>
             <td>${item.paymentStatus || ""}</td><td>${name}</td>
             <td>${item.userId?.email || ""}</td>
             <td>${item.estateId?.name || ""}</td><td>${item.description || ""}</td>
@@ -203,7 +205,7 @@ export default function SuperAdminTransactionsPage() {
           <html><head><title>Transactions Export</title>
           <style>table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px;font-size:12px}th{background:#f5f5f5}</style>
           </head><body><h3>Transactions Export</h3>
-          <table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Status</th>
+          <table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Service Charge</th><th>Status</th>
           <th>User Details</th><th>Email</th><th>Estate</th><th>Description</th><th>Reference</th></tr></thead>
           <tbody>${tableRows}</tbody></table></body></html>`);
         printWindow.document.close();
@@ -251,6 +253,15 @@ export default function SuperAdminTransactionsPage() {
         </p>
       ),
     },
+    {
+      key: "tx_ref",
+      header: "Transaction Reference",
+      render: (item: any) => (
+        <p className="max-w-[220px] break-all whitespace-normal">
+          {item.tx_ref || "-"}
+        </p>
+      ),
+    },
     { key: "type", header: "Type", render: (item: any) => item.type },
     {
       key: "amount",
@@ -261,12 +272,20 @@ export default function SuperAdminTransactionsPage() {
         ),
     },
     {
+      key: "serviceCharge",
+      header: "Service Charge",
+      render: (item: any) =>
+        new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(
+          item.serviceCharge || 0,
+        ),
+    },
+    {
       key: "action",
       header: "Action",
       render: (item: any) => (
         <button
           onClick={() => handleViewDetails(item._id || item.id)}
-          className="px-3 py-1 bg-blue-100 text-blue-700 rounded-md text-sm font-medium hover:bg-blue-200 cursor-pointer"
+          className="px-3 py-1 bg-blue-100 text-blue-700 rounded-md text-sm font-medium hover:bg-blue-200 cursor-pointer hover:text-blue-800"
         >
           View Details
         </button>

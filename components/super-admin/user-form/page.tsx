@@ -21,6 +21,11 @@ import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
 import { toast } from "react-toastify";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch, RootState } from "@/redux/store";
+import {
+  DEFAULT_COUNTRY_CODE,
+  getPhoneValidationError,
+  toE164PhoneNumber,
+} from "@/lib/phone-e164";
 
 type InviteUserFormProps = {
   close: () => void;
@@ -33,6 +38,7 @@ interface InviteUserFormData {
   lastName: string;
   email: string;
   phoneNumber: string;
+  countryCode: string;
   role: string;
 }
 
@@ -47,6 +53,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
     lastName: "",
     email: "",
     phoneNumber: "",
+    countryCode: DEFAULT_COUNTRY_CODE,
     role: "",
   });
 
@@ -132,16 +139,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
   };
 
   const handleSelectChange = (field: keyof InviteUserFormData, option: any) => {
-    setFormData((prev) => {
-      const nextValue = option?.value ?? "";
-      if (field === "role") {
-        return {
-          ...prev,
-          role: nextValue,
-        };
-      }
-      return { ...prev, [field]: nextValue };
-    });
+    setFormData((prev) => ({ ...prev, [field]: option?.value ?? "" }));
   };
 
   const resetForm = () =>
@@ -152,6 +150,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
       lastName: "",
       email: "",
       phoneNumber: "",
+      countryCode: DEFAULT_COUNTRY_CODE,
       role: "",
     });
 
@@ -162,6 +161,21 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
     if (!formData.email) return toast.error("Please provide an email.");
     if (!formData.phoneNumber.trim()) {
       return toast.error("Please provide a phone number.");
+    }
+    if (!formData.countryCode.trim()) {
+      return toast.error("Please select a country code.");
+    }
+    const e164Phone = toE164PhoneNumber(
+      formData.phoneNumber,
+      formData.countryCode,
+    );
+    if (!e164Phone) {
+      return toast.error(
+        getPhoneValidationError(
+          formData.phoneNumber,
+          formData.countryCode,
+        ),
+      );
     }
     if (!formData.firstName) return toast.error("Please provide first name.");
     if (!formData.lastName) return toast.error("Please provide last name.");
@@ -186,7 +200,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
-        phoneNumber: formData.phoneNumber,
+        phoneNumber: e164Phone,
         role: formData.role,
         inviteContext: inviteScope,
         estateId: formData.estateId,
@@ -275,7 +289,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
                   checked={inviteScope === "estate"}
                   onChange={() => {
                     setInviteScope("estate");
-                    setFormData((p) => ({ ...p, companyId: "", role: "" }));
+                    setFormData((p) => ({ ...p, companyId: "", role: "", plan: "" }));
                   }}
                 />
                 Estate
@@ -288,7 +302,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
                   checked={inviteScope === "company"}
                   onChange={() => {
                     setInviteScope("company");
-                    setFormData((p) => ({ ...p, estateId: "", role: "" }));
+                    setFormData((p) => ({ ...p, estateId: "", role: "", plan: "" }));
                   }}
                 />
                 Company
@@ -359,8 +373,12 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ close }) => {
 
           <InvitePhoneNumberField
             id="phoneNumber"
-            value={formData.phoneNumber}
-            onChange={handleInputChange}
+            countryCode={formData.countryCode}
+            phoneNumber={formData.phoneNumber}
+            onCountryCodeChange={(countryCode) =>
+              setFormData((prev) => ({ ...prev, countryCode }))
+            }
+            onPhoneNumberChange={handleInputChange}
           />
 
           <Button

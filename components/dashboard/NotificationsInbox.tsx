@@ -114,7 +114,11 @@ export function NotificationsInbox() {
       }
     }
 
-    const href = resolveNotificationHref(item.actionUrl, role || "admin");
+    const href = resolveNotificationHref(item.actionUrl, role || "admin", {
+      estateId: item.estateId,
+      relatedEntityId: item.relatedEntityId,
+      relatedEntityType: item.relatedEntityType,
+    });
     if (!href) return;
     if (/^https?:\/\//i.test(href)) {
       window.open(href, "_blank", "noopener,noreferrer");
@@ -165,7 +169,7 @@ export function NotificationsInbox() {
           <p className="mt-1 text-sm text-muted-foreground">
             {unreadCount > 0
               ? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}`
-              : "You are all caught up"}
+              : "You have no notifications"}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">

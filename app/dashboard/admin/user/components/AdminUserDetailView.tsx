@@ -34,9 +34,15 @@ import EditUserForm, {
   type UpdateUserDetailsData,
 } from "@/components/user-mgt/edit-user-form";
 import { CopyButton } from "@/components/ui/copy-button";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import SuspendRentModal from "@/components/resident/suspend-rent-modal/page";
 import { MaintenanceRequestCard } from "@/components/admin/maintenance/maintenance-request-card";
 import { getApiErrorMessage } from "@/lib/api-error";
+import {
+  paidByEmail,
+  paidByName,
+  type PaidByPerson,
+} from "@/lib/paid-by";
 import { cn } from "@/lib/utils";
 import { normalizeAddresses, formatAddressLabel, type AddressOption } from "@/lib/address";
 import type { AsyncThunk } from "@reduxjs/toolkit";
@@ -50,6 +56,7 @@ import type { ResidentMeterData } from "@/redux/slice/resident/meter-mgt/meter-m
 import { getComplaintsByAddress } from "@/redux/slice/resident/maintenance/resident-complaints";
 import type { ResidentComplaintItem } from "@/redux/slice/resident/maintenance/resident-complaints";
 import { getVisitorsByResident } from "@/redux/slice/resident/visitor/visitor";
+import { UserWalletBalanceCard } from "@/components/user-mgt/UserWalletBalanceCard";
 
 type DetailTab = "bills" | "complaints" | "visitors";
 
@@ -62,6 +69,7 @@ interface UserBillRow {
   startDate?: string;
   nextDueDate?: string;
   lastPaymentDate?: string | null;
+  paidBy?: PaidByPerson | null;
 }
 
 interface AssignedBillRow {
@@ -124,7 +132,7 @@ function formatDate(value?: string) {
       });
 }
 
-function formatDateTime(value?: string) {
+function formatDateTime(value?: string | null) {
   if (!value) return "—";
   const d = new Date(value);
   return Number.isNaN(d.getTime())
@@ -144,12 +152,6 @@ function formatLabel(value?: string) {
     .split(/[\s_-]+/)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(" ");
-}
-
-function getInitials(user: DashboardUserDetails) {
-  const first = user.firstName?.charAt(0) ?? "";
-  const last = user.lastName?.charAt(0) ?? "";
-  return (first + last).toUpperCase() || "?";
 }
 
 function getUserAddresses(user: DashboardUserDetails): AddressOption[] {
@@ -329,6 +331,21 @@ function UserProfileDetails({
             label="Invitation"
             value={formatLabel(user.invitationStatus) || "—"}
           />
+          {user.isActive === false ? (
+            <DetailField
+              label="Suspension"
+              value={
+                [
+                  user.suspensionReason?.trim(),
+                  formatDateTime(user.suspendedAt) !== "—"
+                    ? formatDateTime(user.suspendedAt)
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ") || "—"
+              }
+            />
+          ) : null}
           {user.serviceCharge != null ? (
             <DetailField
               label="Service charge"
@@ -389,6 +406,16 @@ function UserProfileDetails({
 }
 
 type UserIdThunk = AsyncThunk<unknown, string, object>;
+type SuspendUserThunk = AsyncThunk<
+  unknown,
+  { id: string; reason: string },
+  object
+>;
+type ActivateUserThunk = AsyncThunk<
+  unknown,
+  { id: string; note: string },
+  object
+>;
 type UpdateUserThunk = AsyncThunk<
   unknown,
   { id: string; data: UpdateUserDetailsData },
@@ -397,8 +424,8 @@ type UpdateUserThunk = AsyncThunk<
 
 export type UserMgtActions = {
   getUser: UserIdThunk;
-  activateUser: UserIdThunk;
-  suspendUser: UserIdThunk;
+  activateUser: ActivateUserThunk;
+  suspendUser: SuspendUserThunk;
   deleteUser: UserIdThunk;
   updateUser?: UpdateUserThunk;
 };
@@ -409,6 +436,7 @@ export interface UserDetailViewProps {
   userLoading: boolean;
   listPath: string;
   actions: UserMgtActions;
+  showWalletBalance?: boolean;
 }
 
 export default function UserDetailView({
@@ -417,6 +445,7 @@ export default function UserDetailView({
   userLoading,
   listPath,
   actions,
+  showWalletBalance = false,
 }: UserDetailViewProps) {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
@@ -438,7 +467,9 @@ export default function UserDetailView({
   const [visitorsTotal, setVisitorsTotal] = useState(0);
 
   const [suspendOpen, setSuspendOpen] = useState(false);
+  const [activateOpen, setActivateOpen] = useState(false);
   const [suspendSubmitting, setSuspendSubmitting] = useState(false);
+  const [activateSubmitting, setActivateSubmitting] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -491,14 +522,35 @@ export default function UserDetailView({
       estateId ||
       resolveEstateId(
         (user as DashboardUserDetails & { estateId?: unknown }).estateId,
+      ) ||
+      resolveEstateId(
+        (
+          user as DashboardUserDetails & {
+            memberships?: Array<{ estateId?: unknown; isCurrent?: boolean }>;
+          }
+        ).memberships?.find((m) => m.isCurrent)?.estateId,
+      ) ||
+      resolveEstateId(
+        (
+          user as DashboardUserDetails & {
+            memberships?: Array<{ estateId?: unknown }>;
+          }
+        ).memberships?.[0]?.estateId,
       );
 
     setRelatedLoading(true);
     try {
       const billPromise = uid
         ? dispatch(
-            getResidentBills({ residentId: uid, page: 1, limit: 100 }),
-          ).unwrap()
+            getResidentBills({
+              residentId: uid,
+              page: 1,
+              limit: 100,
+              estateId: resolvedEstateId || undefined,
+            }),
+          )
+            .unwrap()
+            .catch(() => ({ data: [] }))
         : Promise.resolve({ data: [] });
 
       const assignedBillPromises =
@@ -569,6 +621,7 @@ export default function UserDetailView({
               residentId: uid,
               page: 1,
               limit: 100,
+              estateId: resolvedEstateId || undefined,
             }),
           )
             .unwrap()
@@ -600,6 +653,7 @@ export default function UserDetailView({
             startDate: bill.startDate as string | undefined,
             nextDueDate: bill.nextDueDate as string | undefined,
             lastPaymentDate: bill.lastPaymentDate as string | null | undefined,
+            paidBy: (bill.paidBy as PaidByPerson | null | undefined) ?? null,
           }),
         ),
       );
@@ -679,34 +733,37 @@ export default function UserDetailView({
     return number || code || "—";
   }, [user]);
 
-  const handleActivate = async () => {
+  const handleActivateConfirm = async (note: string) => {
     const id = getUserId(user);
     if (!id) return;
-    setActionLoading(true);
+    setActivateSubmitting(true);
     try {
-      await dispatch(actions.activateUser(id)).unwrap();
+      await dispatch(actions.activateUser({ id, note })).unwrap();
       toast.success(`${displayName} has been activated.`);
+      setActivateOpen(false);
       await fetchUser();
     } catch (err: unknown) {
       const message = getApiErrorMessage(err);
       if (message) toast.error(message);
+      throw err;
     } finally {
-      setActionLoading(false);
+      setActivateSubmitting(false);
     }
   };
 
-  const handleSuspendConfirm = async (_reason: string) => {
+  const handleSuspendConfirm = async (reason: string) => {
     const id = getUserId(user);
     if (!id) return;
     setSuspendSubmitting(true);
     try {
-      await dispatch(actions.suspendUser(id)).unwrap();
+      await dispatch(actions.suspendUser({ id, reason })).unwrap();
       toast.info(`${displayName} has been suspended.`);
       setSuspendOpen(false);
       await fetchUser();
     } catch (err: unknown) {
       const message = getApiErrorMessage(err);
       if (message) toast.error(message);
+      throw err;
     } finally {
       setSuspendSubmitting(false);
     }
@@ -793,6 +850,23 @@ export default function UserDetailView({
 
   const billColumns = [
     { key: "billName", header: "Bill Name" },
+    {
+      key: "paidBy",
+      header: "Paid By",
+      render: (item: UserBillRow) => {
+        const name = paidByName(item.paidBy);
+        const email = paidByEmail(item.paidBy);
+        if (!name && !email) return "—";
+        return (
+          <div className="min-w-0">
+            <p className="truncate">{name || email}</p>
+            {name && email ? (
+              <p className="truncate text-xs text-muted-foreground">{email}</p>
+            ) : null}
+          </div>
+        );
+      },
+    },
     {
       key: "frequency",
       header: "Frequency",
@@ -912,17 +986,11 @@ export default function UserDetailView({
               <div className="flex min-w-0 items-start gap-3 sm:items-center">
                 {user ? (
                   <>
-                    {user.image ? (
-                      <img
-                        src={user.image}
-                        alt={displayName}
-                        className="h-11 w-11 shrink-0 rounded-full object-cover sm:h-12 sm:w-12"
-                      />
-                    ) : (
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground sm:h-12 sm:w-12">
-                        {getInitials(user)}
-                      </div>
-                    )}
+                    <UserAvatar
+                      src={user.image}
+                      alt={displayName}
+                      size={48}
+                    />
                     <div className="min-w-0 flex-1">
                       <h1 className="font-heading text-lg font-bold break-words sm:text-xl lg:text-2xl">
                         {displayName}
@@ -1000,7 +1068,7 @@ export default function UserDetailView({
                         size="sm"
                         className="gap-2"
                         disabled={actionLoading}
-                        onClick={() => handleActivate()}
+                        onClick={() => setActivateOpen(true)}
                       >
                         <Power className="h-4 w-4" />
                       </Button>
@@ -1047,6 +1115,10 @@ export default function UserDetailView({
 
         {user ? (
           <>
+            {showWalletBalance ? (
+              <UserWalletBalanceCard userId={getUserId(user) || userId} />
+            ) : null}
+
             {/* Quick stats */}
             <div className="grid grid-cols-1 gap-3 pt-8 sm:grid-cols-3">
               <SummaryCard
@@ -1184,8 +1256,36 @@ export default function UserDetailView({
         tenantName={displayName}
         title="Suspend user"
         confirmLabel="Suspend"
+        requireReason
+        reasonLabel="Reason"
+        reasonPlaceholder="e.g. Outstanding service charge / policy violation"
+        description={
+          <>
+            Are you sure you want to suspend <strong>{displayName}</strong>?
+            Please provide a reason.
+          </>
+        }
         onConfirm={handleSuspendConfirm}
         loading={suspendSubmitting}
+      />
+
+      <SuspendRentModal
+        visible={activateOpen}
+        onClose={() => setActivateOpen(false)}
+        tenantName={displayName}
+        title="Activate user"
+        confirmLabel="Activate"
+        requireReason
+        reasonLabel="Note"
+        reasonPlaceholder="e.g. Service charge settled — account restored"
+        description={
+          <>
+            Are you sure you want to activate <strong>{displayName}</strong>?
+            Please add a short note.
+          </>
+        }
+        onConfirm={handleActivateConfirm}
+        loading={activateSubmitting}
       />
 
       <DeleteModal

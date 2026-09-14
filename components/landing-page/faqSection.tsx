@@ -66,7 +66,7 @@ export default function FAQSection() {
         <div className="grid gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-14 items-start">
           {/* Left: heading + CTA */}
           <div className="flex flex-col items-start gap-5 sm:gap-6 lg:sticky lg:top-32">
-            <h2 className="text-[36px] font-meduim leading-tight text-black max-w-[18ch]">
+            <h2 className="text-[32px] font-semibold leading-tight tracking-[-0.02em] text-black sm:text-[36px] lg:text-[40px]">
               Everything you need to know before you start.
             </h2>
             <p className="text-base sm:text-lg font-normal text-[#4C4C4C] leading-relaxed max-w-md">

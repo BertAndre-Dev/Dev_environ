@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Eye, Paperclip, Pencil, Trash2 } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import Table from "@/components/tables/list/page";
@@ -57,6 +57,21 @@ export function ExpenseEntriesTable({
         render: (item: ExpenseEntry) => item.documentNumber ?? "—",
       },
       {
+        key: "attachments",
+        header: "Files",
+        exportable: false,
+        render: (item: ExpenseEntry) => {
+          const count = item.attachments?.length ?? 0;
+          if (!count) return "—";
+          return (
+            <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+              <Paperclip className="h-3.5 w-3.5" />
+              {count}
+            </span>
+          );
+        },
+      },
+      {
         key: "actions",
         header: "Action",
         exportable: false,
@@ -80,11 +95,11 @@ export function ExpenseEntriesTable({
             </button>
             <button
               type="button"
-              className="p-2 rounded-md hover:bg-muted"
+              className="text-red-600 hover:text-red-700 p-2 rounded-md hover:bg-muted"
               aria-label="Delete"
               onClick={() => onDelete(item)}
             >
-              <Trash2 className="h-4 w-4 text-red-600" />
+              <Trash2 className="h-4 w-4" />
             </button>
           </div>
         ),

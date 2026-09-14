@@ -10,38 +10,62 @@ import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/redux/store";
 import {
-  getBanks,
-  verifyBankAccount,
+  getBanks as getEstateAdminBanks,
+  verifyBankAccount as verifyEstateAdminBankAccount,
   type BankItem,
 } from "@/redux/slice/estate-admin/fund-wallet/fund-wallet";
 import {
-  clearVerifiedAccount,
+  clearVerifiedAccount as clearEstateAdminVerifiedAccount,
 } from "@/redux/slice/estate-admin/fund-wallet/fund-wallet-slice";
+import {
+  getBanks as getStaffBanks,
+  verifyBankAccount as verifyStaffBankAccount,
+} from "@/redux/slice/staff/fund-wallet/fund-wallet";
+import { clearVerifiedAccount as clearStaffVerifiedAccount } from "@/redux/slice/staff/fund-wallet/fund-wallet-slice";
 import { setWithdrawalAccount } from "@/redux/slice/wallet-mgt/withdrawal-account";
 import { resetWithdrawalAccountState } from "@/redux/slice/wallet-mgt/withdrawal-account-slice";
 import { ChevronDown, Search } from "lucide-react";
 
 const COUNTRY = "NG";
 
+const FUND_WALLET_API = {
+  estateAdmin: {
+    getBanks: getEstateAdminBanks,
+    verifyBankAccount: verifyEstateAdminBankAccount,
+    clearVerifiedAccount: clearEstateAdminVerifiedAccount,
+    selectSlice: (state: RootState) => state.estateAdminFundWallet,
+  },
+  staff: {
+    getBanks: getStaffBanks,
+    verifyBankAccount: verifyStaffBankAccount,
+    clearVerifiedAccount: clearStaffVerifiedAccount,
+    selectSlice: (state: RootState) => state.staffFundWallet,
+  },
+} as const;
+
 export interface SetWithdrawalAccountModalProps {
   visible: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  /** Defaults to estate admin so existing callers stay unchanged. */
+  source?: "estateAdmin" | "staff";
 }
 
 export default function SetWithdrawalAccountModal({
   visible,
   onClose,
   onSuccess,
+  source = "estateAdmin",
 }: Readonly<SetWithdrawalAccountModalProps>) {
   const dispatch = useDispatch<AppDispatch>();
+  const fundWalletApi = FUND_WALLET_API[source];
   const {
     banks,
     getBanksState,
     verifyBankAccountState,
     verifiedAccountName,
     error: paymentError,
-  } = useSelector((state: RootState) => state.estateAdminFundWallet);
+  } = useSelector(fundWalletApi.selectSlice);
   const setState = useSelector(
     (state: RootState) => state.withdrawalAccount.setWithdrawalAccountState,
   );
@@ -69,12 +93,12 @@ export default function SetWithdrawalAccountModal({
 
   useEffect(() => {
     if (!visible) return;
-    dispatch(getBanks({ country: COUNTRY, gatewayType: "flutterwave" }));
+    dispatch(fundWalletApi.getBanks({ country: COUNTRY, gatewayType: "flutterwave" }));
     return () => {
-      dispatch(clearVerifiedAccount());
+      dispatch(fundWalletApi.clearVerifiedAccount());
       dispatch(resetWithdrawalAccountState());
     };
-  }, [visible, dispatch]);
+  }, [visible, dispatch, fundWalletApi]);
 
   useEffect(() => {
     if (!visible) {
@@ -118,7 +142,7 @@ export default function SetWithdrawalAccountModal({
     ) {
       const timeoutId = setTimeout(() => {
         dispatch(
-          verifyBankAccount({
+          fundWalletApi.verifyBankAccount({
             accountNumber: accountNumber.trim(),
             bankCode: selectedBankCode,
             gatewayType: "flutterwave",
@@ -127,8 +151,8 @@ export default function SetWithdrawalAccountModal({
       }, 500);
       return () => clearTimeout(timeoutId);
     }
-    dispatch(clearVerifiedAccount());
-  }, [accountNumber, selectedBankCode, dispatch, visible]);
+    dispatch(fundWalletApi.clearVerifiedAccount());
+  }, [accountNumber, selectedBankCode, dispatch, visible, fundWalletApi]);
 
   useEffect(() => {
     if (verifiedAccountName?.trim()) {
@@ -143,7 +167,7 @@ export default function SetWithdrawalAccountModal({
   }, [getBanksState, paymentError]);
 
   const handleClose = () => {
-    dispatch(clearVerifiedAccount());
+    dispatch(fundWalletApi.clearVerifiedAccount());
     onClose();
   };
 
@@ -252,7 +276,7 @@ export default function SetWithdrawalAccountModal({
                             className="w-full cursor-pointer px-3 py-2 text-sm text-left hover:bg-accent focus:bg-accent outline-none rounded-none"
                             onClick={() => {
                               setSelectedBankCode(bank.code);
-                              dispatch(clearVerifiedAccount());
+                              dispatch(fundWalletApi.clearVerifiedAccount());
                               setBankDropdownOpen(false);
                             }}
                           >

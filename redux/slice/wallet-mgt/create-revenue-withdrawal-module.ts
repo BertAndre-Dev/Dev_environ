@@ -8,7 +8,8 @@ import axiosInstance from "@/utils/axiosInstance";
 export type RevenueWithdrawalRole =
   | "company"
   | "estateAdmin"
-  | "energyProvider";
+  | "energyProvider"
+  | "staff";
 
 export interface SetRevenueWithdrawalAccountPayload {
   revenueType: string;
@@ -236,7 +237,7 @@ const initialState: RevenueWithdrawalAccountState = {
 
 /**
  * Builds an isolated Redux module (unique action types + slice) per role.
- * Company / estate admin / energy provider each get their own store key.
+ * Company / estate admin / energy provider / staff each get their own store key.
  */
 export function createRevenueWithdrawalModule(
   role: RevenueWithdrawalRole,

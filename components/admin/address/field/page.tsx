@@ -107,13 +107,18 @@ export default function AddressField() {
 
   const handleSubmitField = async (data: FieldData) => {
     try {
+      const payload = {
+        estateId: data.estateId,
+        label: data.label,
+        key: data.key,
+      };
       if (selectedField?.id) {
         await dispatch(
-          updateField({ fieldId: selectedField.id, data }),
+          updateField({ fieldId: selectedField.id, data: payload }),
         ).unwrap();
         toast.success("Field updated successfully!");
       } else {
-        await dispatch(createField(data)).unwrap();
+        await dispatch(createField(payload)).unwrap();
         toast.success("Field created successfully!");
       }
 
@@ -164,6 +169,11 @@ export default function AddressField() {
     })) || [];
 
   const columns = [
+    {
+      key: "createdAt",
+      header: "Created At",
+      render: (item: any) => formatAddressRecordCreatedAt(item.createdAt),
+    },
     { key: "label", header: "Field Label" },
     {
       key: "isActive",
@@ -181,11 +191,6 @@ export default function AddressField() {
       ),
     },
     {
-      key: "createdAt",
-      header: "Created At",
-      render: (item: any) => formatAddressRecordCreatedAt(item.createdAt),
-    },
-    {
       key: "actions",
       header: "Actions",
       render: (item: any) => (
@@ -194,15 +199,17 @@ export default function AddressField() {
             variant="ghost"
             size="sm"
             onClick={() => handleOpenModal(item)}
-          >
-            <Edit2 className="w-4 h-4 text-blue-600" />
+           className="text-blue-600 hover:text-blue-700"
+           >
+            <Edit2 className="w-4 h-4" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => handleDeleteField(item.id, item.label)}
-          >
-            <Trash2 className="w-4 h-4 text-red-600" />
+           className="text-red-600 hover:text-red-700"
+           >
+            <Trash2 className="w-4 h-4" />
           </Button>
         </div>
       ),

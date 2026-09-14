@@ -30,6 +30,18 @@ export interface CompanyUserDetails {
   id?: string;
   _id?: string;
   residentType?: string;
+  designationId?: string;
+  addressIds?: Array<{
+    id: string;
+    data?: Record<string, string>;
+  }>;
+  memberships?: Array<{
+    designationId?: string | null;
+    isCurrent?: boolean;
+  }>;
+  suspendedAt?: string | null;
+  suspendedBy?: string | null;
+  suspensionReason?: string | null;
 }
 
 export interface Pagination {

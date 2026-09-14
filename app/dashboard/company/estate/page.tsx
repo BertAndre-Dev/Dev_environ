@@ -23,6 +23,7 @@ import { isPending } from "@/lib/async-status";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
+import { parseCompanyFromUser } from "../lib/company";
 import {
   activateCompanyEstate,
   createCompanyEstate,
@@ -33,8 +34,8 @@ import {
   type EstateData,
 } from "@/redux/slice/company/estate-mgt/company-estate";
 import CompanyEstateForm from "./components/CompanyEstateForm";
-import { CompanyEstateModulesForm } from "./components/CompanyEstateModulesForm";
 import { CompanyEstateStatusModal } from "./components/CompanyEstateStatusModal";
+import { labelForPlan, formatVendAmount } from "@/lib/plans";
 
 type EstateTableRow = EstateData & {
   id?: string;
@@ -54,9 +55,7 @@ export default function CompanyEstatePage() {
   const [open, setOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ id: string; name?: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [modulesOpen, setModulesOpen] = useState(false);
   const [selectedEstate, setSelectedEstate] = useState<EstateTableRow | null>(null);
-  const [modulesEstate, setModulesEstate] = useState<EstateTableRow | null>(null);
   const [statusItem, setStatusItem] = useState<EstateTableRow | null>(null);
   const [statusMode, setStatusMode] = useState<"suspend" | "activate">("suspend");
   const [statusSubmitting, setStatusSubmitting] = useState(false);
@@ -92,13 +91,9 @@ export default function CompanyEstatePage() {
     (async () => {
       try {
         const userRes = await dispatch(getSignedInUser()).unwrap();
-        const data = userRes?.data ?? (userRes as Record<string, unknown>);
-        const companyFromId =
-          (data?.companyId as { name?: string } | undefined)?.name ?? "";
-        const companyFromObj =
-          (data?.company as { name?: string } | undefined)?.name ?? "";
-        const fallback = (data?.companyName as string) ?? "";
-        setCompanyName(companyFromId || companyFromObj || fallback || "Company");
+        const data = (userRes?.data ?? userRes) as Record<string, unknown>;
+        const company = parseCompanyFromUser(data);
+        if (company?.name) setCompanyName(company.name);
       } catch {
         // keep default
       }
@@ -121,18 +116,6 @@ export default function CompanyEstatePage() {
   const handleCloseModal = () => {
     setOpen(false);
     setSelectedEstate(null);
-  };
-
-  const handleModulesModal = (estate: EstateTableRow) => {
-    const id = rowId(estate);
-    if (!id) return;
-    setModulesEstate(estate);
-    setModulesOpen(true);
-  };
-
-  const handleCloseModulesModal = () => {
-    setModulesOpen(false);
-    setModulesEstate(null);
   };
 
   const handleSubmitEstate = async (data: EstateData) => {
@@ -232,6 +215,26 @@ export default function CompanyEstatePage() {
     { key: "state" as const, header: "State" },
     { key: "country" as const, header: "Country" },
     {
+      key: "plan" as const,
+      header: "Plan",
+      render: (item: EstateTableRow) => (
+        <span className="font-medium">{labelForPlan(item.plan)}</span>
+      ),
+      exportValue: (item: EstateTableRow) => labelForPlan(item.plan),
+    },
+    {
+      key: "minVendAmount" as const,
+      header: "Min vend",
+      render: (item: EstateTableRow) => formatVendAmount(item.minVendAmount),
+      exportValue: (item: EstateTableRow) => formatVendAmount(item.minVendAmount),
+    },
+    {
+      key: "maxVendAmount" as const,
+      header: "Max vend",
+      render: (item: EstateTableRow) => formatVendAmount(item.maxVendAmount),
+      exportValue: (item: EstateTableRow) => formatVendAmount(item.maxVendAmount),
+    },
+    {
       key: "visitorVerificationMode" as const,
       header: "Visitor Verification",
       render: (item: EstateTableRow) => {
@@ -291,12 +294,6 @@ export default function CompanyEstatePage() {
                 Update Estate Details
               </DropdownMenu.Item>
               <DropdownMenu.Item
-                onSelect={() => handleModulesModal(item)}
-                className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100"
-              >
-                Update Estate Modules
-              </DropdownMenu.Item>
-              <DropdownMenu.Item
                 onSelect={() =>
                   item.isActive
                     ? openSuspendModal(item)
@@ -310,7 +307,7 @@ export default function CompanyEstatePage() {
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 onSelect={() => handleDeleteEstate(rowId(item), item.name)}
-                className="cursor-pointer select-none rounded px-3 py-2 text-sm text-red-600 outline-none hover:bg-gray-100 focus:bg-gray-100"
+                className="cursor-pointer select-none rounded px-3 py-2 text-sm text-red-600 outline-none hover:bg-gray-100 focus:bg-gray-100 hover:text-red-700"
               >
                 Delete Estate
               </DropdownMenu.Item>
@@ -364,9 +361,9 @@ export default function CompanyEstatePage() {
             <h1 className="font-heading text-3xl font-bold">Estate Management</h1>
             <p className="text-muted-foreground mt-1">
               Manage estates for{" "}
-              <span className="text-[18px] font-bold underline uppercase text-black">
+              {/* <span className="text-[18px] font-bold underline uppercase text-black">
                 {companyName}
-              </span>
+              </span> */}
               .
             </p>
           </div>
@@ -453,7 +450,11 @@ export default function CompanyEstatePage() {
         </Card>
 
         {open && (
-          <Modal visible={open} onClose={handleCloseModal}>
+          <Modal
+            visible={open}
+            onClose={handleCloseModal}
+            contentClassName="p-4 md:w-[42%] lg:w-[36%] xl:w-[32%]"
+          >
             <CompanyEstateForm
               initialData={
                 selectedEstate
@@ -463,28 +464,13 @@ export default function CompanyEstatePage() {
                       city: selectedEstate.city ?? "",
                       state: selectedEstate.state ?? "",
                       country: selectedEstate.country ?? "",
-                      modules: [],
+                      plan: selectedEstate.plan,
                       visitorVerificationMode:
                         (selectedEstate as EstateTableRow).visitorVerificationMode,
                     }
                   : null
               }
               onSubmit={handleSubmitEstate}
-            />
-          </Modal>
-        )}
-
-        {modulesOpen && modulesEstate && rowId(modulesEstate) && (
-          <Modal visible={modulesOpen} onClose={handleCloseModulesModal}>
-            <CompanyEstateModulesForm
-              estateId={rowId(modulesEstate)}
-              estateName={modulesEstate.name}
-              initialModules={modulesEstate.modules}
-              onCancel={handleCloseModulesModal}
-              onSuccess={async () => {
-                handleCloseModulesModal();
-                await fetchEstates(Number(pagination?.currentPage) || 1);
-              }}
             />
           </Modal>
         )}

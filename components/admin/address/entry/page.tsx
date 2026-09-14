@@ -201,6 +201,7 @@ export default function EntryPage() {
         id: entry.id,
         estateId: entry.estateId,
         fieldId: entry.fieldId,
+        data: entry.data,
       };
 
       fields.forEach((field) => {
@@ -219,12 +220,12 @@ export default function EntryPage() {
     })) || [];
 
   const columns = [
-    ...dynamicColumns,
     {
       key: "createdAt",
       header: "Created At",
       render: (item: any) => formatAddressRecordCreatedAt(item.createdAt),
     },
+    ...dynamicColumns,
     {
       key: "actions",
       header: "Actions",
@@ -234,8 +235,9 @@ export default function EntryPage() {
             variant="ghost"
             size="sm"
             onClick={() => handleOpenModal(item)}
-          >
-            <Edit2 className="w-4 h-4 text-blue-600" />
+           className="text-blue-600 hover:text-blue-700"
+           >
+            <Edit2 className="w-4 h-4" />
           </Button>
           <Button
             variant="ghost"
@@ -243,8 +245,9 @@ export default function EntryPage() {
             onClick={() =>
               handleDeleteEntry(item.id, item.data?.name || "entry")
             }
-          >
-            <Trash2 className="w-4 h-4 text-red-600" />
+           className="text-red-600 hover:text-red-700"
+           >
+            <Trash2 className="w-4 h-4" />
           </Button>
         </div>
       ),

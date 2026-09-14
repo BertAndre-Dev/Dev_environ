@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "@/redux/store";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/redux/store";
 import {
-  BILL_FREQUENCY_OPTIONS,
+  billFrequencyOptions,
+  coerceFrequencyForServiceCharge,
   getBill,
   normalizeBillFrequency,
   type BillFrequency,
@@ -26,6 +27,8 @@ import {
   toInterestStartDate,
 } from "@/components/admin/bills-form/accrue-interest-fields";
 import { cn } from "@/lib/utils";
+import { canUseBillInterest } from "@/lib/user-modules";
+import { selectEstateModules } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 
 /** Form state: yearlyAmount can be string (empty input) or number */
 interface BillFormState {
@@ -34,6 +37,7 @@ interface BillFormState {
   description: string;
   yearlyAmount: number | string;
   frequency: BillFrequency;
+  isServiceCharge: boolean;
   compulsory: boolean;
   accrueInterest: boolean;
   interestRatePercent: string;
@@ -48,6 +52,7 @@ export interface BillSubmitData {
   description: string;
   yearlyAmount: number;
   frequency: BillFrequency;
+  isServiceCharge?: boolean;
   compulsory?: boolean;
   accrueInterest?: boolean;
   interestRatePercent?: number;
@@ -77,6 +82,9 @@ function amountFromBill(data?: {
 
 export default function BillsForm({ estateId, initialData, onSubmit }: BillsFormProps) {
   const seededAmount = amountFromBill(initialData);
+  const authUser = useSelector((state: RootState) => state.auth.user);
+  const estateModules = useSelector(selectEstateModules);
+  const canAccrueInterest = canUseBillInterest(authUser, estateModules);
   const [formData, setFormData] = useState<BillFormState>({
     estateId,
     id: initialData?.id,
@@ -84,7 +92,12 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
     description: initialData?.description ?? "",
     yearlyAmount:
       seededAmount != null ? formatAmountInput(String(seededAmount)) : "",
-    frequency: normalizeBillFrequency(initialData?.frequency, "yearly"),
+    frequency: coerceFrequencyForServiceCharge(
+      normalizeBillFrequency(initialData?.frequency, "yearly"),
+      Boolean(initialData?.isServiceCharge) ||
+        initialData?.name?.trim().toLowerCase() === "service charge",
+    ),
+    isServiceCharge: Boolean(initialData?.isServiceCharge),
     compulsory: Boolean(initialData?.compulsory),
     accrueInterest: Boolean(initialData?.accrueInterest),
     interestRatePercent:
@@ -118,7 +131,13 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
                     String(fetchData.amount ?? fetchData.yearlyAmount),
                   )
                 : "",
-            frequency: normalizeBillFrequency(fetchData.frequency, "yearly"),
+            frequency: coerceFrequencyForServiceCharge(
+              normalizeBillFrequency(fetchData.frequency, "yearly"),
+              Boolean(fetchData.isServiceCharge) ||
+                String(fetchData.name ?? "").trim().toLowerCase() ===
+                  "service charge",
+            ),
+            isServiceCharge: Boolean(fetchData.isServiceCharge),
             compulsory: Boolean(fetchData.compulsory),
             accrueInterest: Boolean(fetchData.accrueInterest),
             interestRatePercent:
@@ -143,10 +162,32 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
     field: keyof BillFormState,
     value: string | number | boolean,
   ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      if (field === "isServiceCharge" || field === "name") {
+        const nextName = field === "name" ? String(value) : prev.name;
+        const nextFlag =
+          field === "isServiceCharge" ? Boolean(value) : prev.isServiceCharge;
+        return {
+          ...prev,
+          name: nextName,
+          isServiceCharge: nextFlag,
+          frequency: coerceFrequencyForServiceCharge(
+            prev.frequency,
+            nextFlag || nextName.trim().toLowerCase() === "service charge",
+          ),
+        };
+      }
+      return { ...prev, [field]: value };
+    });
   };
 
-  const hideInterestStartsAt = shouldHideInterestStartsAt(formData.frequency);
+  const isServiceChargeBill =
+    formData.isServiceCharge ||
+    formData.name.trim().toLowerCase() === "service charge";
+  const hideInterestStartsAt = shouldHideInterestStartsAt(
+    formData.frequency,
+    isServiceChargeBill,
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,6 +195,7 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       ? Number(formData.interestRatePercent)
       : 0;
     if (
+      canAccrueInterest &&
       formData.accrueInterest &&
       (!Number.isFinite(interestRate) || interestRate < 0)
     ) {
@@ -161,6 +203,7 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       return;
     }
     if (
+      canAccrueInterest &&
       formData.accrueInterest &&
       !hideInterestStartsAt &&
       !formData.interestStartsAt
@@ -173,14 +216,22 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       name: formData.name,
       description: formData.description,
       yearlyAmount: parseFormattedNumber(formData.yearlyAmount),
-      frequency: formData.frequency,
-      compulsory: formData.compulsory,
-      accrueInterest: formData.accrueInterest,
-      interestRatePercent: interestRate,
-      interestStartsAt:
-        formData.accrueInterest && !hideInterestStartsAt
-          ? formData.interestStartsAt
-          : undefined,
+      frequency: coerceFrequencyForServiceCharge(
+        formData.frequency,
+        isServiceChargeBill,
+      ),
+      isServiceCharge: formData.isServiceCharge,
+      compulsory: isServiceChargeBill ? false : formData.compulsory,
+      ...(canAccrueInterest
+        ? {
+            accrueInterest: formData.accrueInterest,
+            interestRatePercent: interestRate,
+            interestStartsAt:
+              formData.accrueInterest && !hideInterestStartsAt
+                ? formData.interestStartsAt
+                : undefined,
+          }
+        : {}),
     };
     onSubmit(payload);
   };
@@ -233,6 +284,35 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
               />
             </div>
 
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="estate-bill-service-charge" className="font-medium">
+                Service charge
+              </Label>
+              <button
+                id="estate-bill-service-charge"
+                type="button"
+                role="switch"
+                aria-checked={formData.isServiceCharge}
+                aria-label="Service charge"
+                onClick={() =>
+                  handleChange("isServiceCharge", !formData.isServiceCharge)
+                }
+                className={cn(
+                  "relative inline-flex h-7 w-[44px] shrink-0 cursor-pointer items-center rounded-full p-0.5",
+                  "transition-colors duration-150 ease-out active:scale-[0.97]",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0150AC]/40",
+                  formData.isServiceCharge ? "bg-[#0150AC]" : "bg-black/15",
+                )}
+              >
+                <span
+                  className={cn(
+                    "block size-6 rounded-full bg-white shadow-sm transition-transform duration-150",
+                    formData.isServiceCharge ? "translate-x-4" : "translate-x-0",
+                  )}
+                />
+              </button>
+            </div>
+
             <div>
               <Label htmlFor="estate-bill-frequency">Frequency</Label>
               <Select
@@ -240,54 +320,60 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
                 aria-label="Select frequency"
                 value={formData.frequency}
                 onChange={(e) => handleChange("frequency", e.target.value)}
-                options={BILL_FREQUENCY_OPTIONS}
+                options={billFrequencyOptions(isServiceChargeBill)}
                 required
               />
             </div>
 
-            <AccrueInterestFields
-              idPrefix="estate-bill"
-              accrueInterest={formData.accrueInterest}
-              interestRatePercent={formData.interestRatePercent}
-              interestStartsAt={formData.interestStartsAt}
-              hideInterestStartsAt={hideInterestStartsAt}
-              onAccrueInterestChange={(value) =>
-                handleChange("accrueInterest", value)
-              }
-              onInterestRateChange={(value) =>
-                handleChange("interestRatePercent", value)
-              }
-              onInterestStartsAtChange={(value) =>
-                handleChange("interestStartsAt", value)
-              }
-            />
+            {canAccrueInterest ? (
+              <AccrueInterestFields
+                idPrefix="estate-bill"
+                accrueInterest={formData.accrueInterest}
+                interestRatePercent={formData.interestRatePercent}
+                interestStartsAt={formData.interestStartsAt}
+                hideInterestStartsAt={hideInterestStartsAt}
+                onAccrueInterestChange={(value) =>
+                  handleChange("accrueInterest", value)
+                }
+                onInterestRateChange={(value) =>
+                  handleChange("interestRatePercent", value)
+                }
+                onInterestStartsAtChange={(value) =>
+                  handleChange("interestStartsAt", value)
+                }
+              />
+            ) : null}
 
-            <div className="flex items-center justify-between gap-3">
-              <Label htmlFor="estate-bill-compulsory" className="font-medium">
-                Compulsory bill
-              </Label>
-              <button
-                id="estate-bill-compulsory"
-                type="button"
-                role="switch"
-                aria-checked={formData.compulsory}
-                aria-label="Compulsory bill"
-                onClick={() => handleChange("compulsory", !formData.compulsory)}
-                className={cn(
-                  "relative inline-flex h-7 w-[44px] shrink-0 cursor-pointer items-center rounded-full p-0.5",
-                  "transition-colors duration-150 ease-out active:scale-[0.97]",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0150AC]/40",
-                  formData.compulsory ? "bg-[#0150AC]" : "bg-black/15",
-                )}
-              >
-                <span
+            {!isServiceChargeBill ? (
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="estate-bill-compulsory" className="font-medium">
+                  Compulsory bill
+                </Label>
+                <button
+                  id="estate-bill-compulsory"
+                  type="button"
+                  role="switch"
+                  aria-checked={formData.compulsory}
+                  aria-label="Compulsory bill"
+                  onClick={() =>
+                    handleChange("compulsory", !formData.compulsory)
+                  }
                   className={cn(
-                    "block size-6 rounded-full bg-white shadow-sm transition-transform duration-150",
-                    formData.compulsory ? "translate-x-4" : "translate-x-0",
+                    "relative inline-flex h-7 w-[44px] shrink-0 cursor-pointer items-center rounded-full p-0.5",
+                    "transition-colors duration-150 ease-out active:scale-[0.97]",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0150AC]/40",
+                    formData.compulsory ? "bg-[#0150AC]" : "bg-black/15",
                   )}
-                />
-              </button>
-            </div>
+                >
+                  <span
+                    className={cn(
+                      "block size-6 rounded-full bg-white shadow-sm transition-transform duration-150",
+                      formData.compulsory ? "translate-x-4" : "translate-x-0",
+                    )}
+                  />
+                </button>
+              </div>
+            ) : null}
           </div>
         )}
 

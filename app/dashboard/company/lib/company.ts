@@ -8,6 +8,18 @@ function extractCompanyRef(raw: unknown): { id: string; name?: string } | null {
   if (typeof raw === "object") {
     const o = raw as Record<string, unknown>;
     const id = String(o._id ?? o.id ?? "").trim();
+    const nestedCompanyId =
+      typeof o.companyId === "string"
+        ? o.companyId.trim()
+        : extractCompanyRef(o.companyId)?.id ?? "";
+    // Populated estate objects have their own id plus a nested companyId.
+    if (nestedCompanyId && nestedCompanyId !== id) {
+      const nested =
+        typeof o.companyId === "object" && o.companyId
+          ? extractCompanyRef(o.companyId)
+          : null;
+      return { id: nestedCompanyId, name: nested?.name };
+    }
     if (!id) return null;
     const name =
       typeof o.name === "string" && o.name.trim() ? o.name.trim() : undefined;
@@ -16,25 +28,50 @@ function extractCompanyRef(raw: unknown): { id: string; name?: string } | null {
   return null;
 }
 
+function extractEstateId(data: Record<string, unknown>): string {
+  const estate = data.estateId ?? data.estate;
+  if (typeof estate === "string") return estate.trim();
+  if (estate && typeof estate === "object") {
+    const record = estate as Record<string, unknown>;
+    return String(record._id ?? record.id ?? "").trim();
+  }
+  const activeContext = data.activeContext;
+  if (activeContext && typeof activeContext === "object") {
+    const id = (activeContext as Record<string, unknown>).estateId;
+    return typeof id === "string" ? id.trim() : "";
+  }
+  return "";
+}
+
+function stringName(value: unknown): string {
+  return typeof value === "string" && value.trim() ? value.trim() : "";
+}
+
+function resolveCompanyDisplayName(
+  refs: { id: string; name?: string }[],
+  preferredId: string,
+  extras: unknown[],
+): string {
+  const fromSameId = refs.find((r) => r.id === preferredId && r.name)?.name;
+  const fromAny = refs.find((r) => r.name)?.name;
+  const extra = extras.map(stringName).find(Boolean);
+  return fromSameId || fromAny || extra || "Company";
+}
+
 /**
  * Resolve company id/name from `/api/v1/auth-mgt/me` user payload.
- * Checks top-level company fields, then activeContext, current membership,
- * and estate.companyId (common for estate admins under a company).
+ * Prefers active membership, then nested estate.companyId. Never returns the
+ * estate id itself as the company id.
+ *
+ * `activeContext.companyId` is often a bare id string; the display name lives
+ * on the populated `companyId` object or current membership.
  */
 export function parseCompanyFromUser(data: Record<string, unknown>): {
   id: string;
   name: string;
 } | null {
-  const candidates: unknown[] = [
-    data.companyId,
-    data.company,
-  ];
-
+  const estateId = extractEstateId(data);
   const activeContext = data.activeContext;
-  if (activeContext && typeof activeContext === "object") {
-    candidates.push((activeContext as Record<string, unknown>).companyId);
-  }
-
   const memberships = Array.isArray(data.memberships) ? data.memberships : [];
   const currentMembership =
     memberships.find(
@@ -43,32 +80,41 @@ export function parseCompanyFromUser(data: Record<string, unknown>): {
         typeof m === "object" &&
         Boolean((m as Record<string, unknown>).isCurrent),
     ) ?? memberships[0];
+
+  const candidates: unknown[] = [];
+  if (activeContext && typeof activeContext === "object") {
+    candidates.push((activeContext as Record<string, unknown>).companyId);
+  }
   if (currentMembership && typeof currentMembership === "object") {
     candidates.push((currentMembership as Record<string, unknown>).companyId);
   }
-
   const estate = data.estateId ?? data.estate;
   if (estate && typeof estate === "object") {
     candidates.push((estate as Record<string, unknown>).companyId);
   }
+  candidates.push(data.company, data.companyId);
 
-  let resolved: { id: string; name?: string } | null = null;
+  const refs: { id: string; name?: string }[] = [];
   for (const candidate of candidates) {
     const next = extractCompanyRef(candidate);
-    if (next) {
-      resolved = next;
-      break;
-    }
+    if (!next) continue;
+    if (estateId && next.id === estateId) continue;
+    refs.push(next);
   }
 
-  if (!resolved) return null;
+  if (!refs.length) return null;
 
-  const name =
-    resolved.name ||
-    (typeof data.companyName === "string" && data.companyName.trim()
-      ? data.companyName.trim()
-      : undefined) ||
-    "Company";
+  const preferredId = refs[0].id;
+  const membershipName =
+    currentMembership && typeof currentMembership === "object"
+      ? (currentMembership as Record<string, unknown>).companyName
+      : undefined;
 
-  return { id: resolved.id, name };
+  return {
+    id: preferredId,
+    name: resolveCompanyDisplayName(refs, preferredId, [
+      membershipName,
+      data.companyName,
+    ]),
+  };
 }

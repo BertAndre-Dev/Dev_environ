@@ -11,6 +11,7 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import type { AppDispatch } from "@/redux/store";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { parseAdminEstate } from "../asset/lib/estate";
+import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
 import {
   createOperationsReportingField,
   deleteOperationsReportingType,
@@ -38,6 +39,7 @@ export default function AdminOperationsReportingPage() {
   const [estateName, setEstateName] = useState("Estate");
   const [estateId, setEstateId] = useState("");
   const [estateLoading, setEstateLoading] = useState(true);
+  const [hasCompanyId, setHasCompanyId] = useState(false);
   const [activeTab, setActiveTab] = useState<TabTitle>("Configure Report");
   const [typeModalOpen, setTypeModalOpen] = useState(false);
   const [configureModalOpen, setConfigureModalOpen] = useState(false);
@@ -52,7 +54,6 @@ export default function AdminOperationsReportingPage() {
   const [typeToDelete, setTypeToDelete] =
     useState<OperationsReportingType | null>(null);
   const [listRefreshKey, setListRefreshKey] = useState(0);
-  const [fillReportTabNonce, setFillReportTabNonce] = useState(0);
 
   const {
     createTypeStatus,
@@ -67,6 +68,8 @@ export default function AdminOperationsReportingPage() {
         const userRes = await dispatch(getSignedInUser()).unwrap();
         const data = (userRes?.data ?? userRes) as Record<string, unknown>;
         const estate = parseAdminEstate(data);
+        const company = parseCompanyFromUser(data);
+        setHasCompanyId(Boolean(company?.id));
         if (!estate) {
           toast.warning("No estate linked to your account.");
           return;
@@ -224,26 +227,42 @@ export default function AdminOperationsReportingPage() {
             </button>
             <div>
               <h1 className="font-heading text-2xl font-bold sm:text-3xl">
-                Create Weekly Operations Report
+                {hasCompanyId
+                  ? "Operations Reporting"
+                  : "Create Weekly Operations Report"}
               </h1>
               <p className="mt-1 text-muted-foreground">
-                Customize the sections, fields and requirements for the weekly
-                report submitted by your staff for{" "}
-                <span className="font-bold uppercase text-black">
-                  {estateName}
-                </span>
-                .
+                {hasCompanyId ? (
+                  <>
+                    Fill operations reports for{" "}
+                    <span className="font-bold uppercase text-black">
+                      {estateName}
+                    </span>
+                    . Report types are configured by your company.
+                  </>
+                ) : (
+                  <>
+                    Customize the sections, fields and requirements for the weekly
+                    report submitted by your staff for{" "}
+                    <span className="font-bold uppercase text-black">
+                      {estateName}
+                    </span>
+                    .
+                  </>
+                )}
               </p>
             </div>
           </div>
 
-          <Button
-            onClick={startCreateFlow}
-            className="shrink-0 text-white"
-            style={{ backgroundColor: "#0150AC" }}
-          >
-            + Create Type
-          </Button>
+          {hasCompanyId ? null : (
+            <Button
+              onClick={startCreateFlow}
+              className="shrink-0 text-white"
+              style={{ backgroundColor: "#0150AC" }}
+            >
+              + Create Type
+            </Button>
+          )}
         </div>
 
         {!estateId ? (
@@ -252,39 +271,29 @@ export default function AdminOperationsReportingPage() {
           </p>
         ) : (
           <>
-            <div className="space-y-3 border-b border-border pb-4">
-              <div className="flex space-x-4">
-                {TABS.map((title) => (
-                  <button
-                    key={title}
-                    type="button"
-                    className={`cursor-pointer px-4 py-2 ${
-                      activeTab === title
-                        ? "border-b-2 border-primary font-bold text-primary"
-                        : "font-medium text-sidebar-foreground/60"
-                    }`}
-                    onClick={() => setActiveTab(title)}
-                  >
-                    {title}
-                  </button>
-                ))}
-              </div>
-
-              {activeTab === "Fill Report" ? (
-                <div className="flex justify-end">
-                  <Button
-                    onClick={() => setFillReportTabNonce((n) => n + 1)}
-                    className="shrink-0 text-white"
-                    style={{ backgroundColor: "#0150AC" }}
-                  >
-                    Fill report
-                  </Button>
+            {hasCompanyId ? null : (
+              <div className="space-y-3 border-b border-border pb-4">
+                <div className="flex space-x-4">
+                  {TABS.map((title) => (
+                    <button
+                      key={title}
+                      type="button"
+                      className={`cursor-pointer px-4 py-2 ${
+                        activeTab === title
+                          ? "border-b-2 border-primary font-bold text-primary"
+                          : "font-medium text-sidebar-foreground/60"
+                      }`}
+                      onClick={() => setActiveTab(title)}
+                    >
+                      {title}
+                    </button>
+                  ))}
                 </div>
-              ) : null}
-            </div>
+              </div>
+            )}
 
             <div className="mt-2">
-              {activeTab === "Configure Report" ? (
+              {!hasCompanyId && activeTab === "Configure Report" ? (
                 <OperationsReportingTypesTab
                   key={`configure-${listRefreshKey}`}
                   estateId={estateId}
@@ -295,9 +304,8 @@ export default function AdminOperationsReportingPage() {
                 <OperationsReportingReportsTab
                   key={`fill-${listRefreshKey}`}
                   estateId={estateId}
-                  fillReportTabNonce={fillReportTabNonce}
-                  onEditType={handleEditType}
-                  onDeleteType={handleDeleteType}
+                  onEditType={hasCompanyId ? undefined : handleEditType}
+                  onDeleteType={hasCompanyId ? undefined : handleDeleteType}
                 />
               )}
             </div>
@@ -305,49 +313,53 @@ export default function AdminOperationsReportingPage() {
         )}
       </div>
 
-      <OperationsReportingTypeFormModal
-        visible={typeModalOpen}
-        onClose={() => {
-          if (createFlowActive) {
-            closeCreateFlow();
-          } else {
-            setTypeModalOpen(false);
-            setEditingType(null);
-          }
-        }}
-        initial={editingType}
-        loading={
-          createTypeStatus === "isLoading" || updateTypeStatus === "isLoading"
-        }
-        submitLabel={createFlowActive ? "Next" : "Save"}
-        onSubmit={handleTypeSubmit}
-      />
+      {hasCompanyId ? null : (
+        <>
+          <OperationsReportingTypeFormModal
+            visible={typeModalOpen}
+            onClose={() => {
+              if (createFlowActive) {
+                closeCreateFlow();
+              } else {
+                setTypeModalOpen(false);
+                setEditingType(null);
+              }
+            }}
+            initial={editingType}
+            loading={
+              createTypeStatus === "isLoading" || updateTypeStatus === "isLoading"
+            }
+            submitLabel={createFlowActive ? "Next" : "Save"}
+            onSubmit={handleTypeSubmit}
+          />
 
-      <OperationsReportingConfigureFieldsModal
-        visible={configureModalOpen && !!flowType}
-        onClose={closeCreateFlow}
-        typeName={flowType?.name ?? ""}
-        typeDescription={flowType?.description}
-        loading={createFieldStatus === "isLoading"}
-        submitLabel="Save"
-        onSubmit={handleConfigureFieldsSave}
-      />
+          <OperationsReportingConfigureFieldsModal
+            visible={configureModalOpen && !!flowType}
+            onClose={closeCreateFlow}
+            typeName={flowType?.name ?? ""}
+            typeDescription={flowType?.description}
+            loading={createFieldStatus === "isLoading"}
+            submitLabel="Save"
+            onSubmit={handleConfigureFieldsSave}
+          />
 
-      <DeleteModal
-        visible={!!typeToDelete}
-        onClose={() => setTypeToDelete(null)}
-        itemName={typeToDelete?.name ?? "this type"}
-        title="Delete reporting type"
-        loading={deleteTypeStatus === "isLoading"}
-        onConfirm={async () => {
-          const id = getId(typeToDelete ?? undefined);
-          if (!id || !estateId) return;
-          await dispatch(deleteOperationsReportingType(id)).unwrap();
-          toast.success("Reporting type deleted.");
-          setTypeToDelete(null);
-          await refreshLists();
-        }}
-      />
+          <DeleteModal
+            visible={!!typeToDelete}
+            onClose={() => setTypeToDelete(null)}
+            itemName={typeToDelete?.name ?? "this type"}
+            title="Delete reporting type"
+            loading={deleteTypeStatus === "isLoading"}
+            onConfirm={async () => {
+              const id = getId(typeToDelete ?? undefined);
+              if (!id || !estateId) return;
+              await dispatch(deleteOperationsReportingType(id)).unwrap();
+              toast.success("Reporting type deleted.");
+              setTypeToDelete(null);
+              await refreshLists();
+            }}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -39,6 +39,8 @@ import Tab from "@/components/tabs/page";
 import { IoSpeedometerOutline } from "react-icons/io5";
 import Loader from "@/components/ui/Loader";
 import { isPending } from "@/lib/async-status";
+import { resolveEstateDisplayName } from "@/lib/user-id";
+import { formatAddressRecordCreatedAt, formatAddressEntryLabel } from "@/lib/address";
 import { ViewVendLimitModal } from "./components/ViewVendLimitModal";
 import { SetVendLimitModal } from "./components/SetVendLimitModal";
 
@@ -60,7 +62,7 @@ interface AdminMeterData {
   meterNumber: string;
   isActive?: boolean;
   isAssigned?: boolean;
-  estateId?: string;
+  estateId?: string | { id?: string; _id?: string; name?: string };
   lastCredit?: number;
   createdAt?: string;
   updatedAt?: string;
@@ -446,33 +448,35 @@ export default function AdminMeterManagement() {
       });
   }, [dispatch, usageModalOpen, usageMeterNumber, meterUsageRange]);
 
-  const getAllAddressKeys = (data: AdminMeterData[]) => {
-    const keys = new Set<string>();
-    data.forEach((item) => {
-      if (item.addressId?.data) {
-        Object.keys(item.addressId.data).forEach((key) => keys.add(key));
-      }
-    });
-    return Array.from(keys);
-  };
-
-  const getAddressColumns = (data: AdminMeterData[]) => {
-    if (!data.length) return [];
-    const addressKeys = getAllAddressKeys(data);
-    return addressKeys.map((key) => ({
-      key: `address_${key}`,
-      header: key
-        .replace(/([A-Z])/g, " $1")
-        .replace(/^./, (c) => c.toUpperCase()),
-      render: (item: AdminMeterData) => item.addressId?.data?.[key] ?? "-",
-      exportValue: (item: AdminMeterData) => item.addressId?.data?.[key] ?? "",
-    }));
-  };
-
   const columns = [
-    { key: "createdAt", header: "Created Date" },
+    {
+      key: "createdAt",
+      header: "Created Date",
+      render: (item: AdminMeterData) =>
+        formatAddressRecordCreatedAt(item.createdAt),
+      exportValue: (item: AdminMeterData) =>
+        formatAddressRecordCreatedAt(item.createdAt),
+    },
     { key: "meterNumber", header: "Meter Number" },
-    ...getAddressColumns(allAdminMeters),
+    {
+      key: "estateId",
+      header: "Estate",
+      render: (item: AdminMeterData) => {
+        const label = resolveEstateDisplayName(item.estateId);
+        if (!label) return <span className="text-muted-foreground">—</span>;
+        return <span className="font-medium">{label}</span>;
+      },
+      exportValue: (item: AdminMeterData) =>
+        resolveEstateDisplayName(item.estateId) ?? "",
+    },
+    {
+      key: "address",
+      header: "Address",
+      render: (item: AdminMeterData) =>
+        formatAddressEntryLabel(item.addressId?.data) || "—",
+      exportValue: (item: AdminMeterData) =>
+        formatAddressEntryLabel(item.addressId?.data),
+    },
     {
       key: "isActive",
       header: "Status",
@@ -490,7 +494,7 @@ export default function AdminMeterManagement() {
     },
     {
       key: "isAssigned",
-      header: "Assigned Status",
+      header: "Assigned To Address",
       render: (item: AdminMeterData) => (
         <span
           className={`px-3 py-1 rounded-full text-xs font-semibold ${
@@ -499,7 +503,7 @@ export default function AdminMeterManagement() {
               : "bg-red-100 text-red-700"
           }`}
         >
-          {item.isAssigned ? "Assigned" : "Not Assigned"}
+          {item.isAssigned ? "Assigned to address" : "Not assigned to address"}
         </span>
       ),
     },
@@ -513,20 +517,20 @@ export default function AdminMeterManagement() {
             variant="ghost"
             size="sm"
             onClick={() => openUnassignConfirm(item)}
-            className="hover:bg-amber-100"
+            className="text-amber-600 hover:text-amber-700 hover:bg-amber-100"
             title="Unassign meter"
           >
-            <Unlink className="w-4 h-4 text-amber-600" />
+            <Unlink className="w-4 h-4" />
           </Button>
         ) : (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => handleOpenModal(item)}
-            className="hover:bg-blue-100"
+            className="text-blue-600 hover:text-blue-700 hover:bg-blue-100"
             title="Assign meter"
           >
-            <Link className="w-4 h-4 text-blue-600" />
+            <Link className="w-4 h-4" />
           </Button>
         ),
     },
@@ -539,10 +543,10 @@ export default function AdminMeterManagement() {
           variant="ghost"
           size="sm"
           onClick={() => handleOpenUsageModal(item)}
-          className="cursor-pointer hover:bg-emerald-100"
+          className="text-emerald-600 hover:text-emerald-700 cursor-pointer hover:bg-emerald-100"
           title="View energy usage"
         >
-          <Eye className="w-4 h-4 text-emerald-600" />
+          <Eye className="w-4 h-4" />
         </Button>
       ),
     },
@@ -555,11 +559,11 @@ export default function AdminMeterManagement() {
           variant="ghost"
           size="sm"
           onClick={() => handleClearTamper(item)}
-          className="cursor-pointer hover:bg-orange-100"
+          className="text-orange-600 hover:text-orange-700 cursor-pointer hover:bg-orange-100"
           title="Generate clear-tamper token"
           disabled={clearTamperLoadingMeter === item.meterNumber}
         >
-          <KeyRound className="w-4 h-4 text-orange-600" />
+          <KeyRound className="w-4 h-4" />
         </Button>
       ),
     },

@@ -35,8 +35,7 @@ export function toAddressIdString(
   return null;
 }
 
-/** Render a human-friendly address label from an entry data object
- *  e.g. { block: "A", unit: "1", street: "Main St" } => "Block A, Unit 1 (Main St)" */
+/** Render a human-friendly address label from every field on the entry data. */
 export function formatAddressEntryLabel(
   data: Record<string, unknown> | undefined | null,
 ): string {
@@ -44,51 +43,69 @@ export function formatAddressEntryLabel(
   const toStr = (v: unknown) =>
     typeof v === "string" || typeof v === "number" ? String(v).trim() : "";
 
-  const block = toStr(data.block);
-  const street = toStr(data.street);
-  const unit = toStr(data.unit);
-  const flat = toStr(data.flat);
-  const apartment = toStr(data.apartment);
-  const houseNumber = toStr(data.houseNumber);
-  const number = toStr(data.number);
-
-  const unitLikeValue =
-    unit || flat || apartment || houseNumber || number || "";
-  const unitLikeKey = unit
-    ? "Unit"
-    : flat
-      ? "Flat"
-      : apartment
-        ? "Apartment"
-        : houseNumber
-          ? "House"
-          : number
-            ? "No."
-            : "";
-
-  if (block && unitLikeValue) {
-    const base = `Block ${block}, ${unitLikeKey} ${unitLikeValue}`;
-    return street ? `${base} (${street})` : base;
-  }
-  if (block) {
-    const base = `Block ${block}`;
-    return street ? `${base} (${street})` : base;
-  }
-  if (unitLikeValue) {
-    const base = `${unitLikeKey} ${unitLikeValue}`;
-    return street ? `${base} (${street})` : base;
-  }
-
-  const pairs = Object.entries(data)
-    .map(([k, v]) => {
-      const sv = toStr(v);
-      if (!sv) return "";
-      const key = k.charAt(0).toUpperCase() + k.slice(1);
-      return `${key} ${sv}`;
+  return Object.entries(data)
+    .map(([key, value]) => {
+      const text = toStr(value);
+      if (!text) return "";
+      const label = key.charAt(0).toUpperCase() + key.slice(1);
+      return `${label} ${text}`;
     })
-    .filter(Boolean);
+    .filter(Boolean)
+    .join(", ");
+}
 
-  return pairs.join(", ");
+type AddressEntryLike = {
+  id?: string;
+  data?: Record<string, unknown> | Record<string, string> | null;
+};
+
+/** Combine all address entries into one display string (e.g. "Flat V, Unit 1"). */
+export function formatUserAddresses(
+  addressIds?: AddressEntryLike[] | null,
+): string {
+  if (!addressIds?.length) return "";
+  const labels = addressIds
+    .map((address) => {
+      const fromData = formatAddressEntryLabel(
+        address?.data as Record<string, unknown> | undefined,
+      );
+      return fromData || address?.id || "";
+    })
+    .filter((label) => label.length > 0);
+  return Array.from(new Set(labels)).join("; ");
+}
+
+/** Capitalize the first character of a string (leaves the rest unchanged). */
+export function capitalizeFirstLetter(value: string): string {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+/**
+ * Body for POST/PUT /api/v1/address-mgt/field.
+ * The API whitelist rejects extra properties such as `id`.
+ */
+export function toAddressFieldBody(data: {
+  estateId?: unknown;
+  label?: string;
+  key?: string;
+}): { estateId: string; label: string; key: string } {
+  const raw = data.estateId;
+  const estateId =
+    typeof raw === "string"
+      ? raw
+      : raw && typeof raw === "object"
+        ? String(
+            (raw as { _id?: string; id?: string })._id ||
+              (raw as { id?: string }).id ||
+              "",
+          )
+        : "";
+  return {
+    estateId,
+    label: data.label ?? "",
+    key: data.key ?? "",
+  };
 }
 
 /** Format address field/entry `createdAt` for admin tables. */

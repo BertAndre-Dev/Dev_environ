@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo } from "react";
-import Image from "next/image";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { Wrench } from "lucide-react";
@@ -36,6 +35,7 @@ import {
 } from "@/redux/slice/staff/maintenance/staff-maintenance-selectors";
 import type { StaffComplaintItem } from "@/redux/slice/staff/maintenance/staff-maintenance-slice";
 import type { AppDispatch } from "@/redux/store";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import StaffMaintenanceViewModal from "./components/StaffMaintenanceViewModal";
 import {
   STAFF_CATEGORY_FILTER_OPTIONS,
@@ -45,7 +45,6 @@ import {
   formatCategoryLabel,
   getAddressDisplay,
   getGreetingName,
-  getInitials,
   getResidentImage,
   getResidentName,
   getStatusStyle,
@@ -169,19 +168,7 @@ export default function StaffMaintenancePage() {
         const image = getResidentImage(item);
         return (
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center text-xs font-semibold shrink-0">
-              {image ? (
-                <Image
-                  src={image}
-                  alt={name}
-                  width={32}
-                  height={32}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                getInitials(name)
-              )}
-            </div>
+            <UserAvatar src={image} alt={name} size={32} />
             <span>{name}</span>
           </div>
         );

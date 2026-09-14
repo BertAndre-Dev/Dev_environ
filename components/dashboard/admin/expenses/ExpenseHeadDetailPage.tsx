@@ -39,6 +39,7 @@ import {
   AddExpenseModal,
   type AddExpenseDraftEntry,
 } from "@/components/dashboard/admin/expenses/AddExpenseModal";
+import { toDraftAttachments } from "@/components/dashboard/admin/expenses/ExpenseAttachmentsPicker";
 import { EditExpenseModal } from "@/components/dashboard/admin/expenses/EditExpenseModal";
 import { ViewExpenseEntryModal } from "@/components/dashboard/admin/expenses/ViewExpenseEntryModal";
 import Loader from "@/components/ui/Loader";
@@ -115,6 +116,9 @@ export default function ExpenseHeadDetailPage() {
   const [formDescription, setFormDescription] = useState("");
   const [formAmount, setFormAmount] = useState("");
   const [formDocumentNumber, setFormDocumentNumber] = useState("");
+  const [formAttachments, setFormAttachments] = useState<
+    AddExpenseDraftEntry["attachments"]
+  >([]);
 
   const [viewOpen, setViewOpen] = useState(false);
   const [viewItem, setViewItem] = useState<ExpenseEntry | null>(null);
@@ -199,6 +203,7 @@ export default function ExpenseHeadDetailPage() {
     description: "",
     amount: "",
     documentNumber: "",
+    attachments: [],
   });
 
   const openAdd = () => {
@@ -218,6 +223,7 @@ export default function ExpenseHeadDetailPage() {
     setFormDescription("");
     setFormAmount("");
     setFormDocumentNumber("");
+    setFormAttachments([]);
     setSaving(false);
   };
 
@@ -234,6 +240,14 @@ export default function ExpenseHeadDetailPage() {
   const addDraft = () => setDrafts((prev) => [...prev, createDraftEntry()]);
   const removeDraft = (id: string) =>
     setDrafts((prev) => prev.filter((p) => p.id !== id));
+  const onAttachmentsChange = (
+    id: string,
+    attachments: AddExpenseDraftEntry["attachments"],
+  ) => {
+    setDrafts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, attachments } : p)),
+    );
+  };
 
   const submitCreate = async () => {
     if (!headId) return toast.error("Expense head not resolved.");
@@ -244,6 +258,7 @@ export default function ExpenseHeadDetailPage() {
       description: d.description.trim(),
       documentNumber: d.documentNumber.trim(),
       amount: Number(d.amount),
+      attachments: d.attachments.map((file) => file.url),
     }));
 
     for (const [idx, e] of entriesPayload.entries()) {
@@ -291,6 +306,7 @@ export default function ExpenseHeadDetailPage() {
     setFormDescription(item.description ?? "");
     setFormAmount(String(item.amount ?? ""));
     setFormDocumentNumber(item.documentNumber ?? "");
+    setFormAttachments(toDraftAttachments(item.attachments));
     setEditOpen(true);
   };
 
@@ -316,6 +332,7 @@ export default function ExpenseHeadDetailPage() {
           description: formDescription.trim(),
           documentNumber: formDocumentNumber.trim(),
           amount,
+          attachments: formAttachments.map((file) => file.url),
         }),
       ).unwrap();
       toast.success("Expense entry updated.");
@@ -416,6 +433,7 @@ export default function ExpenseHeadDetailPage() {
           drafts={drafts}
           onOpenChange={(open) => (open ? setAddOpen(true) : closeAdd())}
           onDraftChange={onDraftChange}
+          onAttachmentsChange={onAttachmentsChange}
           onAddDraft={addDraft}
           onRemoveDraft={removeDraft}
           onSubmit={submitCreate}
@@ -429,10 +447,12 @@ export default function ExpenseHeadDetailPage() {
           description={formDescription}
           amount={formAmount}
           documentNumber={formDocumentNumber}
+          attachments={formAttachments}
           onOpenChange={(open) => (open ? setEditOpen(true) : closeEdit())}
           onDescriptionChange={setFormDescription}
           onAmountChange={setFormAmount}
           onDocumentNumberChange={setFormDocumentNumber}
+          onAttachmentsChange={setFormAttachments}
           onSubmit={submitUpdate}
         />
 

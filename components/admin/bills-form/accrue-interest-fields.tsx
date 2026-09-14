@@ -14,8 +14,12 @@ export function toInterestStartDate(value?: string | null): string {
 
 const RECURRING_FREQUENCIES = new Set(["monthly", "quarterly", "yearly"]);
 
-/** Hide start date for recurring bills (monthly, quarterly, yearly). */
-export function shouldHideInterestStartsAt(frequency?: string): boolean {
+/** Hide start date for recurring bills (monthly, quarterly, yearly) and service charges. */
+export function shouldHideInterestStartsAt(
+  frequency?: string,
+  isServiceCharge = false,
+): boolean {
+  if (isServiceCharge) return true;
   const normalized = (frequency ?? "").toLowerCase().replace(/[_-]/g, "");
   return RECURRING_FREQUENCIES.has(normalized);
 }

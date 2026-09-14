@@ -2,6 +2,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import { parseEstateModulesResponse } from "@/lib/estate-module-labels";
 import { apiErrorRejectValue } from "@/lib/api-error";
+import { toEstateWriteBody } from "@/lib/plans";
 
 export enum VisitorVerificationMode {
   VIEW_AND_VERIFY = "VIEW_AND_VERIFY",
@@ -16,13 +17,11 @@ export interface EstateData {
   state: string;
   country: string;
   isActive?: boolean;
-  modules: string[];
+  modules?: string[];
+  plan?: string;
+  minVendAmount?: number;
+  maxVendAmount?: number;
   visitorVerificationMode?: VisitorVerificationMode;
-}
-
-export interface UpdateEstateModulesPayload {
-  id: string;
-  modules: string[];
 }
 
 /** GET /api/v1/estate-mgt/{id}/modules — enabled modules for an estate */
@@ -40,29 +39,15 @@ export const fetchEstateModules = createAsyncThunk(
   },
 );
 
-/** PUT /api/v1/estate-mgt/{id}/modules — set enabled modules for an estate */
-export const updateEstateModules = createAsyncThunk(
-  "super-admin-est-mgt/updateEstateModules",
-  async (payload: UpdateEstateModulesPayload, { rejectWithValue }) => {
-    try {
-      const { id, modules } = payload;
-      const res = await axiosInstance.put(
-        `/api/v1/estate-mgt/${id}/modules`,
-        { modules },
-      );
-      return { ...res.data, updatedId: id, modules };
-    } catch (error: unknown) {
-      return rejectWithValue(apiErrorRejectValue(error));
-    }
-  },
-);
-
 // create estate
 export const createEstate = createAsyncThunk(
   "super-admin-est-mgt/createEstate",
   async (data: EstateData, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.post("/api/v1/estate-mgt", data);
+      const res = await axiosInstance.post(
+        "/api/v1/estate-mgt",
+        toEstateWriteBody(data),
+      );
       return res.data;
     } catch (error: unknown) {
       return rejectWithValue(apiErrorRejectValue(error));
@@ -140,7 +125,10 @@ export const updateEstate = createAsyncThunk(
     { rejectWithValue },
   ) => {
     try {
-      const res = await axiosInstance.put(`/api/v1/estate-mgt/${id}`, data);
+      const res = await axiosInstance.put(
+        `/api/v1/estate-mgt/${id}`,
+        toEstateWriteBody(data),
+      );
       return res.data;
     } catch (error: unknown) {
       return rejectWithValue(apiErrorRejectValue(error));

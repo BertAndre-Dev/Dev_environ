@@ -2,6 +2,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import { getStoredUserEmail } from "@/utils/auth-storage";
 import { clearCsrfToken, fetchCsrfToken } from "@/utils/csrf";
+import { toInviteUserApiBody } from "@/lib/phone-e164";
 
 export interface InvitedUserData {
   estateId?: string;
@@ -9,12 +10,16 @@ export interface InvitedUserData {
   firstName: string;
   lastName: string;
   email: string;
-  /** Prefer WhatsApp-capable number. Required for every invited user. */
+  /** Prefer WhatsApp-capable number in E.164 (e.g. +2348141153727). */
   phoneNumber?: string;
   role: string;
   /** Set to "owner" | "tenant" for residents; null for staff, security, admin, etc. */
   residentType: string | null;
   addressIds: string[];
+  /** Required when inviting staff. */
+  designationId?: string;
+  /** Optional modules granted when inviting staff. */
+  modules?: string[];
 }
 
 interface VerifyInvitedUserData {
@@ -212,7 +217,7 @@ export const iniviteUser = createAsyncThunk(
     try {
       const res = await axiosInstance.post(
         "/api/v1/auth-mgt/invite-user",
-        data,
+        toInviteUserApiBody(data),
       );
       return res.data;
     } catch (error: any) {

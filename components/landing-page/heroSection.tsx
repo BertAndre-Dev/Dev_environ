@@ -7,55 +7,45 @@ const FEATURE_CARDS = [
   {
     src: "/assets/hero/buy%20power.svg",
     alt: "Buy Energy",
-    // Higher left — level with first line of subheadline
-    className:
-      "left-2 top-[22%] xl:left-6 2xl:left-12",
   },
   {
     src: "/assets/hero/pay%20bills.svg",
     alt: "Pay Bills",
-    // Lower left — beside store buttons
-    className:
-      "left-10 top-[55%] xl:left-16 2xl:left-24",
   },
   {
     src: "/assets/hero/invite.svg",
     alt: "Invite Guests",
-    // Mid-right — lower than Buy Energy (per Figma stagger)
-    className:
-      "right-2 top-[34%] xl:right-6 2xl:right-12",
   },
   {
     src: "/assets/hero/analytics.svg",
     alt: "Analytics",
-    // Lower right — beside users row
-    className:
-      "right-10 top-[58%] xl:right-16 2xl:right-24",
   },
 ] as const;
 
 function FeatureCard({
   src,
   alt,
-  delay,
+  enterDelay,
+  floatDelay,
   className,
 }: Readonly<{
   src: string;
   alt: string;
-  delay: string;
+  enterDelay: string;
+  floatDelay: string;
   className: string;
 }>) {
   return (
     <div
-      className={`pointer-events-none absolute z-10 hidden lg:block ${className}`}
+      className={`pointer-events-none absolute z-30 hidden lg:block ${className}`}
     >
       <Image
         src={src}
         alt={alt}
         width={108}
         height={88}
-        className="hero-float h-auto w-24 xl:w-[108px]"
-        style={{ animationDelay: delay }}
+        className="hero-float h-auto w-[92px] xl:w-[108px]"
+        style={{ animationDelay: `${enterDelay}, ${floatDelay}` }}
       />
     </div>
   );
@@ -63,21 +53,41 @@ function FeatureCard({
 
 export default function HeroSection() {
   return (
-      <section className="relative bg-white">
-        <div className="relative px-5 sm:px-8 lg:px-10">
-          {/* Staggered floats — Invite Guests sits higher than Buy Energy (per Figma) */}
-          {FEATURE_CARDS.map((card, index) => (
-            <FeatureCard
-              key={card.alt}
-              src={card.src}
-              alt={card.alt}
-              className={card.className}
-              delay={`${index * 0.6}s`}
-            />
-          ))}
+    <section className="relative bg-white">
+      <div className="px-5 sm:px-8 lg:px-10">
+        {/* Copy + floats share one box so cards sit beside the store buttons, not the house image */}
+        <div className="relative mx-auto max-w-6xl overflow-visible">
+          <FeatureCard
+            src="/assets/hero/buy%20power.svg"
+            alt="Buy Energy"
+            enterDelay="0ms"
+            floatDelay="0s"
+            className="left-2 top-[32%] xl:left-8"
+          />
+          <FeatureCard
+            src="/assets/hero/invite.svg"
+            alt="Invite Guests"
+            enterDelay="120ms"
+            floatDelay="2.2s"
+            className="right-2 top-[32%] xl:right-8"
+          />
+          <FeatureCard
+            src="/assets/hero/pay%20bills.svg"
+            alt="Pay Bills"
+            enterDelay="60ms"
+            floatDelay="1.1s"
+            className="left-1/2 xl:left-2/3 top-[40%] xl:top-[60%] -translate-x-[calc(50%+16.5rem)] xl:-translate-x-[calc(50%+18rem)]"
+          />
+          <FeatureCard
+            src="/assets/hero/analytics.svg"
+            alt="Analytics"
+            enterDelay="180ms"
+            floatDelay="3.3s"
+            className="left-1/2 top-[40%] xl:top-[60%] translate-x-[calc(-50%+16.5rem)] xl:translate-x-[calc(-50%+18rem)]"
+          />
 
           {/* Center copy */}
-          <div className="relative z-20 mx-auto flex max-w-3xl flex-col items-center pt-4 text-center sm:pt-6">
+          <div className="relative z-20 mx-auto flex max-w-3xl flex-col items-center overflow-visible pt-4 text-center sm:pt-6">
             <span className="inline-flex items-center rounded-lg border border-[#0150AC]/35 px-4 py-1.5 text-xs font-medium text-[#0150AC] sm:text-sm">
               The Best Real Estate Operating System
             </span>
@@ -136,10 +146,12 @@ export default function HeroSection() {
                 className="h-9 w-auto sm:h-10"
                 aria-hidden="true"
               />
-              <p className="text-sm font-medium text-[#374151] sm:text-base">
-                <span className="font-bold text-black">250+</span> Worldwide
-                Users
-              </p>
+              <div className="flex flex-col items-start text-left leading-tight">
+                <p className="text-lg font-bold text-black sm:text-xl">250+</p>
+                <p className="text-sm font-medium text-[#374151]">
+                  Worldwide users
+                </p>
+              </div>
             </div>
 
             <div className="mt-10 grid w-full max-w-md grid-cols-2 gap-3 lg:hidden">
@@ -155,39 +167,58 @@ export default function HeroSection() {
               ))}
             </div>
           </div>
-
-          {/* Hero visual */}
-          <div className="relative z-20 mx-auto mt-10 max-w-5xl sm:mt-12 lg:mt-14">
-            <div className="overflow-hidden">
-              <Image
-                src="/assets/hero/hero.svg"
-                alt="Berta Hub — energy usage and meter balance for modern living"
-                width={1200}
-                height={640}
-                className="h-auto w-full object-cover"
-                priority
-                sizes="(max-width: 1024px) 100vw, 1100px"
-              />
-            </div>
-          </div>
         </div>
 
-        <style>{`
-          @keyframes heroFloat {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-8px); }
-          }
+        {/* Hero visual */}
+        <div className="relative z-20 mx-auto mt-10 max-w-5xl sm:mt-12 lg:mt-14">
+          <div className="overflow-hidden">
+            <Image
+              src="/assets/hero/hero.svg"
+              alt="Berta Hub — energy usage and meter balance for modern living"
+              width={1200}
+              height={640}
+              className="h-auto w-full object-cover"
+              priority
+              sizes="(max-width: 1024px) 100vw, 1100px"
+            />
+          </div>
+        </div>
+      </div>
 
+      <style>{`
+        @keyframes heroCardFade {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes heroFloat {
+          0%,
+          100% {
+            transform: translate3d(0, 0, 0) rotate(0deg);
+          }
+          25% {
+            transform: translate3d(3px, -6px, 0) rotate(0.35deg);
+          }
+          50% {
+            transform: translate3d(-2px, -10px, 0) rotate(-0.3deg);
+          }
+          75% {
+            transform: translate3d(2px, -5px, 0) rotate(0.2deg);
+          }
+        }
+
+        .hero-float {
+          animation:
+            heroCardFade 400ms cubic-bezier(0.23, 1, 0.32, 1) both,
+            heroFloat 6.5s cubic-bezier(0.77, 0, 0.175, 1) infinite;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
           .hero-float {
-            animation: heroFloat 5s ease-in-out infinite;
+            animation: heroCardFade 200ms cubic-bezier(0.23, 1, 0.32, 1) both;
           }
-
-          @media (prefers-reduced-motion: reduce) {
-            .hero-float {
-              animation: none;
-            }
-          }
-        `}</style>
-      </section>
+        }
+      `}</style>
+    </section>
   );
 }

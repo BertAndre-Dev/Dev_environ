@@ -40,13 +40,13 @@ const EnergyProviderAddressPage = () => {
       </div>
       <Card className="p-4">
         <Tab
-          titles={["Entries Fields", "Address Fields"]}
+          titles={["Address Fields", "Entries Fields"]}
           renderContent={(activeTab) => {
             switch (activeTab) {
-              case "Entries Fields":
-                return <EnergyProviderFieldEntry />;
               case "Address Fields":
                 return <EnergyProviderAddressField />;
+              case "Entries Fields":
+                return <EnergyProviderFieldEntry />;
               default:
                 return null;
             }

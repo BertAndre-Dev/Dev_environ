@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import DeleteModal from "@/components/resident/delete-modal/page";
@@ -23,98 +23,14 @@ import {
   createCompany,
   deleteCompany,
   getCompanies,
-  getCompanyModules,
   suspendCompany,
   updateCompany,
   type CompanyItem,
   type CreateCompanyPayload,
-  type CompanyModuleKey,
 } from "@/redux/slice/super-admin/company-mgt/company";
+import { DEFAULT_PLAN, labelForPlan, normalizePlanKey } from "@/lib/plans";
 
 const PAGE_SIZE = 10;
-
-const MODULE_LABELS: Record<string, string> = {
-  bills: "Bills",
-  rent: "Rent",
-  meter: "Meter",
-  marketplace: "Marketplace",
-  visitor: "Visitor",
-  complaints: "Complaints",
-  announcements: "Announcements",
-  wallet: "Wallet",
-  transactions: "Transactions",
-  comments: "Comments",
-  address: "Address",
-  expense: "Expense",
-  reporting: "Reporting",
-  users: "Users",
-};
-
-const VISIBLE_MODULE_LIMIT = 3;
-
-function ModulesCell({ mods }: { mods: CompanyModuleKey[] }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  if (!mods.length) return <span className="text-muted-foreground">—</span>;
-
-  const visible = mods.slice(0, VISIBLE_MODULE_LIMIT);
-  const overflow = mods.slice(VISIBLE_MODULE_LIMIT);
-
-  return (
-    <div className="relative flex flex-wrap items-center gap-1" ref={ref}>
-      {visible.map((m) => (
-        <span
-          key={m}
-          className="px-2 py-0.5 rounded-full text-xs bg-muted whitespace-nowrap"
-        >
-          {MODULE_LABELS[m] ?? m}
-        </span>
-      ))}
-
-      {overflow.length > 0 && (
-        <>
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors cursor-pointer whitespace-nowrap"
-          >
-            +{overflow.length} more
-          </button>
-
-          {open && (
-            <div className="absolute left-0 top-full mt-1 z-50 w-56 rounded-lg border border-border bg-popover shadow-md p-3">
-              <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
-                All Modules ({mods.length})
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {mods.map((m) => (
-                  <span
-                    key={m}
-                    className="px-2 py-0.5 rounded-full text-xs bg-muted whitespace-nowrap"
-                  >
-                    {MODULE_LABELS[m] ?? m}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
 
 function companyId(item: CompanyItem): string | undefined {
   return item.id ?? item._id;
@@ -122,25 +38,17 @@ function companyId(item: CompanyItem): string | undefined {
 
 type CompanyFormState = CreateCompanyPayload;
 
-function normalizeModules(mods: unknown): CompanyModuleKey[] {
-  return Array.isArray(mods)
-    ? (mods.filter(Boolean) as CompanyModuleKey[])
-    : [];
-}
-
 export default function SuperAdminCompanyPage() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
 
-  const { list, pagination, loading, modules, modulesLoading } = useSelector(
+  const { list, pagination, loading } = useSelector(
     (state: RootState) => {
       const s: any = (state as any).superAdminCompany;
       return {
         list: (s?.list ?? []) as CompanyItem[],
         pagination: s?.pagination ?? null,
         loading: isPending(s?.getListStatus),
-        modules: (s?.modules ?? []) as CompanyModuleKey[],
-        modulesLoading: s?.getModulesStatus === "isLoading",
       };
     },
   );
@@ -170,20 +78,10 @@ export default function SuperAdminCompanyPage() {
     state: "",
     country: "",
     isActive: true,
-    modules: [],
+    plan: DEFAULT_PLAN,
   });
 
   const effectivePageSize = Number(pagination?.pageSize) || PAGE_SIZE;
-
-  useEffect(() => {
-    if (!open) return;
-    dispatch(getCompanyModules())
-      .unwrap()
-      .catch((err: unknown) => {
-        const message = getApiErrorMessage(err);
-        if (message) toast.error(message);
-      });
-  }, [dispatch, open]);
 
   const fetchList = useCallback(
     (targetPage: number) => {
@@ -239,7 +137,7 @@ export default function SuperAdminCompanyPage() {
       state: "",
       country: "",
       isActive: true,
-      modules: [],
+      plan: DEFAULT_PLAN,
     });
     setOpen(true);
   };
@@ -253,7 +151,7 @@ export default function SuperAdminCompanyPage() {
       state: item.state ?? "",
       country: item.country ?? "",
       isActive: Boolean(item.isActive),
-      modules: normalizeModules(item.modules),
+      plan: normalizePlanKey(item.plan),
     });
     setOpen(true);
   };
@@ -270,8 +168,8 @@ export default function SuperAdminCompanyPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.modules.length) {
-      toast.error("Select at least one module");
+    if (!form.plan.trim()) {
+      toast.error("Please select a plan.");
       return;
     }
     try {
@@ -372,8 +270,16 @@ export default function SuperAdminCompanyPage() {
       { key: "address", header: "Address" },
       { key: "city", header: "City" },
       { key: "state", header: "State" },
-      { key: "country", header: "Country" },
-      {
+    { key: "country", header: "Country" },
+    {
+      key: "plan",
+      header: "Plan",
+      render: (item: CompanyItem) => (
+        <span className="font-medium">{labelForPlan(item.plan)}</span>
+      ),
+      exportValue: (item: CompanyItem) => labelForPlan(item.plan),
+    },
+    {
         key: "isActive",
         header: "Status",
         render: (item: CompanyItem) => (
@@ -392,15 +298,6 @@ export default function SuperAdminCompanyPage() {
           item.isActive ? "Active" : "Inactive",
       },
       {
-        key: "modules",
-        header: "Modules",
-        render: (item: CompanyItem) => (
-          <ModulesCell mods={normalizeModules(item.modules)} />
-        ),
-        exportValue: (item: CompanyItem) =>
-          normalizeModules(item.modules).join("|"),
-      },
-      {
         key: "actions",
         header: "Actions",
         exportable: false,
@@ -414,19 +311,19 @@ export default function SuperAdminCompanyPage() {
                 if (id) router.push(`/dashboard/super-admin/company/${id}`);
               }}
               title="View company details"
-              className="cursor-pointer"
+              className="text-[#0150AC] hover:text-[#01408A] cursor-pointer"
               disabled={!companyId(item)}
             >
-              <Eye className="w-4 h-4 text-[#0150AC]" />
+              <Eye className="w-4 h-4" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => openEdit(item)}
               title="Edit Company"
-              className="cursor-pointer"
+              className="text-blue-600 hover:text-blue-700 cursor-pointer"
             >
-              <Edit className="w-4 h-4 text-blue-600" />
+              <Edit className="w-4 h-4" />
             </Button>
 
             {item.isActive ? (
@@ -435,9 +332,9 @@ export default function SuperAdminCompanyPage() {
                 size="sm"
                 onClick={() => openSuspendModal(item)}
                 title="Suspend Company"
-                className="cursor-pointer"
+                className="text-red-600 hover:text-red-700 cursor-pointer"
               >
-                <PowerOff className="w-4 h-4 text-red-600" />
+                <PowerOff className="w-4 h-4" />
               </Button>
             ) : (
               <Button
@@ -445,9 +342,9 @@ export default function SuperAdminCompanyPage() {
                 size="sm"
                 onClick={() => openActivateModal(item)}
                 title="Activate Company"
-                className="cursor-pointer"
+                className="text-green-600 hover:text-green-700 cursor-pointer"
               >
-                <Power className="w-4 h-4 text-green-600" />
+                <Power className="w-4 h-4" />
               </Button>
             )}
 
@@ -456,16 +353,16 @@ export default function SuperAdminCompanyPage() {
               size="sm"
               onClick={() => handleDelete(item)}
               title="Delete Company"
-              className="cursor-pointer"
+              className="text-red-600 hover:text-red-700 cursor-pointer"
             >
-              <Trash2 className="w-4 h-4 text-red-600" />
+              <Trash2 className="w-4 h-4" />
             </Button>
           </div>
         ),
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [modules],
+    [],
   );
 
   const emptyMessage = "No companies found.";
@@ -486,7 +383,7 @@ export default function SuperAdminCompanyPage() {
               Company Management
             </h1>
             <p className="text-muted-foreground mt-1">
-              Create and manage companies, including enabled modules.
+              Create and manage companies and their plans.
             </p>
           </div>
 
@@ -576,8 +473,6 @@ export default function SuperAdminCompanyPage() {
           mode={editingCompany ? "update" : "create"}
           form={form}
           setForm={setForm}
-          modules={modules}
-          modulesLoading={modulesLoading}
           onSubmit={handleSubmit}
         />
 

@@ -8,9 +8,11 @@ import { Save } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CountryCodeSelect } from "@/components/ui/country-code-select";
 import { IsoDatePicker } from "@/components/ui/iso-date-picker";
+import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
+import { ProfilePhotoField } from "@/components/settings/profile-photo-field";
 import type { AppDispatch, RootState } from "@/redux/store";
+import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { resetStaffUserProfileState } from "@/redux/slice/staff/user-profile/staff-user-profile-slice";
 import {
   getStaffUserProfile,
@@ -19,10 +21,11 @@ import {
 import { isBusy, isPending } from "@/lib/async-status";
 import { getApiErrorMessage } from "@/lib/api-error";
 import {
-  PHONE_E164_ERROR,
+  getPhoneValidationError,
   splitPhoneFields,
   toE164PhoneNumber,
 } from "@/lib/phone-e164";
+import { isBase64Image } from "@/lib/uploads/fileToDataUri";
 
 type StaffFormState = {
   firstName: string;
@@ -33,6 +36,7 @@ type StaffFormState = {
   dateOfBirth: string;
   gender: string;
   role: string;
+  image: string;
 };
 
 function extractUserId(raw: unknown): string | null {
@@ -63,6 +67,7 @@ export function StaffGeneralSettingsCard() {
     dateOfBirth: "",
     gender: "",
     role: "",
+    image: "",
   });
   const [formError, setFormError] = useState("");
 
@@ -91,6 +96,7 @@ export function StaffGeneralSettingsCard() {
       dateOfBirth: user.dateOfBirth ? user.dateOfBirth.split("T")[0] : "",
       gender: user.gender || "",
       role: user.role || "",
+      image: user.image || "",
     });
   }, [user]);
 
@@ -127,8 +133,9 @@ export function StaffGeneralSettingsCard() {
       ? toE164PhoneNumber(phone, formData.countryCode)
       : "";
     if (phone && !e164Phone) {
-      setFormError(PHONE_E164_ERROR);
-      toast.error(PHONE_E164_ERROR);
+      const phoneError = getPhoneValidationError(phone, formData.countryCode);
+      setFormError(phoneError);
+      toast.error(phoneError);
       return;
     }
 
@@ -145,9 +152,13 @@ export function StaffGeneralSettingsCard() {
             gender: formData.gender,
             phoneNumber: e164Phone ?? "",
             role: formData.role || undefined,
+            ...(isBase64Image(formData.image)
+              ? { image: formData.image }
+              : {}),
           },
         }),
       ).unwrap();
+      await dispatch(getSignedInUser());
       toast.success(res?.message || "Profile updated successfully");
     } catch (err: unknown) {
       const message = getApiErrorMessage(err);
@@ -173,13 +184,19 @@ export function StaffGeneralSettingsCard() {
   return (
     <div className="space-y-6">
       <Card className="pt-6 md:pt-8 px-8 md:px-16 pb-12 md:pb-18 w-full md:w-3/4 lg:w-2/3 mx-auto">
-        <h2 className="font-heading text-xl font-bold text-center">
+        <h2 className="font-heading text-xl font-bold text-center tracking-tight">
           Profile Information
         </h2>
         <p className="text-sm text-gray-500 text-center">
           Update your staff profile details here.
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <ProfilePhotoField
+            src={formData.image}
+            alt={`${formData.firstName} ${formData.lastName}`.trim() || "Profile photo"}
+            onChange={(image) => setFormData((prev) => ({ ...prev, image }))}
+            disabled={isLoading}
+          />
           {(formError || error) && (
             <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
               {formError || error}
@@ -247,38 +264,19 @@ export function StaffGeneralSettingsCard() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium" htmlFor="staff-country-code">
-                Country Code
-              </label>
-              <CountryCodeSelect
-                id="staff-country-code"
-                value={formData.countryCode}
-                onChange={(countryCode) =>
-                  setFormData((prev) => ({ ...prev, countryCode }))
-                }
-                disabled={isLoading}
-                placeholder="+234"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium" htmlFor="staff-phone">
-                Phone
-              </label>
-              <Input
-                id="staff-phone"
-                name="phoneNumber"
-                type="tel"
-                inputMode="numeric"
-                value={formData.phoneNumber}
-                onChange={handleChange}
-                placeholder="8100001427"
-                className="mt-2 h-10"
-                disabled={isLoading}
-              />
-            </div>
-          </div>
+          <InvitePhoneNumberField
+            id="staff-phone"
+            label="Phone"
+            showWhatsAppHint={false}
+            required={false}
+            countryCode={formData.countryCode}
+            phoneNumber={formData.phoneNumber}
+            onCountryCodeChange={(countryCode) =>
+              setFormData((prev) => ({ ...prev, countryCode }))
+            }
+            onPhoneNumberChange={handleChange}
+            disabled={isLoading}
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>

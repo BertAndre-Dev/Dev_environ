@@ -9,6 +9,7 @@ type AudienceId = "owners" | "residents";
 type FeatureItem = Readonly<{
   title: string;
   description: string;
+  icon: string;
 }>;
 
 const FEATURE_COPY =
@@ -21,10 +22,10 @@ const AUDIENCES = {
     image: "/assets/ft/man.svg",
     imageAlt: "Property operator reviewing estate data on a computer",
     features: [
-      { title: "Energy Intelligence", description: "Get real-time insights into energy consumption across every property, catch irregular usage early, and make informed, cost-saving decisions." },
-      { title: "Property & Occupant Management", description: "Create and manage properties, units, and occupants from one central system, built for clarity as your portfolio scales." },
-      { title: "Billing & Collections", description: "Automate recurring charges and utility billing, track collections in real time, and instantly reconcile payments with auto-generated reports." },
-      { title: "Operations & Performance Insights", description: "Monitor service delivery and maintenance performance while gaining actionable insights into operations and revenue, all in one view." },
+      { title: "Energy Intelligence", description: "Get real-time insights into energy consumption across every property, catch irregular usage early, and make informed, cost-saving decisions.", icon: "/assets/built/energy.svg" },
+      { title: "Property & Occupant Management", description: "Create and manage properties, units, and occupants from one central system, built for clarity as your portfolio scales.", icon: "/assets/built/property.svg" },
+      { title: "Billing & Collections", description: "Automate recurring charges and utility billing, track collections in real time, and instantly reconcile payments with auto-generated reports.", icon: "/assets/built/billing.svg" },
+      { title: "Operations & Performance Insights", description: "Monitor service delivery and maintenance performance while gaining actionable insights into operations and revenue, all in one view.", icon: "/assets/built/operationns.svg" },
     ] satisfies readonly FeatureItem[],
   },
   residents: {
@@ -33,32 +34,30 @@ const AUDIENCES = {
     image: "/assets/ft/woman.svg",
     imageAlt: "Residents enjoying community living at home",
     features: [
-      { title: "Energy Intelligence", description: "See exactly what you're using, in real time, track your own energy consumption and never be caught off guard by a bill again." },
-      { title: "Bills & Payments", description: "View your charges, pay instantly, and keep a clear record of every payment, no more chasing receipts or wondering what you owe." },
-      { title: "Maintenance Requests", description: "Report an issue in seconds and track it through to resolution, no more calls or messages that go unanswered." },
-      { title: "Visitor Access", description: "Invite guests, approve deliveries, and manage who comes and goes right from your phone, without holding up the gate." },
+      { title: "Energy Intelligence", description: "See exactly what you're using, in real time, track your own energy consumption and never be caught off guard by a bill again.", icon: "/assets/built/energy.svg" },
+      { title: "Bills & Payments", description: "View your charges, pay instantly, and keep a clear record of every payment, no more chasing receipts or wondering what you owe.", icon: "/assets/built/billing.svg" },
+      { title: "Maintenance Requests", description: "Report an issue in seconds and track it through to resolution, no more calls or messages that go unanswered.", icon: "/assets/built/maintenance.svg" },
+      { title: "Visitor Access", description: "Invite guests, approve deliveries, and manage who comes and goes right from your phone, without holding up the gate.", icon: "/assets/built/visitor.svg" },
     ] satisfies readonly FeatureItem[],
   },
 } as const;
 
 const spring = { type: "spring" as const, bounce: 0, duration: 0.35 };
 
-function FeatureIcon() {
+function FeatureIcon({ src }: { src: string }) {
   return (
-    <div className="flex size-11 shrink-0 items-center justify-center rounded-full border border-[#0150AC]/20 bg-[#E8F1FB]/60">
-      <Image
-        src="/assets/energy.svg"
-        alt=""
-        width={22}
-        height={22}
-        className="size-[22px]"
-        aria-hidden="true"
-      />
-    </div>
+    <Image
+      src={src}
+      alt=""
+      width={44}
+      height={44}
+      className="size-11 shrink-0"
+      aria-hidden="true"
+    />
   );
 }
 
-function FeatureCard({ title, description }: FeatureItem) {
+function FeatureCard({ title, description, icon }: FeatureItem) {
   const reduceMotion = useReducedMotion();
 
   return (
@@ -72,7 +71,7 @@ function FeatureCard({ title, description }: FeatureItem) {
       whileTap={reduceMotion ? undefined : { scale: 0.985 }}
       transition={spring}
     >
-      <FeatureIcon />
+      <FeatureIcon src={icon} />
       <div className="min-w-0">
         <h3 className="text-base font-bold tracking-[-0.01em] text-black sm:text-lg">
           {title}

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useCallback, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,12 +11,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  ExpenseAttachmentsPicker,
+  type ExpenseDraftAttachment,
+} from "@/components/dashboard/admin/expenses/ExpenseAttachmentsPicker";
+
+export type { ExpenseDraftAttachment };
 
 export interface AddExpenseDraftEntry {
   id: string;
   description: string;
   amount: string;
   documentNumber: string;
+  attachments: ExpenseDraftAttachment[];
 }
 
 export interface AddExpenseModalProps {
@@ -30,14 +37,13 @@ export interface AddExpenseModalProps {
     field: "description" | "amount" | "documentNumber",
     value: string,
   ) => void;
+  onAttachmentsChange: (id: string, attachments: ExpenseDraftAttachment[]) => void;
   onAddDraft: () => void;
   onRemoveDraft: (id: string) => void;
   onSubmit: () => void;
   showDateAndUpload?: boolean;
   date?: string;
-  file?: File | null;
   onDateChange?: (value: string) => void;
-  onFileChange?: (file: File | null) => void;
 }
 
 export function AddExpenseModal({
@@ -47,18 +53,31 @@ export function AddExpenseModal({
   drafts,
   onOpenChange,
   onDraftChange,
+  onAttachmentsChange,
   onAddDraft,
   onRemoveDraft,
   onSubmit,
   showDateAndUpload = true,
   date = "",
-  file = null,
   onDateChange,
-  onFileChange,
 }: Readonly<AddExpenseModalProps>) {
+  const [busyRows, setBusyRows] = useState<Record<string, boolean>>({});
+  const attachmentsBusy = Object.values(busyRows).some(Boolean);
+  const submitDisabled = saving || attachmentsBusy;
+  let submitLabel = "Add Expense";
+  if (saving) submitLabel = "Saving...";
+  else if (attachmentsBusy) submitLabel = "Uploading...";
+
+  const onPickerBusyChange = useCallback((rowId: string, busy: boolean) => {
+    setBusyRows((prev) => {
+      if (prev[rowId] === busy) return prev;
+      return { ...prev, [rowId]: busy };
+    });
+  }, []);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto min-h-[30vh]">
+      <DialogContent className="max-h-[80vh] min-h-[30vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Expense</DialogTitle>
         </DialogHeader>
@@ -101,9 +120,9 @@ export function AddExpenseModal({
             {drafts.map((row, idx) => (
               <div
                 key={row.id}
-                className="rounded-md border border-border/60 p-3 space-y-3"
+                className="space-y-3 rounded-md border border-border/60 p-3"
               >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                   <div className="space-y-2">
                     <label
                       className="text-sm font-medium"
@@ -157,6 +176,13 @@ export function AddExpenseModal({
                   </div>
                 </div>
 
+                <ExpenseAttachmentsPicker
+                  attachments={row.attachments}
+                  disabled={saving}
+                  onChange={(next) => onAttachmentsChange(row.id, next)}
+                  onBusyChange={(busy) => onPickerBusyChange(row.id, busy)}
+                />
+
                 {drafts.length > 1 && (
                   <div className="flex justify-end">
                     <Button
@@ -173,34 +199,17 @@ export function AddExpenseModal({
             ))}
           </div>
 
-          {showDateAndUpload ? (
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="add-expense-file">
-                Upload supporting document (Receipt/ Invoice)
-              </label>
-              <input
-                id="add-expense-file"
-                type="file"
-                onChange={(e) => onFileChange?.(e.target.files?.[0] ?? null)}
-                className="block w-full text-sm"
-              />
-              {file ? (
-                <p className="text-xs text-muted-foreground">{file.name}</p>
-              ) : null}
-            </div>
-          ) : null}
-
           <div className="flex items-center justify-between gap-3 pt-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={saving}
+              disabled={submitDisabled}
             >
               Cancel
             </Button>
-            <Button type="button" onClick={onSubmit} disabled={saving}>
-              {saving ? "Saving..." : "Add Expense"}
+            <Button type="button" onClick={onSubmit} disabled={submitDisabled}>
+              {submitLabel}
             </Button>
           </div>
         </div>
@@ -208,4 +217,3 @@ export function AddExpenseModal({
     </Dialog>
   );
 }
-

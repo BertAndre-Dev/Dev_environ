@@ -43,7 +43,7 @@ export default function OperationsReportingFieldFormModal({
 
   return (
     <Modal visible={visible} onClose={onClose}>
-      <div className="pr-8 space-y-4">
+      <div className="space-y-4">
         <div>
           <h2 className="text-xl font-semibold text-gray-900">
             {initial ? "Edit report field" : "Create report field"}
@@ -64,10 +64,7 @@ export default function OperationsReportingFieldFormModal({
           />
         </div>
 
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={onClose} disabled={loading}>
-            Cancel
-          </Button>
+        <div className="flex justify-end">
           <Button
             className="text-white"
             style={{ backgroundColor: "#0150AC" }}

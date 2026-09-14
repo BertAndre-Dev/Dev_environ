@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { ClipboardList, Paperclip, Plus } from "lucide-react";
+import { Check, ClipboardList, Paperclip, Plus, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -13,7 +14,10 @@ import Modal from "@/components/modal/page";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { isBusy, isPending } from "@/lib/async-status";
 import {
+  cancelStaffRequest,
   createStaffRequest,
+  decideStaffRequest,
+  getStaffRequestById,
   getStaffRequestCategories,
   getStaffRequests,
   STAFF_REQUEST_STATUS_OPTIONS,
@@ -27,14 +31,35 @@ import {
   setStaffRequestSearch,
   setStaffRequestStatusFilter,
 } from "@/redux/slice/staff/request/staff-request-slice";
+import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import type { AppDispatch, RootState } from "@/redux/store";
-import { requestViewButtonClass } from "@/components/request-mgt/request-action-styles";
+import {
+  requestDestructiveOutlineButtonClass,
+  requestViewButtonClass,
+} from "@/components/request-mgt/request-action-styles";
 import { getRequestActorDisplayName } from "@/lib/request-actor";
 import {
-  downloadAttachment,
-  getAttachmentFilename,
+  formatRequestStatusLabel,
+  formatRequestStepsExport,
+  formatStepAssignees,
+  getCurrentRequestStep,
+  getRequestStatusStyle,
+  isUserAssignedToCurrentStep,
+  canUserCancelRequest,
+} from "@/lib/request-record";
+import {
+  extractSignedInUserEmail,
+  extractSignedInUserIds,
+} from "@/lib/user-id";
+import { selectUserRole } from "@/redux/slice/auth-mgt/auth-mgt-slice";
+import {
+  openAttachmentInNewTab,
 } from "@/lib/download-attachment";
 import StaffRequestFormModal from "./StaffRequestFormModal";
+import RequestComments from "./RequestComments";
+import RequestRejectModal from "./RequestRejectModal";
+import { RequestRecordDetails } from "./RequestRecordDetails";
+import { RequestStepsCell } from "./RequestStepsCell";
 
 function formatDate(dateStr?: string) {
   if (!dateStr) return "—";
@@ -63,30 +88,16 @@ function formatCategory(
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-const STATUS_LABELS: Record<StaffRequestStatus, string> = {
-  draft: "Draft",
-  pending_approval: "Pending approval",
-  approved: "Approved",
-  rejected: "Rejected",
-  cancelled: "Cancelled",
-};
-
-function formatStatusLabel(status?: StaffRequestStatus) {
-  if (!status) return "—";
-  return STATUS_LABELS[status] ?? status;
-}
-
-function getStatusStyle(status?: StaffRequestStatus) {
-  if (status === "approved") return "bg-[#DCFCE7] text-[#16A34A]";
-  if (status === "rejected" || status === "cancelled")
-    return "bg-[#FEE2E2] text-[#DC2626]";
-  if (status === "pending_approval") return "bg-[#FFEDD5] text-[#EA580C]";
-  if (status === "draft") return "bg-[#F3F4F6] text-[#4B5563]";
-  return "bg-[#E0E7FF] text-[#3730A3]";
-}
-
 function getCreatedByName(item: StaffRequestItem) {
   return getRequestActorDisplayName(item.createdBy);
+}
+
+function formatCurrentStep(item: StaffRequestItem) {
+  return item.currentStepName?.trim() || "—";
+}
+
+function formatCurrentAssignees(item: StaffRequestItem) {
+  return formatStepAssignees(getCurrentRequestStep(item));
 }
 
 export interface RequestSubmitViewProps {
@@ -111,9 +122,14 @@ export default function RequestSubmitView({
   hideHeading = false,
 }: RequestSubmitViewProps) {
   const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [createOpen, setCreateOpen] = useState(false);
   const [viewing, setViewing] = useState<StaffRequestItem | null>(null);
   const [searchInput, setSearchInput] = useState("");
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
 
   const {
     list,
@@ -123,15 +139,75 @@ export default function RequestSubmitView({
     getListStatus,
     getCategoriesStatus,
     createStatus,
+    decideStatus,
+    cancelStatus,
   } = useSelector((state: RootState) => state.staffRequest);
+  const signedInUser = useSelector(
+    (state: RootState) =>
+      (state.auth.user ?? null) as Record<string, unknown> | null,
+  );
+  const signedInUserIds = extractSignedInUserIds(signedInUser);
+  const signedInUserEmail = extractSignedInUserEmail(signedInUser);
+  const role = useSelector(selectUserRole);
 
   const { page, pageSize, search, statusFilter } = ui;
   const listLoading = isPending(getListStatus);
   const categoriesLoading = isBusy(getCategoriesStatus);
   const creating = isBusy(createStatus);
+  const deciding = isBusy(decideStatus);
+  const cancelling = isBusy(cancelStatus);
+  const mutating = deciding || cancelling;
   const fullPageLoading = bootstrapping || listLoading;
   const showOverlayLoader = fullPageLoading && !embedded;
   const showSectionLoader = fullPageLoading && embedded;
+
+  const clearRequestQuery = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (!params.has("id")) return;
+    params.delete("id");
+    params.delete("estateId");
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
+
+  // Deep-link from notifications: /request?id=…
+  useEffect(() => {
+    const idFromUrl = searchParams.get("id")?.trim() || "";
+    if (!idFromUrl) return;
+    if (viewing?.id === idFromUrl) return;
+
+    const fromList = list.find((item) => item.id === idFromUrl);
+    if (fromList) {
+      setViewing(fromList);
+      return;
+    }
+
+    if (bootstrapping || listLoading || !estateId) return;
+
+    let cancelled = false;
+    dispatch(getStaffRequestById({ id: idFromUrl, estateId }))
+      .unwrap()
+      .then((item) => {
+        if (!cancelled) setViewing(item);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    bootstrapping,
+    dispatch,
+    estateId,
+    list,
+    listLoading,
+    searchParams,
+    viewing?.id,
+  ]);
 
   const loadRequests = useCallback(() => {
     if (!estateId) return Promise.resolve();
@@ -150,6 +226,10 @@ export default function RequestSubmitView({
         if (message) toast.error(message);
       });
   }, [dispatch, estateId, page, pageSize, statusFilter, search]);
+
+  useEffect(() => {
+    dispatch(getSignedInUser()).catch(() => {});
+  }, [dispatch]);
 
   useEffect(() => {
     dispatch(getStaffRequestCategories())
@@ -198,8 +278,101 @@ export default function RequestSubmitView({
     }
   };
 
+  const viewingLive = useMemo(() => {
+    if (!viewing) return null;
+    return list.find((item) => item.id === viewing.id) ?? viewing;
+  }, [list, viewing]);
+
+  const assignedToCurrentStep = Boolean(
+    viewingLive &&
+      isUserAssignedToCurrentStep(
+        viewingLive,
+        signedInUserIds,
+        signedInUserEmail,
+      ),
+  );
+  const canDecide =
+    viewingLive?.status === "pending_approval" && assignedToCurrentStep;
+  const canCancel = canUserCancelRequest(viewingLive, {
+    userId: signedInUserIds,
+    email: signedInUserEmail,
+    role,
+  });
+
+  useEffect(() => {
+    setConfirmCancel(false);
+    setRejectOpen(false);
+  }, [viewing?.id]);
+
+  const closeViewing = () => {
+    setViewing(null);
+    setConfirmCancel(false);
+    setRejectOpen(false);
+    clearRequestQuery();
+  };
+
+  const handleDecide = async (
+    decision: "approve" | "reject",
+    reason?: string,
+  ) => {
+    if (!viewingLive?.id) return;
+    if (decision === "reject") {
+      const trimmed = reason?.trim() ?? "";
+      if (trimmed.length < 3) {
+        toast.error("A rejection reason of at least 3 characters is required.");
+        return;
+      }
+    }
+    try {
+      await dispatch(
+        decideStaffRequest({
+          id: viewingLive.id,
+          decision,
+          comment:
+            decision === "reject" ? reason?.trim() : undefined,
+          estateId: estateId || viewingLive.estateId,
+        }),
+      ).unwrap();
+      toast.success(
+        decision === "approve" ? "Request approved." : "Request rejected.",
+      );
+      setRejectOpen(false);
+      closeViewing();
+      await loadRequests();
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!viewingLive?.id) return;
+    try {
+      await dispatch(
+        cancelStaffRequest({
+          id: viewingLive.id,
+          estateId: estateId || viewingLive.estateId,
+        }),
+      ).unwrap();
+      toast.success("Request cancelled.");
+      closeViewing();
+      await loadRequests();
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    }
+  };
+
   const columns = useMemo(
     () => [
+      {
+        key: "createdAt",
+        header: "Created",
+        render: (item: StaffRequestItem) =>
+          formatDate(item.createdAt || item.updatedAt),
+        exportValue: (item: StaffRequestItem) =>
+          formatDate(item.createdAt || item.updatedAt),
+      },
       {
         key: "code",
         header: "Code",
@@ -209,14 +382,6 @@ export default function RequestSubmitView({
           </span>
         ),
         exportValue: (item: StaffRequestItem) => item.code?.trim() || "—",
-      },
-      {
-        key: "createdAt",
-        header: "Submitted",
-        render: (item: StaffRequestItem) =>
-          formatDate(item.createdAt || item.updatedAt),
-        exportValue: (item: StaffRequestItem) =>
-          formatDate(item.createdAt || item.updatedAt),
       },
       {
         key: "title",
@@ -242,17 +407,29 @@ export default function RequestSubmitView({
           formatCategory(item.category, categories),
       },
       {
+        key: "steps",
+        header: "Steps",
+        render: (item: StaffRequestItem) => (
+          <RequestStepsCell
+            steps={item.steps}
+            fallbackName={item.currentStepName}
+          />
+        ),
+        exportValue: (item: StaffRequestItem) =>
+          formatRequestStepsExport(item.steps, item.currentStepName),
+      },
+      {
         key: "status",
         header: "Status",
         render: (item: StaffRequestItem) => (
           <span
-            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStatusStyle(item.status)}`}
+            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getRequestStatusStyle(item.status)}`}
           >
-            {formatStatusLabel(item.status)}
+            {formatRequestStatusLabel(item.status)}
           </span>
         ),
         exportValue: (item: StaffRequestItem) =>
-          formatStatusLabel(item.status),
+          formatRequestStatusLabel(item.status),
       },
       {
         key: "createdBy",
@@ -404,31 +581,31 @@ export default function RequestSubmitView({
         />
       )}
 
-      {viewing && (
+      {viewingLive && (
         <Modal
-          visible={Boolean(viewing)}
-          onClose={() => setViewing(null)}
+          visible={Boolean(viewingLive)}
+          onClose={closeViewing}
           contentClassName="max-w-lg w-full max-h-[90vh] overflow-y-auto"
         >
           <div className="p-5 sm:p-6 space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="font-heading text-xl font-semibold">
-                  {viewing.title || "Request"}
+                  {viewingLive.title || "Request"}
                 </h2>
-                {viewing.code ? (
+                {viewingLive.code ? (
                   <p className="mt-1 text-sm font-medium tracking-[0.02em] text-muted-foreground">
-                    {viewing.code}
+                    {viewingLive.code}
                   </p>
                 ) : null}
                 <p className="text-sm text-muted-foreground mt-1">
-                  {formatDate(viewing.createdAt || viewing.updatedAt)}
+                  {formatDate(viewingLive.createdAt || viewingLive.updatedAt)}
                 </p>
               </div>
               <span
-                className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold shrink-0 ${getStatusStyle(viewing.status)}`}
+                className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold shrink-0 ${getRequestStatusStyle(viewingLive.status)}`}
               >
-                {formatStatusLabel(viewing.status)}
+                {formatRequestStatusLabel(viewingLive.status)}
               </span>
             </div>
 
@@ -436,36 +613,51 @@ export default function RequestSubmitView({
               <div>
                 <p className="text-muted-foreground">Category</p>
                 <p className="font-medium">
-                  {formatCategory(viewing.category, categories)}
+                  {formatCategory(viewingLive.category, categories)}
                 </p>
               </div>
               <div>
                 <p className="text-muted-foreground">Created by</p>
-                <p className="font-medium">{getCreatedByName(viewing)}</p>
+                <p className="font-medium">{getCreatedByName(viewingLive)}</p>
               </div>
+              {viewingLive.currentStepName ||
+              viewingLive.currentStepOrder != null ? (
+                <div className="col-span-2">
+                  <p className="text-muted-foreground">Current step</p>
+                  <p className="font-medium">
+                    {formatCurrentStep(viewingLive)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formatCurrentAssignees(viewingLive)}
+                  </p>
+                </div>
+              ) : null}
             </div>
 
-            {viewing.description ? (
+            {viewingLive.description ? (
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Description</p>
-                <p className="text-sm whitespace-pre-wrap">{viewing.description}</p>
+                <p className="text-sm whitespace-pre-wrap">
+                  {viewingLive.description}
+                </p>
               </div>
             ) : null}
 
-            {viewing.attachments && viewing.attachments.length > 0 ? (
+            <RequestRecordDetails
+              fieldValues={viewingLive.fieldValues}
+              steps={viewingLive.steps}
+              currentStepOrder={viewingLive.currentStepOrder}
+            />
+
+            {viewingLive.attachments && viewingLive.attachments.length > 0 ? (
               <div>
                 <p className="text-sm text-muted-foreground mb-2">Attachments</p>
                 <ul className="space-y-1.5">
-                  {viewing.attachments.map((url, index) => (
+                  {viewingLive.attachments.map((url, index) => (
                     <li key={`${url.slice(0, 24)}-${index}`}>
                       <button
                         type="button"
-                        onClick={() =>
-                          void downloadAttachment(
-                            url,
-                            getAttachmentFilename(url, index),
-                          )
-                        }
+                        onClick={() => openAttachmentInNewTab(url)}
                         className="inline-flex items-center gap-2 text-sm text-[#2563EB] hover:underline cursor-pointer"
                       >
                         <Paperclip className="h-3.5 w-3.5" />
@@ -477,14 +669,81 @@ export default function RequestSubmitView({
               </div>
             ) : null}
 
-            <div className="flex justify-end pt-2">
-              <Button variant="outline" onClick={() => setViewing(null)}>
-                Close
-              </Button>
-            </div>
+            <RequestComments
+              requestId={viewingLive.id}
+              estateId={estateId || viewingLive.estateId}
+            />
+
+            {canDecide || canCancel ? (
+              <div className="space-y-3 border-t border-border pt-4">
+                {confirmCancel ? (
+                  <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] p-3 space-y-3">
+                    <p className="text-sm text-[#991B1B]">
+                      Cancel this request? This cannot be undone.
+                    </p>
+                    <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+                      <Button
+                        variant="outline"
+                        disabled={mutating}
+                        onClick={() => setConfirmCancel(false)}
+                      >
+                        Keep request
+                      </Button>
+                      <Button
+                        className="bg-[#DC2626] hover:bg-[#B91C1C]"
+                        disabled={mutating}
+                        onClick={() => void handleCancel()}
+                      >
+                        Confirm cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+                    {canCancel ? (
+                      <Button
+                        variant="outline"
+                        className={requestDestructiveOutlineButtonClass}
+                        disabled={mutating}
+                        onClick={() => setConfirmCancel(true)}
+                      >
+                        Cancel request
+                      </Button>
+                    ) : null}
+                    {canDecide ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          className={requestDestructiveOutlineButtonClass}
+                          disabled={mutating}
+                          onClick={() => setRejectOpen(true)}
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Reject
+                        </Button>
+                        <Button
+                          disabled={mutating}
+                          onClick={() => void handleDecide("approve")}
+                        >
+                          <Check className="w-4 h-4 mr-2" />
+                          Approve
+                        </Button>
+                      </>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            ) : null}
           </div>
         </Modal>
       )}
+
+      <RequestRejectModal
+        open={rejectOpen}
+        loading={deciding}
+        onClose={() => setRejectOpen(false)}
+        onConfirm={(reason) => handleDecide("reject", reason)}
+      />
     </div>
   );
 }

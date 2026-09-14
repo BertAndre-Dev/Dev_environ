@@ -1,7 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
-import { parseEstateModulesResponse } from "@/lib/estate-module-labels";
 import { apiErrorRejectValue } from "@/lib/api-error";
+import { toEstateWriteBody } from "@/lib/plans";
 
 export enum VisitorVerificationMode {
   VIEW_AND_VERIFY = "VIEW_AND_VERIFY",
@@ -17,6 +17,9 @@ export interface EstateData {
   country: string;
   isActive?: boolean;
   modules?: string[];
+  plan?: string;
+  minVendAmount?: number;
+  maxVendAmount?: number;
   visitorVerificationMode?: VisitorVerificationMode;
 }
 
@@ -28,63 +31,15 @@ export type GetEstatesParams = {
   endDate?: string;
 };
 
-export type UpdateEstateModulesPayload = {
-  id: string;
-  modules: string[];
-};
-
-/** GET /api/v1/estate-mgt/{id}/modules — enabled modules for an estate */
-export const fetchCompanyEstateEnabledModules = createAsyncThunk(
-  "company-estate/fetchCompanyEstateEnabledModules",
-  async (estateId: string, { rejectWithValue }) => {
-    try {
-      const res = await axiosInstance.get(
-        `/api/v1/estate-mgt/${estateId}/modules`,
-      );
-      return { data: parseEstateModulesResponse(res.data) };
-    } catch (error: unknown) {
-      return rejectWithValue(apiErrorRejectValue(error));
-    }
-  },
-);
-
-/** PUT /api/v1/estate-mgt/{id}/modules — set enabled modules for an estate */
-export const updateCompanyEstateModules = createAsyncThunk(
-  "company-estate/updateCompanyEstateModules",
-  async (payload: UpdateEstateModulesPayload, { rejectWithValue }) => {
-    try {
-      const { id, modules } = payload;
-      const res = await axiosInstance.put(`/api/v1/estate-mgt/${id}/modules`, {
-        modules,
-      });
-      return { ...res.data, updatedId: id, modules };
-    } catch (error: unknown) {
-      return rejectWithValue(apiErrorRejectValue(error));
-    }
-  },
-);
-
-/** GET /api/v1/company-mgt/modules */
-export const fetchCompanyEstateModules = createAsyncThunk(
-  "company-estate/fetchCompanyEstateModules",
-  async (_, { rejectWithValue }) => {
-    try {
-      const res = await axiosInstance.get<{ data?: string[] }>(
-        "/api/v1/company-mgt/modules",
-      );
-      return res.data;
-    } catch (error: unknown) {
-      return rejectWithValue(apiErrorRejectValue(error));
-    }
-  },
-);
-
 /** POST /api/v1/estate-mgt */
 export const createCompanyEstate = createAsyncThunk(
   "company-estate/createCompanyEstate",
   async (data: EstateData, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.post("/api/v1/estate-mgt", data);
+      const res = await axiosInstance.post(
+        "/api/v1/estate-mgt",
+        toEstateWriteBody(data),
+      );
       return res.data;
     } catch (error: unknown) {
       return rejectWithValue(apiErrorRejectValue(error));
@@ -134,7 +89,10 @@ export const updateCompanyEstate = createAsyncThunk(
     { rejectWithValue },
   ) => {
     try {
-      const res = await axiosInstance.put(`/api/v1/estate-mgt/${id}`, data);
+      const res = await axiosInstance.put(
+        `/api/v1/estate-mgt/${id}`,
+        toEstateWriteBody(data),
+      );
       return res.data;
     } catch (error: unknown) {
       return rejectWithValue(apiErrorRejectValue(error));

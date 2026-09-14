@@ -44,9 +44,9 @@ export interface CreateAnnouncementPayload {
   priority?: string;
   /** When true, send immediately; schedule field is ignored. */
   sendNow?: boolean;
-  /** Optional image data URL, e.g. `data:image/png;base64,...` (JPEG, PNG, WebP, GIF) up to 5MB. */
+  /** Image as a base64 data URI, or an already-hosted https:// URL. */
   image?: string | null;
-  /** Optional attachment data URL, e.g. `data:application/pdf;base64,...` up to 10MB. */
+  /** Attachment as a base64 data URI, or an already-hosted https:// URL. */
   file?: string | null;
 }
 
@@ -62,7 +62,9 @@ export interface UpdateAnnouncementPayload {
   isPinned?: boolean;
   priority?: string;
   sendNow?: boolean;
+  /** Image as a base64 data URI, or an already-hosted https:// URL. */
   image?: string | null;
+  /** Attachment as a base64 data URI, or an already-hosted https:// URL. */
   file?: string | null;
 }
 

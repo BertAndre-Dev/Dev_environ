@@ -2,6 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Eye } from "lucide-react";
 import { MeterRealtimeBalanceCard } from "@/components/charts/meter-realtime-balance-card";
 import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
 import { MeterEnergyUsageSection } from "@/components/charts/meter-energy-usage-section";
@@ -29,6 +30,11 @@ import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { normalizeAddresses } from "@/lib/address";
 import SwitchAddress from "@/components/resident/switch-address/page";
 import VendPower from "@/components/resident/vend-power/page";
+import { ReceiptModal } from "@/components/receipt/ReceiptModal";
+import {
+  resolveReceiptAddressLabel,
+  residentDisplayName,
+} from "@/components/receipt/format";
 import Table from "@/components/tables/list/page";
 import Tab from "@/components/tabs/page";
 import type { EnergyListItem } from "@/redux/slice/resident/meter-mgt/meter-mgt-slice";
@@ -63,6 +69,10 @@ export default function ResidentMeter() {
   );
   const [walletId, setWalletId] = useState<string | null>(null);
   const [estateId, setEstateId] = useState<string | null>(null);
+  const [estateName, setEstateName] = useState("");
+  const [payerName, setPayerName] = useState("");
+  const [payerEmail, setPayerEmail] = useState("");
+  const [viewVend, setViewVend] = useState<EnergyListItem | null>(null);
   const [usageRange, setUsageRange] = useState<MeterUsageRange>("weekly");
   const [energyPeriod, setEnergyPeriod] =
     useState<EnergyConsumptionPeriod>("weekly");
@@ -138,6 +148,13 @@ export default function ResidentMeter() {
 
         const estate = parseResidentEstate(userData as Record<string, unknown>);
         setEstateId(estate?.id ?? null);
+        setEstateName(estate?.name ?? "");
+        setPayerName(
+          residentDisplayName(userData.firstName, userData.lastName) ?? "",
+        );
+        setPayerEmail(
+          typeof userData.email === "string" ? userData.email : "",
+        );
 
         const addresses = normalizeAddresses(userData);
         if (addresses.length === 0) {
@@ -397,6 +414,24 @@ export default function ResidentMeter() {
       header: "Meter Number",
       render: (row: EnergyListItem) => row.device,
     },
+    {
+      key: "actions",
+      header: "Actions",
+      exportable: false as const,
+      render: (row: EnergyListItem) => (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={() => setViewVend(row)}
+          title="View receipt"
+          aria-label="View receipt"
+        >
+          <Eye className="h-4 w-4" />
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -581,6 +616,22 @@ export default function ResidentMeter() {
           />
         </Modal>
       )}
+
+      <ReceiptModal
+        isOpen={!!viewVend}
+        onClose={() => setViewVend(null)}
+        type="vend"
+        vend={viewVend}
+        party={{
+          payerName: payerName || undefined,
+          email: payerEmail || undefined,
+          estateName: estateName || undefined,
+          addressLabel: resolveReceiptAddressLabel(
+            addressOptions,
+            selectedAddressId,
+          ),
+        }}
+      />
     </div>
   );
 }

@@ -1,6 +1,14 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import { apiErrorRejectValue } from "@/lib/api-error";
+import {
+  EXPENSE_ENTRY_BULK_MAX,
+  parseExpenseAttachments,
+  toExpenseEntryBulkBody,
+  toExpenseEntryUpdateBody,
+  type ExpenseEntryUpdateArg,
+  type ExpenseEntryWriteItem,
+} from "@/lib/expense-entry";
 
 export type CompanyExpenseEntry = {
   id?: string;
@@ -9,6 +17,7 @@ export type CompanyExpenseEntry = {
   description: string;
   documentNumber: string;
   amount: number;
+  attachments?: string[];
   createdAt?: string;
   updatedAt?: string;
 };
@@ -28,23 +37,19 @@ export type CompanyExpenseEntryListResponse = {
 export const createCompanyExpenseEntries = createAsyncThunk(
   "company-expense-entry/createCompanyExpenseEntries",
   async (
-    payload: {
-      entries: Array<{
-        headId: string;
-        description: string;
-        documentNumber: string;
-        amount: number;
-      }>;
-    },
+    payload: { entries: ExpenseEntryWriteItem[] },
     { rejectWithValue },
   ) => {
     try {
-      if (payload.entries.length > 100) {
+      if (payload.entries.length > EXPENSE_ENTRY_BULK_MAX) {
         return rejectWithValue({
-          message: "Max 100 entries per request.",
+          message: `Max ${EXPENSE_ENTRY_BULK_MAX} entries per request.`,
         });
       }
-      const res = await axiosInstance.post("/api/v1/expense-entry", payload);
+      const res = await axiosInstance.post(
+        "/api/v1/expense-entry",
+        toExpenseEntryBulkBody(payload.entries),
+      );
       return res.data;
     } catch (error: unknown) {
       return rejectWithValue(apiErrorRejectValue(error));
@@ -80,7 +85,16 @@ export const fetchCompanyExpenseEntries = createAsyncThunk(
       const res = await axiosInstance.get(
         `/api/v1/expense-entry/head/${headId}${qs ? "?" + qs : ""}`,
       );
-      return res.data as CompanyExpenseEntryListResponse;
+      const data = res.data as CompanyExpenseEntryListResponse;
+      return {
+        ...data,
+        data: Array.isArray(data.data)
+          ? data.data.map((item) => ({
+              ...item,
+              attachments: parseExpenseAttachments(item.attachments),
+            }))
+          : data.data,
+      };
     } catch (error: unknown) {
       return rejectWithValue(apiErrorRejectValue(error));
     }
@@ -114,29 +128,12 @@ export const fetchCompanyExpenseEntryById = createAsyncThunk(
 
 export const updateCompanyExpenseEntry = createAsyncThunk(
   "company-expense-entry/updateCompanyExpenseEntry",
-  async (
-    {
-      id,
-      headId,
-      description,
-      documentNumber,
-      amount,
-    }: {
-      id: string;
-      headId: string;
-      description: string;
-      documentNumber: string;
-      amount: number;
-    },
-    { rejectWithValue },
-  ) => {
+  async ({ id, ...fields }: ExpenseEntryUpdateArg, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.put(`/api/v1/expense-entry/${id}`, {
-        headId,
-        description,
-        documentNumber,
-        amount,
-      });
+      const res = await axiosInstance.put(
+        `/api/v1/expense-entry/${id}`,
+        toExpenseEntryUpdateBody(fields),
+      );
       return res.data;
     } catch (error: unknown) {
       return rejectWithValue(apiErrorRejectValue(error));

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "@/redux/store";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/redux/store";
 import { getBill, payBill } from "@/redux/slice/resident/bill-mgt/bills-mgt";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import {
@@ -20,6 +20,8 @@ import SwitchAddress from "@/components/resident/switch-address/page";
 import type { AddressOption } from "@/lib/address";
 import { toast } from "react-toastify";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { canUseBillInterest } from "@/lib/user-modules";
+import { selectEstateModules } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 
 interface BillsFormProps {
   billId: string;
@@ -45,6 +47,7 @@ function frequencyLabel(value: BillFrequency): string {
 function resolvePaymentFrequencies(
   billFrequency?: string,
   allowedFrequencies?: string[],
+  isServiceCharge?: boolean,
 ): { options: BillFrequency[]; editable: boolean; value: BillFrequency } {
   const allowed = uniqueFrequencies(
     (allowedFrequencies ?? []).map((item) => normalizeBillFrequency(item)),
@@ -52,6 +55,12 @@ function resolvePaymentFrequencies(
   const frequency = billFrequency
     ? normalizeBillFrequency(billFrequency)
     : undefined;
+
+  let resolved: {
+    options: BillFrequency[];
+    editable: boolean;
+    value: BillFrequency;
+  };
 
   if (frequency === "yearly") {
     const fromAllowed = allowed.filter(
@@ -61,32 +70,49 @@ function resolvePaymentFrequencies(
       fromAllowed.length > 0
         ? fromAllowed
         : (["quarterly", "yearly"] as BillFrequency[]);
-    return {
+    resolved = {
       options,
       editable: options.length > 1,
       value: options.includes("yearly") ? "yearly" : options[0],
     };
-  }
-
-  if (
+  } else if (
     frequency === "oneoff" ||
     frequency === "monthly" ||
     frequency === "quarterly"
   ) {
     const locked = allowed[0] ?? frequency;
-    return { options: [locked], editable: false, value: locked };
-  }
-
-  if (allowed.length > 1) {
-    return {
+    resolved = { options: [locked], editable: false, value: locked };
+  } else if (allowed.length > 1) {
+    resolved = {
       options: allowed,
       editable: true,
       value: allowed.includes("yearly") ? "yearly" : allowed[0],
     };
+  } else {
+    const fallback = allowed[0] ?? "yearly";
+    resolved = { options: [fallback], editable: false, value: fallback };
   }
 
-  const fallback = allowed[0] ?? "yearly";
-  return { options: [fallback], editable: false, value: fallback };
+  if (!isServiceCharge) return resolved;
+
+  const serviceOptions = uniqueFrequencies(
+    resolved.options.filter(
+      (item) => item === "quarterly" || item === "yearly",
+    ),
+  );
+  const options =
+    serviceOptions.length > 0
+      ? serviceOptions
+      : (["quarterly", "yearly"] as BillFrequency[]);
+  return {
+    options,
+    editable: options.length > 1,
+    value: options.includes(resolved.value)
+      ? resolved.value
+      : options.includes("yearly")
+        ? "yearly"
+        : options[0],
+  };
 }
 
 function hasActiveInterest(bill: {
@@ -126,6 +152,9 @@ export default function BillsForm({
   onClose,
 }: BillsFormProps) {
   const dispatch = useDispatch<AppDispatch>();
+  const authUser = useSelector((state: RootState) => state.auth.user);
+  const estateModules = useSelector(selectEstateModules);
+  const canAccrueInterest = canUseBillInterest(authUser, estateModules);
 
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -184,6 +213,7 @@ export default function BillsForm({
           const resolved = resolvePaymentFrequencies(
             billData.frequency,
             billData.allowedFrequencies,
+            Boolean(billData.isServiceCharge),
           );
           setFrequency(resolved.value);
           setFrequencyEditable(resolved.editable);
@@ -325,6 +355,7 @@ export default function BillsForm({
         )}
 
         {!loading &&
+        canAccrueInterest &&
         hasActiveInterest({ accrueInterest, interestRatePercent }) ? (
           <AlertBanner
             variant="warning"

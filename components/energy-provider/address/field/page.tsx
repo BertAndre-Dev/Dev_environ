@@ -102,13 +102,18 @@ export default function EnergyProviderAddressField() {
 
   const handleSubmitField = async (data: FieldData) => {
     try {
+      const payload = {
+        estateId: data.estateId,
+        label: data.label,
+        key: data.key,
+      };
       if (selectedField?.id) {
         await dispatch(
-          updateEnergyProviderField({ fieldId: selectedField.id, data }),
+          updateEnergyProviderField({ fieldId: selectedField.id, data: payload }),
         ).unwrap();
         toast.success("Field updated successfully!");
       } else {
-        await dispatch(createEnergyProviderField(data)).unwrap();
+        await dispatch(createEnergyProviderField(payload)).unwrap();
         toast.success("Field created successfully!");
       }
 
@@ -158,6 +163,11 @@ export default function EnergyProviderAddressField() {
     })) || [];
 
   const columns = [
+    {
+      key: "createdAt",
+      header: "Created At",
+      render: (item: FieldData) => formatAddressRecordCreatedAt(item.createdAt),
+    },
     { key: "label", header: "Field Label" },
     {
       key: "isActive",
@@ -175,11 +185,6 @@ export default function EnergyProviderAddressField() {
       ),
     },
     {
-      key: "createdAt",
-      header: "Created At",
-      render: (item: FieldData) => formatAddressRecordCreatedAt(item.createdAt),
-    },
-    {
       key: "actions",
       header: "Actions",
       render: (item: FieldData) => (
@@ -188,15 +193,17 @@ export default function EnergyProviderAddressField() {
             variant="ghost"
             size="sm"
             onClick={() => handleOpenModal(item)}
-          >
-            <Edit2 className="w-4 h-4 text-blue-600" />
+           className="text-blue-600 hover:text-blue-700"
+           >
+            <Edit2 className="w-4 h-4" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => handleDeleteField(item.id, item.label)}
-          >
-            <Trash2 className="w-4 h-4 text-red-600" />
+           className="text-red-600 hover:text-red-700"
+           >
+            <Trash2 className="w-4 h-4" />
           </Button>
         </div>
       ),

@@ -32,7 +32,7 @@ export default function AssetCategoryFormModal({
 
   return (
     <Modal visible={visible} onClose={onClose}>
-      <div className="pr-8 space-y-4">
+      <div className="space-y-4">
         <div>
           <h2 className="text-xl font-semibold text-gray-900">
             {initial ? "Edit asset category" : "Create asset category"}

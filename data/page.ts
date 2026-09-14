@@ -1,6 +1,7 @@
 import { FiSettings, FiMapPin, FiLogOut, FiHome } from "react-icons/fi";
 import { BsBuildings } from "react-icons/bs";
 import { IoSpeedometerOutline } from "react-icons/io5";
+import type { ComponentType } from "react";
 import {
   ArrowLeftRight,
   Banknote,
@@ -25,7 +26,16 @@ import {
   Wrench,
 } from "lucide-react";
 
-export const superAdminNav = [
+export type NavItem = {
+  label: string;
+  icon?: ComponentType<{ className?: string }>;
+  path?: string;
+  moduleKey?: string;
+  module?: string;
+  children?: NavItem[];
+};
+
+export const superAdminNav: NavItem[] = [
   {
     label: "Overview",
     icon: FiHome,
@@ -164,16 +174,95 @@ export const energyProviderNav = [
 
 export const staffNav = [
   {
+    label: "Overview",
+    icon: FiHome,
+    path: "/dashboard/staff/overview",
+  },
+  {
+    label: "Transactions",
+    icon: ArrowLeftRight,
+    path: "/dashboard/staff/transactions",
+    module: "transactions",
+    moduleKey: "transactions",
+  },
+  {
+    label: "Wallet",
+    icon: Wallet,
+    path: "/dashboard/staff/wallet",
+    module: "wallet",
+    moduleKey: "wallet",
+  },
+  {
+    label: "Address Management",
+    icon: FiMapPin,
+    path: "/dashboard/staff/address",
+    moduleKey: "address",
+  },
+  {
+    label: "User Management",
+    icon: UserCog,
+    moduleKey: "users",
+    children: [
+      {
+        label: "Residents",
+        path: "/dashboard/staff/user?role=resident",
+      },
+      {
+        label: "Staff",
+        path: "/dashboard/staff/user?role=staff",
+      },
+      {
+        label: "Security",
+        path: "/dashboard/staff/user?role=security",
+      },
+    ],
+  },
+  {
+    label: "Bills Management",
+    icon: Banknote,
+    path: "/dashboard/staff/bills",
+    module: "bills",
+    moduleKey: "bills",
+  },
+  {
+    label: "Energy Management",
+    icon: IoSpeedometerOutline,
+    path: "/dashboard/staff/meter",
+    module: "meter",
+    moduleKey: "meter",
+  },
+  {
+    label: "Request Management",
+    icon: ClipboardList,
+    path: "/dashboard/staff/request",
+    moduleKey: "requests",
+  },
+  {
+    label: "Visitors Management",
+    icon: UserPlus,
+    path: "/dashboard/staff/visitor",
+    module: "visitor",
+    moduleKey: "visitor",
+  },
+  {
+    label: "Expenses",
+    icon: CircleDollarSign,
+    path: "/dashboard/staff/expenses",
+    moduleKey: "expense",
+    module: "expense",
+  },
+  {
+    label: "Revenue",
+    icon: Banknote,
+    path: "/dashboard/staff/revenue",
+    moduleKey: "revenue",
+    module: "revenue",
+  },
+  {
     label: "Maintenance Requests",
     icon: Hammer,
     path: "/dashboard/staff/maintenance",
     moduleKey: "complaints",
-  },
-  {
-    label: "Requests Management",
-    icon: ClipboardList,
-    path: "/dashboard/staff/request",
-    moduleKey: "requests",
   },
   {
     label: "Announcements",
@@ -181,7 +270,30 @@ export const staffNav = [
     path: "/dashboard/staff/announcements",
     moduleKey: "announcements",
   },
-    {
+  {
+    label: "Asset",
+    icon: Package,
+    moduleKey: "asset",
+    children: [
+      {
+        label: "Asset Management",
+        path: "/dashboard/staff/asset",
+        moduleKey: "asset",
+      },
+      {
+        label: "Asset Maintenance",
+        path: "/dashboard/staff/asset-maintenance",
+        moduleKey: "asset-maintenance",
+      },
+    ],
+  },
+  {
+    label: "Operations Reporting",
+    icon: ClipboardList,
+    path: "/dashboard/staff/operations-reporting",
+    moduleKey: "operations-reporting",
+  },
+  {
     label: "Community Chat",
     icon: MessagesSquare,
     path: "/dashboard/staff/community",
@@ -225,8 +337,29 @@ export const companyNav = [
   {
     label: "User Management",
     icon: UserCog,
-    path: "/dashboard/company/users",
     moduleKey: "users",
+    children: [
+      {
+        label: "Residents",
+        path: "/dashboard/company/users?role=resident",
+      },
+      {
+        label: "Admins",
+        path: "/dashboard/company/users?role=admin",
+      },
+      {
+        label: "Security",
+        path: "/dashboard/company/users?role=security",
+      },
+      {
+        label: "Staff",
+        path: "/dashboard/company/users?role=staff",
+      },
+      {
+        label: "Energy Providers",
+        path: "/dashboard/company/users?role=energy provider",
+      },
+    ],
   },
   {
     label: "Energy Provider",
@@ -246,29 +379,34 @@ export const companyNav = [
     moduleKey: "estate",
   },
   {
-    label: "Asset Management",
-    icon: Building2,
-    path: "/dashboard/company/asset",
+    label: "Asset",
+    icon: Package,
     moduleKey: "asset",
+    children: [
+      {
+        label: "Asset Management",
+        path: "/dashboard/company/asset",
+        moduleKey: "asset",
+      },
+      {
+        label: "Asset Maintenance",
+        path: "/dashboard/company/asset-mgt",
+        moduleKey: "asset-maintenance",
+      },
+    ],
   },
-  {
-    label: "Asset Maintenance",
-    icon: Wrench,
-    path: "/dashboard/company/asset-mgt",
-    moduleKey: "asset-maintenance",
-  },
-  {
-    label: "Expenses",
-    icon: CircleDollarSign,
-    path: "/dashboard/company/expenses",
-    moduleKey: "expense",
-  },
-  {
-    label: "Revenue",
-    icon: Banknote,
-    path: "/dashboard/company/revenue",
-    moduleKey: "revenue",
-  },
+  // {
+  //   label: "Expenses",
+  //   icon: CircleDollarSign,
+  //   path: "/dashboard/company/expenses",
+  //   moduleKey: "expense",
+  // },
+  // {
+  //   label: "Revenue",
+  //   icon: Banknote,
+  //   path: "/dashboard/company/revenue",
+  //   moduleKey: "revenue",
+  // },
   {
     label: "Operations Reporting",
     icon: ClipboardList,
@@ -280,6 +418,12 @@ export const companyNav = [
     icon: ClipboardList,
     path: "/dashboard/company/request",
     moduleKey: "requests",
+  },
+  {
+    label: "Announcements",
+    icon: Bell,
+    path: "/dashboard/company/announcements",
+    moduleKey: "announcements",
   },
   {
     label: "Report",
@@ -319,8 +463,21 @@ export const adminNav = [
   {
     label: "User Management",
     icon: UserCog,
-    path: "/dashboard/admin/user",
     moduleKey: "users",
+    children: [
+      {
+        label: "Residents",
+        path: "/dashboard/admin/user?role=resident",
+      },
+      {
+        label: "Staff",
+        path: "/dashboard/admin/user?role=staff",
+      },
+      {
+        label: "Security",
+        path: "/dashboard/admin/user?role=security",
+      },
+    ],
   },
   {
     label: "Bills Management",
@@ -378,16 +535,21 @@ export const adminNav = [
     moduleKey: "announcements",
   },
   {
-    label: "Asset Management",
+    label: "Asset",
     icon: Package,
-    path: "/dashboard/admin/asset",
     moduleKey: "asset",
-  },
-  {
-    label: "Asset Maintenance",
-    icon: Wrench,
-    path: "/dashboard/admin/asset-maintenance",
-    moduleKey: "asset-maintenance",
+    children: [
+      {
+        label: "Asset Management",
+        path: "/dashboard/admin/asset",
+        moduleKey: "asset",
+      },
+      {
+        label: "Asset Maintenance",
+        path: "/dashboard/admin/asset-maintenance",
+        moduleKey: "asset-maintenance",
+      },
+    ],
   },
   {
     label: "Operations Reporting",
@@ -537,6 +699,29 @@ export const estateAdminNav = [
     label: "Overview",
     icon: FiHome,
     path: "/dashboard/estate-admin/dashboard",
+  },
+  {
+    label: "User Management",
+    icon: UserCog,
+    moduleKey: "users",
+    children: [
+      {
+        label: "Residents",
+        path: "/dashboard/estate-admin/user?role=resident",
+      },
+      {
+        label: "Staff",
+        path: "/dashboard/estate-admin/user?role=staff",
+      },
+      {
+        label: "Security",
+        path: "/dashboard/estate-admin/user?role=security",
+      },
+      {
+        label: "Admins",
+        path: "/dashboard/estate-admin/user?role=admin",
+      },
+    ],
   },
   {
     label: "Transactions",

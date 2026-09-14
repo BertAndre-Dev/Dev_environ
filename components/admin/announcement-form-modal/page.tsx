@@ -12,15 +12,17 @@ import { Label } from "@/components/ui/label";
 import Modal from "@/components/modal/page";
 import { Select } from "@/components/ui/select";
 import type { AnnouncementItem } from "@/redux/slice/admin/announcements/announcements";
-import { fileToBase64 } from "@/lib/file-to-base64";
+import { fileToDataUri } from "@/lib/uploads/fileToDataUri";
+import { validateFile } from "@/lib/uploads/validate";
+import {
+  DOCUMENT_ACCEPT_ATTR,
+  IMAGE_ACCEPT_ATTR,
+} from "@/lib/uploads/constants";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB
-const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10MB
-const IMAGE_ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
-const FILE_ACCEPT =
-  ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,application/pdf";
+const IMAGE_ACCEPT = IMAGE_ACCEPT_ATTR;
+const FILE_ACCEPT = DOCUMENT_ACCEPT_ATTR;
 
 export interface AnnouncementFormData {
   title: string;
@@ -135,8 +137,9 @@ export default function AnnouncementFormModal({
       setFormImage(null);
       return;
     }
-    if (f.size > MAX_IMAGE_BYTES) {
-      toast.error("Image must be 5MB or less.");
+    const validation = validateFile(f, { kind: "image" });
+    if (!validation.ok) {
+      toast.error(validation.error);
       e.target.value = "";
       return;
     }
@@ -149,8 +152,9 @@ export default function AnnouncementFormModal({
       setFormFile(null);
       return;
     }
-    if (f.size > MAX_FILE_BYTES) {
-      toast.error("Attachment must be 10MB or less.");
+    const validation = validateFile(f, { kind: "document" });
+    if (!validation.ok) {
+      toast.error(validation.error);
       e.target.value = "";
       return;
     }
@@ -182,10 +186,10 @@ export default function AnnouncementFormModal({
       let imageDataUrl: string | null = null;
       let fileDataUrl: string | null = null;
       if (formImage) {
-        imageDataUrl = await fileToBase64(formImage);
+        imageDataUrl = await fileToDataUri(formImage);
       }
       if (formFile) {
-        fileDataUrl = await fileToBase64(formFile);
+        fileDataUrl = await fileToDataUri(formFile);
       }
       await onSubmit({
         title: t,

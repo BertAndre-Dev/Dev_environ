@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  ExpenseAttachmentsPicker,
+  type ExpenseDraftAttachment,
+} from "@/components/dashboard/admin/expenses/ExpenseAttachmentsPicker";
 
 export interface EditExpenseModalProps {
   open: boolean;
@@ -18,10 +22,12 @@ export interface EditExpenseModalProps {
   description: string;
   amount: string;
   documentNumber: string;
+  attachments: ExpenseDraftAttachment[];
   onOpenChange: (open: boolean) => void;
   onDescriptionChange: (value: string) => void;
   onAmountChange: (value: string) => void;
   onDocumentNumberChange: (value: string) => void;
+  onAttachmentsChange: (attachments: ExpenseDraftAttachment[]) => void;
   onSubmit: () => void;
 }
 
@@ -32,15 +38,23 @@ export function EditExpenseModal({
   description,
   amount,
   documentNumber,
+  attachments,
   onOpenChange,
   onDescriptionChange,
   onAmountChange,
   onDocumentNumberChange,
+  onAttachmentsChange,
   onSubmit,
 }: Readonly<EditExpenseModalProps>) {
+  const [attachmentsBusy, setAttachmentsBusy] = useState(false);
+  const submitDisabled = saving || attachmentsBusy;
+  let submitLabel = "Update";
+  if (saving) submitLabel = "Saving...";
+  else if (attachmentsBusy) submitLabel = "Uploading...";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-h-[80vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Expense</DialogTitle>
         </DialogHeader>
@@ -87,17 +101,24 @@ export function EditExpenseModal({
             />
           </div>
 
+          <ExpenseAttachmentsPicker
+            attachments={attachments}
+            disabled={saving}
+            onChange={onAttachmentsChange}
+            onBusyChange={setAttachmentsBusy}
+          />
+
           <div className="flex items-center justify-between gap-3 pt-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={saving}
+              disabled={submitDisabled}
             >
               Cancel
             </Button>
-            <Button type="button" onClick={onSubmit} disabled={saving}>
-              {saving ? "Saving..." : "Update"}
+            <Button type="button" onClick={onSubmit} disabled={submitDisabled}>
+              {submitLabel}
             </Button>
           </div>
         </div>
@@ -105,4 +126,3 @@ export function EditExpenseModal({
     </Dialog>
   );
 }
-

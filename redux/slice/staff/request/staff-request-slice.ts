@@ -1,6 +1,8 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import {
+  cancelStaffRequest,
   createStaffRequest,
+  decideStaffRequest,
   getStaffRequestCategories,
   getStaffRequests,
   type StaffRequestCategory,
@@ -30,6 +32,8 @@ interface StaffRequestState {
   getListStatus: AsyncStatus;
   getCategoriesStatus: AsyncStatus;
   createStatus: AsyncStatus;
+  decideStatus: AsyncStatus;
+  cancelStatus: AsyncStatus;
   error: string | null;
 }
 
@@ -46,8 +50,18 @@ const initialState: StaffRequestState = {
   getListStatus: "idle",
   getCategoriesStatus: "idle",
   createStatus: "idle",
+  decideStatus: "idle",
+  cancelStatus: "idle",
   error: null,
 };
+
+function upsertListItem(list: StaffRequestItem[], item: StaffRequestItem) {
+  const index = list.findIndex((row) => row.id === item.id);
+  if (index === -1) return list;
+  const next = [...list];
+  next[index] = { ...next[index], ...item };
+  return next;
+}
 
 const staffRequestSlice = createSlice({
   name: "staffRequest",
@@ -122,6 +136,48 @@ const staffRequestSlice = createSlice({
           (action.payload as { message?: string })?.message ??
           action.error.message ??
           "Failed to create request";
+      })
+      .addCase(decideStaffRequest.pending, (state) => {
+        state.decideStatus = "isLoading";
+        state.error = null;
+      })
+      .addCase(decideStaffRequest.fulfilled, (state, action) => {
+        state.decideStatus = "succeeded";
+        if (action.payload.item) {
+          state.list = upsertListItem(state.list, action.payload.item);
+        }
+      })
+      .addCase(decideStaffRequest.rejected, (state, action) => {
+        state.decideStatus = "failed";
+        state.error =
+          (action.payload as { message?: string })?.message ??
+          action.error.message ??
+          "Failed to submit decision";
+      })
+      .addCase(cancelStaffRequest.pending, (state) => {
+        state.cancelStatus = "isLoading";
+        state.error = null;
+      })
+      .addCase(cancelStaffRequest.fulfilled, (state, action) => {
+        state.cancelStatus = "succeeded";
+        if (action.payload.item) {
+          state.list = upsertListItem(state.list, action.payload.item);
+        } else {
+          const existing = state.list.find((row) => row.id === action.payload.id);
+          if (existing) {
+            state.list = upsertListItem(state.list, {
+              ...existing,
+              status: "cancelled",
+            });
+          }
+        }
+      })
+      .addCase(cancelStaffRequest.rejected, (state, action) => {
+        state.cancelStatus = "failed";
+        state.error =
+          (action.payload as { message?: string })?.message ??
+          action.error.message ??
+          "Failed to cancel request";
       });
   },
 });

@@ -51,6 +51,13 @@ function triggerDownload(href: string, filename: string) {
   link.remove();
 }
 
+/** Open a request attachment in a new browser tab. */
+export function openAttachmentInNewTab(source: string): void {
+  const trimmed = source.trim();
+  if (!trimmed || typeof window === "undefined") return;
+  window.open(trimmed, "_blank", "noopener,noreferrer");
+}
+
 /** Download a request attachment (data URL or remote URL). */
 export async function downloadAttachment(
   source: string,

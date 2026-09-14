@@ -20,7 +20,7 @@ export default function ResidentAssetPage() {
   const [estateName, setEstateName] = useState("Estate");
   const [estateId, setEstateId] = useState("");
   const [bootstrapping, setBootstrapping] = useState(true);
-  const [activeAssetTab, setActiveAssetTab] = useState("Assets");
+  const [activeAssetTab, setActiveAssetTab] = useState("Asset Categories");
 
   const { assetsStatus, categoriesStatus } = useSelector(
     (state: RootState) => {
@@ -112,14 +112,14 @@ export default function ResidentAssetPage() {
 
         <Card className="p-4">
           <Tab
-            titles={["Assets", "Asset Categories"]}
+            titles={["Asset Categories", "Assets"]}
             onTabChange={(_index, title) => setActiveAssetTab(title)}
             renderContent={(activeTab) => {
               switch (activeTab) {
-                case "Assets":
-                  return <AssetsTab estateId={estateId} estateName={estateName} />;
                 case "Asset Categories":
                   return <AssetCategoriesTab estateId={estateId} />;
+                case "Assets":
+                  return <AssetsTab estateId={estateId} estateName={estateName} />;
                 default:
                   return null;
               }

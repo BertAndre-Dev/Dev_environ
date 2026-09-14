@@ -43,13 +43,15 @@ export function ModuleSelectionChips({
     <div className="space-y-3">
       <label className="flex items-center gap-2 text-sm cursor-pointer select-none w-fit">
         <input
-          type="radio"
+          type="checkbox"
           name={selectAllName}
           checked={allSelected}
-          onChange={() => onChange([...availableModules])}
+          onChange={() =>
+            onChange(allSelected ? [] : [...availableModules])
+          }
           className="cursor-pointer"
         />
-        Select all
+        {allSelected ? "Unselect all" : "Select all"}
       </label>
 
       <div className="flex flex-wrap gap-2">

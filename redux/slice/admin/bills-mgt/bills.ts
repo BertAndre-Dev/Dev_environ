@@ -19,6 +19,30 @@ export const BILL_FREQUENCY_OPTIONS: { label: string; value: BillFrequency }[] =
     { label: "Yearly", value: "yearly" },
   ];
 
+/** Service-charge bills may only be billed quarterly or yearly. */
+export const SERVICE_CHARGE_FREQUENCY_VALUES: BillFrequency[] = [
+  "quarterly",
+  "yearly",
+];
+
+export function billFrequencyOptions(
+  isServiceCharge?: boolean,
+): { label: string; value: BillFrequency }[] {
+  if (!isServiceCharge) return BILL_FREQUENCY_OPTIONS;
+  return BILL_FREQUENCY_OPTIONS.filter((option) =>
+    SERVICE_CHARGE_FREQUENCY_VALUES.includes(option.value),
+  );
+}
+
+export function coerceFrequencyForServiceCharge(
+  frequency: BillFrequency,
+  isServiceCharge?: boolean,
+): BillFrequency {
+  if (!isServiceCharge) return frequency;
+  if (frequency === "quarterly" || frequency === "yearly") return frequency;
+  return "yearly";
+}
+
 export function normalizeBillFrequency(
   value?: string,
   fallback: BillFrequency = "yearly",
@@ -94,7 +118,8 @@ function billInterestFields(data: {
   interestRatePercent?: number;
   interestStartsAt?: string;
 }) {
-  const accrueInterest = Boolean(data.accrueInterest);
+  if (typeof data.accrueInterest !== "boolean") return {};
+  const accrueInterest = data.accrueInterest;
   const interestStartsAt = accrueInterest
     ? String(data.interestStartsAt ?? "").trim().slice(0, 10)
     : "";

@@ -4,11 +4,23 @@ const API_ORIGIN = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "
 
 const nextConfig: NextConfig = {
   reactStrictMode: false,
+  experimental: {
+    // Rewrites buffer the body; default 10MB is tight once multipart overhead is added.
+    proxyClientMaxBodySize: "12mb",
+  },
   images: {
     remotePatterns: [
       {
         protocol: "https",
         hostname: "res.cloudinary.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.digitaloceanspaces.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.fra1.digitaloceanspaces.com",
       },
     ],
   },

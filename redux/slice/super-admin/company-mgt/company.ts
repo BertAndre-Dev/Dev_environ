@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance";
 import { apiErrorRejectValue } from "@/lib/api-error";
+import { toCompanyWriteBody } from "@/lib/plans";
 
 export type CompanyModuleKey = string;
 
@@ -14,6 +15,7 @@ export interface CompanyItem {
   country?: string;
   isActive?: boolean;
   modules?: CompanyModuleKey[];
+  plan?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -45,7 +47,7 @@ export interface CreateCompanyPayload {
   state: string;
   country: string;
   isActive: boolean;
-  modules: CompanyModuleKey[];
+  plan: string;
 }
 
 export interface UpdateCompanyPayload {
@@ -109,7 +111,10 @@ export const createCompany = createAsyncThunk(
   "super-admin-company/createCompany",
   async (payload: CreateCompanyPayload, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.post("/api/v1/company-mgt", payload);
+      const res = await axiosInstance.post(
+        "/api/v1/company-mgt",
+        toCompanyWriteBody(payload),
+      );
       return res.data;
     } catch (error: unknown) {
       return rejectWithValue(apiErrorRejectValue(error));
@@ -123,7 +128,18 @@ export const updateCompany = createAsyncThunk(
   async (payload: UpdateCompanyPayload, { rejectWithValue }) => {
     try {
       const { id, data } = payload;
-      const res = await axiosInstance.put(`/api/v1/company-mgt/${id}`, data);
+      const res = await axiosInstance.put(
+        `/api/v1/company-mgt/${id}`,
+        toCompanyWriteBody({
+          name: data.name ?? "",
+          address: data.address ?? "",
+          city: data.city ?? "",
+          state: data.state ?? "",
+          country: data.country ?? "",
+          isActive: data.isActive,
+          plan: data.plan,
+        }),
+      );
       return { ...res.data, updatedId: id };
     } catch (error: unknown) {
       return rejectWithValue(apiErrorRejectValue(error));

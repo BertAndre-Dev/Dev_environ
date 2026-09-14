@@ -4,6 +4,13 @@ import {
   resolveCreatedByFromRaw,
   type RequestActor,
 } from "@/lib/request-actor";
+import {
+  parseRequestFieldValues,
+  parseRequestSteps,
+  resolveCurrentStepName,
+  type RequestRecordField,
+  type RequestWorkflowStep,
+} from "@/lib/request-record";
 import axiosInstance from "@/utils/axiosInstance";
 
 export const STAFF_REQUEST_STATUSES = [
@@ -39,9 +46,18 @@ export interface StaffRequestItem {
   attachments?: string[];
   workflowId?: string;
   status?: StaffRequestStatus;
+  currentStepOrder?: number;
+  currentStepName?: string;
+  steps?: RequestWorkflowStep[];
+  fieldValues?: RequestRecordField[];
   createdBy?: string | RequestActor;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface RequestFieldValue {
+  key: string;
+  value: string;
 }
 
 export interface CreateStaffRequestPayload {
@@ -49,8 +65,11 @@ export interface CreateStaffRequestPayload {
   description?: string;
   category: string;
   estateId: string;
+  /** Hosted https:// URLs from POST /api/v1/uploads. Never send base64 here. */
   attachments?: string[];
   workflowId?: string;
+  /** For file/image workflow fields, `value` is a base64 data URI (or a hosted URL). */
+  fieldValues?: RequestFieldValue[];
 }
 
 export interface ListStaffRequestsParams {
@@ -59,6 +78,20 @@ export interface ListStaffRequestsParams {
   search?: string;
   page?: number;
   limit?: number;
+}
+
+export type StaffRequestDecision = "approve" | "reject";
+
+export interface DecideStaffRequestPayload {
+  id: string;
+  decision: StaffRequestDecision;
+  comment?: string;
+  estateId?: string;
+}
+
+export interface CancelStaffRequestPayload {
+  id: string;
+  estateId?: string;
 }
 
 function normalizeStatus(raw: unknown): StaffRequestStatus {
@@ -119,6 +152,10 @@ export function normalizeStaffRequest(
   raw: Record<string, unknown>,
 ): StaffRequestItem {
   const id = String(raw._id ?? raw.id ?? "");
+  const steps = parseRequestSteps(raw.steps);
+  const currentStepOrder =
+    raw.currentStepOrder != null ? Number(raw.currentStepOrder) : undefined;
+
   return {
     id,
     _id: id,
@@ -132,6 +169,15 @@ export function normalizeStaffRequest(
       : undefined,
     workflowId: raw.workflowId as string | undefined,
     status: normalizeStatus(raw.status),
+    currentStepOrder,
+    currentStepName: resolveCurrentStepName({
+      currentStepName:
+        raw.currentStepName != null ? String(raw.currentStepName) : undefined,
+      currentStepOrder,
+      steps,
+    }),
+    steps,
+    fieldValues: parseRequestFieldValues(raw.fieldValues),
     createdBy: resolveCreatedByFromRaw(raw),
     createdAt: raw.createdAt as string | undefined,
     updatedAt: raw.updatedAt as string | undefined,
@@ -211,6 +257,16 @@ export const createStaffRequest = createAsyncThunk(
       };
       const workflowId = payload.workflowId?.trim();
       if (workflowId) body.workflowId = workflowId;
+      const fieldValues = (payload.fieldValues ?? [])
+        .map((field) => {
+          const key = field.key?.trim() ?? "";
+          const raw =
+            typeof field.value === "string" ? field.value : "";
+          const value = raw.startsWith("data:") ? raw : raw.trim();
+          return { key, value };
+        })
+        .filter((field) => field.key && field.value);
+      if (fieldValues.length > 0) body.fieldValues = fieldValues;
 
       const res = await axiosInstance.post("/api/v1/requests", body);
       return res.data;
@@ -264,3 +320,131 @@ export const getStaffRequests = createAsyncThunk(
     }
   },
 );
+
+function extractRequestPayload(data: unknown): StaffRequestItem | null {
+  if (!data || typeof data !== "object") return null;
+  const root = data as Record<string, unknown>;
+  const nested = root.data;
+
+  if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+    return normalizeStaffRequest(nested as Record<string, unknown>);
+  }
+  if (Array.isArray(nested) && nested[0] && typeof nested[0] === "object") {
+    return normalizeStaffRequest(nested[0] as Record<string, unknown>);
+  }
+  if (root.id != null || root._id != null || root.title != null) {
+    return normalizeStaffRequest(root);
+  }
+  return null;
+}
+
+/** GET /api/v1/requests/{id}?estateId= — get a request by ID */
+export const getStaffRequestById = createAsyncThunk(
+  "staffRequest/getById",
+  async (
+    payload: { id: string; estateId?: string },
+    { rejectWithValue },
+  ) => {
+    const requestId = payload.id?.trim();
+    if (!requestId) {
+      return rejectWithValue({ message: "Request id is required." });
+    }
+
+    try {
+      const estateId = payload.estateId?.trim();
+      const res = await axiosInstance.get(`/api/v1/requests/${requestId}`, {
+        params: estateId ? { estateId } : undefined,
+      });
+      const item = extractRequestPayload(res.data);
+      if (!item) {
+        return rejectWithValue({ message: "Request not found." });
+      }
+      const [enriched] = await enrichRequestItemsWithActorNames([item]);
+      return enriched ?? item;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ?? "Failed to fetch request details",
+      });
+    }
+  },
+);
+
+/** POST /api/v1/requests/{id}/decide — approve or reject the current step */
+export const decideStaffRequest = createAsyncThunk(
+  "staffRequest/decide",
+  async (payload: DecideStaffRequestPayload, { rejectWithValue }) => {
+    const id = payload.id?.trim();
+    const decision = payload.decision;
+    const comment = payload.comment?.trim() ?? "";
+
+    if (!id) {
+      return rejectWithValue({ message: "Request id is required." });
+    }
+    if (decision !== "approve" && decision !== "reject") {
+      return rejectWithValue({ message: "Decision must be approve or reject." });
+    }
+    if (decision === "reject" && comment.length < 3) {
+      return rejectWithValue({
+        message: "A rejection reason of at least 3 characters is required.",
+      });
+    }
+
+    try {
+      const body: Record<string, string> = { decision };
+      if (comment) body.comment = comment;
+      const estateId = payload.estateId?.trim();
+
+      const res = await axiosInstance.post(
+        `/api/v1/requests/${id}/decide`,
+        body,
+        { params: estateId ? { estateId } : undefined },
+      );
+      return {
+        id,
+        decision,
+        data: res.data,
+        item: extractRequestPayload(res.data),
+      };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ?? "Failed to submit decision",
+      });
+    }
+  },
+);
+
+/** POST /api/v1/requests/{id}/cancel — cancel a request */
+export const cancelStaffRequest = createAsyncThunk(
+  "staffRequest/cancel",
+  async (payload: CancelStaffRequestPayload, { rejectWithValue }) => {
+    const requestId = payload.id?.trim();
+    const estateId = payload.estateId?.trim();
+    if (!requestId) {
+      return rejectWithValue({ message: "Request id is required." });
+    }
+
+    try {
+      const res = await axiosInstance.post(
+        `/api/v1/requests/${requestId}/cancel`,
+        {},
+        { params: estateId ? { estateId } : undefined },
+      );
+      return {
+        id: requestId,
+        data: res.data,
+        item: extractRequestPayload(res.data),
+      };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ?? "Failed to cancel request",
+      });
+    }
+  },
+);
+

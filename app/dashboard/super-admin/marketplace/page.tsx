@@ -37,6 +37,15 @@ import Loader from "@/components/ui/Loader";
 import { isBusy, isPending } from "@/lib/async-status";
 import Pagination from "@/components/pagination/page";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
+import Select from "react-select";
+
+const ESTATE_FILTER_FETCH_LIMIT = 500;
+
+interface EstateOption {
+  label: string;
+  value: string;
+}
 
 export default function SuperAdminMarketplacePage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -49,7 +58,9 @@ export default function SuperAdminMarketplacePage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
-  const [estateIdFilter, setEstateIdFilter] = useState<string>("");
+  const [selectedEstate, setSelectedEstate] = useState<EstateOption | null>(
+    null,
+  );
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [page, setPage] = useState(1);
@@ -69,6 +80,28 @@ export default function SuperAdminMarketplacePage() {
     });
 
   const listings = list ?? [];
+  const selectedEstateId = selectedEstate?.value;
+
+  const { allEstates, estatesStatus } = useSelector((state: RootState) => {
+    const estateState = state.estate;
+    const data = estateState.allEstates?.data || [];
+    return {
+      allEstates: Array.isArray(data) ? data : [],
+      estatesStatus: estateState.getAllEstatesState as string,
+    };
+  });
+
+  const estateOptions: EstateOption[] = useMemo(
+    () =>
+      allEstates
+        .map((e: { id?: string; _id?: string; name?: string }) => {
+          const value = String(e?._id || e?.id || "").trim();
+          if (!value) return null;
+          return { label: e?.name ?? "Unnamed estate", value };
+        })
+        .filter((x): x is EstateOption => Boolean(x)),
+    [allEstates],
+  );
 
   const filteredListings = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -90,6 +123,25 @@ export default function SuperAdminMarketplacePage() {
   }, [listings, search]);
 
   useEffect(() => {
+    dispatch(getAllEstates({ page: 1, limit: ESTATE_FILTER_FETCH_LIMIT }))
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (selectedEstate?.value) return;
+    if (!estateOptions.length) return;
+    setSelectedEstate(estateOptions[0]);
+  }, [estateOptions, selectedEstate?.value]);
+
+  useEffect(() => {
+    if (!selectedEstateId) {
+      if (!isPending(estatesStatus)) setBootstrapping(false);
+      return;
+    }
     const shouldApplyDate = Boolean(startDate && endDate);
     dispatch(
       getMarketplaceList({
@@ -97,7 +149,7 @@ export default function SuperAdminMarketplacePage() {
         limit,
         status: statusFilter || undefined,
         category: categoryFilter || undefined,
-        estateId: estateIdFilter.trim() || undefined,
+        estateId: selectedEstateId,
         startDate: shouldApplyDate ? startDate : undefined,
         endDate: shouldApplyDate ? endDate : undefined,
       }),
@@ -113,9 +165,10 @@ export default function SuperAdminMarketplacePage() {
     limit,
     statusFilter,
     categoryFilter,
-    estateIdFilter,
+    selectedEstateId,
     startDate,
     endDate,
+    estatesStatus,
   ]);
 
   const openAddModal = () => {
@@ -345,14 +398,35 @@ export default function SuperAdminMarketplacePage() {
             Manage businesses in marketplace.
           </p>
         </div>
-        <Button
-          onClick={openAddModal}
-          className="shrink-0 flex items-center gap-2 text-white"
-          style={{ backgroundColor: "#0150AC" }}
-        >
-          <Plus className="w-4 h-4" />
-          Add business
-        </Button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="w-full sm:w-64 min-w-[12rem]">
+            <Select
+              options={estateOptions}
+              placeholder="Filter by estate"
+              value={selectedEstate}
+              onChange={(option) => {
+                setSelectedEstate(option);
+                setPage(1);
+              }}
+              isSearchable
+              isDisabled={!estateOptions.length || isPending(estatesStatus)}
+              styles={{
+                control: (base) => ({ ...base, cursor: "pointer" }),
+                option: (base) => ({ ...base, cursor: "pointer" }),
+                dropdownIndicator: (base) => ({ ...base, cursor: "pointer" }),
+                clearIndicator: (base) => ({ ...base, cursor: "pointer" }),
+              }}
+            />
+          </div>
+          <Button
+            onClick={openAddModal}
+            className="shrink-0 flex items-center gap-2 text-white"
+            style={{ backgroundColor: "#0150AC" }}
+          >
+            <Plus className="w-4 h-4" />
+            Add business
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

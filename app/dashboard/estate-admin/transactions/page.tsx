@@ -23,6 +23,10 @@ import { HistoryTransactionsTab } from "./components/HistoryTransactionsTab";
 import { VendsTab } from "./components/VendsTab";
 import { PaidBillsTab } from "./components/PaidBillsTab";
 import {
+  PaidBillResidentCell,
+  paidBillResidentExportValue,
+} from "./components/PaidBillResidentCell";
+import {
   PaidBillDetailsModal,
   type PaidBillDetailsItem,
 } from "./components/PaidBillDetailsModal";
@@ -703,24 +707,8 @@ export default function TransactionPage() {
     {
       key: "user",
       header: "Resident",
-      render: (item: any) =>
-        item.user
-          ? [item.user.firstName, item.user.lastName]
-              .filter(Boolean)
-              .join(" ") || item.user.email
-          : "-",
-      exportValue: (item: any) => {
-        const u = item?.user;
-        if (!u) return "";
-        const name = [u.firstName, u.lastName].filter(Boolean).join(" ").trim();
-        return name || u.email || "";
-      },
-    },
-    {
-      key: "email",
-      header: "Email",
-      render: (item: any) => item.user?.email ?? "-",
-      exportValue: (item: any) => String(item?.user?.email ?? ""),
+      render: (item: any) => <PaidBillResidentCell user={item.user} />,
+      exportValue: (item: any) => paidBillResidentExportValue(item?.user),
     },
     {
       key: "bill",

@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const DISPLAY_DATE_FORMAT = "MMM d, yyyy";
@@ -23,8 +23,24 @@ const MONTHS = [
   "December",
 ] as const;
 
+const MONTHS_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
 const PAST_YEAR_SPAN = 30;
 const FUTURE_YEAR_SPAN = 30;
+const YEAR_PAGE_SIZE = 12;
 
 const inputClassName =
   "h-10 rounded-md border border-border bg-background px-3 pr-10 text-sm outline-none focus:ring-2 focus:ring-primary w-full max-w-full cursor-pointer placeholder:text-muted-foreground";
@@ -101,9 +117,41 @@ function DatePickerHeader({
 }: Readonly<CustomHeaderProps>) {
   const years = buildYearOptions(date.getFullYear(), minDate, maxDate);
   const year = date.getFullYear();
+  const month = date.getMonth();
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [openPanel, setOpenPanel] = useState<"month" | "year" | null>(null);
+  const selectedPage = Math.max(
+    0,
+    Math.floor(Math.max(0, years.indexOf(year)) / YEAR_PAGE_SIZE) *
+      YEAR_PAGE_SIZE,
+  );
+  const [pageIndex, setPageIndex] = useState(selectedPage);
+
+  useEffect(() => {
+    if (openPanel === "year") setPageIndex(selectedPage);
+  }, [openPanel, selectedPage]);
+
+  useEffect(() => {
+    if (!openPanel) return;
+    const onDoc = (event: MouseEvent) => {
+      if (!wrapRef.current?.contains(event.target as Node)) setOpenPanel(null);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [openPanel]);
+
+  const pageYears = years.slice(pageIndex, pageIndex + YEAR_PAGE_SIZE);
+  const canPrev = pageIndex > 0;
+  const canNext = pageIndex + YEAR_PAGE_SIZE < years.length;
+  const rangeLabel = pageYears.length
+    ? `${pageYears[0]}–${pageYears[pageYears.length - 1]}`
+    : "";
 
   return (
-    <div className="iso-datepicker-custom-header flex items-center justify-between gap-2 px-1 pb-2">
+    <div
+      className="iso-datepicker-custom-header relative flex items-center justify-between gap-1 px-0.5 pb-2 sm:gap-2"
+      ref={wrapRef}
+    >
       <button
         type="button"
         className="iso-datepicker-nav-btn"
@@ -114,35 +162,35 @@ function DatePickerHeader({
         <ChevronLeft className="h-4 w-4" />
       </button>
 
-      <div className="flex min-w-0 flex-1 items-center justify-center gap-1.5">
-        <select
+      <div className="flex min-w-0 flex-1 items-center justify-center gap-1 sm:gap-1.5">
+        <button
+          type="button"
           aria-label="Month"
-          className="iso-datepicker-select"
-          value={date.getMonth()}
-          onChange={(e) => changeMonth(Number(e.target.value))}
+          aria-haspopup="listbox"
+          aria-expanded={openPanel === "month"}
+          className="iso-datepicker-month-trigger"
+          onMouseDown={(event) => event.stopPropagation()}
+          onClick={() =>
+            setOpenPanel((value) => (value === "month" ? null : "month"))
+          }
         >
-          {MONTHS.map((month, index) => (
-            <option
-              key={month}
-              value={index}
-              disabled={!monthAllowed(year, index, minDate, maxDate)}
-            >
-              {month}
-            </option>
-          ))}
-        </select>
-        <select
+          <span>{MONTHS_SHORT[month]}</span>
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
+        </button>
+        <button
+          type="button"
           aria-label="Year"
-          className="iso-datepicker-select iso-datepicker-select-year"
-          value={year}
-          onChange={(e) => changeYear(Number(e.target.value))}
+          aria-haspopup="listbox"
+          aria-expanded={openPanel === "year"}
+          className="iso-datepicker-year-trigger"
+          onMouseDown={(event) => event.stopPropagation()}
+          onClick={() =>
+            setOpenPanel((value) => (value === "year" ? null : "year"))
+          }
         >
-          {years.map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
+          <span>{year}</span>
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
+        </button>
       </div>
 
       <button
@@ -154,6 +202,102 @@ function DatePickerHeader({
       >
         <ChevronRight className="h-4 w-4" />
       </button>
+
+      {openPanel === "month" ? (
+        <div
+          className="iso-datepicker-year-panel"
+          role="listbox"
+          aria-label="Choose month"
+          onMouseDown={(event) => event.stopPropagation()}
+        >
+          <div className="grid grid-cols-3 gap-1">
+            {MONTHS_SHORT.map((label, index) => {
+              const allowed = monthAllowed(year, index, minDate, maxDate);
+              return (
+                <button
+                  key={MONTHS[index]}
+                  type="button"
+                  role="option"
+                  aria-selected={index === month}
+                  disabled={!allowed}
+                  className={cn(
+                    "iso-datepicker-year-option",
+                    index === month && "is-selected",
+                  )}
+                  onClick={() => {
+                    changeMonth(index);
+                    setOpenPanel(null);
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {openPanel === "year" ? (
+        <div
+          className="iso-datepicker-year-panel"
+          role="listbox"
+          aria-label="Choose year"
+          onMouseDown={(event) => event.stopPropagation()}
+        >
+          <div className="mb-2 flex items-center justify-between gap-1">
+            <button
+              type="button"
+              className="iso-datepicker-nav-btn"
+              onClick={() =>
+                setPageIndex((index) => Math.max(0, index - YEAR_PAGE_SIZE))
+              }
+              disabled={!canPrev}
+              aria-label="Earlier years"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <p className="min-w-0 truncate text-xs font-medium text-foreground">
+              {rangeLabel}
+            </p>
+            <button
+              type="button"
+              className="iso-datepicker-nav-btn"
+              onClick={() =>
+                setPageIndex((index) =>
+                  Math.min(
+                    Math.max(0, years.length - YEAR_PAGE_SIZE),
+                    index + YEAR_PAGE_SIZE,
+                  ),
+                )
+              }
+              disabled={!canNext}
+              aria-label="Later years"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-1">
+            {pageYears.map((option) => (
+              <button
+                key={option}
+                type="button"
+                role="option"
+                aria-selected={option === year}
+                className={cn(
+                  "iso-datepicker-year-option",
+                  option === year && "is-selected",
+                )}
+                onClick={() => {
+                  changeYear(option);
+                  setOpenPanel(null);
+                }}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -171,7 +315,6 @@ function sharedPickerProps(
     showIcon: !hasValue,
     toggleCalendarOnIconClick: true,
     icon: datePickerIcon,
-    todayButton: "Jump to today",
     withPortal,
     shouldCloseOnSelect: true,
     isClearable: hasValue,

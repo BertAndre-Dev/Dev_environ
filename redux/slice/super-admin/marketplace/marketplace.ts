@@ -58,11 +58,24 @@ export const getMarketplaceList = createAsyncThunk(
   "super-admin-marketplace/getList",
   async (params: GetMarketplaceParams | undefined, { rejectWithValue }) => {
     try {
-      const { page = 1, limit = 10, status, estateId, category, startDate, endDate } =
-        params ?? {};
+      const {
+        page = 1,
+        limit = 10,
+        status,
+        estateId,
+        category,
+        startDate,
+        endDate,
+      } = params ?? {};
+      const query: Record<string, string | number> = { page, limit };
+      if (status) query.status = status;
+      if (estateId) query.estateId = estateId;
+      if (category) query.category = category;
+      if (startDate) query.startDate = startDate;
+      if (endDate) query.endDate = endDate;
       const res = await axiosInstance.get<MarketplaceListResponse>(
         "/api/v1/marketplace",
-        { params: { page, limit, status, estateId, category, startDate, endDate } }
+        { params: query },
       );
       return res.data;
     } catch (error: unknown) {

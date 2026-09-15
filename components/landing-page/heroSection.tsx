@@ -76,14 +76,14 @@ export default function HeroSection() {
             alt="Pay Bills"
             enterDelay="60ms"
             floatDelay="1.1s"
-            className="left-1/2 top-[40%] xl:top-[60%] -translate-x-[calc(50%+16.5rem)] xl:-translate-x-[calc(50%+18rem)]"
+            className="bottom-2 left-2 xl:bottom-auto xl:left-1/2 xl:top-[60%] xl:-translate-x-[calc(50%+18rem)]"
           />
           <FeatureCard
             src="/assets/hero/analytics.svg"
             alt="Analytics"
             enterDelay="180ms"
             floatDelay="3.3s"
-            className="left-1/2 top-[40%] xl:top-[60%] translate-x-[calc(-50%+16.5rem)] xl:translate-x-[calc(-50%+18rem)]"
+            className="bottom-2 right-2 xl:bottom-auto xl:right-auto xl:left-1/2 xl:top-[60%] xl:translate-x-[calc(-50%+18rem)]"
           />
 
           {/* Center copy */}
@@ -92,7 +92,7 @@ export default function HeroSection() {
               The Best Real Estate Operating System
             </span>
 
-            <h1 className="mt-6 text-[36px] font-bold leading-[1.1] tracking-[-0.03em] text-black sm:text-[48px] lg:text-[56px]">
+            <h1 className="mt-6 text-[36px] font-bold leading-[1.1] tracking-[-0.03em] text-black sm:text-[48px] xl:text-[56px]">
               Your Digital{" "}
               <span className="text-[#0150AC]">Companion</span>
               <br className="hidden sm:block" /> For{" "}

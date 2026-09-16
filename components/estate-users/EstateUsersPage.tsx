@@ -51,6 +51,7 @@ import { isPending } from "@/lib/async-status";
 import { UserNameWithAvatar } from "@/components/ui/user-avatar";
 import { getDesignations } from "@/redux/slice/designations/designations";
 import {
+  canUseDesignationModule,
   designationLabelForUser,
   designationNamesById,
   designationWriteScope,
@@ -58,6 +59,7 @@ import {
 } from "@/lib/designations";
 import { DesignationsManager } from "@/components/designations/DesignationsManager";
 import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
+import { selectEstateModules } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 
 type AdminStaffPageTab = "staff" | "designations";
 
@@ -131,6 +133,8 @@ export function EstateUsersPage({
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const authUser = useSelector((state: RootState) => state.auth.user);
+  const estateModules = useSelector(selectEstateModules);
 
   const [user, setUser] = useState<any>(null);
   const [estateName, setEstateName] = useState("Estate");
@@ -178,7 +182,9 @@ export function EstateUsersPage({
     isAdminInviteRole(roleFilter) &&
     (roleFilter !== "staff" || isStandaloneEstate);
   const canManageDesignations =
-    staffPolicy === "company-only" && isStandaloneEstate;
+    staffPolicy === "company-only" &&
+    isStandaloneEstate &&
+    canUseDesignationModule(authUser ?? user, estateModules);
   const requestedStaffTab = parseAdminStaffTab(searchParams.get("tab"));
   const staffTab = canManageDesignations ? requestedStaffTab : "staff";
   const showStaffTabs = roleFilter === "staff" && canManageDesignations;

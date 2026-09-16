@@ -526,7 +526,7 @@ export function SuperAdminEstateDetailView({
 
         {activeTab === "rates" && estateId ? (
           <Card className="p-4 sm:p-6">
-            <EstateRatesTab estateId={estateId} />
+            <EstateRatesTab estateId={estateId} estateName={estate?.name} />
           </Card>
         ) : null}
 

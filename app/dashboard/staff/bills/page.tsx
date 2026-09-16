@@ -57,6 +57,7 @@ interface BillData {
   isActive?: boolean;
   isServiceCharge?: boolean;
   compulsory?: boolean;
+  collectionDate?: string;
   accrueInterest?: boolean;
   interestRatePercent?: number;
   interestStartsAt?: string;
@@ -502,6 +503,7 @@ export default function StaffBillPage() {
               amount: data.amount,
               frequency: "oneoff",
               compulsory: data.compulsory,
+              collectionDate: data.collectionDate,
               accrueInterest: data.accrueInterest,
               interestRatePercent: data.interestRatePercent,
               interestStartsAt: data.interestStartsAt,
@@ -519,6 +521,7 @@ export default function StaffBillPage() {
             amount: data.amount,
             frequency: "oneoff",
             compulsory: data.compulsory,
+            collectionDate: data.collectionDate,
             accrueInterest: data.accrueInterest,
             interestRatePercent: data.interestRatePercent,
             interestStartsAt: data.interestStartsAt,

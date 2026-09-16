@@ -31,42 +31,9 @@ export interface PlatformRate {
   splits?: RateSplit[] | null;
   notes?: string | null;
   isActive?: boolean;
-  source?: string | null;
-  configId?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
   [key: string]: unknown;
-}
-
-export interface EffectiveRateEstate {
-  id?: string;
-  name?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  companyId?: string | null;
-  isActive?: boolean;
-  modules?: string[];
-  visitorVerificationMode?: string;
-}
-
-export interface EffectiveRateResolved {
-  scope?: RateScope | string;
-  feeType?: RateFeeType | string;
-  estateId?: string | null;
-  companyId?: string | null;
-  splits?: RateSplit[] | null;
-  source?: string | null;
-  configId?: string | null;
-  notes?: string | null;
-  isActive?: boolean;
-}
-
-export interface EffectiveRateData {
-  estate?: EffectiveRateEstate | null;
-  feeType?: RateFeeType | string;
-  resolved?: EffectiveRateResolved | null;
 }
 
 export interface GetRatesParams {
@@ -74,11 +41,6 @@ export interface GetRatesParams {
   scope?: RateScope | string;
   estateId?: string;
   companyId?: string;
-}
-
-export interface GetEffectiveRateParams {
-  estateId: string;
-  feeType: RateFeeType | string;
 }
 
 export interface UpsertRatePayload {
@@ -130,45 +92,10 @@ function parseSingleRate(payload: unknown): PlatformRate | null {
   return null;
 }
 
-/** Parse GET /rates/effective — `{ data: { estate, feeType, resolved } }` */
-function parseEffectiveRate(payload: unknown): EffectiveRateData | null {
-  if (!payload || typeof payload !== "object") return null;
-  const record = payload as Record<string, unknown>;
-  const data =
-    record.data && typeof record.data === "object" && !Array.isArray(record.data)
-      ? (record.data as Record<string, unknown>)
-      : record;
-
-  if (!("resolved" in data) && !("estate" in data) && !("feeType" in data)) {
-    return null;
-  }
-
-  const resolvedRaw = data.resolved;
-  const resolved =
-    resolvedRaw && typeof resolvedRaw === "object" && !Array.isArray(resolvedRaw)
-      ? (resolvedRaw as EffectiveRateResolved)
-      : null;
-
-  const estateRaw = data.estate;
-  const estate =
-    estateRaw && typeof estateRaw === "object" && !Array.isArray(estateRaw)
-      ? (estateRaw as EffectiveRateEstate)
-      : null;
-
-  return {
-    estate,
-    feeType:
-      (data.feeType as string | undefined) ?? resolved?.feeType ?? undefined,
-    resolved,
-  };
-}
-
-/** Prefer estate-scoped config splits; fall back to effective resolved rate. */
-export function pickEditableRate(args: {
-  estateRates: PlatformRate[];
-  effective: EffectiveRateData | null;
-}): { splits: RateSplit[]; notes: string } {
-  const { estateRates, effective } = args;
+export function pickEditableRate(estateRates: PlatformRate[]): {
+  splits: RateSplit[];
+  notes: string;
+} {
   const estateRate =
     estateRates.find((rate) => rate.isActive !== false) ?? estateRates[0];
 
@@ -176,14 +103,6 @@ export function pickEditableRate(args: {
     return {
       splits: estateRate.splits,
       notes: String(estateRate.notes ?? ""),
-    };
-  }
-
-  const resolved = effective?.resolved;
-  if (resolved && Array.isArray(resolved.splits) && resolved.splits.length > 0) {
-    return {
-      splits: resolved.splits,
-      notes: String(resolved.notes ?? ""),
     };
   }
 
@@ -208,31 +127,6 @@ export const getRates = createAsyncThunk(
       };
     } catch (error: unknown) {
       return rejectWithValue(apiErrorRejectValue(error));
-    }
-  },
-);
-
-/** GET /api/v1/rates/effective — resolve effective rate for an estate */
-export const getEffectiveRate = createAsyncThunk(
-  "superAdminRates/getEffectiveRate",
-  async (params: GetEffectiveRateParams, { rejectWithValue }) => {
-    try {
-      const query = new URLSearchParams({
-        estateId: params.estateId,
-        feeType: String(params.feeType),
-      });
-      const res = await axiosInstance.get(
-        `/api/v1/rates/effective?${query.toString()}`,
-      );
-      return {
-        feeType: String(params.feeType),
-        data: parseEffectiveRate(res.data),
-      };
-    } catch (error: unknown) {
-      return rejectWithValue({
-        feeType: String(params.feeType),
-        ...apiErrorRejectValue(error),
-      });
     }
   },
 );

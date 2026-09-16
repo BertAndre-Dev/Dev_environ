@@ -16,7 +16,6 @@ import {
   type BankItem,
 } from "@/redux/slice/estate-admin/fund-wallet/fund-wallet";
 import {
-  getEffectiveRate,
   getRates,
   pickEditableRate,
   upsertRate,
@@ -125,19 +124,13 @@ export function SetEstateRateModal({
       );
 
       try {
-        const [estateRatesRes, effectiveRes] = await Promise.all([
-          dispatch(
-            getRates({ scope: "ESTATE", estateId, feeType }),
-          ).unwrap(),
-          dispatch(getEffectiveRate({ estateId, feeType })).unwrap(),
-        ]);
+        const estateRatesRes = await dispatch(
+          getRates({ scope: "ESTATE", estateId, feeType }),
+        ).unwrap();
 
         if (cancelled) return;
 
-        const editable = pickEditableRate({
-          estateRates: estateRatesRes?.data ?? [],
-          effective: effectiveRes?.data ?? null,
-        });
+        const editable = pickEditableRate(estateRatesRes?.data ?? []);
 
         setSplits(splitsToDrafts(editable.splits));
         setNotes(editable.notes);

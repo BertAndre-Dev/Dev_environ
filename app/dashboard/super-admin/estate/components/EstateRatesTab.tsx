@@ -9,9 +9,7 @@ import { formatDateTime } from "@/lib/format-date";
 import type { AppDispatch, RootState } from "@/redux/store";
 import {
   deactivateRate,
-  getEffectiveRate,
   getRates,
-  type EffectiveRateData,
   type PlatformRate,
   type RateFeeType,
   type RateSplit,
@@ -107,9 +105,15 @@ function ActiveBadge({ isActive }: Readonly<{ isActive?: boolean }>) {
 }
 
 function EffectiveRateCard({
-  data,
-}: Readonly<{ data: EffectiveRateData | null }>) {
-  if (!data?.resolved) {
+  rate,
+  onDeactivate,
+  deactivating,
+}: Readonly<{
+  rate: PlatformRate | null;
+  onDeactivate?: (id: string) => void;
+  deactivating?: boolean;
+}>) {
+  if (!rate) {
     return (
       <div className="rounded-md border border-dashed p-4">
         <p className="text-sm font-medium mb-1">Effective rate</p>
@@ -118,66 +122,11 @@ function EffectiveRateCard({
     );
   }
 
-  const { estate, feeType, resolved } = data;
-  const splitsLabel = formatSplits(resolved.splits) ?? "—";
-
   return (
     <div className="rounded-md border p-4 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium">Effective rate</p>
-          <p className="text-lg font-semibold mt-0.5">{splitsLabel}</p>
-        </div>
-        <ActiveBadge isActive={resolved.isActive ?? estate?.isActive} />
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <DetailRow
-          label="Fee type"
-          value={formatFeeType(feeType ?? resolved.feeType)}
-        />
-        <DetailRow label="Resolved scope" value={formatScope(resolved.scope)} />
-        <DetailRow
-          label="Source"
-          value={formatScope(resolved.source) || "—"}
-        />
-        <DetailRow label="Config ID" value={resolved.configId || "—"} />
-        {estate?.name ? (
-          <DetailRow label="Estate" value={estate.name} />
-        ) : null}
-        {resolved.notes ? (
-          <DetailRow label="Notes" value={resolved.notes} />
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function RateCard({
-  title,
-  rate,
-  onDeactivate,
-  deactivating,
-}: Readonly<{
-  title: string;
-  rate: PlatformRate | null;
-  onDeactivate?: (id: string) => void;
-  deactivating?: boolean;
-}>) {
-  if (!rate) {
-    return (
-      <div className="rounded-md border border-dashed p-4">
-        <p className="text-sm font-medium mb-1">{title}</p>
-        <p className="text-sm text-muted-foreground">No rate found.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-md border p-4 space-y-3">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium">{title}</p>
           <p className="text-lg font-semibold mt-0.5">
             {formatRateValue(rate)}
           </p>
@@ -222,28 +171,19 @@ export function EstateRatesTab({ estateId }: Props) {
   const [feeType, setFeeType] = useState<RateFeeType>("VENDING");
   const [setRateOpen, setSetRateOpen] = useState(false);
 
-  const {
-    rates,
-    getRatesStatus,
-    effectiveRate,
-    getEffectiveRateStatus,
-    deactivateRateStatus,
-    error,
-  } = useSelector((state: RootState) => state.superAdminRates);
+  const { rates, getRatesStatus, deactivateRateStatus, error } = useSelector(
+    (state: RootState) => state.superAdminRates,
+  );
 
-  const loading =
-    getRatesStatus === "isLoading" || getEffectiveRateStatus === "isLoading";
+  const loading = getRatesStatus === "isLoading";
   const deactivating = deactivateRateStatus === "isLoading";
+  const effectiveRate =
+    rates.find((rate) => rate.isActive !== false) ?? rates[0] ?? null;
 
   const refreshRates = async (nextFeeType: RateFeeType = feeType) => {
-    await Promise.all([
-      dispatch(
-        getRates({ scope: "ESTATE", estateId, feeType: nextFeeType }),
-      ).unwrap(),
-      dispatch(
-        getEffectiveRate({ estateId, feeType: nextFeeType }),
-      ).unwrap(),
-    ]);
+    await dispatch(
+      getRates({ scope: "ESTATE", estateId, feeType: nextFeeType }),
+    ).unwrap();
   };
 
   useEffect(() => {
@@ -251,7 +191,6 @@ export function EstateRatesTab({ estateId }: Props) {
 
     dispatch(clearRatesState());
     dispatch(getRates({ scope: "ESTATE", estateId, feeType })).catch(() => {});
-    dispatch(getEffectiveRate({ estateId, feeType })).catch(() => {});
   }, [dispatch, estateId, feeType]);
 
   useEffect(() => {
@@ -310,32 +249,11 @@ export function EstateRatesTab({ estateId }: Props) {
       ) : null}
 
       {!loading ? (
-        <div className="space-y-4">
-          <EffectiveRateCard data={effectiveRate} />
-
-          <div>
-            <p className="text-sm font-medium mb-2">
-              Estate rate configs ({rates.length})
-            </p>
-            {rates.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No estate-scoped rates for this fee type.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {rates.map((rate, index) => (
-                  <RateCard
-                    key={rate.id ?? `${rate.feeType}-${index}`}
-                    title={`Config ${index + 1}`}
-                    rate={rate}
-                    onDeactivate={handleDeactivate}
-                    deactivating={deactivating}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <EffectiveRateCard
+          rate={effectiveRate}
+          onDeactivate={handleDeactivate}
+          deactivating={deactivating}
+        />
       ) : null}
 
       <SetEstateRateModal

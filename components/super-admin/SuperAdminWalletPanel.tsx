@@ -131,10 +131,10 @@ export function SuperAdminWalletPanel({
       ) : null}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <BalanceCard
+        {/* <BalanceCard
           label="Total balance"
           value={computeWalletTotalBalance(wallet)}
-        />
+        /> */}
         <BalanceCard label="Available balance" value={wallet.availableBalance} />
         <BalanceCard
           label="Withdrawable balance"
@@ -144,7 +144,7 @@ export function SuperAdminWalletPanel({
           label="Temporary balance"
           value={wallet.temporaryBalance}
         />
-        <BalanceCard label="Locked balance" value={wallet.lockedBalance} />
+        {/* <BalanceCard label="Locked balance" value={wallet.lockedBalance} /> */}
       </div>
 
       {wallet.autoSettlementEnabled != null ? (

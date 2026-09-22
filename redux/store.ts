@@ -61,6 +61,7 @@ import adminAnnouncementsSliceReducer from "@/redux/slice/admin/announcements/an
 import adminRequestSliceReducer from "@/redux/slice/admin/request/admin-request-slice";
 import superAdminMarketplaceSliceReducer from "@/redux/slice/super-admin/marketplace/marketplace-slice";
 import residentMarketplaceSliceReducer from "@/redux/slice/resident/marketplace/marketplace-slice";
+import marketplaceSliceReducer from "@/redux/slice/marketplace/marketplace-slice";
 import residentAnnouncementsSliceReducer from "@/redux/slice/resident/announcements/announcements-slice";
 import adminExpenseHeadSliceReducer from "@/redux/slice/admin/expense-head/expense-head-slice";
 import adminExpenseEntrySliceReducer from "@/redux/slice/admin/expense-entry/expense-entry-slice";
@@ -426,6 +427,7 @@ export const store = configureStore({
     residentInvitedTenants: residentInvitedTenantsSliceReducer,
     adminAnnouncements: adminAnnouncementsSliceReducer,
     adminRequest: adminRequestSliceReducer,
+    marketplace: marketplaceSliceReducer,
     superAdminMarketplace: superAdminMarketplaceSliceReducer,
     superAdminCompany: persistedSuperAdminCompanySliceReducer,
     companyMarketplace: persistedCompanyMarketplaceSliceReducer,

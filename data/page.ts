@@ -156,6 +156,12 @@ export const energyProviderNav = [
     moduleKey: "meter",
   },
   {
+    label: "Marketplace",
+    icon: Store,
+    path: "/dashboard/energy-provider/marketplace",
+    moduleKey: "marketplace",
+  },
+  {
     label: "Notifications",
     icon: Inbox,
     path: "/dashboard/energy-provider/notifications",
@@ -431,6 +437,12 @@ export const companyNav = [
     path: "/dashboard/company/reports",
     moduleKey: "reporting",
   },
+  {
+    label: "Marketplace",
+    icon: Store,
+    path: "/dashboard/company/marketplace",
+    moduleKey: "marketplace",
+  },
   // {
   //   label: "Community Chat",
   //   icon: MessagesSquare,
@@ -562,6 +574,12 @@ export const adminNav = [
     icon: MessagesSquare,
     path: "/dashboard/admin/community",
     moduleKey: "chat",
+  },
+  {
+    label: "Marketplace",
+    icon: Store,
+    path: "/dashboard/admin/marketplace",
+    moduleKey: "marketplace",
   },
   {
     label: "Notifications",
@@ -760,6 +778,12 @@ export const estateAdminNav = [
     icon: Bell,
     path: "/dashboard/estate-admin/announcements",
     moduleKey: "announcements",
+  },
+  {
+    label: "Marketplace",
+    icon: Store,
+    path: "/dashboard/estate-admin/marketplace",
+    moduleKey: "marketplace",
   },
   {
     label: "Notifications",

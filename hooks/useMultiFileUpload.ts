@@ -153,6 +153,7 @@ export function useMultiFileUpload(options: UseMultiFileUploadOptions = {}) {
 
         try {
           const result = await uploadFile(file, token, kind, {
+            accept,
             onProgress: (percent) => {
               setItems((prev) =>
                 prev.map((item) =>

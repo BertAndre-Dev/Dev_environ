@@ -2,7 +2,7 @@ import axiosInstance from "@/utils/axiosInstance";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { compressImageIfNeeded } from "@/lib/uploads/compressImage";
 import { validateFile } from "@/lib/uploads/validate";
-import type { UploadKind } from "@/lib/uploads/constants";
+import type { FileAcceptKind, UploadKind } from "@/lib/uploads/constants";
 
 export type UploadedFile = {
   file_url: string;
@@ -12,6 +12,7 @@ export type UploadedFile = {
 export type UploadFileOptions = {
   onProgress?: (percent: number) => void;
   signal?: AbortSignal;
+  accept?: FileAcceptKind;
 };
 
 type UploadApiResponse = {
@@ -37,7 +38,7 @@ export async function uploadFile(
     throw new Error("You must be signed in to upload a file.");
   }
 
-  const validation = validateFile(file, { kind });
+  const validation = validateFile(file, { kind: options?.accept ?? kind });
   if (!validation.ok) {
     throw new Error(validation.error);
   }

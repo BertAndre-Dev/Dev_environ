@@ -2,6 +2,6 @@
 
 import { MarketplaceWorkspace } from "@/components/marketplace/MarketplaceWorkspace";
 
-export default function SuperAdminMarketplacePage() {
+export default function EnergyProviderMarketplacePage() {
   return <MarketplaceWorkspace />;
 }

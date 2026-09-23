@@ -1,3 +1,21 @@
+import {
+  ALLOWED_IMAGE_MIME_TYPES,
+  ALLOWED_VIDEO_MIME_TYPES,
+  IMAGE_ACCEPT_ATTR,
+  VIDEO_ACCEPT_ATTR,
+  inferFileMimeType,
+  isAllowedMime,
+} from "@/lib/uploads/constants";
+
+export const MARKETPLACE_MEDIA_ACCEPT = `${IMAGE_ACCEPT_ATTR},${VIDEO_ACCEPT_ATTR}`;
+
+export function marketplaceFileKind(file: File): "image" | "video" | null {
+  const mime = inferFileMimeType(file);
+  if (isAllowedMime(mime, ALLOWED_IMAGE_MIME_TYPES)) return "image";
+  if (isAllowedMime(mime, ALLOWED_VIDEO_MIME_TYPES)) return "video";
+  return null;
+}
+
 export function coverMedia(ad: {
   images?: string[];
   image?: string;

@@ -40,10 +40,31 @@ import type { EstateOption } from "@/components/marketplace/MarketplaceEstatePic
 
 const PRESS = MARKETPLACE_PRESS;
 
-function submitLabel(loading: boolean, editing: boolean) {
+function submitLabel(loading: boolean, editing: boolean, isSuperAdmin: boolean) {
   if (loading) return "Saving…";
   if (editing) return "Save listing";
+  if (isSuperAdmin) return "Post listing";
   return "Submit for approval";
+}
+
+function FormStatusNote({
+  isSuperAdmin,
+  editingActive,
+}: Readonly<{ isSuperAdmin: boolean; editingActive: boolean }>) {
+  if (isSuperAdmin) return null;
+  if (editingActive) {
+    return (
+      <p className="rounded-xl bg-amber-500/10 px-4 py-3 text-sm text-amber-900">
+        Saving an active ad sends it back for approval before it appears in the
+        feed again.
+      </p>
+    );
+  }
+  return (
+    <p className="text-sm text-muted-foreground">
+      New ads stay hidden until a super admin approves them.
+    </p>
+  );
 }
 
 function estateSourceRows(
@@ -89,6 +110,7 @@ export function MarketplaceAdForm({
   const currentEstateId = resolveEstateId(user?.estateId);
   const isCompany = role === "company";
   const isEnergyProvider = role === "energy provider";
+  const isSuperAdmin = role === "super admin";
 
   const [companyName, setCompanyName] = useState("");
   const [link, setLink] = useState("");
@@ -104,9 +126,7 @@ export function MarketplaceAdForm({
   const [notes, setNotes] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [videos, setVideos] = useState<string[]>([]);
-  const [imageBusy, setImageBusy] = useState(false);
-  const [videoBusy, setVideoBusy] = useState(false);
-  const mediaBusy = imageBusy || videoBusy;
+  const [mediaBusy, setMediaBusy] = useState(false);
   const [estateOptions, setEstateOptions] = useState<EstateOption[]>([]);
 
   const superAdminEstates = useSelector(
@@ -257,16 +277,10 @@ export function MarketplaceAdForm({
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
-      {editingActive ? (
-        <p className="rounded-xl bg-amber-500/10 px-4 py-3 text-sm text-amber-900">
-          Saving an active ad sends it back for approval before it appears in
-          the feed again.
-        </p>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          New ads stay hidden until a super admin approves them.
-        </p>
-      )}
+      <FormStatusNote
+        isSuperAdmin={isSuperAdmin}
+        editingActive={editingActive}
+      />
 
       <section className="space-y-4">
         <h2 className="text-base font-semibold tracking-[-0.02em]">Business</h2>
@@ -395,33 +409,20 @@ export function MarketplaceAdForm({
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-base font-semibold tracking-[-0.02em]">Photos</h2>
+        <h2 className="text-base font-semibold tracking-[-0.02em]">Media</h2>
         <p className="text-sm text-muted-foreground">
-          Up to {MARKETPLACE_MAX_IMAGES} photos. Files upload to storage, not as
-          base64.
+          Up to {MARKETPLACE_MAX_IMAGES} photos and {MARKETPLACE_MAX_VIDEOS}{" "}
+          videos in one place.
         </p>
         <MarketplaceMediaPicker
-          kind="image"
-          urls={images}
-          maxFiles={MARKETPLACE_MAX_IMAGES}
+          images={images}
+          videos={videos}
+          maxImages={MARKETPLACE_MAX_IMAGES}
+          maxVideos={MARKETPLACE_MAX_VIDEOS}
           disabled={loading}
-          onChange={setImages}
-          onBusyChange={setImageBusy}
-        />
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-base font-semibold tracking-[-0.02em]">Videos</h2>
-        <p className="text-sm text-muted-foreground">
-          Optional. Up to {MARKETPLACE_MAX_VIDEOS} clips, MP4 or WebM, 10MB each.
-        </p>
-        <MarketplaceMediaPicker
-          kind="video"
-          urls={videos}
-          maxFiles={MARKETPLACE_MAX_VIDEOS}
-          disabled={loading}
-          onChange={setVideos}
-          onBusyChange={setVideoBusy}
+          onImagesChange={setImages}
+          onVideosChange={setVideos}
+          onBusyChange={setMediaBusy}
         />
       </section>
 
@@ -432,7 +433,9 @@ export function MarketplaceAdForm({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={2}
-          placeholder="Optional note for reviewers"
+          placeholder={
+            isSuperAdmin ? "Optional note" : "Optional note for reviewers"
+          }
           className="mt-1 flex w-full cursor-pointer rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
@@ -443,7 +446,7 @@ export function MarketplaceAdForm({
           disabled={!canSubmit}
           className={cn("h-12 flex-1 rounded-xl", PRESS)}
         >
-          {submitLabel(loading, Boolean(initialData?.id))}
+          {submitLabel(loading, Boolean(initialData?.id), isSuperAdmin)}
         </Button>
         <Button
           type="button"

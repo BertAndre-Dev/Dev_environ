@@ -60,7 +60,7 @@ function FormStatusNote({
   }
   return (
     <p className="text-sm text-muted-foreground">
-      New ads stay hidden until a super admin approves them.
+      New ads stay hidden until the Bertahub Review Team approves them.
     </p>
   );
 }
@@ -406,7 +406,7 @@ export function MarketplaceAdForm({
           onChange={(e) => setNotes(e.target.value)}
           rows={2}
           placeholder={
-            isSuperAdmin ? "Optional note" : "Optional note for reviewers"
+            isSuperAdmin ? "Note" : "Note for reviewers"
           }
           className="mt-1 flex w-full cursor-pointer rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />

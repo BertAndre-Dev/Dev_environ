@@ -91,7 +91,7 @@ export function marketplaceAudienceLabel(value: unknown): string {
     case "WITHIN_ESTATE":
       return "This estate";
     case "OTHER_ESTATES":
-      return "Selected estates";
+      return "Select estates";
     case "ALL_ESTATES":
       return "All estates";
     default:

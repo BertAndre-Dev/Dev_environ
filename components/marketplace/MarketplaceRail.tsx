@@ -11,12 +11,13 @@ import Modal from "@/components/modal/page";
 import {
   MARKETPLACE_PRESS,
   canCreateMarketplaceAds,
+  feedRequiresEstateId,
   isMarketplaceModuleEnabled,
   isSettingsPath,
   marketplacePathForRole,
+  resolveEstateId,
 } from "@/lib/marketplace";
 import { coverMedia } from "@/lib/marketplace-media";
-import { useMarketplaceFeedEstate } from "@/hooks/useMarketplaceFeedEstate";
 import {
   selectEstateModules,
   selectUserRole,
@@ -238,15 +239,19 @@ export function MarketplaceRail() {
   const reduceMotion = useReducedMotion();
   const role = useSelector(selectUserRole);
   const modules = useSelector(selectEstateModules);
-  const { feed, current } = useSelector(
+  const user = useSelector((state: RootState) => state.auth.user);
+  const estateId = resolveEstateId(user?.estateId);
+  const { feed, current, getFeedStatus } = useSelector(
     (state: RootState) => state.marketplace,
   );
   const [collapsed, setCollapsed] = useState(false);
   const [selected, setSelected] = useState<MarketplaceAd | null>(null);
-  const { estateId, ready: feedReady } = useMarketplaceFeedEstate();
 
+  const needsEstate = feedRequiresEstateId(role);
   const hidden =
-    isSettingsPath(pathname) || !isMarketplaceModuleEnabled(role, modules);
+    isSettingsPath(pathname) ||
+    !isMarketplaceModuleEnabled(role, modules) ||
+    (needsEstate && !estateId);
 
   useEffect(() => {
     try {
@@ -257,15 +262,16 @@ export function MarketplaceRail() {
   }, []);
 
   useEffect(() => {
-    if (hidden || !feedReady) return;
-    void dispatch(
+    if (hidden) return;
+    if (getFeedStatus === "succeeded" || getFeedStatus === "isLoading") return;
+    dispatch(
       getMarketplaceFeed({
         page: 1,
         limit: FEED_LIMIT,
-        estateId,
+        estateId: estateId || undefined,
       }),
     );
-  }, [dispatch, estateId, feedReady, hidden]);
+  }, [dispatch, estateId, getFeedStatus, hidden]);
 
   const openListing = (item: MarketplaceAd) => {
     setSelected(item);

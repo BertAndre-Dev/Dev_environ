@@ -3,23 +3,27 @@
 import { useCallback, useEffect, useId, useState } from "react";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { ImagePlus, Trash2, Upload, Video } from "lucide-react";
+import { ImagePlus, Trash2, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { MultiFileUploadItem } from "@/hooks/useMultiFileUpload";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { getAttachmentFilename } from "@/lib/download-attachment";
+import { MARKETPLACE_PRESS } from "@/lib/marketplace";
 import {
-  IMAGE_ACCEPT_ATTR,
-  VIDEO_ACCEPT_ATTR,
-} from "@/lib/uploads/constants";
+  MARKETPLACE_MEDIA_ACCEPT,
+  marketplaceFileKind,
+} from "@/lib/marketplace-media";
 import { uploadFile } from "@/lib/uploads/uploadFile";
 import { validateFile } from "@/lib/uploads/validate";
 import { selectAuthToken } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 import type { RootState } from "@/redux/store";
 import { cn } from "@/lib/utils";
-import { MARKETPLACE_PRESS } from "@/lib/marketplace";
 
 const PRESS = MARKETPLACE_PRESS;
+
+type MediaKind = "image" | "video";
+
+type GalleryItem = MultiFileUploadItem & { kind: MediaKind };
 
 let uploadSeq = 0;
 function newId() {
@@ -27,71 +31,186 @@ function newId() {
   return `media-${Date.now()}-${uploadSeq}`;
 }
 
+function doneItems(urls: string[], kind: MediaKind): GalleryItem[] {
+  return urls.map((url, index) => ({
+    id: `done-${kind}-${index}-${url}`,
+    name: getAttachmentFilename(url, index),
+    url,
+    status: "succeeded" as const,
+    progress: 100,
+    error: null,
+    kind,
+  }));
+}
+
+function uploadStatusCopy(item: GalleryItem) {
+  if (item.status === "uploading") return `${item.progress}%`;
+  if (item.status === "failed") return item.error ?? "Upload failed";
+  return item.kind === "video" ? "Video" : "Photo";
+}
+
+function MediaPreview({ item }: Readonly<{ item: GalleryItem }>) {
+  if (item.kind === "image" && item.url) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={item.url}
+        alt={item.name}
+        className="h-28 w-full object-cover"
+      />
+    );
+  }
+  if (item.kind === "video" && item.url) {
+    return (
+      <video
+        src={item.url}
+        muted
+        playsInline
+        preload="metadata"
+        className="h-28 w-full object-cover"
+      />
+    );
+  }
+  return (
+    <div className="flex h-28 items-center gap-3 px-4">
+      {item.kind === "video" ? (
+        <Video className="size-4 shrink-0 text-muted-foreground" />
+      ) : (
+        <ImagePlus className="size-4 shrink-0 text-muted-foreground" />
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{item.name}</p>
+        <p
+          className={cn(
+            "text-xs",
+            item.status === "failed"
+              ? "text-destructive"
+              : "text-muted-foreground",
+          )}
+        >
+          {uploadStatusCopy(item)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function MediaTile({
+  item,
+  disabled,
+  onRemove,
+}: Readonly<{
+  item: GalleryItem;
+  disabled: boolean;
+  onRemove: () => void;
+}>) {
+  const uploading = item.status === "uploading";
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-black/5 bg-muted/40">
+      <MediaPreview item={item} />
+      {uploading ? null : (
+        <span className="pointer-events-none absolute bottom-2 left-2 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium tracking-[0.01em] text-white">
+          {item.kind === "video" ? "Video" : "Photo"}
+        </span>
+      )}
+      <Button
+        type="button"
+        size="icon"
+        variant="secondary"
+        className={cn("absolute top-2 right-2 size-8 rounded-full", PRESS)}
+        onClick={onRemove}
+        disabled={disabled || uploading}
+        aria-label={`Remove ${item.name}`}
+      >
+        <Trash2 className="size-3.5" />
+      </Button>
+    </div>
+  );
+}
+
 type Props = Readonly<{
-  kind: "image" | "video";
-  urls: string[];
-  maxFiles: number;
+  images: string[];
+  videos: string[];
+  maxImages: number;
+  maxVideos: number;
   disabled?: boolean;
-  onChange: (urls: string[]) => void;
+  onImagesChange: (urls: string[]) => void;
+  onVideosChange: (urls: string[]) => void;
   onBusyChange?: (busy: boolean) => void;
 }>;
 
 export function MarketplaceMediaPicker({
-  kind,
-  urls,
-  maxFiles,
+  images,
+  videos,
+  maxImages,
+  maxVideos,
   disabled = false,
-  onChange,
+  onImagesChange,
+  onVideosChange,
   onBusyChange,
 }: Props) {
   const inputId = useId();
   const token = useSelector((state: RootState) => selectAuthToken(state));
-  const [pending, setPending] = useState<MultiFileUploadItem[]>([]);
+  const [pending, setPending] = useState<GalleryItem[]>([]);
   const isUploading = pending.some((item) => item.status === "uploading");
 
   useEffect(() => {
     onBusyChange?.(isUploading);
   }, [isUploading, onBusyChange]);
 
-  const items: MultiFileUploadItem[] = [
-    ...urls.map((url, index) => ({
-      id: `done-${index}-${url}`,
-      name: getAttachmentFilename(url, index),
-      url,
-      status: "succeeded" as const,
-      progress: 100,
-      error: null,
-    })),
+  const pendingImages = pending.filter(
+    (item) => item.kind === "image" && item.status !== "failed",
+  ).length;
+  const pendingVideos = pending.filter(
+    (item) => item.kind === "video" && item.status !== "failed",
+  ).length;
+  const imageRemaining = maxImages - images.length - pendingImages;
+  const videoRemaining = maxVideos - videos.length - pendingVideos;
+  const canAdd = imageRemaining > 0 || videoRemaining > 0;
+
+  const items: GalleryItem[] = [
+    ...doneItems(images, "image"),
+    ...doneItems(videos, "video"),
     ...pending,
   ];
-
-  const remaining =
-    maxFiles - urls.length - pending.filter((item) => item.status !== "failed").length;
 
   const addFiles = useCallback(
     async (files: File[]) => {
       if (!files.length) return;
-      if (remaining <= 0) {
-        toast.error(
-          `You can add up to ${maxFiles} ${kind === "image" ? "photos" : "videos"}.`,
-        );
-        return;
-      }
       if (!token) {
         toast.error("You must be signed in to upload a file.");
         return;
       }
 
-      const selected = files.slice(0, remaining);
-      let nextUrls = [...urls];
+      let imageSlots = maxImages - images.length - pendingImages;
+      let videoSlots = maxVideos - videos.length - pendingVideos;
+      let nextImages = [...images];
+      let nextVideos = [...videos];
 
-      for (const file of selected) {
-        const id = newId();
+      for (const file of files) {
+        const kind = marketplaceFileKind(file);
+        if (!kind) {
+          toast.error(`${file.name} is not a photo or video.`);
+          continue;
+        }
+        if (kind === "image" && imageSlots <= 0) {
+          toast.error(`You can add up to ${maxImages} photos.`);
+          continue;
+        }
+        if (kind === "video" && videoSlots <= 0) {
+          toast.error(`You can add up to ${maxVideos} videos.`);
+          continue;
+        }
+
         const validation = validateFile(file, { kind });
         if (!validation.ok) {
           toast.error(validation.error);
           continue;
         }
+
+        const id = newId();
+        if (kind === "image") imageSlots -= 1;
+        else videoSlots -= 1;
 
         setPending((prev) => [
           ...prev,
@@ -102,6 +221,7 @@ export function MarketplaceMediaPicker({
             status: "uploading",
             progress: 0,
             error: null,
+            kind,
           },
         ]);
 
@@ -117,8 +237,13 @@ export function MarketplaceMediaPicker({
             },
           });
           setPending((prev) => prev.filter((item) => item.id !== id));
-          nextUrls = [...nextUrls, result.file_url];
-          onChange(nextUrls);
+          if (kind === "image") {
+            nextImages = [...nextImages, result.file_url];
+            onImagesChange(nextImages);
+          } else {
+            nextVideos = [...nextVideos, result.file_url];
+            onVideosChange(nextVideos);
+          }
         } catch (err: unknown) {
           const message = getApiErrorMessage(err) || "Failed to upload file.";
           setPending((prev) =>
@@ -132,74 +257,44 @@ export function MarketplaceMediaPicker({
         }
       }
     },
-    [kind, maxFiles, onChange, remaining, token, urls],
+    [
+      images,
+      maxImages,
+      maxVideos,
+      onImagesChange,
+      onVideosChange,
+      pendingImages,
+      pendingVideos,
+      token,
+      videos,
+    ],
   );
+
+  const removeItem = (item: GalleryItem) => {
+    if (item.id.startsWith("done-")) {
+      if (item.kind === "image") {
+        onImagesChange(images.filter((url) => url !== item.url));
+        return;
+      }
+      onVideosChange(videos.filter((url) => url !== item.url));
+      return;
+    }
+    setPending((prev) => prev.filter((entry) => entry.id !== item.id));
+  };
 
   return (
     <div className="space-y-2">
-      <div
-        className={cn(
-          "grid gap-3",
-          kind === "image" ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-1",
-        )}
-      >
+      <div className="">
         {items.map((item) => (
-          <div
+          <MediaTile
             key={item.id}
-            className="relative overflow-hidden rounded-2xl border border-black/5 bg-muted/40"
-          >
-            {kind === "image" && item.url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={item.url}
-                alt={item.name}
-                className="h-28 w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-20 items-center gap-3 px-4">
-                <Video className="size-4 shrink-0 text-muted-foreground" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{item.name}</p>
-                  {item.status === "uploading" ? (
-                    <p className="text-xs text-muted-foreground">
-                      {item.progress}%
-                    </p>
-                  ) : item.status === "failed" ? (
-                    <p className="text-xs text-destructive">
-                      {item.error ?? "Upload failed"}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">Ready</p>
-                  )}
-                </div>
-              </div>
-            )}
-            {item.status === "uploading" && kind === "image" ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-sm text-white">
-                {item.progress}%
-              </div>
-            ) : null}
-            <Button
-              type="button"
-              size="icon"
-              variant="secondary"
-              className={cn("absolute top-2 right-2 size-8 rounded-full", PRESS)}
-              onClick={() => {
-                if (item.id.startsWith("done-")) {
-                  onChange(urls.filter((url) => url !== item.url));
-                  return;
-                }
-                setPending((prev) => prev.filter((entry) => entry.id !== item.id));
-              }}
-              disabled={disabled || item.status === "uploading"}
-              aria-label={`Remove ${item.name}`}
-            >
-              <Trash2 className="size-3.5" />
-            </Button>
-          </div>
+            item={item}
+            disabled={disabled}
+            onRemove={() => removeItem(item)}
+          />
         ))}
 
-        {remaining > 0 ? (
+        {canAdd ? (
           <label
             htmlFor={inputId}
             className={cn(
@@ -209,16 +304,10 @@ export function MarketplaceMediaPicker({
               (disabled || isUploading) && "pointer-events-none opacity-60",
             )}
           >
-            {kind === "image" ? (
-              <ImagePlus className="size-5 text-muted-foreground" />
-            ) : (
-              <Upload className="size-5 text-muted-foreground" />
-            )}
-            <span className="text-sm font-medium">
-              {kind === "image" ? "Add photos" : "Add videos"}
-            </span>
+            <ImagePlus className="size-5 text-muted-foreground" />
+            <span className="text-sm font-medium">Add photos or videos</span>
             <span className="text-xs text-muted-foreground">
-              {remaining} remaining
+              {imageRemaining} photos · {videoRemaining} videos left
             </span>
           </label>
         ) : null}
@@ -227,9 +316,9 @@ export function MarketplaceMediaPicker({
         id={inputId}
         type="file"
         className="sr-only"
-        accept={kind === "image" ? IMAGE_ACCEPT_ATTR : VIDEO_ACCEPT_ATTR}
+        accept={MARKETPLACE_MEDIA_ACCEPT}
         multiple
-        disabled={disabled || remaining <= 0}
+        disabled={disabled || !canAdd}
         onChange={(event) => {
           const files = Array.from(event.target.files ?? []);
           event.target.value = "";

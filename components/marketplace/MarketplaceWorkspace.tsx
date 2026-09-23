@@ -22,8 +22,6 @@ import {
   MARKETPLACE_CATEGORIES,
   MARKETPLACE_PRESS,
   canCreateMarketplaceAds,
-  feedRequiresEstateId,
-  resolveEstateId,
 } from "@/lib/marketplace";
 import { selectUserRole } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 import {
@@ -54,17 +52,10 @@ function notifyError(err: unknown) {
   if (message) toast.error(message);
 }
 
-function emptyCopy(
-  tab: TabKey,
-  filtered: boolean,
-  needsEstate?: boolean,
-) {
+function emptyCopy(tab: TabKey, filtered: boolean) {
   if (filtered) return "No listings match your filters.";
   if (tab === "mine") return "You have not posted a listing yet.";
   if (tab === "review") return "Nothing is waiting for review.";
-  if (needsEstate) {
-    return "Pick an estate context to browse the public marketplace feed.";
-  }
   return "No listings in the feed yet.";
 }
 
@@ -119,12 +110,8 @@ function matchSearch(item: MarketplaceAd, query: string) {
 export function MarketplaceWorkspace() {
   const dispatch = useDispatch<AppDispatch>();
   const role = useSelector(selectUserRole);
-  const user = useSelector((state: RootState) => state.auth.user);
   const canCreate = canCreateMarketplaceAds(role);
   const isSuperAdmin = role === "super admin";
-  const estateId = resolveEstateId(user?.estateId);
-  const needsEstateForFeed = feedRequiresEstateId(role);
-  const canLoadDiscover = !needsEstateForFeed || Boolean(estateId);
 
   const {
     feed,
@@ -141,9 +128,7 @@ export function MarketplaceWorkspace() {
     moderateStatus,
   } = useSelector((state: RootState) => state.marketplace);
 
-  const [tab, setTab] = useState<TabKey>(() =>
-    canCreate && needsEstateForFeed && !estateId ? "mine" : "discover",
-  );
+  const [tab, setTab] = useState<TabKey>("discover");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [page, setPage] = useState(1);
@@ -170,13 +155,11 @@ export function MarketplaceWorkspace() {
 
   useEffect(() => {
     if (tab === "discover") {
-      if (!canLoadDiscover) return;
       dispatch(
         getMarketplaceFeed({
           page,
           limit: PAGE_SIZE,
           category: category === "All" ? undefined : category,
-          estateId: estateId || undefined,
         }),
       ).catch(notifyError);
       return;
@@ -190,7 +173,7 @@ export function MarketplaceWorkspace() {
     dispatch(getPendingMarketplaceAds({ page, limit: PAGE_SIZE })).catch(
       notifyError,
     );
-  }, [canLoadDiscover, category, dispatch, estateId, page, tab]);
+  }, [category, dispatch, page, tab]);
 
   const { source, pagination, status: listStatus } = pickTabState(tab, {
     feed,
@@ -211,8 +194,6 @@ export function MarketplaceWorkspace() {
 
   const pageLoading = isPending(listStatus);
   const formLoading = isBusy(createStatus) || isBusy(updateStatus);
-  const showEmpty =
-    tab === "discover" && !canLoadDiscover ? true : isSettled(listStatus);
 
   const openCreate = () => {
     setEditing(null);
@@ -397,15 +378,11 @@ export function MarketplaceWorkspace() {
           </div>
         ) : null}
 
-        {listings.length === 0 && showEmpty ? (
+        {listings.length === 0 && isSettled(listStatus) ? (
           <Card className="p-12 text-center">
             <Store className="mx-auto mb-3 size-10 text-muted-foreground" />
             <p className="text-muted-foreground">
-              {emptyCopy(
-                tab,
-                Boolean(search.trim() || category !== "All"),
-                tab === "discover" && !canLoadDiscover,
-              )}
+              {emptyCopy(tab, Boolean(search.trim() || category !== "All"))}
             </p>
           </Card>
         ) : (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,6 @@ import {
   marketplaceAudienceLabel,
   normalizeMarketplaceStatus,
   plusDaysDateInput,
-  resolveEstateId,
   toDateInputValue,
   todayDateInput,
   type MarketplaceAudience,
@@ -27,12 +26,11 @@ import {
 import { listingImages, listingVideos } from "@/lib/marketplace-media";
 import { MarketplaceEstatePicker } from "@/components/marketplace/MarketplaceEstatePicker";
 import { selectUserRole } from "@/redux/slice/auth-mgt/auth-mgt-slice";
-import { getAllEstates } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
-import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
-import { getEnergyProviderEstates } from "@/redux/slice/energy-provider/estate-mgt/energy-provider-estate";
-import type {
-  CreateMarketplacePayload,
-  MarketplaceAd,
+import {
+  getMarketplaceEstates,
+  type CreateMarketplacePayload,
+  type MarketplaceAd,
+  type MarketplaceTargetEstate,
 } from "@/redux/slice/marketplace/marketplace";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { cn } from "@/lib/utils";
@@ -67,26 +65,21 @@ function FormStatusNote({
   );
 }
 
-function estateSourceRows(
-  isCompany: boolean,
-  isEnergyProvider: boolean,
-  companyEstates: unknown,
-  energyProviderEstates: unknown,
-  superAdminEstates: unknown,
-) {
-  if (isCompany) return companyEstates;
-  if (isEnergyProvider) return energyProviderEstates;
-  return superAdminEstates;
+function estateLabel(item: MarketplaceTargetEstate): string {
+  const name = item.name?.trim() || "Unnamed estate";
+  const place = [item.city, item.state, item.country]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(", ");
+  return place ? `${name} · ${place}` : name;
 }
 
-function mapEstates(rows: unknown): EstateOption[] {
-  if (!Array.isArray(rows)) return [];
+function mapTargetEstates(rows: MarketplaceTargetEstate[]): EstateOption[] {
   return rows
-    .map((row) => {
-      const item = row as { id?: string; _id?: string; name?: string };
-      const value = String(item._id || item.id || "").trim();
+    .map((item) => {
+      const value = String(item.id || item._id || "").trim();
       if (!value) return null;
-      return { label: item.name ?? "Unnamed estate", value };
+      return { label: estateLabel(item), value };
     })
     .filter((row): row is EstateOption => Boolean(row));
 }
@@ -106,10 +99,6 @@ export function MarketplaceAdForm({
 }: MarketplaceAdFormProps) {
   const dispatch = useDispatch<AppDispatch>();
   const role = useSelector(selectUserRole);
-  const user = useSelector((state: RootState) => state.auth.user);
-  const currentEstateId = resolveEstateId(user?.estateId);
-  const isCompany = role === "company";
-  const isEnergyProvider = role === "energy provider";
   const isSuperAdmin = role === "super admin";
 
   const [companyName, setCompanyName] = useState("");
@@ -127,16 +116,13 @@ export function MarketplaceAdForm({
   const [images, setImages] = useState<string[]>([]);
   const [videos, setVideos] = useState<string[]>([]);
   const [mediaBusy, setMediaBusy] = useState(false);
-  const [estateOptions, setEstateOptions] = useState<EstateOption[]>([]);
 
-  const superAdminEstates = useSelector(
-    (state: RootState) => state.estate.allEstates?.data ?? [],
+  const targetEstates = useSelector(
+    (state: RootState) => state.marketplace.targetEstates,
   );
-  const companyEstates = useSelector(
-    (state: RootState) => state.companyEstate.allEstates?.data ?? [],
-  );
-  const energyProviderEstates = useSelector(
-    (state: RootState) => state.energyProviderEstate.allEstates?.data ?? [],
+  const estateOptions = useMemo(
+    () => mapTargetEstates(targetEstates),
+    [targetEstates],
   );
 
   useEffect(() => {
@@ -179,36 +165,21 @@ export function MarketplaceAdForm({
 
   useEffect(() => {
     if (audience !== "OTHER_ESTATES") return;
-    if (isCompany) {
-      dispatch(getCompanyEstates({ page: 1, limit: 200 })).catch(() => {});
-      return;
-    }
-    if (isEnergyProvider) {
-      dispatch(getEnergyProviderEstates({ page: 1, limit: 200 })).catch(() => {});
-      return;
-    }
-    dispatch(getAllEstates({ page: 1, limit: 200 })).catch(() => {});
-  }, [audience, dispatch, isCompany, isEnergyProvider]);
+    dispatch(getMarketplaceEstates({ page: 1, limit: 200 })).catch(() => {});
+  }, [audience, dispatch]);
 
-  useEffect(() => {
-    const rows = estateSourceRows(
-      isCompany,
-      isEnergyProvider,
-      companyEstates,
-      energyProviderEstates,
-      superAdminEstates,
-    );
-    setEstateOptions(
-      mapEstates(rows).filter((option) => option.value !== currentEstateId),
-    );
-  }, [
-    companyEstates,
-    currentEstateId,
-    energyProviderEstates,
-    isCompany,
-    isEnergyProvider,
-    superAdminEstates,
-  ]);
+  const searchEstates = useCallback(
+    (query: string) => {
+      dispatch(
+        getMarketplaceEstates({
+          page: 1,
+          limit: 200,
+          search: query || undefined,
+        }),
+      ).catch(() => {});
+    },
+    [dispatch],
+  );
 
   const audienceOptions = audiencesForRole(role);
   const editingActive =
@@ -403,6 +374,7 @@ export function MarketplaceAdForm({
             options={estateOptions}
             value={targetEstateIds}
             onChange={setTargetEstateIds}
+            onSearch={searchEstates}
             disabled={loading}
           />
         ) : null}

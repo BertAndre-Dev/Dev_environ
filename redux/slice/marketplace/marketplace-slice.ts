@@ -7,6 +7,7 @@ import {
   createMarketplaceAd,
   deleteMarketplaceAd,
   getMarketplaceById,
+  getMarketplaceEstates,
   getMarketplaceFeed,
   getMyMarketplaceAds,
   getPendingMarketplaceAds,
@@ -14,6 +15,7 @@ import {
   suspendMarketplaceAd,
   updateMarketplaceAd,
   type MarketplaceAd,
+  type MarketplaceTargetEstate,
 } from "./marketplace";
 
 type AsyncStatus = "idle" | "isLoading" | "succeeded" | "failed";
@@ -30,13 +32,16 @@ export interface MarketplaceState {
   mine: MarketplaceAd[];
   pending: MarketplaceAd[];
   current: MarketplaceAd | null;
+  targetEstates: MarketplaceTargetEstate[];
   feedPagination: MarketplacePagination | null;
   minePagination: MarketplacePagination | null;
   pendingPagination: MarketplacePagination | null;
+  targetEstatesPagination: MarketplacePagination | null;
   getFeedStatus: AsyncStatus;
   getMineStatus: AsyncStatus;
   getPendingStatus: AsyncStatus;
   getByIdStatus: AsyncStatus;
+  getEstatesStatus: AsyncStatus;
   createStatus: AsyncStatus;
   updateStatus: AsyncStatus;
   moderateStatus: AsyncStatus;
@@ -48,13 +53,16 @@ const initialState: MarketplaceState = {
   mine: [],
   pending: [],
   current: null,
+  targetEstates: [],
   feedPagination: null,
   minePagination: null,
   pendingPagination: null,
+  targetEstatesPagination: null,
   getFeedStatus: "idle",
   getMineStatus: "idle",
   getPendingStatus: "idle",
   getByIdStatus: "idle",
+  getEstatesStatus: "idle",
   createStatus: "idle",
   updateStatus: "idle",
   moderateStatus: "idle",
@@ -170,6 +178,26 @@ const marketplaceSlice = createSlice({
       .addCase(getMarketplaceById.rejected, (state, action) => {
         state.getByIdStatus = "failed";
         state.current = null;
+        state.error = getApiErrorMessage(action.payload) ?? null;
+      })
+      .addCase(getMarketplaceEstates.pending, (state) => {
+        state.getEstatesStatus = "isLoading";
+        state.error = null;
+      })
+      .addCase(getMarketplaceEstates.fulfilled, (state, action) => {
+        state.getEstatesStatus = "succeeded";
+        const data = action.payload?.data;
+        state.targetEstates = Array.isArray(data)
+          ? (data as MarketplaceTargetEstate[])
+          : [];
+        state.targetEstatesPagination = paginationFrom(
+          action.payload?.pagination,
+        );
+      })
+      .addCase(getMarketplaceEstates.rejected, (state, action) => {
+        state.getEstatesStatus = "failed";
+        state.targetEstates = [];
+        state.targetEstatesPagination = null;
         state.error = getApiErrorMessage(action.payload) ?? null;
       })
       .addCase(createMarketplaceAd.pending, (state) => {

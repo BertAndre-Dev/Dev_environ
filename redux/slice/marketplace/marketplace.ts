@@ -20,6 +20,13 @@ export interface MarketplaceAd {
   endDate?: string;
   audience?: MarketplaceAudience | string;
   targetEstateIds?: string[];
+  targetEstates?: Array<{
+    id?: string;
+    name?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+  }>;
   notes?: string;
   estateId?: string;
   status?: string;
@@ -295,6 +302,42 @@ export const deleteMarketplaceAd = createAsyncThunk(
         `/api/v1/marketplace/${marketPlaceId}`,
       );
       return { ...res.data, deletedId: marketPlaceId };
+    } catch (error: unknown) {
+      return rejectWithValue(apiErrorRejectValue(error));
+    }
+  },
+);
+
+export type MarketplaceTargetEstate = {
+  id?: string;
+  _id?: string;
+  name?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+};
+
+export type GetMarketplaceEstatesParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+};
+
+/** GET /api/v1/marketplace/estates — estates for OTHER_ESTATES targeting */
+export const getMarketplaceEstates = createAsyncThunk(
+  "marketplace/getEstates",
+  async (params: GetMarketplaceEstatesParams | undefined, { rejectWithValue }) => {
+    try {
+      const { page = 1, limit = 100, search } = params ?? {};
+      const query: Record<string, string | number> = { page, limit };
+      const trimmed = search?.trim();
+      if (trimmed) query.search = trimmed;
+      const res = await axiosInstance.get<{
+        success?: boolean;
+        data?: MarketplaceTargetEstate[];
+        pagination?: MarketplaceListResponse["pagination"];
+      }>("/api/v1/marketplace/estates", { params: query });
+      return res.data;
     } catch (error: unknown) {
       return rejectWithValue(apiErrorRejectValue(error));
     }

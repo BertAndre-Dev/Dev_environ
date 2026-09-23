@@ -46,7 +46,7 @@ export function MarketplaceReviewModal({
       </div>
       <div>
         <Label htmlFor="review-note">
-          {mode === "approve" ? "Notes (optional)" : "Reason"}
+          {mode === "approve" ? "Notes" : "Reason"}
         </Label>
         <textarea
           id="review-note"

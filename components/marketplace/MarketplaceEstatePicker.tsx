@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { MARKETPLACE_PRESS } from "@/lib/marketplace";
@@ -13,6 +13,8 @@ type Props = Readonly<{
   value: string[];
   onChange: (next: string[]) => void;
   disabled?: boolean;
+  /** When set, search is forwarded to the server (debounced). */
+  onSearch?: (query: string) => void;
 }>;
 
 export function MarketplaceEstatePicker({
@@ -20,6 +22,7 @@ export function MarketplaceEstatePicker({
   value,
   onChange,
   disabled = false,
+  onSearch,
 }: Props) {
   const [query, setQuery] = useState("");
   const selected = useMemo(
@@ -27,10 +30,19 @@ export function MarketplaceEstatePicker({
     [options, value],
   );
   const filtered = useMemo(() => {
+    if (onSearch) return options;
     const q = query.trim().toLowerCase();
     if (!q) return options;
     return options.filter((option) => option.label.toLowerCase().includes(q));
-  }, [options, query]);
+  }, [onSearch, options, query]);
+
+  useEffect(() => {
+    if (!onSearch) return;
+    const handle = window.setTimeout(() => {
+      onSearch(query.trim());
+    }, 300);
+    return () => window.clearTimeout(handle);
+  }, [onSearch, query]);
 
   const toggle = (id: string) => {
     if (disabled) return;

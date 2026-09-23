@@ -174,8 +174,7 @@ export function isMarketplaceModuleEnabled(
   estateModules: string[],
 ): boolean {
   const normalized = (role ?? "").toString().trim().toLowerCase();
-  // Platform creators are not estate-module gated; company / energy provider
-  // can fetch the public feed without estateId.
+  // Platform creators are not estate-module gated.
   if (
     normalized === "super admin" ||
     normalized === "company" ||
@@ -185,15 +184,6 @@ export function isMarketplaceModuleEnabled(
   }
   if (!Array.isArray(estateModules) || estateModules.length === 0) return false;
   return estateModules.includes("marketplace");
-}
-
-/**
- * Roles that must pass estateId on GET /api/v1/marketplace when they are not
- * bound to a membership switch. Company and energy provider do not need it.
- */
-export function feedRequiresEstateId(role: string | null | undefined): boolean {
-  const normalized = (role ?? "").toString().trim().toLowerCase();
-  return normalized === "super admin" || normalized === "admin";
 }
 
 export function isSettingsPath(pathname: string): boolean {

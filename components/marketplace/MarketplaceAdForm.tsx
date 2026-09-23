@@ -121,6 +121,7 @@ export function MarketplaceAdForm({
   const [images, setImages] = useState<string[]>([]);
   const [videos, setVideos] = useState<string[]>([]);
   const [mediaBusy, setMediaBusy] = useState(false);
+
   const targetEstates = useSelector(
     (state: RootState) => state.marketplace.targetEstates,
   );

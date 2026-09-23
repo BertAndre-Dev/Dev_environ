@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import Loader from "@/components/ui/Loader";
 import Modal from "@/components/modal/page";
 import Pagination from "@/components/pagination/page";
@@ -20,8 +21,10 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import { isBusy, isPending, isSettled } from "@/lib/async-status";
 import {
   MARKETPLACE_CATEGORIES,
+  MARKETPLACE_PRESS,
   canCreateMarketplaceAds,
 } from "@/lib/marketplace";
+import { useMarketplaceFeedEstate } from "@/hooks/useMarketplaceFeedEstate";
 import { selectUserRole } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 import {
   activateMarketplaceAd,
@@ -40,7 +43,6 @@ import {
 import { resetMarketplaceMutation } from "@/redux/slice/marketplace/marketplace-slice";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { cn } from "@/lib/utils";
-import { MARKETPLACE_PRESS } from "@/lib/marketplace";
 
 const PAGE_SIZE = 12;
 const PRESS = MARKETPLACE_PRESS;
@@ -143,6 +145,13 @@ export function MarketplaceWorkspace() {
   } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [suspendSubmitting, setSuspendSubmitting] = useState(false);
+  const {
+    needsEstateId,
+    estateId,
+    estateOptions,
+    setEstateId,
+    ready: feedReady,
+  } = useMarketplaceFeedEstate();
 
   const tabs = useMemo(() => {
     const items: { key: TabKey; label: string }[] = [
@@ -155,11 +164,13 @@ export function MarketplaceWorkspace() {
 
   useEffect(() => {
     if (tab === "discover") {
+      if (!feedReady) return;
       dispatch(
         getMarketplaceFeed({
           page,
           limit: PAGE_SIZE,
           category: category === "All" ? undefined : category,
+          estateId,
         }),
       ).catch(notifyError);
       return;
@@ -173,7 +184,7 @@ export function MarketplaceWorkspace() {
     dispatch(getPendingMarketplaceAds({ page, limit: PAGE_SIZE })).catch(
       notifyError,
     );
-  }, [category, dispatch, page, tab]);
+  }, [category, dispatch, estateId, feedReady, page, tab]);
 
   const { source, pagination, status: listStatus } = pickTabState(tab, {
     feed,
@@ -352,6 +363,22 @@ export function MarketplaceWorkspace() {
               className="h-11 rounded-xl pl-9"
             />
           </div>
+          {tab === "discover" && needsEstateId ? (
+            <Select
+              aria-label="Estate for marketplace feed"
+              value={estateId ?? ""}
+              onChange={(e) => {
+                setEstateId(e.target.value);
+                setPage(1);
+              }}
+              options={estateOptions.map((option) => ({
+                label: option.label,
+                value: option.value,
+              }))}
+              className="h-11 w-full rounded-xl sm:max-w-xs"
+              disabled={estateOptions.length === 0}
+            />
+          ) : null}
         </div>
 
         {tab === "discover" ? (

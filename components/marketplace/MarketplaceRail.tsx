@@ -22,6 +22,7 @@ import {
   marketplacePathForRole,
 } from "@/lib/marketplace";
 import { coverMedia } from "@/lib/marketplace-media";
+import { useMarketplaceFeedEstate } from "@/hooks/useMarketplaceFeedEstate";
 import {
   selectEstateModules,
   selectUserRole,
@@ -268,11 +269,12 @@ export function MarketplaceRail() {
   const reduceMotion = useReducedMotion();
   const role = useSelector(selectUserRole);
   const modules = useSelector(selectEstateModules);
-  const { feed, current, getFeedStatus } = useSelector(
+  const { feed, current } = useSelector(
     (state: RootState) => state.marketplace,
   );
   const [collapsed, setCollapsed] = useState(false);
   const [selected, setSelected] = useState<MarketplaceAd | null>(null);
+  const { estateId, ready: feedReady } = useMarketplaceFeedEstate();
 
   const hidden =
     isSettingsPath(pathname) || !isMarketplaceModuleEnabled(role, modules);
@@ -286,10 +288,15 @@ export function MarketplaceRail() {
   }, []);
 
   useEffect(() => {
-    if (hidden) return;
-    if (getFeedStatus === "succeeded" || getFeedStatus === "isLoading") return;
-    dispatch(getMarketplaceFeed({ page: 1, limit: FEED_LIMIT }));
-  }, [dispatch, getFeedStatus, hidden]);
+    if (hidden || !feedReady) return;
+    void dispatch(
+      getMarketplaceFeed({
+        page: 1,
+        limit: FEED_LIMIT,
+        estateId,
+      }),
+    );
+  }, [dispatch, estateId, feedReady, hidden]);
 
   const openListing = (item: MarketplaceAd) => {
     setSelected(item);

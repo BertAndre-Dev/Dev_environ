@@ -55,6 +55,15 @@ export function isPlatformCreator(role: string | null | undefined): boolean {
   return PLATFORM_CREATOR_ROLES.has((role ?? "").toString().trim().toLowerCase());
 }
 
+/** Platform roles are not JWT estate-scoped — feed requires estateId query. */
+export function marketplaceFeedNeedsEstateId(
+  role: string | null | undefined,
+): boolean {
+  return isPlatformCreator(role);
+}
+
+export const MARKETPLACE_FEED_ESTATE_KEY = "berta-marketplace-feed-estate";
+
 export function normalizeMarketplaceStatus(value: unknown): string {
   if (typeof value !== "string") return "";
   return value.trim().replace(/\s+/g, "_").toUpperCase();

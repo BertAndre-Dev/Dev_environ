@@ -438,7 +438,7 @@ export function MarketplaceWorkspace() {
         contentClassName="md:w-[min(40rem,92vw)]"
       >
         <div className="pr-8">
-          <h2 className="mb-4 text-xl font-semibold tracking-[-0.02em]">
+          <h2 className="mb-2 text-xl font-semibold tracking-[-0.02em]">
             {editing?.id ? "Edit listing" : "Post listing"}
           </h2>
           <MarketplaceAdForm

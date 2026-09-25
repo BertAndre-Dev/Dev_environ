@@ -45,7 +45,11 @@ function toDateOnlyValue(val?: string | null) {
 
 function toIsoOrNull(val: string, endOfDay = false) {
   if (!val) return null;
-  const d = new Date(`${val}T${endOfDay ? "23:59:59" : "00:00:00"}`);
+  // Parse YYYY-MM-DD as a UTC calendar date so the selected day is not shifted
+  // (e.g. Africa/Lagos midnight → previous day in UTC).
+  const d = new Date(
+    `${val}T${endOfDay ? "23:59:59.000Z" : "00:00:00.000Z"}`,
+  );
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 

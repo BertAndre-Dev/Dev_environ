@@ -45,12 +45,18 @@ function toDateOnlyValue(val?: string | null) {
 
 function toIsoOrNull(val: string, endOfDay = false) {
   if (!val) return null;
-  // Parse YYYY-MM-DD as a UTC calendar date so the selected day is not shifted
-  // (e.g. Africa/Lagos midnight → previous day in UTC).
-  const d = new Date(
-    `${val}T${endOfDay ? "23:59:59.000Z" : "00:00:00.000Z"}`,
-  );
-  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  // End of day stays on the selected calendar date in UTC.
+  if (endOfDay) {
+    const end = new Date(`${val}T23:59:59.000Z`);
+    return Number.isNaN(end.getTime()) ? null : end.toISOString();
+  }
+  // If the start day is today (local), send now — UTC midnight of today is
+  // already in the past and fails "must be current date and time or later".
+  if (val === todayIsoString()) {
+    return new Date().toISOString();
+  }
+  const start = new Date(`${val}T00:00:00.000Z`);
+  return Number.isNaN(start.getTime()) ? null : start.toISOString();
 }
 
 type VisitorDraft = {
@@ -561,7 +567,7 @@ export default function VisitorForm({
                             onEndChange={(iso) =>
                               updateDraft(row.id, "visitEndDate", iso)
                             }
-                            placeholder="Select start date"
+                            placeholder="Start date"
                             ariaLabel={`Visit start date for visitor ${idx + 1}`}
                           />
                         </div>

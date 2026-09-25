@@ -7,6 +7,8 @@ import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const DISPLAY_DATE_FORMAT = "MMM d, yyyy";
+const DISPLAY_DATETIME_FORMAT = "MMM d, yyyy h:mm aa";
+const TIME_INTERVALS_MINUTES = 15;
 
 const MONTHS = [
   "January",
@@ -43,7 +45,7 @@ const FUTURE_YEAR_SPAN = 30;
 const YEAR_PAGE_SIZE = 12;
 
 const inputClassName =
-  "h-10 rounded-md border border-border bg-background px-3 pr-10 text-sm outline-none focus:ring-2 focus:ring-primary w-full max-w-full cursor-pointer placeholder:text-muted-foreground";
+  "h-10 rounded-md border border-border bg-background px-3 pr-4 text-sm outline-none focus:ring-2 focus:ring-primary w-full max-w-full cursor-pointer placeholder:text-muted-foreground";
 
 /** Shown next to every date field for consistent affordance. */
 const datePickerIcon = (
@@ -307,20 +309,28 @@ function sharedPickerProps(
   maxDate?: Date | null,
   hasValue = false,
   withPortal = true,
+  includeTime = false,
 ) {
   return {
-    dateFormat: DISPLAY_DATE_FORMAT,
+    dateFormat: includeTime ? DISPLAY_DATETIME_FORMAT : DISPLAY_DATE_FORMAT,
     showPopperArrow: false,
     // Empty: calendar icon. Selected: clear (X) only — never both at once.
     showIcon: !hasValue,
     toggleCalendarOnIconClick: true,
     icon: datePickerIcon,
     withPortal,
-    shouldCloseOnSelect: true,
+    // Keep calendar open when picking time so date + time can be set together.
+    shouldCloseOnSelect: !includeTime,
     isClearable: hasValue,
     fixedHeight: true,
+    showTimeSelect: includeTime,
+    timeIntervals: includeTime ? TIME_INTERVALS_MINUTES : undefined,
+    timeCaption: includeTime ? "Time" : undefined,
     popperClassName: "iso-datepicker-popper",
-    calendarClassName: "iso-datepicker-calendar",
+    calendarClassName: cn(
+      "iso-datepicker-calendar",
+      includeTime && "iso-datepicker-calendar-time",
+    ),
     wrapperClassName: cn(
       "w-full iso-datepicker-wrapper",
       hasValue ? "iso-datepicker-has-value" : "iso-datepicker-empty",
@@ -333,14 +343,27 @@ function sharedPickerProps(
 
 export function parseIsoToDate(value: string | undefined | null): Date | null {
   if (value == null || String(value).trim() === "") return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value).trim());
-  if (!m) return null;
-  const y = Number(m[1]);
-  const month = Number(m[2]) - 1;
-  const d = Number(m[3]);
-  const dt = new Date(y, month, d);
-  if (Number.isNaN(dt.getTime())) return null;
-  return dt;
+  const trimmed = String(value).trim();
+  const local = /^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(
+    trimmed,
+  );
+  if (local) {
+    const dt = new Date(
+      Number(local[1]),
+      Number(local[2]) - 1,
+      Number(local[3]),
+      Number(local[4] ?? 0),
+      Number(local[5] ?? 0),
+      Number(local[6] ?? 0),
+    );
+    return Number.isNaN(dt.getTime()) ? null : dt;
+  }
+  // Absolute ISO (e.g. from API) — convert into a local Date for the picker.
+  if (trimmed.includes("T")) {
+    const dt = new Date(trimmed);
+    return Number.isNaN(dt.getTime()) ? null : dt;
+  }
+  return null;
 }
 
 export function dateToIsoString(d: Date | null): string {
@@ -351,9 +374,24 @@ export function dateToIsoString(d: Date | null): string {
   return `${y}-${mo}-${day}`;
 }
 
+/** Local date+time as `YYYY-MM-DDTHH:mm` for datetime pickers. */
+export function dateToIsoDateTimeString(d: Date | null): string {
+  if (!d) return "";
+  const h = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${dateToIsoString(d)}T${h}:${mi}`;
+}
+
 /** Local calendar date for “today” as YYYY-MM-DD. */
 export function todayIsoString() {
   return dateToIsoString(startOfDay(new Date()));
+}
+
+/** Convert a picker value (`YYYY-MM-DD` or `YYYY-MM-DDTHH:mm`) to API ISO UTC. */
+export function localPickerValueToApiIso(value: string): string | null {
+  const d = parseIsoToDate(value);
+  if (!d) return null;
+  return d.toISOString();
 }
 
 export type IsoDatePickerProps = {
@@ -368,6 +406,8 @@ export type IsoDatePickerProps = {
   ariaLabel?: string;
   /** When false, the calendar opens next to the input instead of a page overlay. */
   withPortal?: boolean;
+  /** When true, value is `YYYY-MM-DDTHH:mm` and the calendar includes a time list. */
+  includeTime?: boolean;
 };
 
 export function IsoDatePicker({
@@ -381,18 +421,21 @@ export function IsoDatePicker({
   className,
   ariaLabel,
   withPortal = true,
+  includeTime = false,
 }: Readonly<IsoDatePickerProps>) {
   const selected = parseIsoToDate(value);
   const min = useMemo(() => parseIsoToDate(minDate), [minDate]);
   const max = useMemo(() => parseIsoToDate(maxDate), [maxDate]);
-  const openTo = selected ?? min ?? startOfDay(new Date());
+  const openTo = selected ?? min ?? (includeTime ? new Date() : startOfDay(new Date()));
 
   return (
     <DatePicker
-      {...sharedPickerProps(min, max, Boolean(selected), withPortal)}
+      {...sharedPickerProps(min, max, Boolean(selected), withPortal, includeTime)}
       id={id}
       selected={selected}
-      onChange={(d: Date | null) => onChange(dateToIsoString(d))}
+      onChange={(d: Date | null) =>
+        onChange(includeTime ? dateToIsoDateTimeString(d) : dateToIsoString(d))
+      }
       placeholderText={placeholder}
       minDate={min ?? undefined}
       maxDate={max ?? undefined}
@@ -443,23 +486,26 @@ export function IsoLinkedRangeStart({
   disabled,
   className,
   withPortal = true,
+  includeTime = false,
 }: Omit<LinkedRangeBase, "onEndChange"> & {
   onEndChange?: (iso: string) => void;
   id?: string;
   ariaLabel?: string;
   placeholder?: string;
   minDate?: string;
+  includeTime?: boolean;
 }) {
   const s = parseIsoToDate(startDate);
   const e = parseIsoToDate(endDate);
   const min = parseIsoToDate(minDate);
+  const format = includeTime ? dateToIsoDateTimeString : dateToIsoString;
   return (
     <DatePicker
-      {...sharedPickerProps(min, e, Boolean(s), withPortal)}
+      {...sharedPickerProps(min, e, Boolean(s), withPortal, includeTime)}
       id={id}
       selected={s}
       onChange={(d: Date | null) => {
-        const next = dateToIsoString(d);
+        const next = format(d);
         onStartChange(next);
         // If new start is after current end, clear end so the range stays valid.
         if (d && e && d > e) {
@@ -470,7 +516,7 @@ export function IsoLinkedRangeStart({
       startDate={s}
       endDate={e}
       minDate={min ?? undefined}
-      openToDate={s ?? min ?? startOfDay(new Date())}
+      openToDate={s ?? min ?? (includeTime ? new Date() : startOfDay(new Date()))}
       placeholderText={placeholder}
       disabled={disabled}
       className={cn(inputClassName, className)}
@@ -491,24 +537,27 @@ export function IsoLinkedRangeEnd({
   disabled,
   className,
   withPortal = true,
+  includeTime = false,
 }: Omit<LinkedRangeBase, "onStartChange"> & {
   id?: string;
   ariaLabel?: string;
   placeholder?: string;
+  includeTime?: boolean;
 }) {
   const s = parseIsoToDate(startDate);
   const e = parseIsoToDate(endDate);
+  const format = includeTime ? dateToIsoDateTimeString : dateToIsoString;
   return (
     <DatePicker
-      {...sharedPickerProps(s, null, Boolean(e), withPortal)}
+      {...sharedPickerProps(s, null, Boolean(e), withPortal, includeTime)}
       id={id}
       selected={e}
-      onChange={(d: Date | null) => onEndChange(dateToIsoString(d))}
+      onChange={(d: Date | null) => onEndChange(format(d))}
       selectsEnd
       startDate={s}
       endDate={e}
       minDate={s ?? undefined}
-      openToDate={e ?? s ?? startOfDay(new Date())}
+      openToDate={e ?? s ?? (includeTime ? new Date() : startOfDay(new Date()))}
       placeholderText={placeholder}
       disabled={disabled}
       className={cn(inputClassName, className)}

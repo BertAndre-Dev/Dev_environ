@@ -134,7 +134,7 @@ export function PlatformFeeFilters({
                 endDate={draftEndDate}
                 onEndChange={setDraftEndDate}
                 ariaLabel="End date"
-                placeholder="Select end date"
+                placeholder="End date"
                 className={dateInputClassName}
                 withPortal={false}
               />

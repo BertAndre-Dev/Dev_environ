@@ -24,6 +24,13 @@ import {
 import { toast } from "react-toastify";
 import { formatAddressEntryLabel } from "@/lib/address";
 import { getApiErrorMessage } from "@/lib/api-error";
+import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
+import {
+  DEFAULT_COUNTRY_CODE,
+  getPhoneValidationError,
+  splitPhoneFields,
+  toE164PhoneNumber,
+} from "@/lib/phone-e164";
 
 /** Normalize API / datetime values to YYYY-MM-DD for IsoDatePicker. */
 function toDateOnlyValue(val?: string | null) {
@@ -47,6 +54,7 @@ type VisitorDraft = {
   firstName: string;
   lastName: string;
   phone: string;
+  countryCode: string;
   purpose: string;
   visitingType: VisitingType;
   visitStartDate: string;
@@ -59,6 +67,7 @@ function createEmptyDraft(): VisitorDraft {
     firstName: "",
     lastName: "",
     phone: "",
+    countryCode: DEFAULT_COUNTRY_CODE,
     purpose: "",
     visitingType: "SHORT_VISIT",
     visitStartDate: "",
@@ -126,12 +135,17 @@ export default function VisitorForm({
           const start = toDateOnlyValue(visitor.visitStartDate);
           const today = todayIsoString();
           setVisitStartMinDate(start && start < today ? start : today);
+          const phoneFields = splitPhoneFields(
+            visitor.phone || "",
+            DEFAULT_COUNTRY_CODE,
+          );
           setDrafts([
             {
               id: createEmptyDraft().id,
               firstName: visitor.firstName || "",
               lastName: visitor.lastName || "",
-              phone: visitor.phone || "",
+              phone: phoneFields.nationalNumber,
+              countryCode: phoneFields.countryCode || DEFAULT_COUNTRY_CODE,
               purpose: visitor.purpose || "",
               visitingType:
                 (visitor.visitingType as VisitingType) || "SHORT_VISIT",
@@ -213,6 +227,7 @@ export default function VisitorForm({
     }
 
     const today = todayIsoString();
+    const e164ByDraftId = new Map<string, string>();
 
     for (let i = 0; i < drafts.length; i++) {
       const row = drafts[i];
@@ -226,6 +241,20 @@ export default function VisitorForm({
         );
         return;
       }
+
+      if (!row.countryCode.trim()) {
+        toast.error(`Please select a country code for ${label}.`);
+        return;
+      }
+
+      const e164Phone = toE164PhoneNumber(row.phone, row.countryCode);
+      if (!e164Phone) {
+        toast.error(
+          `${label}: ${getPhoneValidationError(row.phone, row.countryCode)}`,
+        );
+        return;
+      }
+      e164ByDraftId.set(row.id, e164Phone);
 
       if (row.visitingType === "LONG_VISIT") {
         if (!row.visitStartDate || !row.visitEndDate) {
@@ -266,7 +295,7 @@ export default function VisitorForm({
             data: {
               firstName: row.firstName.trim(),
               lastName: row.lastName.trim(),
-              phone: row.phone.trim(),
+              phone: e164ByDraftId.get(row.id)!,
               purpose: row.purpose.trim(),
               residentId,
               estateId,
@@ -286,7 +315,7 @@ export default function VisitorForm({
           return {
             firstName: row.firstName.trim(),
             lastName: row.lastName.trim(),
-            phone: row.phone.trim(),
+            phone: e164ByDraftId.get(row.id)!,
             purpose: row.purpose.trim(),
             residentId,
             estateId,
@@ -431,20 +460,21 @@ export default function VisitorForm({
                     </div>
                   </div>
 
-                  <div>
-                    <Label htmlFor={`phone-${row.id}`}>Phone Number *</Label>
-                    <Input
-                      id={`phone-${row.id}`}
-                      type="tel"
-                      value={row.phone}
-                      onChange={(e) =>
-                        updateDraft(row.id, "phone", e.target.value)
-                      }
-                      placeholder="Enter phone number"
-                      required
-                      className="mt-1"
-                    />
-                  </div>
+                  <InvitePhoneNumberField
+                    id={`phone-${row.id}`}
+                    label="Phone number"
+                    showWhatsAppHint={false}
+                    name="phone"
+                    countryCode={row.countryCode}
+                    phoneNumber={row.phone}
+                    onCountryCodeChange={(countryCode) =>
+                      updateDraft(row.id, "countryCode", countryCode)
+                    }
+                    onPhoneNumberChange={(e) =>
+                      updateDraft(row.id, "phone", e.target.value)
+                    }
+                    disabled={submitting}
+                  />
 
                   <div>
                     <Label htmlFor={`purpose-${row.id}`}>

@@ -315,7 +315,7 @@ export default function Table<T extends { id?: string }>({
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      <div className="relative z-0 overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-[#D9D9D9] border-b border-border">
             <tr>

@@ -19,6 +19,9 @@ import {
   IsoDatePicker,
   IsoLinkedRangeEnd,
   IsoLinkedRangeStart,
+  dateToIsoDateTimeString,
+  localPickerValueToApiIso,
+  parseIsoToDate,
   todayIsoString,
 } from "@/components/ui/iso-date-picker";
 import { toast } from "react-toastify";
@@ -32,31 +35,23 @@ import {
   toE164PhoneNumber,
 } from "@/lib/phone-e164";
 
-/** Normalize API / datetime values to YYYY-MM-DD for IsoDatePicker. */
+/** Normalize API / datetime values for date-only pickers (short visit edit). */
 function toDateOnlyValue(val?: string | null) {
   if (!val) return "";
-  const trimmed = String(val).trim();
-  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) return trimmed.slice(0, 10);
-  const d = new Date(trimmed);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const d = parseIsoToDate(val);
+  if (!d) {
+    const trimmed = String(val).trim();
+    return /^\d{4}-\d{2}-\d{2}/.test(trimmed) ? trimmed.slice(0, 10) : "";
+  }
+  return dateToIsoDateTimeString(d).slice(0, 10);
 }
 
-function toIsoOrNull(val: string, endOfDay = false) {
-  if (!val) return null;
-  // End of day stays on the selected calendar date in UTC.
-  if (endOfDay) {
-    const end = new Date(`${val}T23:59:59.000Z`);
-    return Number.isNaN(end.getTime()) ? null : end.toISOString();
-  }
-  // If the start day is today (local), send now — UTC midnight of today is
-  // already in the past and fails "must be current date and time or later".
-  if (val === todayIsoString()) {
-    return new Date().toISOString();
-  }
-  const start = new Date(`${val}T00:00:00.000Z`);
-  return Number.isNaN(start.getTime()) ? null : start.toISOString();
+/** Normalize API values for long-visit datetime pickers (`YYYY-MM-DDTHH:mm`). */
+function toDateTimeLocalValue(val?: string | null) {
+  if (!val) return "";
+  const d = parseIsoToDate(val);
+  if (!d) return "";
+  return dateToIsoDateTimeString(d);
 }
 
 type VisitorDraft = {
@@ -142,9 +137,18 @@ export default function VisitorForm({
         const res = await dispatch(getVisitorById(visitorId)).unwrap();
         const visitor = res?.data?.visitor || res?.data;
         if (visitor) {
-          const start = toDateOnlyValue(visitor.visitStartDate);
+          const visitingType =
+            (visitor.visitingType as VisitingType) || "SHORT_VISIT";
+          const isLong = visitingType === "LONG_VISIT";
+          const start = isLong
+            ? toDateTimeLocalValue(visitor.visitStartDate)
+            : toDateOnlyValue(visitor.visitStartDate);
+          const end = isLong
+            ? toDateTimeLocalValue(visitor.visitEndDate)
+            : toDateOnlyValue(visitor.visitEndDate);
           const today = todayIsoString();
-          setVisitStartMinDate(start && start < today ? start : today);
+          const startDay = start.slice(0, 10);
+          setVisitStartMinDate(startDay && startDay < today ? startDay : today);
           const phoneFields = splitPhoneFields(
             visitor.phone || "",
             DEFAULT_COUNTRY_CODE,
@@ -157,10 +161,9 @@ export default function VisitorForm({
               phone: phoneFields.nationalNumber,
               countryCode: phoneFields.countryCode || DEFAULT_COUNTRY_CODE,
               purpose: visitor.purpose || "",
-              visitingType:
-                (visitor.visitingType as VisitingType) || "SHORT_VISIT",
+              visitingType,
               visitStartDate: start,
-              visitEndDate: toDateOnlyValue(visitor.visitEndDate),
+              visitEndDate: end,
             },
           ]);
           if (visitor.address) setAddressLabel(visitor.address);
@@ -269,13 +272,25 @@ export default function VisitorForm({
       if (row.visitingType === "LONG_VISIT") {
         if (!row.visitStartDate || !row.visitEndDate) {
           toast.error(
-            `Start and end dates are required for ${label}'s long visit`,
+            `Start and end date/time are required for ${label}'s long visit`,
           );
           return;
         }
-        if (row.visitEndDate < row.visitStartDate) {
+        const startAt = parseIsoToDate(row.visitStartDate);
+        const endAt = parseIsoToDate(row.visitEndDate);
+        if (!startAt || !endAt) {
+          toast.error(`Enter a valid start and end date/time for ${label}.`);
+          return;
+        }
+        if (endAt.getTime() < startAt.getTime()) {
           toast.error(
-            `End date must be on or after the start date for ${label}`,
+            `End date/time must be on or after the start for ${label}`,
+          );
+          return;
+        }
+        if (startAt.getTime() < Date.now() - 60_000) {
+          toast.error(
+            `Visit start for ${label} must be the current date and time or later.`,
           );
           return;
         }
@@ -284,7 +299,8 @@ export default function VisitorForm({
         return;
       }
 
-      if (row.visitStartDate && row.visitStartDate < visitStartMinDate) {
+      const startDay = row.visitStartDate.slice(0, 10);
+      if (row.visitStartDate && startDay < visitStartMinDate) {
         toast.error(
           visitStartMinDate === today
             ? `Visit start date for ${label} must be today or later.`
@@ -311,9 +327,9 @@ export default function VisitorForm({
               estateId,
               addressId: addressIdString,
               visitingType: row.visitingType,
-              visitStartDate: toIsoOrNull(row.visitStartDate),
+              visitStartDate: localPickerValueToApiIso(row.visitStartDate),
               ...(isLongVisit
-                ? { visitEndDate: toIsoOrNull(row.visitEndDate, true) }
+                ? { visitEndDate: localPickerValueToApiIso(row.visitEndDate) }
                 : {}),
             },
           }),
@@ -331,9 +347,9 @@ export default function VisitorForm({
             estateId,
             addressId: addressIdString,
             visitingType: row.visitingType,
-            visitStartDate: toIsoOrNull(row.visitStartDate),
+            visitStartDate: localPickerValueToApiIso(row.visitStartDate),
             ...(isLongVisit
-              ? { visitEndDate: toIsoOrNull(row.visitEndDate, true) }
+              ? { visitEndDate: localPickerValueToApiIso(row.visitEndDate) }
               : {}),
           };
         });
@@ -525,7 +541,7 @@ export default function VisitorForm({
                         ? isEdit
                           ? "Choose when the short visit should start."
                           : "Short visits start when the visitor arrives."
-                        : "Long visits require a start and end date."}
+                        : "Long visits require a start and end date and time."}
                     </p>
                   </div>
 
@@ -553,7 +569,7 @@ export default function VisitorForm({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor={`visitStartDate-${row.id}`}>
-                          Visit Start Date *
+                          Visit start *
                         </Label>
                         <div className="mt-1">
                           <IsoLinkedRangeStart
@@ -561,31 +577,33 @@ export default function VisitorForm({
                             startDate={row.visitStartDate}
                             endDate={row.visitEndDate}
                             minDate={visitStartMinDate}
+                            includeTime
                             onStartChange={(iso) =>
                               updateDraft(row.id, "visitStartDate", iso)
                             }
                             onEndChange={(iso) =>
                               updateDraft(row.id, "visitEndDate", iso)
                             }
-                            placeholder="Start date"
-                            ariaLabel={`Visit start date for visitor ${idx + 1}`}
+                            placeholder="Start date & time"
+                            ariaLabel={`Visit start for visitor ${idx + 1}`}
                           />
                         </div>
                       </div>
                       <div>
                         <Label htmlFor={`visitEndDate-${row.id}`}>
-                          Visit End Date *
+                          Visit end *
                         </Label>
                         <div className="mt-1">
                           <IsoLinkedRangeEnd
                             id={`visitEndDate-${row.id}`}
                             startDate={row.visitStartDate}
                             endDate={row.visitEndDate}
+                            includeTime
                             onEndChange={(iso) =>
                               updateDraft(row.id, "visitEndDate", iso)
                             }
-                            placeholder="Select end date"
-                            ariaLabel={`Visit end date for visitor ${idx + 1}`}
+                            placeholder="End date & time"
+                            ariaLabel={`Visit end for visitor ${idx + 1}`}
                           />
                         </div>
                       </div>

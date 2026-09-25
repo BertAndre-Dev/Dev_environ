@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
@@ -158,74 +164,98 @@ function MarketplaceMarquee({
   items: MarketplaceAd[];
   onOpen: (item: MarketplaceAd) => void;
 }>) {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const offsetRef = useRef(0);
-  const pausedRef = useRef(false);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const setRef = useRef<HTMLDivElement>(null);
+  const [paused, setPaused] = useState(false);
+  const [copies, setCopies] = useState(2);
+  const [loopPx, setLoopPx] = useState(0);
   const looping = items.length > 1;
+
+  const measure = useCallback(() => {
+    const scroller = scrollerRef.current;
+    const set = setRef.current;
+    if (!scroller || !set) return;
+    const setWidth = set.offsetWidth;
+    const view = scroller.clientWidth;
+    if (setWidth <= 0) return;
+    setLoopPx(setWidth);
+    setCopies(Math.max(2, Math.ceil(view / setWidth) + 2));
+  }, []);
 
   useEffect(() => {
     if (!looping) return;
-    let frame = 0;
-    let last = performance.now();
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (scrollerRef.current) ro.observe(scrollerRef.current);
+    if (setRef.current) ro.observe(setRef.current);
+    return () => ro.disconnect();
+  }, [looping, measure, items]);
 
-    const tick = (now: number) => {
-      const dt = Math.min((now - last) / 1000, 0.05);
-      last = now;
-      if (!pausedRef.current) {
-        offsetRef.current += MARQUEE_SPEED_PX_S * dt;
-        const track = trackRef.current;
-        if (track) {
-          const half = track.scrollWidth / 2;
-          if (half > 0 && offsetRef.current >= half) {
-            offsetRef.current -= half;
-          }
-          track.style.transform = `translate3d(${-offsetRef.current}px,0,0)`;
-        }
-      }
-      frame = requestAnimationFrame(tick);
+  useEffect(() => {
+    if (!looping) return;
+    const set = setRef.current;
+    if (!set) return;
+    const images = [...set.querySelectorAll("img")];
+    images.forEach((img) => {
+      if (!img.complete) img.addEventListener("load", measure);
+    });
+    return () => {
+      images.forEach((img) => img.removeEventListener("load", measure));
     };
+  }, [looping, measure, items]);
 
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [looping, items.length]);
+  const pause = () => setPaused(true);
+  const resume = () => setPaused(false);
 
-  const pause = () => {
-    pausedRef.current = true;
-  };
-  const resume = () => {
-    pausedRef.current = false;
-  };
+  const renderSet = (copyIndex: number) => (
+    <div
+      ref={copyIndex === 0 ? setRef : undefined}
+      className="flex shrink-0 gap-3 pr-3"
+      aria-hidden={copyIndex > 0 || undefined}
+    >
+      {items.map((item) => (
+        <RailCard
+          key={`${item.id ?? item.productName}-${copyIndex}`}
+          item={item}
+          clone={copyIndex > 0}
+          onOpen={onOpen}
+        />
+      ))}
+    </div>
+  );
+
+  if (!looping) {
+    return (
+      <div className="overflow-hidden px-4 pb-3 md:px-6">
+        <div className="flex w-max gap-3">{renderSet(0)}</div>
+      </div>
+    );
+  }
+
+  const duration = loopPx > 0 ? loopPx / MARQUEE_SPEED_PX_S : 0;
 
   return (
     <div
+      ref={scrollerRef}
       className="overflow-hidden px-4 pb-3 md:px-6"
       onPointerEnter={pause}
       onPointerLeave={resume}
+      onPointerDown={pause}
+      onPointerUp={resume}
       onFocusCapture={pause}
       onBlurCapture={resume}
     >
       <div
-        ref={trackRef}
-        className="flex w-max gap-3 will-change-transform"
-        style={{ transform: "translate3d(0,0,0)" }}
+        className="iso-marketplace-marquee-track flex w-max will-change-transform"
+        data-paused={paused || duration === 0 ? "true" : "false"}
+        style={
+          {
+            "--marquee-loop": `${loopPx}px`,
+            animationDuration: duration ? `${duration}s` : "0s",
+          } as CSSProperties
+        }
       >
-        {items.map((item) => (
-          <RailCard
-            key={item.id ?? item.productName}
-            item={item}
-            onOpen={onOpen}
-          />
-        ))}
-        {looping
-          ? items.map((item) => (
-              <RailCard
-                key={`${item.id ?? item.productName}-loop`}
-                item={item}
-                clone
-                onOpen={onOpen}
-              />
-            ))
-          : null}
+        {Array.from({ length: copies }, (_, copyIndex) => renderSet(copyIndex))}
       </div>
     </div>
   );

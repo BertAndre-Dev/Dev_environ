@@ -187,6 +187,27 @@
   }
 }
 
+/* One-set shift so the marketplace rail loops without a visible reset */
+@keyframes iso-marketplace-marquee {
+  to {
+    transform: translate3d(calc(-1 * var(--marquee-loop, 0px)), 0, 0);
+  }
+}
+
+.iso-marketplace-marquee-track {
+  animation: iso-marketplace-marquee linear infinite;
+}
+
+.iso-marketplace-marquee-track[data-paused="true"] {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iso-marketplace-marquee-track {
+    animation: none;
+  }
+}
+
 @keyframes parallax {
   0% {
     transform: translateY(0);

@@ -379,7 +379,7 @@ type SharedPickerOptions = {
 function DatetimeDoneFooter({ onDone }: Readonly<{ onDone: () => void }>) {
   return (
     <div className="iso-datepicker-time-footer">
-      <p className="iso-datepicker-time-hint">Pick a date, then a time</p>
+      <p className="iso-datepicker-time-hint">Closes when you pick a time</p>
       <button
         type="button"
         className="iso-datepicker-done-btn"
@@ -392,6 +392,17 @@ function DatetimeDoneFooter({ onDone }: Readonly<{ onDone: () => void }>) {
         Done
       </button>
     </div>
+  );
+}
+
+/** True when the change came from clicking a time slot (not a calendar day). */
+function isTimeListSelection(event?: { target?: EventTarget | null } | null) {
+  const target = event?.target;
+  if (!target || !(target instanceof Element)) return false;
+  return Boolean(
+    target.closest(
+      ".react-datepicker__time-list-item, .react-datepicker__time-container",
+    ),
   );
 }
 
@@ -568,7 +579,7 @@ export function IsoDatePicker({
       })}
       id={id}
       selected={selected}
-      onChange={(d: Date | null) => {
+      onChange={(d: Date | null, event) => {
         if (!d) {
           onChange("");
           return;
@@ -577,6 +588,8 @@ export function IsoDatePicker({
         onChange(
           includeTime ? dateToIsoDateTimeString(next) : dateToIsoString(next),
         );
+        // Date-only closes via shouldCloseOnSelect. Datetime closes after time pick.
+        if (includeTime && isTimeListSelection(event)) setOpen(false);
       }}
       placeholderText={placeholder}
       minDate={
@@ -676,7 +689,7 @@ export function IsoLinkedRangeStart({
       })}
       id={id}
       selected={s}
-      onChange={(d: Date | null) => {
+      onChange={(d: Date | null, event) => {
         if (!d) {
           onStartChange("");
           return;
@@ -684,6 +697,7 @@ export function IsoLinkedRangeStart({
         const next = includeTime ? clampDateTime(d, minDateTime) : d;
         onStartChange(format(next));
         if (e && next > e) onEndChange?.("");
+        if (includeTime && isTimeListSelection(event)) setOpen(false);
       }}
       selectsStart
       startDate={s}
@@ -757,13 +771,14 @@ export function IsoLinkedRangeEnd({
       })}
       id={id}
       selected={e}
-      onChange={(d: Date | null) => {
+      onChange={(d: Date | null, event) => {
         if (!d) {
           onEndChange("");
           return;
         }
         const next = includeTime ? clampDateTime(d, minDateTime) : d;
         onEndChange(format(next));
+        if (includeTime && isTimeListSelection(event)) setOpen(false);
       }}
       selectsEnd
       startDate={s}

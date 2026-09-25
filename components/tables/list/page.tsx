@@ -214,9 +214,9 @@ export default function Table<T extends { id?: string }>({
   ]);
 
   return (
-    <div className="overflow-hidden border rounded-lg">
+    <div className="overflow-visible border rounded-lg">
       {(enableSearch || enableExport || enableDateRangeFilter) && (
-        <div className="border-b border-white/50 bg-white/70 p-3 backdrop-blur-[20px] backdrop-saturate-150 supports-[backdrop-filter]:bg-white/55 dark:border-white/10 dark:bg-background/70 sm:p-4">
+        <div className="relative z-20 overflow-visible border-b border-white/50 bg-white/70 p-3 backdrop-blur-[20px] backdrop-saturate-150 supports-[backdrop-filter]:bg-white/55 dark:border-white/10 dark:bg-background/70 sm:p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
               {enableDateRangeFilter && (
@@ -232,6 +232,7 @@ export default function Table<T extends { id?: string }>({
                       id="table-start-date-input"
                       startDate={effectiveStartDate}
                       endDate={effectiveEndDate}
+                      withPortal={false}
                       onStartChange={(value) => {
                         if (!isStartControlled) setInternalStartDate(value);
                         onDateRangeChange?.({
@@ -255,6 +256,7 @@ export default function Table<T extends { id?: string }>({
                       id="table-end-date-input"
                       startDate={effectiveStartDate}
                       endDate={effectiveEndDate}
+                      withPortal={false}
                       onEndChange={(value) => {
                         if (!isEndControlled) setInternalEndDate(value);
                         onDateRangeChange?.({

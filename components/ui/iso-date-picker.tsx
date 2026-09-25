@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
@@ -379,7 +380,7 @@ type SharedPickerOptions = {
 function DatetimeDoneFooter({ onDone }: Readonly<{ onDone: () => void }>) {
   return (
     <div className="iso-datepicker-time-footer">
-      <p className="iso-datepicker-time-hint">Closes when you pick a time</p>
+      <p className="iso-datepicker-time-hint">Pick a time to finish</p>
       <button
         type="button"
         className="iso-datepicker-done-btn"
@@ -395,8 +396,29 @@ function DatetimeDoneFooter({ onDone }: Readonly<{ onDone: () => void }>) {
   );
 }
 
+/** Stable calendar shell — avoids remounting (which was clearing the value). */
+function DatetimeCalendarContainer({
+  className,
+  children,
+  onDone,
+}: Readonly<{
+  className?: string;
+  children?: ReactNode;
+  onDone: () => void;
+}>) {
+  return (
+    <div className={className}>
+      {children}
+      <DatetimeDoneFooter onDone={onDone} />
+    </div>
+  );
+}
+
+/** Event shape passed by react-datepicker onChange (typed for strict builds). */
+type DatePickerSelectEvent = { target?: EventTarget | null } | undefined;
+
 /** True when the change came from clicking a time slot (not a calendar day). */
-function isTimeListSelection(event?: { target?: EventTarget | null } | null) {
+function isTimeListSelection(event?: DatePickerSelectEvent) {
   const target = event?.target;
   if (!target || !(target instanceof Element)) return false;
   return Boolean(
@@ -404,6 +426,46 @@ function isTimeListSelection(event?: { target?: EventTarget | null } | null) {
       ".react-datepicker__time-list-item, .react-datepicker__time-container",
     ),
   );
+}
+
+function usePickerOpenState(includeTime: boolean) {
+  const [open, setOpen] = useState(false);
+  const pendingRef = useRef<Date | null>(null);
+  const onDoneRef = useRef<() => void>(() => setOpen(false));
+
+  const close = useCallback(() => setOpen(false), []);
+  const openCalendar = useCallback(() => setOpen(true), []);
+
+  const calendarContainer = useMemo(() => {
+    if (!includeTime) return undefined;
+    function CalendarContainer({
+      className,
+      children,
+    }: {
+      className?: string;
+      children?: ReactNode;
+    }) {
+      return (
+        <DatetimeCalendarContainer
+          className={className}
+          onDone={() => onDoneRef.current()}
+        >
+          {children}
+        </DatetimeCalendarContainer>
+      );
+    }
+    return CalendarContainer;
+  }, [includeTime]);
+
+  return {
+    open,
+    setOpen,
+    close,
+    openCalendar,
+    pendingRef,
+    onDoneRef,
+    calendarContainer,
+  };
 }
 
 function sharedPickerProps({
@@ -552,10 +614,38 @@ export function IsoDatePicker({
   const selected = parseIsoToDate(value);
   const min = useMemo(() => parseIsoToDate(minDate), [minDate]);
   const max = useMemo(() => parseIsoToDate(maxDate), [maxDate]);
-  const minDateTime = includeTime
-    ? earliestSelectableDateTime(min)
-    : null;
-  const [open, setOpen] = useState(false);
+  const minDateTime = includeTime ? earliestSelectableDateTime(min) : null;
+  const {
+    open,
+    setOpen,
+    openCalendar,
+    pendingRef,
+    onDoneRef,
+    calendarContainer,
+  } = usePickerOpenState(includeTime);
+
+  const commit = useCallback(
+    (d: Date | null) => {
+      if (!d) {
+        onChange("");
+        pendingRef.current = null;
+        return;
+      }
+      const next = includeTime ? clampDateTime(d, minDateTime) : d;
+      pendingRef.current = next;
+      onChange(
+        includeTime ? dateToIsoDateTimeString(next) : dateToIsoString(next),
+      );
+    },
+    [includeTime, minDateTime, onChange, pendingRef],
+  );
+
+  onDoneRef.current = () => {
+    if (pendingRef.current) commit(pendingRef.current);
+    else if (selected) commit(selected);
+    setOpen(false);
+  };
+
   const dayForBounds = selected ?? minDateTime ?? new Date();
   const openTo =
     selected ??
@@ -572,24 +662,22 @@ export function IsoDatePicker({
         includeTime,
         minDateTime,
         selectedDay: dayForBounds,
-        open: includeTime ? open : undefined,
-        onCalendarOpen: includeTime ? () => setOpen(true) : undefined,
-        onCalendarClose: includeTime ? () => setOpen(false) : undefined,
-        onInputClick: includeTime ? () => setOpen(true) : undefined,
+        open,
+        onCalendarOpen: openCalendar,
+        onCalendarClose: () => setOpen(false),
+        onInputClick: openCalendar,
       })}
       id={id}
       selected={selected}
-      onChange={(d: Date | null, event) => {
+      onChange={(d: Date | null, event: DatePickerSelectEvent) => {
+        // Ignore spurious nulls while open (remount / internal resets).
         if (!d) {
-          onChange("");
+          if (open) return;
+          commit(null);
           return;
         }
-        const next = includeTime ? clampDateTime(d, minDateTime) : d;
-        onChange(
-          includeTime ? dateToIsoDateTimeString(next) : dateToIsoString(next),
-        );
-        // Date-only closes via shouldCloseOnSelect. Datetime closes after time pick.
-        if (includeTime && isTimeListSelection(event)) setOpen(false);
+        commit(d);
+        if (!includeTime || isTimeListSelection(event)) setOpen(false);
       }}
       placeholderText={placeholder}
       minDate={
@@ -603,16 +691,7 @@ export function IsoDatePicker({
       className={cn(inputClassName, className)}
       ariaLabel={ariaLabel}
       autoComplete="off"
-      calendarContainer={
-        includeTime
-          ? ({ className: calClass, children }) => (
-              <div className={calClass}>
-                {children}
-                <DatetimeDoneFooter onDone={() => setOpen(false)} />
-              </div>
-            )
-          : undefined
-      }
+      calendarContainer={calendarContainer}
     />
   );
 }
@@ -668,8 +747,37 @@ export function IsoLinkedRangeStart({
   const e = parseIsoToDate(endDate);
   const min = parseIsoToDate(minDate);
   const minDateTime = includeTime ? earliestSelectableDateTime(min) : null;
-  const [open, setOpen] = useState(false);
   const format = includeTime ? dateToIsoDateTimeString : dateToIsoString;
+  const {
+    open,
+    setOpen,
+    openCalendar,
+    pendingRef,
+    onDoneRef,
+    calendarContainer,
+  } = usePickerOpenState(includeTime);
+
+  const commit = useCallback(
+    (d: Date | null) => {
+      if (!d) {
+        onStartChange("");
+        pendingRef.current = null;
+        return;
+      }
+      const next = includeTime ? clampDateTime(d, minDateTime) : d;
+      pendingRef.current = next;
+      onStartChange(format(next));
+      if (e && next > e) onEndChange?.("");
+    },
+    [e, format, includeTime, minDateTime, onEndChange, onStartChange, pendingRef],
+  );
+
+  onDoneRef.current = () => {
+    if (pendingRef.current) commit(pendingRef.current);
+    else if (s) commit(s);
+    setOpen(false);
+  };
+
   const dayForBounds = s ?? minDateTime ?? new Date();
 
   return (
@@ -682,22 +790,21 @@ export function IsoLinkedRangeStart({
         includeTime,
         minDateTime,
         selectedDay: dayForBounds,
-        open: includeTime ? open : undefined,
-        onCalendarOpen: includeTime ? () => setOpen(true) : undefined,
-        onCalendarClose: includeTime ? () => setOpen(false) : undefined,
-        onInputClick: includeTime ? () => setOpen(true) : undefined,
+        open,
+        onCalendarOpen: openCalendar,
+        onCalendarClose: () => setOpen(false),
+        onInputClick: openCalendar,
       })}
       id={id}
       selected={s}
-      onChange={(d: Date | null, event) => {
+      onChange={(d: Date | null, event: DatePickerSelectEvent) => {
         if (!d) {
-          onStartChange("");
+          if (open) return;
+          commit(null);
           return;
         }
-        const next = includeTime ? clampDateTime(d, minDateTime) : d;
-        onStartChange(format(next));
-        if (e && next > e) onEndChange?.("");
-        if (includeTime && isTimeListSelection(event)) setOpen(false);
+        commit(d);
+        if (!includeTime || isTimeListSelection(event)) setOpen(false);
       }}
       selectsStart
       startDate={s}
@@ -715,16 +822,7 @@ export function IsoLinkedRangeStart({
       className={cn(inputClassName, className)}
       ariaLabel={ariaLabel}
       autoComplete="off"
-      calendarContainer={
-        includeTime
-          ? ({ className: calClass, children }) => (
-              <div className={calClass}>
-                {children}
-                <DatetimeDoneFooter onDone={() => setOpen(false)} />
-              </div>
-            )
-          : undefined
-      }
+      calendarContainer={calendarContainer}
     />
   );
 }
@@ -750,8 +848,36 @@ export function IsoLinkedRangeEnd({
   const s = parseIsoToDate(startDate);
   const e = parseIsoToDate(endDate);
   const minDateTime = includeTime ? earliestSelectableDateTime(s) : null;
-  const [open, setOpen] = useState(false);
   const format = includeTime ? dateToIsoDateTimeString : dateToIsoString;
+  const {
+    open,
+    setOpen,
+    openCalendar,
+    pendingRef,
+    onDoneRef,
+    calendarContainer,
+  } = usePickerOpenState(includeTime);
+
+  const commit = useCallback(
+    (d: Date | null) => {
+      if (!d) {
+        onEndChange("");
+        pendingRef.current = null;
+        return;
+      }
+      const next = includeTime ? clampDateTime(d, minDateTime) : d;
+      pendingRef.current = next;
+      onEndChange(format(next));
+    },
+    [format, includeTime, minDateTime, onEndChange, pendingRef],
+  );
+
+  onDoneRef.current = () => {
+    if (pendingRef.current) commit(pendingRef.current);
+    else if (e) commit(e);
+    setOpen(false);
+  };
+
   const dayForBounds = e ?? s ?? minDateTime ?? new Date();
 
   return (
@@ -764,21 +890,21 @@ export function IsoLinkedRangeEnd({
         includeTime,
         minDateTime,
         selectedDay: dayForBounds,
-        open: includeTime ? open : undefined,
-        onCalendarOpen: includeTime ? () => setOpen(true) : undefined,
-        onCalendarClose: includeTime ? () => setOpen(false) : undefined,
-        onInputClick: includeTime ? () => setOpen(true) : undefined,
+        open,
+        onCalendarOpen: openCalendar,
+        onCalendarClose: () => setOpen(false),
+        onInputClick: openCalendar,
       })}
       id={id}
       selected={e}
-      onChange={(d: Date | null, event) => {
+      onChange={(d: Date | null, event: DatePickerSelectEvent) => {
         if (!d) {
-          onEndChange("");
+          if (open) return;
+          commit(null);
           return;
         }
-        const next = includeTime ? clampDateTime(d, minDateTime) : d;
-        onEndChange(format(next));
-        if (includeTime && isTimeListSelection(event)) setOpen(false);
+        commit(d);
+        if (!includeTime || isTimeListSelection(event)) setOpen(false);
       }}
       selectsEnd
       startDate={s}
@@ -796,16 +922,7 @@ export function IsoLinkedRangeEnd({
       className={cn(inputClassName, className)}
       ariaLabel={ariaLabel}
       autoComplete="off"
-      calendarContainer={
-        includeTime
-          ? ({ className: calClass, children }) => (
-              <div className={calClass}>
-                {children}
-                <DatetimeDoneFooter onDone={() => setOpen(false)} />
-              </div>
-            )
-          : undefined
-      }
+      calendarContainer={calendarContainer}
     />
   );
 }

@@ -5,7 +5,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Table from "@/components/tables/list/page";
 import { Eye, Edit, Trash2, QrCode } from "lucide-react";
-import type { ResidentVisitorData } from "./types";
+import {
+  formatVisitorDateTime,
+  formatVisitorPerson,
+  visitorGateStatus,
+  type ResidentVisitorData,
+} from "./types";
 import { CopyButton } from "@/components/ui/copy-button";
 
 export function VisitorsTableCard({
@@ -39,9 +44,9 @@ export function VisitorsTableCard({
     () => [
       {
         key: "createdAt",
-        header: "Created At",
+        header: "Created",
         render: (item: ResidentVisitorData) =>
-          item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "—",
+          formatVisitorDateTime(item.createdAt),
       },
       {
         key: "name",
@@ -97,46 +102,51 @@ export function VisitorsTableCard({
         key: "visitStartDate",
         header: "Visit Start",
         render: (item: ResidentVisitorData) =>
-          item.visitStartDate
-            ? new Date(item.visitStartDate).toLocaleString()
-            : "—",
+          formatVisitorDateTime(item.visitStartDate),
       },
       {
         key: "visitEndDate",
         header: "Visit End",
         render: (item: ResidentVisitorData) =>
-          item.visitEndDate
-            ? new Date(item.visitEndDate).toLocaleString()
-            : "—",
+          formatVisitorDateTime(item.visitEndDate),
       },
-      // {
-      //   key: "isVerified",
-      //   header: "Status",
-      //   render: (item: ResidentVisitorData) => (
-      //     <span
-      //       className={`px-2 py-1 rounded text-xs font-semibold ${
-      //         item.isVerified
-      //           ? "bg-green-100 text-green-800"
-      //           : "bg-yellow-100 text-yellow-800"
-      //       }`}
-      //     >
-      //       {item.isVerified ? "Verified" : "Pending"}
-      //     </span>
-      //   ),
-      // },
+      {
+        key: "status",
+        header: "Status",
+        render: (item: ResidentVisitorData) => {
+          const status = visitorGateStatus(item);
+          return (
+            <span
+              className={`px-2 py-1 rounded text-xs font-semibold ${status.className}`}
+            >
+              {status.label}
+            </span>
+          );
+        },
+      },
+      {
+        key: "checkinTime",
+        header: "Check-in",
+        render: (item: ResidentVisitorData) =>
+          formatVisitorDateTime(item.checkinTime),
+      },
       {
         key: "checkoutTime",
-        header: "Checkout Time",
+        header: "Check-out",
         render: (item: ResidentVisitorData) =>
-          item.checkoutTime
-            ? new Date(item.checkoutTime).toLocaleTimeString()
-            : "—",
+          formatVisitorDateTime(item.checkoutTime),
       },
       {
-        key: "isCheckedOut",
-        header: "Checked Out",
+        key: "viewedBy",
+        header: "Viewed By",
         render: (item: ResidentVisitorData) =>
-          item.isCheckedOut ? "Yes" : "No",
+          formatVisitorPerson(item.viewedBy) || "—",
+      },
+      {
+        key: "checkedOutBy",
+        header: "Checked Out By",
+        render: (item: ResidentVisitorData) =>
+          formatVisitorPerson(item.checkedOutBy) || "—",
       },
       {
         key: "actions",

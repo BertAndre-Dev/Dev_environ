@@ -1,9 +1,11 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { VisitorDetailsData } from "@/app/dashboard/security/types";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { parseGateResponse, type GateResult } from "@/lib/security-gate";
 import { VisitorVerificationMode } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
 import {
   checkoutVisitor,
+  gateVisitor,
   getAllVisitors,
   getVisitorDetailsByCode,
   scanVisitor,
@@ -52,12 +54,14 @@ type RequestStatus = "idle" | "isLoading" | "succeeded" | "failed";
 
 export interface SecurityVisitorState {
   getAllVisitorsStatus: RequestStatus;
+  gateVisitorStatus: RequestStatus;
   viewDetailsStatus: RequestStatus;
   scanVisitorStatus: RequestStatus;
   verifyVisitorStatus: RequestStatus;
   checkoutVisitorStatus: RequestStatus;
   allVisitors: SecurityAllVisitorsResponse | null;
   activeVisitor: VisitorDetailsData | null;
+  lastGateResult: GateResult | null;
   lookupSource: "code" | "scan" | null;
   estateId: string | null;
   visitorVerificationMode: VisitorVerificationMode | null;
@@ -68,12 +72,14 @@ export interface SecurityVisitorState {
 
 const initialState: SecurityVisitorState = {
   getAllVisitorsStatus: "idle",
+  gateVisitorStatus: "idle",
   viewDetailsStatus: "idle",
   scanVisitorStatus: "idle",
   verifyVisitorStatus: "idle",
   checkoutVisitorStatus: "idle",
   allVisitors: null,
   activeVisitor: null,
+  lastGateResult: null,
   lookupSource: null,
   estateId: null,
   visitorVerificationMode: null,
@@ -131,7 +137,10 @@ const securityVisitorSlice = createSlice({
       action: PayloadAction<VisitorDetailsData | null>,
     ) => {
       state.activeVisitor = action.payload;
-      if (!action.payload) state.lookupSource = null;
+      if (!action.payload) {
+        state.lookupSource = null;
+        state.lastGateResult = null;
+      }
     },
     setLookupSource: (
       state,
@@ -142,6 +151,12 @@ const securityVisitorSlice = createSlice({
     clearActiveVisitor: (state) => {
       state.activeVisitor = null;
       state.lookupSource = null;
+      state.lastGateResult = null;
+      state.gateVisitorStatus = "idle";
+    },
+    clearGateResult: (state) => {
+      state.lastGateResult = null;
+      state.gateVisitorStatus = "idle";
     },
     clearSecurityVisitorError: (state) => {
       state.error = null;
@@ -159,6 +174,22 @@ const securityVisitorSlice = createSlice({
       })
       .addCase(getAllVisitors.rejected, (state, action) => {
         state.getAllVisitorsStatus = "failed";
+        setRejectedError(state, action);
+      })
+
+      .addCase(gateVisitor.pending, (state) => {
+        state.gateVisitorStatus = "isLoading";
+        state.error = null;
+      })
+      .addCase(gateVisitor.fulfilled, (state, action) => {
+        state.gateVisitorStatus = "succeeded";
+        const result = parseGateResponse(action.payload);
+        state.lastGateResult = result;
+        if (result.visitor) state.activeVisitor = result.visitor;
+      })
+      .addCase(gateVisitor.rejected, (state, action) => {
+        state.gateVisitorStatus = "failed";
+        state.lastGateResult = null;
         setRejectedError(state, action);
       })
 
@@ -226,6 +257,7 @@ export const {
   setActiveVisitor,
   setLookupSource,
   clearActiveVisitor,
+  clearGateResult,
   clearSecurityVisitorError,
 } = securityVisitorSlice.actions;
 

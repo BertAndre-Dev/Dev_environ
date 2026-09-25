@@ -31,6 +31,7 @@ import { clearCsrfToken, ensureCsrfToken } from "@/utils/csrf";
 import { disconnectSocket } from "@/lib/socket";
 import { CommunityChatSocketProvider } from "@/components/providers/CommunityChatSocketProvider";
 import { WalletRequiredAlert } from "@/components/wallet/WalletRequiredAlert";
+import { MarketplaceRail } from "@/components/marketplace/MarketplaceRail";
 import { MembershipSwitcher } from "@/components/dashboard/MembershipSwitcher";
 import { NotificationsBell } from "@/components/dashboard/NotificationsBell";
 import { filterNavItemsByEstateModules } from "@/lib/nav-module-filter";
@@ -583,6 +584,7 @@ export default function DashboardLayout({
         </header>
 
         <WalletRequiredAlert />
+        <MarketplaceRail />
 
         {/* Page Content */}
         <Suspense fallback={<Loader fullScreen label="Loading..." />}>

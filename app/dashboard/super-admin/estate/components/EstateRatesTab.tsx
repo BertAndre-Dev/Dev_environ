@@ -25,6 +25,7 @@ const FEE_TYPE_OPTIONS: { value: RateFeeType; label: string }[] = [
 
 type Props = Readonly<{
   estateId: string;
+  estateName?: string;
 }>;
 
 function DetailRow({
@@ -106,10 +107,12 @@ function ActiveBadge({ isActive }: Readonly<{ isActive?: boolean }>) {
 
 function EffectiveRateCard({
   rate,
+  estateName,
   onDeactivate,
   deactivating,
 }: Readonly<{
   rate: PlatformRate | null;
+  estateName?: string;
   onDeactivate?: (id: string) => void;
   deactivating?: boolean;
 }>) {
@@ -117,6 +120,9 @@ function EffectiveRateCard({
     return (
       <div className="rounded-md border border-dashed p-4">
         <p className="text-sm font-medium mb-1">Effective rate</p>
+        {estateName ? (
+          <p className="text-sm text-muted-foreground mb-1">{estateName}</p>
+        ) : null}
         <p className="text-sm text-muted-foreground">No rate found.</p>
       </div>
     );
@@ -135,12 +141,9 @@ function EffectiveRateCard({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {estateName ? <DetailRow label="Estate" value={estateName} /> : null}
         <DetailRow label="Fee type" value={formatFeeType(rate.feeType)} />
         <DetailRow label="Scope" value={formatScope(rate.scope)} />
-        <DetailRow
-          label="Calculation"
-          value={rate.calculationType?.toString() || "—"}
-        />
         <DetailRow
           label="Updated at"
           value={formatDateTime(rate.updatedAt ?? rate.createdAt)}
@@ -166,7 +169,7 @@ function EffectiveRateCard({
   );
 }
 
-export function EstateRatesTab({ estateId }: Props) {
+export function EstateRatesTab({ estateId, estateName }: Props) {
   const dispatch = useDispatch<AppDispatch>();
   const [feeType, setFeeType] = useState<RateFeeType>("VENDING");
   const [setRateOpen, setSetRateOpen] = useState(false);
@@ -251,6 +254,7 @@ export function EstateRatesTab({ estateId }: Props) {
       {!loading ? (
         <EffectiveRateCard
           rate={effectiveRate}
+          estateName={estateName}
           onDeactivate={handleDeactivate}
           deactivating={deactivating}
         />

@@ -122,6 +122,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -133,6 +134,7 @@
     opacity: 0;
     transform: translateY(30px) blur(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) blur(0);
@@ -144,6 +146,7 @@
     opacity: 0;
     transform: translateX(-40px) blur(10px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0) blur(0);
@@ -155,6 +158,7 @@
     opacity: 0;
     transform: translateX(40px) blur(10px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0) blur(0);
@@ -162,10 +166,12 @@
 }
 
 @keyframes float {
+
   0%,
   100% {
     transform: translateY(0px);
   }
+
   50% {
     transform: translateY(-20px);
   }
@@ -175,8 +181,30 @@
   0% {
     transform: translateX(0);
   }
+
   100% {
     transform: translateX(-100%);
+  }
+}
+
+/* One-set shift so the marketplace rail loops without a visible reset */
+@keyframes iso-marketplace-marquee {
+  to {
+    transform: translate3d(calc(-1 * var(--marquee-loop, 0px)), 0, 0);
+  }
+}
+
+.iso-marketplace-marquee-track {
+  animation: iso-marketplace-marquee linear infinite;
+}
+
+.iso-marketplace-marquee-track[data-paused="true"] {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iso-marketplace-marquee-track {
+    animation: none;
   }
 }
 
@@ -184,6 +212,7 @@
   0% {
     transform: translateY(0);
   }
+
   100% {
     transform: translateY(50px);
   }
@@ -214,11 +243,13 @@
 }
 
 @keyframes breathe {
+
   0%,
   100% {
     opacity: 0.3;
     transform: scale(1);
   }
+
   50% {
     opacity: 1;
     transform: scale(1.08);
@@ -233,15 +264,19 @@
 .stagger-1 {
   animation-delay: 0.1s;
 }
+
 .stagger-2 {
   animation-delay: 0.2s;
 }
+
 .stagger-3 {
   animation-delay: 0.3s;
 }
+
 .stagger-4 {
   animation-delay: 0.4s;
 }
+
 .stagger-5 {
   animation-delay: 0.5s;
 }
@@ -267,27 +302,38 @@ input[type="number"] {
   appearance: textfield;
 }
 
-/* react-datepicker — friendlier calendar (portaled above modals) */
+/* react-datepicker — friendlier calendar (portaled above tables / modals) */
+#iso-datepicker-portal-root {
+  position: relative;
+  z-index: 200;
+}
+
 .react-datepicker__portal {
-  z-index: 100;
+  z-index: 200;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: max(0.75rem, env(safe-area-inset-top))
-    max(0.75rem, env(safe-area-inset-right))
-    max(0.75rem, env(safe-area-inset-bottom))
-    max(0.75rem, env(safe-area-inset-left));
+  padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right)) max(0.75rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
   background: rgba(15, 23, 42, 0.4);
   overflow: auto;
   -webkit-overflow-scrolling: touch;
 }
 
+@media (min-width: 480px) {
+  .react-datepicker__portal {
+    align-items: center;
+  }
+}
+
 .iso-datepicker-popper {
-  z-index: 50;
+  z-index: 200;
 }
 
 .iso-datepicker-calendar.react-datepicker {
   font-family: inherit;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  isolation: isolate;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.16);
@@ -502,6 +548,7 @@ input[type="number"] {
 .iso-datepicker-calendar .react-datepicker__month-container {
   float: none;
   width: 100%;
+  background: var(--popover);
 }
 
 .react-datepicker__portal .iso-datepicker-calendar {
@@ -603,16 +650,174 @@ input[type="number"] {
   display: none;
 }
 
+/* Date + time: stack calendar above a clear time grid (Apple-style steps) */
+.iso-datepicker-calendar-time.react-datepicker {
+  display: flex;
+  flex-direction: column;
+  width: min(22.5rem, calc(100vw - 1.5rem));
+  max-height: min(92vh, 40rem);
+  padding-bottom: 0.5rem;
+}
+
+.iso-datepicker-calendar-time .react-datepicker__month-container {
+  float: none;
+  width: 100%;
+}
+
+.iso-datepicker-calendar-time .react-datepicker__time-container {
+  float: none !important;
+  width: 100% !important;
+  border-left: none !important;
+  border-top: 1px solid var(--border);
+  margin-top: 0.5rem;
+  padding-top: 0.35rem;
+  background: var(--popover);
+}
+
+.iso-datepicker-calendar-time .react-datepicker__header--time {
+  background: transparent;
+  border-bottom: none;
+  padding: 0.25rem 0.5rem 0.4rem;
+}
+
+.iso-datepicker-calendar-time .react-datepicker-time__header {
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.iso-datepicker-calendar-time .react-datepicker__time,
+.iso-datepicker-calendar-time .react-datepicker__time-box {
+  width: 100% !important;
+}
+
+.iso-datepicker-calendar-time .react-datepicker__time-list {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.25rem;
+  height: auto !important;
+  max-height: min(11.5rem, 32vh);
+  overflow-y: auto !important;
+  padding: 0.25rem 0.35rem 0.5rem;
+  box-sizing: border-box;
+}
+
+@media (max-width: 420px) {
+  .iso-datepicker-calendar-time.react-datepicker {
+    width: min(100vw - 1rem, 22.5rem);
+    padding: 0.55rem;
+  }
+
+  .iso-datepicker-calendar-time .react-datepicker__time-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: min(10rem, 28vh);
+  }
+
+  .iso-datepicker-time-footer {
+    flex-wrap: wrap;
+  }
+
+  .iso-datepicker-done-btn {
+    width: 100%;
+  }
+}
+
+.iso-datepicker-calendar-time .react-datepicker__time-list-item {
+  width: auto !important;
+  height: 2.35rem !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.65rem !important;
+  font-size: 0.8125rem !important;
+  font-weight: 500;
+  color: var(--foreground);
+  transition: transform 100ms ease-out, background-color 100ms ease-out;
+}
+
+.iso-datepicker-calendar-time .react-datepicker__time-list-item:hover {
+  background: var(--secondary) !important;
+}
+
+.iso-datepicker-calendar-time .react-datepicker__time-list-item:active {
+  transform: scale(0.97);
+}
+
+.iso-datepicker-calendar-time .react-datepicker__time-list-item--selected {
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  font-weight: 600 !important;
+}
+
+.iso-datepicker-calendar-time .react-datepicker__time-list-item--disabled {
+  display: none !important;
+}
+
+.iso-datepicker-time-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+  padding: 0.55rem 0.35rem 0.15rem;
+  border-top: 1px solid var(--border);
+}
+
+.iso-datepicker-time-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  letter-spacing: 0.01em;
+}
+
+.iso-datepicker-done-btn {
+  flex-shrink: 0;
+  height: 2.25rem;
+  padding: 0 1rem;
+  border: none;
+  border-radius: 999px;
+  background: #0071e3;
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 100ms ease-out, background-color 100ms ease-out;
+}
+
+.iso-datepicker-done-btn:hover {
+  background: #0077ed;
+}
+
+.iso-datepicker-done-btn:active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .iso-datepicker-calendar-time .react-datepicker__time-list-item,
+  .iso-datepicker-done-btn {
+    transition: none;
+  }
+}
+
 /* Hide scrollbars while keeping scroll / overflow behavior */
 * {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* Legacy Edge / IE */
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* Legacy Edge / IE */
 }
 
 *::-webkit-scrollbar {
   width: 0;
   height: 0;
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
+  /* Chrome, Safari, Opera */
 }
 
 /* Interactive chart hover affordance (Recharts) */

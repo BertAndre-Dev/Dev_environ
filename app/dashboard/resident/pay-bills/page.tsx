@@ -310,10 +310,7 @@ export default function PayBillsPage() {
             pageLoading ? "pointer-events-none select-none" : "",
           ].join(" ")}
         >
-          <h1 className="text-2xl font-bold">Pay Bills</h1>
-          <p className="text-sm text-muted-foreground">
-            Set up your 4-digit bill payment PIN to continue.
-          </p>
+          <h1 className="text-2xl font-bold tracking-[-0.02em]">Pay Bills</h1>
           <div className="w-full">
             <SetUpPinCard onSubmitPin={handleSubmitBillPin} />
           </div>

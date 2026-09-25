@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const DISPLAY_DATE_FORMAT = "MMM d, yyyy";
+const DISPLAY_DATETIME_FORMAT = "MMM d, yyyy h:mm aa";
+const TIME_INTERVALS_MINUTES = 15;
 
 const MONTHS = [
   "January",
@@ -43,7 +46,7 @@ const FUTURE_YEAR_SPAN = 30;
 const YEAR_PAGE_SIZE = 12;
 
 const inputClassName =
-  "h-10 rounded-md border border-border bg-background px-3 pr-10 text-sm outline-none focus:ring-2 focus:ring-primary w-full max-w-full cursor-pointer placeholder:text-muted-foreground";
+  "h-10 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary w-full max-w-full cursor-pointer placeholder:text-muted-foreground";
 
 /** Shown next to every date field for consistent affordance. */
 const datePickerIcon = (
@@ -55,6 +58,62 @@ const datePickerIcon = (
 
 function startOfDay(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function isSameLocalDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+/** Round up to the next time-interval boundary (e.g. 15 min). */
+function ceilToInterval(d: Date, intervalMinutes = TIME_INTERVALS_MINUTES) {
+  const ms = intervalMinutes * 60 * 1000;
+  return new Date(Math.ceil(d.getTime() / ms) * ms);
+}
+
+function withTimeOfDay(day: Date, hours: number, minutes: number) {
+  return new Date(
+    day.getFullYear(),
+    day.getMonth(),
+    day.getDate(),
+    hours,
+    minutes,
+    0,
+    0,
+  );
+}
+
+/**
+ * Earliest selectable instant for a datetime field.
+ * When `floor` is set (e.g. range start), the result is max(now, floor).
+ */
+export function earliestSelectableDateTime(floor?: Date | null): Date {
+  const nowCeil = ceilToInterval(new Date());
+  if (!floor) return nowCeil;
+  return floor.getTime() > nowCeil.getTime() ? floor : nowCeil;
+}
+
+/** Keep a picked datetime at or after `minBound`; bump midnight→next slot when needed. */
+function clampDateTime(d: Date, minBound: Date | null): Date {
+  if (!minBound) return d;
+  if (d.getTime() >= minBound.getTime()) return d;
+  if (isSameLocalDay(d, minBound)) return new Date(minBound);
+  // Picked a past calendar day — shouldn't happen with minDate, but snap forward.
+  return new Date(minBound);
+}
+
+function timeBoundsForDay(day: Date, minBound: Date | null) {
+  const dayStart = withTimeOfDay(day, 0, 0);
+  const dayEnd = withTimeOfDay(day, 23, 45);
+  if (!minBound || !isSameLocalDay(day, minBound)) {
+    return { minTime: dayStart, maxTime: dayEnd };
+  }
+  const minTime =
+    minBound.getTime() > dayEnd.getTime() ? dayEnd : minBound;
+  return { minTime, maxTime: dayEnd };
 }
 
 function buildYearOptions(
@@ -302,25 +361,158 @@ function DatePickerHeader({
   );
 }
 
-function sharedPickerProps(
-  minDate?: Date | null,
-  maxDate?: Date | null,
+/** Body-level host so poppers overlay tables/modals instead of stacking under them. */
+const DATEPICKER_PORTAL_ID = "iso-datepicker-portal-root";
+
+type SharedPickerOptions = {
+  minDate?: Date | null;
+  maxDate?: Date | null;
+  hasValue?: boolean;
+  withPortal?: boolean;
+  includeTime?: boolean;
+  /** Absolute earliest selectable moment (filters past times on that day). */
+  minDateTime?: Date | null;
+  /** Day currently shown/selected — drives which times are listed. */
+  selectedDay?: Date | null;
+};
+
+function DatetimeDoneFooter({ onDone }: Readonly<{ onDone: () => void }>) {
+  return (
+    <div className="iso-datepicker-time-footer">
+      <p className="iso-datepicker-time-hint">Pick a time to finish</p>
+      <button
+        type="button"
+        className="iso-datepicker-done-btn"
+        onMouseDown={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
+        onClick={onDone}
+      >
+        Done
+      </button>
+    </div>
+  );
+}
+
+/** Stable calendar shell — avoids remounting (which was clearing the value). */
+function DatetimeCalendarContainer({
+  className,
+  children,
+  onDone,
+}: Readonly<{
+  className?: string;
+  children?: ReactNode;
+  onDone: () => void;
+}>) {
+  return (
+    <div className={className}>
+      {children}
+      <DatetimeDoneFooter onDone={onDone} />
+    </div>
+  );
+}
+
+/** Event shape passed by react-datepicker onChange (typed for strict builds). */
+type DatePickerSelectEvent = { target?: EventTarget | null } | undefined;
+
+/** True when the change came from clicking a time slot (not a calendar day). */
+function isTimeListSelection(event?: DatePickerSelectEvent) {
+  const target = event?.target;
+  if (!target || !(target instanceof Element)) return false;
+  return Boolean(
+    target.closest(
+      ".react-datepicker__time-list-item, .react-datepicker__time-container",
+    ),
+  );
+}
+
+function usePickerOpenState(includeTime: boolean) {
+  const pickerRef = useRef<DatePicker>(null);
+  const pendingRef = useRef<Date | null>(null);
+  const isOpenRef = useRef(false);
+  const onDoneRef = useRef<() => void>(() => {});
+
+  const close = useCallback(() => {
+    isOpenRef.current = false;
+    pickerRef.current?.setOpen(false);
+  }, []);
+
+  const calendarContainer = useMemo(() => {
+    if (!includeTime) return undefined;
+    function CalendarContainer({
+      className,
+      children,
+    }: {
+      className?: string;
+      children?: ReactNode;
+    }) {
+      return (
+        <DatetimeCalendarContainer
+          className={className}
+          onDone={() => onDoneRef.current()}
+        >
+          {children}
+        </DatetimeCalendarContainer>
+      );
+    }
+    return CalendarContainer;
+  }, [includeTime]);
+
+  return {
+    pickerRef,
+    isOpenRef,
+    close,
+    pendingRef,
+    onDoneRef,
+    calendarContainer,
+  };
+}
+
+function sharedPickerProps({
+  minDate,
+  maxDate,
   hasValue = false,
   withPortal = true,
-) {
+  includeTime = false,
+  minDateTime = null,
+  selectedDay = null,
+}: SharedPickerOptions) {
+  const dayForBounds = selectedDay ?? minDateTime ?? new Date();
+  const { minTime, maxTime } = includeTime
+    ? timeBoundsForDay(dayForBounds, minDateTime)
+    : { minTime: undefined, maxTime: undefined };
+
   return {
-    dateFormat: DISPLAY_DATE_FORMAT,
+    dateFormat: includeTime ? DISPLAY_DATETIME_FORMAT : DISPLAY_DATE_FORMAT,
     showPopperArrow: false,
-    // Empty: calendar icon. Selected: clear (X) only — never both at once.
     showIcon: !hasValue,
     toggleCalendarOnIconClick: true,
     icon: datePickerIcon,
     withPortal,
-    shouldCloseOnSelect: true,
+    portalId: DATEPICKER_PORTAL_ID,
+    shouldCloseOnSelect: !includeTime,
     isClearable: hasValue,
-    fixedHeight: true,
+    fixedHeight: !includeTime,
+    showTimeSelect: includeTime,
+    timeIntervals: includeTime ? TIME_INTERVALS_MINUTES : undefined,
+    timeCaption: includeTime ? "Time" : undefined,
+    timeFormat: includeTime ? "h:mm aa" : undefined,
+    ...(includeTime && minTime && maxTime
+      ? {
+          minTime,
+          maxTime,
+          filterTime: (time: Date) => {
+            if (!minDateTime) return true;
+            return time.getTime() >= minDateTime.getTime();
+          },
+        }
+      : {}),
     popperClassName: "iso-datepicker-popper",
-    calendarClassName: "iso-datepicker-calendar",
+    calendarClassName: cn(
+      "iso-datepicker-calendar",
+      includeTime && "iso-datepicker-calendar-time",
+    ),
     wrapperClassName: cn(
       "w-full iso-datepicker-wrapper",
       hasValue ? "iso-datepicker-has-value" : "iso-datepicker-empty",
@@ -333,14 +525,27 @@ function sharedPickerProps(
 
 export function parseIsoToDate(value: string | undefined | null): Date | null {
   if (value == null || String(value).trim() === "") return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value).trim());
-  if (!m) return null;
-  const y = Number(m[1]);
-  const month = Number(m[2]) - 1;
-  const d = Number(m[3]);
-  const dt = new Date(y, month, d);
-  if (Number.isNaN(dt.getTime())) return null;
-  return dt;
+  const trimmed = String(value).trim();
+  const local = /^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(
+    trimmed,
+  );
+  if (local) {
+    const dt = new Date(
+      Number(local[1]),
+      Number(local[2]) - 1,
+      Number(local[3]),
+      Number(local[4] ?? 0),
+      Number(local[5] ?? 0),
+      Number(local[6] ?? 0),
+    );
+    return Number.isNaN(dt.getTime()) ? null : dt;
+  }
+  // Absolute ISO (e.g. from API) — convert into a local Date for the picker.
+  if (trimmed.includes("T")) {
+    const dt = new Date(trimmed);
+    return Number.isNaN(dt.getTime()) ? null : dt;
+  }
+  return null;
 }
 
 export function dateToIsoString(d: Date | null): string {
@@ -351,9 +556,24 @@ export function dateToIsoString(d: Date | null): string {
   return `${y}-${mo}-${day}`;
 }
 
+/** Local date+time as `YYYY-MM-DDTHH:mm` for datetime pickers. */
+export function dateToIsoDateTimeString(d: Date | null): string {
+  if (!d) return "";
+  const h = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${dateToIsoString(d)}T${h}:${mi}`;
+}
+
 /** Local calendar date for “today” as YYYY-MM-DD. */
 export function todayIsoString() {
   return dateToIsoString(startOfDay(new Date()));
+}
+
+/** Convert a picker value (`YYYY-MM-DD` or `YYYY-MM-DDTHH:mm`) to API ISO UTC. */
+export function localPickerValueToApiIso(value: string): string | null {
+  const d = parseIsoToDate(value);
+  if (!d) return null;
+  return d.toISOString();
 }
 
 export type IsoDatePickerProps = {
@@ -368,6 +588,8 @@ export type IsoDatePickerProps = {
   ariaLabel?: string;
   /** When false, the calendar opens next to the input instead of a page overlay. */
   withPortal?: boolean;
+  /** When true, value is `YYYY-MM-DDTHH:mm` and the calendar includes a time list. */
+  includeTime?: boolean;
 };
 
 export function IsoDatePicker({
@@ -381,26 +603,92 @@ export function IsoDatePicker({
   className,
   ariaLabel,
   withPortal = true,
+  includeTime = false,
 }: Readonly<IsoDatePickerProps>) {
   const selected = parseIsoToDate(value);
   const min = useMemo(() => parseIsoToDate(minDate), [minDate]);
   const max = useMemo(() => parseIsoToDate(maxDate), [maxDate]);
-  const openTo = selected ?? min ?? startOfDay(new Date());
+  const minDateTime = includeTime ? earliestSelectableDateTime(min) : null;
+  const {
+    pickerRef,
+    isOpenRef,
+    close,
+    pendingRef,
+    onDoneRef,
+    calendarContainer,
+  } = usePickerOpenState(includeTime);
+
+  const commit = useCallback(
+    (d: Date | null) => {
+      if (!d) {
+        onChange("");
+        pendingRef.current = null;
+        return;
+      }
+      const next = includeTime ? clampDateTime(d, minDateTime) : d;
+      pendingRef.current = next;
+      onChange(
+        includeTime ? dateToIsoDateTimeString(next) : dateToIsoString(next),
+      );
+    },
+    [includeTime, minDateTime, onChange, pendingRef],
+  );
+
+  onDoneRef.current = () => {
+    if (pendingRef.current) commit(pendingRef.current);
+    else if (selected) commit(selected);
+    close();
+  };
+
+  const dayForBounds = selected ?? minDateTime ?? new Date();
+  const openTo =
+    selected ??
+    minDateTime ??
+    (includeTime ? new Date() : startOfDay(new Date()));
 
   return (
     <DatePicker
-      {...sharedPickerProps(min, max, Boolean(selected), withPortal)}
+      ref={pickerRef}
+      {...sharedPickerProps({
+        minDate: min,
+        maxDate: max,
+        hasValue: Boolean(selected),
+        withPortal,
+        includeTime,
+        minDateTime,
+        selectedDay: dayForBounds,
+      })}
+      onCalendarOpen={() => {
+        isOpenRef.current = true;
+      }}
+      onCalendarClose={() => {
+        isOpenRef.current = false;
+      }}
       id={id}
       selected={selected}
-      onChange={(d: Date | null) => onChange(dateToIsoString(d))}
+      onChange={(d: Date | null, event: DatePickerSelectEvent) => {
+        // Ignore spurious nulls while open (remount / internal resets).
+        if (!d) {
+          if (isOpenRef.current) return;
+          commit(null);
+          return;
+        }
+        commit(d);
+        if (!includeTime || isTimeListSelection(event)) close();
+      }}
       placeholderText={placeholder}
-      minDate={min ?? undefined}
+      minDate={
+        includeTime && minDateTime
+          ? startOfDay(minDateTime)
+          : (min ?? undefined)
+      }
       maxDate={max ?? undefined}
       openToDate={openTo}
       disabled={disabled}
       className={cn(inputClassName, className)}
       ariaLabel={ariaLabel}
       autoComplete="off"
+      calendarContainer={calendarContainer}
     />
   );
 }
@@ -438,44 +726,103 @@ export function IsoLinkedRangeStart({
   onEndChange,
   id,
   ariaLabel,
-  placeholder = "Select start date",
+  placeholder = "Start date",
   minDate,
   disabled,
   className,
   withPortal = true,
+  includeTime = false,
 }: Omit<LinkedRangeBase, "onEndChange"> & {
   onEndChange?: (iso: string) => void;
   id?: string;
   ariaLabel?: string;
   placeholder?: string;
   minDate?: string;
+  includeTime?: boolean;
 }) {
   const s = parseIsoToDate(startDate);
   const e = parseIsoToDate(endDate);
   const min = parseIsoToDate(minDate);
+  const minDateTime = includeTime ? earliestSelectableDateTime(min) : null;
+  const format = includeTime ? dateToIsoDateTimeString : dateToIsoString;
+  const {
+    pickerRef,
+    isOpenRef,
+    close,
+    pendingRef,
+    onDoneRef,
+    calendarContainer,
+  } = usePickerOpenState(includeTime);
+
+  const commit = useCallback(
+    (d: Date | null) => {
+      if (!d) {
+        onStartChange("");
+        pendingRef.current = null;
+        return;
+      }
+      const next = includeTime ? clampDateTime(d, minDateTime) : d;
+      pendingRef.current = next;
+      onStartChange(format(next));
+      if (e && next > e) onEndChange?.("");
+    },
+    [e, format, includeTime, minDateTime, onEndChange, onStartChange, pendingRef],
+  );
+
+  onDoneRef.current = () => {
+    if (pendingRef.current) commit(pendingRef.current);
+    else if (s) commit(s);
+    close();
+  };
+
+  const dayForBounds = s ?? minDateTime ?? new Date();
+
   return (
     <DatePicker
-      {...sharedPickerProps(min, e, Boolean(s), withPortal)}
+      ref={pickerRef}
+      {...sharedPickerProps({
+        minDate: minDateTime ? startOfDay(minDateTime) : min,
+        maxDate: e,
+        hasValue: Boolean(s),
+        withPortal,
+        includeTime,
+        minDateTime,
+        selectedDay: dayForBounds,
+      })}
+      onCalendarOpen={() => {
+        isOpenRef.current = true;
+      }}
+      onCalendarClose={() => {
+        isOpenRef.current = false;
+      }}
       id={id}
       selected={s}
-      onChange={(d: Date | null) => {
-        const next = dateToIsoString(d);
-        onStartChange(next);
-        // If new start is after current end, clear end so the range stays valid.
-        if (d && e && d > e) {
-          onEndChange?.("");
+      onChange={(d: Date | null, event: DatePickerSelectEvent) => {
+        if (!d) {
+          if (isOpenRef.current) return;
+          commit(null);
+          return;
         }
+        commit(d);
+        if (!includeTime || isTimeListSelection(event)) close();
       }}
       selectsStart
       startDate={s}
       endDate={e}
-      minDate={min ?? undefined}
-      openToDate={s ?? min ?? startOfDay(new Date())}
+      minDate={
+        includeTime && minDateTime
+          ? startOfDay(minDateTime)
+          : (min ?? undefined)
+      }
+      openToDate={
+        s ?? minDateTime ?? (includeTime ? new Date() : startOfDay(new Date()))
+      }
       placeholderText={placeholder}
       disabled={disabled}
       className={cn(inputClassName, className)}
       ariaLabel={ariaLabel}
       autoComplete="off"
+      calendarContainer={calendarContainer}
     />
   );
 }
@@ -487,33 +834,98 @@ export function IsoLinkedRangeEnd({
   onEndChange,
   id,
   ariaLabel,
-  placeholder = "Select end date",
+  placeholder = "End date",
   disabled,
   className,
   withPortal = true,
+  includeTime = false,
 }: Omit<LinkedRangeBase, "onStartChange"> & {
   id?: string;
   ariaLabel?: string;
   placeholder?: string;
+  includeTime?: boolean;
 }) {
   const s = parseIsoToDate(startDate);
   const e = parseIsoToDate(endDate);
+  const minDateTime = includeTime ? earliestSelectableDateTime(s) : null;
+  const format = includeTime ? dateToIsoDateTimeString : dateToIsoString;
+  const {
+    pickerRef,
+    isOpenRef,
+    close,
+    pendingRef,
+    onDoneRef,
+    calendarContainer,
+  } = usePickerOpenState(includeTime);
+
+  const commit = useCallback(
+    (d: Date | null) => {
+      if (!d) {
+        onEndChange("");
+        pendingRef.current = null;
+        return;
+      }
+      const next = includeTime ? clampDateTime(d, minDateTime) : d;
+      pendingRef.current = next;
+      onEndChange(format(next));
+    },
+    [format, includeTime, minDateTime, onEndChange, pendingRef],
+  );
+
+  onDoneRef.current = () => {
+    if (pendingRef.current) commit(pendingRef.current);
+    else if (e) commit(e);
+    close();
+  };
+
+  const dayForBounds = e ?? s ?? minDateTime ?? new Date();
+
   return (
     <DatePicker
-      {...sharedPickerProps(s, null, Boolean(e), withPortal)}
+      ref={pickerRef}
+      {...sharedPickerProps({
+        minDate: includeTime && minDateTime ? startOfDay(minDateTime) : s,
+        maxDate: null,
+        hasValue: Boolean(e),
+        withPortal,
+        includeTime,
+        minDateTime,
+        selectedDay: dayForBounds,
+      })}
+      onCalendarOpen={() => {
+        isOpenRef.current = true;
+      }}
+      onCalendarClose={() => {
+        isOpenRef.current = false;
+      }}
       id={id}
       selected={e}
-      onChange={(d: Date | null) => onEndChange(dateToIsoString(d))}
+      onChange={(d: Date | null, event: DatePickerSelectEvent) => {
+        if (!d) {
+          if (isOpenRef.current) return;
+          commit(null);
+          return;
+        }
+        commit(d);
+        if (!includeTime || isTimeListSelection(event)) close();
+      }}
       selectsEnd
       startDate={s}
       endDate={e}
-      minDate={s ?? undefined}
-      openToDate={e ?? s ?? startOfDay(new Date())}
+      minDate={
+        includeTime && minDateTime
+          ? startOfDay(minDateTime)
+          : (s ?? undefined)
+      }
+      openToDate={
+        e ?? s ?? (includeTime ? new Date() : startOfDay(new Date()))
+      }
       placeholderText={placeholder}
       disabled={disabled}
       className={cn(inputClassName, className)}
       ariaLabel={ariaLabel}
       autoComplete="off"
+      calendarContainer={calendarContainer}
     />
   );
 }

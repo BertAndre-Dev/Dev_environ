@@ -4,6 +4,27 @@ import { getApiErrorMessage } from "@/lib/api-error";
 
 export type VisitingType = "SHORT_VISIT" | "LONG_VISIT";
 
+/** Response `action` from POST /visitor-mgt/gate */
+export type GateAction =
+  | "VIEWED"
+  | "CHECKED_IN"
+  | "VERIFIED"
+  | "CHECKED_OUT";
+
+/** Suggested following step from the gate API */
+export type GateNextAction =
+  | "VIEW"
+  | "VERIFY"
+  | "CHECK_IN"
+  | "CHECK_OUT"
+  | "NONE"
+  | null;
+
+export type GateVisitorParams = {
+  /** Visitor code, verification code, or offline token */
+  code: string;
+};
+
 export type ScanVisitorParams = {
   barcode: string;
   visitingType?: VisitingType;
@@ -59,7 +80,31 @@ export const getAllVisitors = createAsyncThunk(
   },
 );
 
-/** GET /api/v1/visitor-mgt/view-details — look up visitor by code */
+/**
+ * POST /api/v1/visitor-mgt/gate
+ * One call for typed code or scanned QR / barcode.
+ * Estate verification mode decides the step: VIEWED → VERIFIED/CHECKED_IN → CHECKED_OUT.
+ */
+export const gateVisitor = createAsyncThunk(
+  "securityVisitor/gateVisitor",
+  async ({ code }: GateVisitorParams, { rejectWithValue }) => {
+    const trimmed = code.trim();
+    if (!trimmed) {
+      return rejectWithValue({ message: "Visitor code is required" });
+    }
+
+    try {
+      const res = await axiosInstance.post("/api/v1/visitor-mgt/gate", {
+        code: trimmed,
+      });
+      return res.data;
+    } catch (error: unknown) {
+      return rejectApiError(error, rejectWithValue);
+    }
+  },
+);
+
+/** Legacy lookup — prefer gateVisitor for gate operations. */
 export const getVisitorDetailsByCode = createAsyncThunk(
   "securityVisitor/getVisitorDetailsByCode",
   async ({ code }: { code: string }, { rejectWithValue }) => {
@@ -74,7 +119,7 @@ export const getVisitorDetailsByCode = createAsyncThunk(
   },
 );
 
-/** POST /api/v1/visitor-mgt/scan — look up visitor from scanned QR / barcode */
+/** Legacy scan — prefer gateVisitor for gate operations. */
 export const scanVisitor = createAsyncThunk(
   "securityVisitor/scanVisitor",
   async (params: ScanVisitorParams, { rejectWithValue }) => {
@@ -96,7 +141,7 @@ export const scanVisitor = createAsyncThunk(
   },
 );
 
-/** PUT /api/v1/visitor-mgt/verify-code — verify visitor and allow access */
+/** Legacy verify — prefer gateVisitor for gate operations. */
 export const verifyVisitor = createAsyncThunk(
   "securityVisitor/verifyVisitor",
   async (params: VerifyVisitorParams, { rejectWithValue }) => {
@@ -123,6 +168,7 @@ export const verifyVisitor = createAsyncThunk(
   },
 );
 
+/** Legacy checkout — prefer gateVisitor for gate operations. */
 export const checkoutVisitor = createAsyncThunk(
   "securityVisitor/checkoutVisitor",
   async ({ visitorCode }: { visitorCode: string }, { rejectWithValue }) => {

@@ -362,7 +362,7 @@ export default function AdminVisitorForm({
                         onEndChange={(iso) =>
                           updateDraft(row.id, "visitEndDate", iso)
                         }
-                        placeholder="Start date & time"
+                        placeholder="Start — date then time"
                         ariaLabel={`Visit start for visitor ${idx + 1}`}
                       />
                     </div>
@@ -380,7 +380,7 @@ export default function AdminVisitorForm({
                         onEndChange={(iso) =>
                           updateDraft(row.id, "visitEndDate", iso)
                         }
-                        placeholder="End date & time"
+                        placeholder="End — date then time"
                         ariaLabel={`Visit end for visitor ${idx + 1}`}
                       />
                     </div>

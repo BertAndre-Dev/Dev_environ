@@ -28,7 +28,11 @@ export function VisitorUpsertModal({
   if (!open) return null;
 
   return (
-    <Modal visible={open} onClose={onClose}>
+    <Modal
+      visible={open}
+      onClose={onClose}
+      contentClassName="w-full max-w-lg sm:max-w-xl md:max-w-2xl max-h-[min(92vh,52rem)] p-4 sm:p-5"
+    >
       <VisitorForm
         visitorId={mode === "edit" ? selectedVisitorId ?? undefined : undefined}
         residentId={residentId}

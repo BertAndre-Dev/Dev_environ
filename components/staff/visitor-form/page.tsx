@@ -344,8 +344,8 @@ export default function StaffVisitorForm({
               </div>
 
               {row.visitingType === "LONG_VISIT" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="min-w-0">
                     <Label htmlFor={`visitStartDate-${row.id}`}>
                       Visit start *
                     </Label>
@@ -367,7 +367,7 @@ export default function StaffVisitorForm({
                       />
                     </div>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <Label htmlFor={`visitEndDate-${row.id}`}>
                       Visit end *
                     </Label>

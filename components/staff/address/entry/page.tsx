@@ -18,8 +18,13 @@ import { AppDispatch } from "@/redux/store";
 import { useEffect, useState } from "react";
 import Modal from "@/components/modal/page";
 import EntryForm from "../forms/entry-form/page";
-import { formatAddressRecordCreatedAt } from "@/lib/address";
+import {
+  formatAddressRecordCreatedAt,
+  normalizeAddressListPagination,
+} from "@/lib/address";
 import { getApiErrorMessage } from "@/lib/api-error";
+
+const PAGE_SIZE = 10;
 
 interface EntryData {
   estateId: string;
@@ -42,9 +47,27 @@ export default function EntryPage() {
   const [fields, setFields] = useState<any[]>([]);
   const [stats, setStats] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(false);
-  const [pagination, setPagination] = useState<any>({});
+  const [pagination, setPagination] = useState({
+    total: 0,
+    currentPage: 1,
+    pageSize: PAGE_SIZE,
+    totalPages: 1,
+  });
+  const [currentPage, setCurrentPage] = useState(1);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+
+  const applyEntries = (res: { data?: EntryData[]; pagination?: unknown; meta?: unknown }, page: number) => {
+    const rows = res?.data || [];
+    setEntries(rows);
+    const next = normalizeAddressListPagination(res?.pagination ?? res?.meta, {
+      page,
+      pageSize: PAGE_SIZE,
+      rowCount: rows.length,
+    });
+    setPagination(next);
+    setCurrentPage(next.currentPage);
+  };
 
   // ✅ Fetch all data
   const fetchAllData = async () => {
@@ -95,25 +118,13 @@ export default function EntryPage() {
         getEntriesByField({
           fieldId,
           page: 1,
-          limit: 10,
+          limit: PAGE_SIZE,
           startDate: shouldApplyDate ? startDate : undefined,
           endDate: shouldApplyDate ? endDate : undefined,
         }),
       ).unwrap();
 
-      setEntries(entryRes?.data || []);
-      setPagination(entryRes?.pagination || {});
-
-      const allEntries = (entryRes?.data || []).map((e: any) => ({
-        id: e.id,
-        estateId: e.estateId,
-        fieldId: e.fieldId,
-        data: e.data,
-        createdAt: e.createdAt,
-        updatedAt: e.updatedAt,
-      }));
-
-      setEntries(allEntries);
+      applyEntries(entryRes, 1);
 
       const statsRes = await dispatch(getEntryStats(fieldId)).unwrap();
       setStats({ [fieldId]: statsRes?.data || {} });
@@ -130,7 +141,7 @@ export default function EntryPage() {
     fetchAllData();
   }, [dispatch]);
 
-  // Refetch entries when date range changes (only apply when both are selected)
+  // Refetch page 1 when the date range changes (not when fields first load)
   useEffect(() => {
     const fieldId = fields[0]?.id || fields[0]?._id;
     if (!fieldId) return;
@@ -141,22 +152,19 @@ export default function EntryPage() {
       getEntriesByField({
         fieldId,
         page: 1,
-        limit: pagination.pageSize ?? 10,
+        limit: PAGE_SIZE,
         startDate: shouldApplyDate ? startDate : undefined,
         endDate: shouldApplyDate ? endDate : undefined,
       }),
     )
       .unwrap()
-      .then((res) => {
-        setEntries(res?.data || []);
-        setPagination(res?.pagination || {});
-      })
+      .then((res) => applyEntries(res, 1))
       .catch((err: unknown) => {
         const message = getApiErrorMessage(err);
         if (message) toast.error(message);
       })
       .finally(() => setLoading(false));
-  }, [dispatch, startDate, endDate, fields]);
+  }, [dispatch, startDate, endDate]);
 
   const handleOpenModal = (entry?: EntryData) => {
     setSelectedEntry(entry || null);
@@ -416,33 +424,32 @@ export default function EntryPage() {
           }}
           showPagination
           paginationInfo={{
-            total: pagination.total ?? 0,
-            current: pagination.currentPage ?? 1,
-            pageSize: pagination.pageSize ?? 10,
+            total: pagination.total,
+            current: pagination.currentPage || currentPage,
+            pageSize: pagination.pageSize || PAGE_SIZE,
           }}
           onPageChange={(page) => {
             const fieldId = fields[0]?.id || fields[0]?._id;
             if (!fieldId) return;
             const shouldApplyDate = Boolean(startDate && endDate);
 
+            setLoading(true);
             dispatch(
               getEntriesByField({
                 fieldId,
                 page,
-                limit: pagination.pageSize ?? 10,
+                limit: pagination.pageSize || PAGE_SIZE,
                 startDate: shouldApplyDate ? startDate : undefined,
                 endDate: shouldApplyDate ? endDate : undefined,
               }),
             )
               .unwrap()
-              .then((res) => {
-                setEntries(res?.data || []);
-                setPagination(res?.pagination || {});
-              })
+              .then((res) => applyEntries(res, page))
               .catch((err: unknown) => {
                 const message = getApiErrorMessage(err);
                 if (message) toast.error(message);
-              });
+              })
+              .finally(() => setLoading(false));
           }}
           enableExport
           exportFileName="address-entries"

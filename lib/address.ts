@@ -108,6 +108,37 @@ export function toAddressFieldBody(data: {
   };
 }
 
+export type AddressListPagination = {
+  total: number;
+  currentPage: number;
+  pageSize: number;
+  totalPages: number;
+};
+
+/** Map API pagination keys (`page`/`limit`/`pages`) to the table shape. */
+export function normalizeAddressListPagination(
+  raw: unknown,
+  fallback: { page: number; pageSize: number; rowCount: number },
+): AddressListPagination {
+  const p = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const pageSize =
+    Number(p.pageSize ?? p.limit ?? fallback.pageSize) || fallback.pageSize;
+  const currentPage =
+    Number(p.currentPage ?? p.page ?? fallback.page) || fallback.page;
+  let total = Number(p.total ?? p.totalCount ?? 0) || 0;
+  let totalPages = Number(p.totalPages ?? p.pages) || 0;
+
+  if (!total) {
+    total = (currentPage - 1) * pageSize + fallback.rowCount;
+    if (fallback.rowCount >= pageSize) total += 1;
+  }
+  if (!totalPages) {
+    totalPages = Math.max(1, Math.ceil(total / pageSize) || 1);
+  }
+
+  return { total, currentPage, pageSize, totalPages };
+}
+
 /** Format address field/entry `createdAt` for admin tables. */
 export function formatAddressRecordCreatedAt(value?: string): string {
   if (!value) return "—";

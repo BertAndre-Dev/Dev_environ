@@ -19,7 +19,12 @@ import { AppDispatch } from "@/redux/store";
 import { useEffect, useState } from "react";
 import Modal from "@/components/modal/page";
 import EnergyProviderEntryForm from "../forms/entry-form/page";
-import { formatAddressRecordCreatedAt } from "@/lib/address";
+import {
+  formatAddressRecordCreatedAt,
+  normalizeAddressListPagination,
+} from "@/lib/address";
+
+const PAGE_SIZE = 10;
 
 interface EntryData {
   estateId: string;
@@ -50,9 +55,30 @@ export default function EnergyProviderFieldEntry() {
   const [fields, setFields] = useState<FieldDefinition[]>([]);
   const [stats, setStats] = useState<Record<string, Record<string, unknown>>>({});
   const [loading, setLoading] = useState(false);
-  const [pagination, setPagination] = useState<Record<string, number>>({});
+  const [pagination, setPagination] = useState({
+    total: 0,
+    currentPage: 1,
+    pageSize: PAGE_SIZE,
+    totalPages: 1,
+  });
+  const [currentPage, setCurrentPage] = useState(1);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+
+  const applyEntries = (
+    res: { data?: EntryData[]; pagination?: unknown; meta?: unknown },
+    page: number,
+  ) => {
+    const rows = res?.data || [];
+    setEntries(rows);
+    const next = normalizeAddressListPagination(res?.pagination ?? res?.meta, {
+      page,
+      pageSize: PAGE_SIZE,
+      rowCount: rows.length,
+    });
+    setPagination(next);
+    setCurrentPage(next.currentPage);
+  };
 
   const fetchAllData = async () => {
     try {
@@ -95,14 +121,13 @@ export default function EnergyProviderFieldEntry() {
         getEnergyProviderEntriesByField({
           fieldId,
           page: 1,
-          limit: 10,
+          limit: PAGE_SIZE,
           startDate: shouldApplyDate ? startDate : undefined,
           endDate: shouldApplyDate ? endDate : undefined,
         }),
       ).unwrap();
 
-      setEntries(entryRes?.data || []);
-      setPagination(entryRes?.pagination || {});
+      applyEntries(entryRes, 1);
 
       const statsRes = await dispatch(getEnergyProviderEntryStats(fieldId)).unwrap();
       setStats({ [fieldId]: statsRes?.data || {} });
@@ -127,19 +152,16 @@ export default function EnergyProviderFieldEntry() {
       getEnergyProviderEntriesByField({
         fieldId,
         page: 1,
-        limit: Number(pagination.pageSize) || 10,
+        limit: PAGE_SIZE,
         startDate: shouldApplyDate ? startDate : undefined,
         endDate: shouldApplyDate ? endDate : undefined,
       }),
     )
       .unwrap()
-      .then((res) => {
-        setEntries(res?.data || []);
-        setPagination(res?.pagination || {});
-      })
+      .then((res) => applyEntries(res, 1))
       .catch(() => toast.error("Failed to fetch entries."))
       .finally(() => setLoading(false));
-  }, [dispatch, startDate, endDate, fields]);
+  }, [dispatch, startDate, endDate]);
 
   const handleOpenModal = (entry?: EntryData) => {
     setSelectedEntry(entry || null);
@@ -327,30 +349,29 @@ export default function EnergyProviderFieldEntry() {
           }}
           showPagination
           paginationInfo={{
-            total: pagination.total ?? 0,
-            current: pagination.currentPage ?? 1,
-            pageSize: pagination.pageSize ?? 10,
+            total: pagination.total,
+            current: pagination.currentPage || currentPage,
+            pageSize: pagination.pageSize || PAGE_SIZE,
           }}
           onPageChange={(page) => {
             const fieldId = fields[0]?.id || fields[0]?._id;
             if (!fieldId) return;
             const shouldApplyDate = Boolean(startDate && endDate);
 
+            setLoading(true);
             dispatch(
               getEnergyProviderEntriesByField({
                 fieldId,
                 page,
-                limit: pagination.pageSize ?? 10,
+                limit: pagination.pageSize || PAGE_SIZE,
                 startDate: shouldApplyDate ? startDate : undefined,
                 endDate: shouldApplyDate ? endDate : undefined,
               }),
             )
               .unwrap()
-              .then((res) => {
-                setEntries(res?.data || []);
-                setPagination(res?.pagination || {});
-              })
-              .catch(() => toast.error("Failed to change page"));
+              .then((res) => applyEntries(res, page))
+              .catch(() => toast.error("Failed to change page"))
+              .finally(() => setLoading(false));
           }}
           enableExport
           exportFileName="energy-provider-address-entries"

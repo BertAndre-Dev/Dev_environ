@@ -632,10 +632,7 @@ export function EstateUsersPage({
                   </Button>
                 )}
 
-                {/* Staff & security: edit icon commented out */}
-                {roleFilter !== "resident" &&
-                roleFilter !== "staff" &&
-                roleFilter !== "security" ? (
+                {roleFilter !== "staff" && roleFilter !== "security" ? (
                   <Button
                     variant="ghost"
                     size="sm"

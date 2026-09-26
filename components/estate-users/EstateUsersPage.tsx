@@ -483,6 +483,7 @@ export function EstateUsersPage({
 
   const showResidentColumns = roleFilter === "resident";
   const showStaffColumns = roleFilter === "staff";
+  const showAddressColumn = roleFilter === "resident";
   const hideActionsColumn = roleFilter === "admin";
 
   const columns = [
@@ -516,13 +517,18 @@ export function EstateUsersPage({
       header: "Phone",
       render: (item: AdminUserData) => item.phoneNumber?.trim() || "—",
     },
-    {
-      key: "address",
-      header: "Address",
-      render: (item: AdminUserData) =>
-        formatUserAddresses(item.addressIds) || "—",
-      exportValue: (item: AdminUserData) => formatUserAddresses(item.addressIds),
-    },
+    ...(showAddressColumn
+      ? [
+          {
+            key: "address",
+            header: "Address",
+            render: (item: AdminUserData) =>
+              formatUserAddresses(item.addressIds) || "—",
+            exportValue: (item: AdminUserData) =>
+              formatUserAddresses(item.addressIds),
+          },
+        ]
+      : []),
     // { key: "role", header: "Role" },
     ...(showResidentColumns
       ? [
@@ -638,7 +644,7 @@ export function EstateUsersPage({
                   </Button>
                 )}
 
-                {roleFilter !== "staff" && roleFilter !== "security" ? (
+                {roleFilter !== "staff" ? (
                   <Button
                     variant="ghost"
                     size="sm"

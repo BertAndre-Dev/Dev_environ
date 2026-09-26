@@ -41,7 +41,10 @@ export default function EntryPage() {
   const [estateId, setEstateId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<EntryData | null>(null);
-  const [itemToDelete, setItemToDelete] = useState<{ id: string; name?: string } | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{
+    id: string;
+    name?: string;
+  } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [entries, setEntries] = useState<EntryData[]>([]);
   const [fields, setFields] = useState<any[]>([]);
@@ -57,7 +60,10 @@ export default function EntryPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  const applyEntries = (res: { data?: EntryData[]; pagination?: unknown; meta?: unknown }, page: number) => {
+  const applyEntries = (
+    res: { data?: EntryData[]; pagination?: unknown; meta?: unknown },
+    page: number,
+  ) => {
     const rows = res?.data || [];
     setEntries(rows);
     const next = normalizeAddressListPagination(res?.pagination ?? res?.meta, {
@@ -243,8 +249,8 @@ export default function EntryPage() {
             variant="ghost"
             size="sm"
             onClick={() => handleOpenModal(item)}
-           className="text-blue-600 hover:text-blue-700"
-           >
+            className="text-blue-600 hover:text-blue-700"
+          >
             <Edit2 className="w-4 h-4" />
           </Button>
           <Button
@@ -253,8 +259,8 @@ export default function EntryPage() {
             onClick={() =>
               handleDeleteEntry(item.id, item.data?.name || "entry")
             }
-           className="text-red-600 hover:text-red-700"
-           >
+            className="text-red-600 hover:text-red-700"
+          >
             <Trash2 className="w-4 h-4" />
           </Button>
         </div>
@@ -488,7 +494,7 @@ export default function EntryPage() {
           />
         </Modal>
       )}
-    
+
       <DeleteModal
         visible={Boolean(itemToDelete)}
         onClose={() => setItemToDelete(null)}

@@ -17,6 +17,7 @@ type PlatformFeeListProps = Readonly<{
   items: PlatformFeeListItem[];
   pagination: PlatformFeePagination | null;
   onPageChange: (page: number) => void;
+  onExportRequest?: () => Promise<PlatformFeeListItem[]> | PlatformFeeListItem[];
   className?: string;
 }>;
 
@@ -24,6 +25,7 @@ export function PlatformFeeList({
   items,
   pagination,
   onPageChange,
+  onExportRequest,
   className,
 }: PlatformFeeListProps) {
   const columns = useMemo(
@@ -32,6 +34,7 @@ export function PlatformFeeList({
         key: "date",
         header: "Date",
         render: (item: TableRow) => formatDate(item.date),
+        exportValue: (item: TableRow) => formatDate(item.date, item.date ?? ""),
       },
       {
         key: "source",
@@ -56,6 +59,7 @@ export function PlatformFeeList({
         align: "right" as const,
         render: (item: TableRow) =>
           formatTransactionAmount(Number(item.fee ?? 0)),
+        exportValue: (item: TableRow) => Number(item.fee ?? 0),
       },
     ],
     [],
@@ -96,6 +100,9 @@ export function PlatformFeeList({
               : undefined
           }
           onPageChange={onPageChange}
+          enableExport
+          exportFileName="platform_fee_transactions"
+          onExportRequest={onExportRequest}
         />
       </div>
     </Card>

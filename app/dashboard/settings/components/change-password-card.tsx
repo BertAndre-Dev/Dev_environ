@@ -9,7 +9,10 @@ import { Lock, Eye, EyeOff } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+<<<<<<< HEAD
 import { OtpInput } from "@/components/ui/otp-input";
+=======
+>>>>>>> 3f8e442 (pagination)
 import { IconTooltip } from "@/components/ui/tooltip";
 import { forgotPassword, resetPassword } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getApiErrorMessage } from "@/lib/api-error";

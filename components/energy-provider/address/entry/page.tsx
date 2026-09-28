@@ -50,11 +50,16 @@ export default function EnergyProviderFieldEntry() {
   const [estateId, setEstateId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<EntryData | null>(null);
-  const [itemToDelete, setItemToDelete] = useState<{ id: string; name?: string } | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{
+    id: string;
+    name?: string;
+  } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [entries, setEntries] = useState<EntryData[]>([]);
   const [fields, setFields] = useState<FieldDefinition[]>([]);
-  const [stats, setStats] = useState<Record<string, Record<string, unknown>>>({});
+  const [stats, setStats] = useState<Record<string, Record<string, unknown>>>(
+    {},
+  );
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
     total: 0,
@@ -130,7 +135,9 @@ export default function EnergyProviderFieldEntry() {
 
       applyEntries(entryRes, 1);
 
-      const statsRes = await dispatch(getEnergyProviderEntryStats(fieldId)).unwrap();
+      const statsRes = await dispatch(
+        getEnergyProviderEntryStats(fieldId),
+      ).unwrap();
       setStats({ [fieldId]: statsRes?.data || {} });
     } catch {
       toast.error("Failed to fetch entries or stats.");
@@ -239,9 +246,9 @@ export default function EnergyProviderFieldEntry() {
               variant="ghost"
               size="sm"
               onClick={() => handleOpenModal(item)}
-             className="text-blue-600 hover:text-blue-700"
-             aria-label="Edit"
-             >
+              className="text-blue-600 hover:text-blue-700"
+              aria-label="Edit"
+            >
               <Edit2 className="w-4 h-4" />
             </Button>
           </IconTooltip>
@@ -250,14 +257,11 @@ export default function EnergyProviderFieldEntry() {
               variant="ghost"
               size="sm"
               onClick={() =>
-                handleDeleteEntry(
-                  item.id,
-                  String(item.data?.name ?? "entry"),
-                )
+                handleDeleteEntry(item.id, String(item.data?.name ?? "entry"))
               }
-             className="text-red-600 hover:text-red-700"
-             aria-label="Delete"
-             >
+              className="text-red-600 hover:text-red-700"
+              aria-label="Delete"
+            >
               <Trash2 className="w-4 h-4" />
             </Button>
           </IconTooltip>
@@ -306,7 +310,10 @@ export default function EnergyProviderFieldEntry() {
                     {String(stat.value)}
                   </p>
                 </div>
-                <div className="p-3 rounded-lg" style={{ background: stat.color }}>
+                <div
+                  className="p-3 rounded-lg"
+                  style={{ background: stat.color }}
+                >
                   <Icon className="w-6 h-6" />
                 </div>
               </div>
@@ -425,7 +432,9 @@ export default function EnergyProviderFieldEntry() {
         <Modal visible={open} onClose={handleCloseModal}>
           <EnergyProviderEntryForm
             estateId={estateId}
-            fieldId={selectedEntry?.fieldId || fields[0]?.id || fields[0]?._id || ""}
+            fieldId={
+              selectedEntry?.fieldId || fields[0]?.id || fields[0]?._id || ""
+            }
             fields={fields.map((field) => ({
               id: field.id || field._id || "",
               key: field.key,
@@ -437,7 +446,7 @@ export default function EnergyProviderFieldEntry() {
           />
         </Modal>
       )}
-    
+
       <DeleteModal
         visible={Boolean(itemToDelete)}
         onClose={() => setItemToDelete(null)}

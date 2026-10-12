@@ -180,8 +180,9 @@ function MarketplaceMarquee({
     const setWidth = set.offsetWidth;
     const view = scroller.clientWidth;
     if (setWidth <= 0) return;
-    setLoopPx(setWidth);
-    setCopies(Math.max(2, Math.ceil(view / setWidth) + 2));
+    const nextCopies = Math.max(2, Math.ceil(view / setWidth) + 2);
+    setLoopPx((prev) => (prev === setWidth ? prev : setWidth));
+    setCopies((prev) => (prev === nextCopies ? prev : nextCopies));
   }, []);
 
   useEffect(() => {
@@ -211,13 +212,14 @@ function MarketplaceMarquee({
 
   const renderSet = (copyIndex: number) => (
     <div
+      key={`marquee-set-${copyIndex}`}
       ref={copyIndex === 0 ? setRef : undefined}
       className="flex shrink-0 gap-3 pr-3"
       aria-hidden={copyIndex > 0 || undefined}
     >
-      {items.map((item) => (
+      {items.map((item, itemIndex) => (
         <RailCard
-          key={`${item.id ?? item.productName}-${copyIndex}`}
+          key={`${item.id ?? item.productName ?? "ad"}-${itemIndex}-${copyIndex}`}
           item={item}
           clone={copyIndex > 0}
           onOpen={onOpen}

@@ -15,9 +15,12 @@ import type { AppDispatch, RootState } from "@/redux/store";
 
 export type FeedEstateOption = { label: string; value: string };
 
+const EMPTY_ESTATE_ROWS: unknown[] = [];
+const EMPTY_OPTIONS: FeedEstateOption[] = [];
+
 function mapEstateRows(rows: unknown): FeedEstateOption[] {
-  if (!Array.isArray(rows)) return [];
-  return rows
+  if (!Array.isArray(rows)) return EMPTY_OPTIONS;
+  const mapped = rows
     .map((row) => {
       const item = row as { id?: string; _id?: string; name?: string };
       const value = String(item._id || item.id || "").trim();
@@ -25,6 +28,7 @@ function mapEstateRows(rows: unknown): FeedEstateOption[] {
       return { label: item.name ?? "Unnamed estate", value };
     })
     .filter((row): row is FeedEstateOption => Boolean(row));
+  return mapped.length === 0 ? EMPTY_OPTIONS : mapped;
 }
 
 function readStoredEstateId(): string {
@@ -56,21 +60,25 @@ export function useMarketplaceFeedEstate() {
   const needsEstateId = marketplaceFeedNeedsEstateId(role);
   const jwtEstateId = resolveEstateId(user?.estateId);
 
+  // Use a stable empty fallback — `?? []` would allocate every render and
+  // retrigger the selection effect in an infinite loop.
   const companyEstates = useSelector(
-    (state: RootState) => state.companyEstate.allEstates?.data ?? [],
+    (state: RootState) =>
+      state.companyEstate.allEstates?.data ?? EMPTY_ESTATE_ROWS,
   );
   const energyProviderEstates = useSelector(
-    (state: RootState) => state.energyProviderEstate.allEstates?.data ?? [],
+    (state: RootState) =>
+      state.energyProviderEstate.allEstates?.data ?? EMPTY_ESTATE_ROWS,
   );
   const superAdminEstates = useSelector(
-    (state: RootState) => state.estate.allEstates?.data ?? [],
+    (state: RootState) => state.estate.allEstates?.data ?? EMPTY_ESTATE_ROWS,
   );
 
   const [selectedEstateId, setSelectedEstateId] = useState("");
   const [estatesLoaded, setEstatesLoaded] = useState(!needsEstateId);
 
   const estateOptions = useMemo(() => {
-    if (!needsEstateId) return [] as FeedEstateOption[];
+    if (!needsEstateId) return EMPTY_OPTIONS;
     if (role === "company") return mapEstateRows(companyEstates);
     if (role === "energy provider") return mapEstateRows(energyProviderEstates);
     return mapEstateRows(superAdminEstates);
@@ -117,7 +125,7 @@ export function useMarketplaceFeedEstate() {
 
   useEffect(() => {
     if (!needsEstateId) {
-      setSelectedEstateId("");
+      setSelectedEstateId((prev) => (prev === "" ? prev : ""));
       return;
     }
     if (!estatesLoaded || estateOptions.length === 0) return;
@@ -125,8 +133,7 @@ export function useMarketplaceFeedEstate() {
     const stored = readStoredEstateId();
     const preferred =
       (stored && estateOptions.some((o) => o.value === stored) ? stored : "") ||
-      (jwtEstateId &&
-      estateOptions.some((o) => o.value === jwtEstateId)
+      (jwtEstateId && estateOptions.some((o) => o.value === jwtEstateId)
         ? jwtEstateId
         : "") ||
       estateOptions[0]?.value ||
@@ -134,6 +141,7 @@ export function useMarketplaceFeedEstate() {
 
     setSelectedEstateId((prev) => {
       if (prev && estateOptions.some((o) => o.value === prev)) return prev;
+      if (prev === preferred) return prev;
       if (preferred) writeStoredEstateId(preferred);
       return preferred;
     });

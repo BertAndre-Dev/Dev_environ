@@ -31,9 +31,6 @@ import {
 } from "@/redux/slice/company/overview-analytics/company-overview-analytics";
 import {
   clearCompanyOverviewAnalytics,
-  selectCompanyBillsSummaryData,
-  selectCompanyBillsSummaryError,
-  selectCompanyBillsSummaryLoading,
   selectCompanyComplaintsSummaryData,
   selectCompanyComplaintsSummaryError,
   selectCompanyComplaintsSummaryLoading,
@@ -198,11 +195,6 @@ export default function CompanyOverviewPage() {
   const handleMeterSummaryRetry = () => {
     if (!selectedEstateId) return;
     void dispatch(getCompanyMeterSummary({ estateId: selectedEstateId }));
-  };
-
-  const handleBillsSummaryRetry = () => {
-    if (!selectedEstateId) return;
-    void dispatch(getCompanyBillsSummary({ estateId: selectedEstateId }));
   };
 
   const handleComplaintsSummaryRetry = () => {

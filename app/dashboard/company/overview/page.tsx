@@ -326,12 +326,21 @@ export default function CompanyOverviewPage() {
         estateId={selectedEstateId || null}
       />
 
-      <UserSummaryCard
-        data={userSummary}
-        loading={userSummaryLoading || estatesLoading}
-        error={userSummaryError}
-        onRetry={handleUserSummaryRetry}
-      />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+        <UserSummaryCard
+          data={userSummary}
+          loading={userSummaryLoading || estatesLoading}
+          error={userSummaryError}
+          onRetry={handleUserSummaryRetry}
+        />
+
+        <RoleBreakdownChart
+          data={roleBreakdown}
+          loading={roleBreakdownLoading || estatesLoading}
+          error={roleBreakdownError}
+          onRetry={handleRoleBreakdownRetry}
+        />
+      </div>
 
       <MeterSummaryCard
         data={meterSummary}
@@ -339,13 +348,6 @@ export default function CompanyOverviewPage() {
         error={meterSummaryError}
         onRetry={handleMeterSummaryRetry}
         estateName={selectedEstateName}
-      />
-
-      <RoleBreakdownChart
-        data={roleBreakdown}
-        loading={roleBreakdownLoading || estatesLoading}
-        error={roleBreakdownError}
-        onRetry={handleRoleBreakdownRetry}
       />
 
       <TransactionSummaryCard

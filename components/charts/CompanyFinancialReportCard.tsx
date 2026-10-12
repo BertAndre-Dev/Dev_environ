@@ -184,7 +184,7 @@ export function CompanyFinancialReportCard({
             />
           </div>
 
-          <div className="flex items-end gap-2">
+          <div className="flex flex-col items-end gap-2">
             <Button
               type="button"
               size="sm"

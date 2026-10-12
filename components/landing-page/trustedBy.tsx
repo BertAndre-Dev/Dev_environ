@@ -172,7 +172,7 @@ export default function TrustedBy() {
     <section className="relative mt-10 w-full overflow-hidden text-white">
       {/* Black stage — clips rings so they never spill into the white band */}
       <div className="relative overflow-hidden bg-[#101010]">
-        <div className="relative z-20 mx-auto flex max-w-3xl flex-col items-center px-4 pb-4 pt-8 text-center sm:px-6 sm:pb-6 sm:pt-10">
+        <div className="relative z-20 mx-auto flex max-w-3xl flex-col items-center px-4 pt-8 text-center sm:px-6 sm:pt-10">
           <h2 className="text-[24px] font-semibold leading-tight tracking-[-0.02em] text-white sm:text-[36px] lg:text-[40px]">
             Powering Leading Estates Across Africa
           </h2>
@@ -189,7 +189,7 @@ export default function TrustedBy() {
           Orbit stage height tracks viewport width so rings + hub stay in frame
           from phone → desktop without a brittle transform scale stack.
         */}
-        <div className="relative z-10 mx-auto mt-4 h-[clamp(16rem,52vw,31.25rem)] w-full max-w-[1100px] overflow-hidden sm:mt-6">
+        <div className="relative z-10 mx-auto h-[clamp(20rem,62vw,38rem)] w-full max-w-[1100px] overflow-hidden">
           <div className="trustedby-orbit-center absolute bottom-[clamp(2.5rem,6vw,4.375rem)] left-1/2 size-0">
             <div
               className="pointer-events-none absolute left-1/2 top-1/2 z-10 h-[clamp(6rem,18vw,13rem)] w-[clamp(6rem,18vw,13rem)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#FA8128]/35 blur-3xl"

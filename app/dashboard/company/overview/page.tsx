@@ -314,16 +314,16 @@ export default function CompanyOverviewPage() {
         companyName={companyName}
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <ComplaintsSummaryStatCard
           data={complaintsSummary}
           loading={complaintsSummaryLoading || estatesLoading}
           error={complaintsSummaryError}
           onRetry={handleComplaintsSummaryRetry}
         />
-      </div>
+      </div> */}
 
-      <UserSummaryCard
+      {/* <UserSummaryCard
         data={userSummary}
         loading={userSummaryLoading || estatesLoading}
         error={userSummaryError}
@@ -336,17 +336,17 @@ export default function CompanyOverviewPage() {
         error={meterSummaryError}
         onRetry={handleMeterSummaryRetry}
         estateName={selectedEstateName}
-      />
+      /> */}
 
-      <ComplaintsDashboardCard
+      {/* <ComplaintsDashboardCard
         data={complaintsDashboard}
         loading={complaintsDashboardLoading || estatesLoading}
         error={complaintsDashboardError}
         onRetry={handleComplaintsDashboardRetry}
         estateName={selectedEstateName}
-      />
+      /> */}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+      {/* <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
         <RoleBreakdownChart
           data={roleBreakdown}
           loading={roleBreakdownLoading || estatesLoading}
@@ -359,7 +359,7 @@ export default function CompanyOverviewPage() {
           error={billsSummaryError}
           onRetry={handleBillsSummaryRetry}
         />
-      </div>
+      </div> */}
 
       <TransactionSummaryCard
         data={transactionSummary}

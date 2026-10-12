@@ -188,7 +188,7 @@ export function CompanyFinancialReportCard({
             <Button
               type="button"
               size="sm"
-              className="h-9"
+              className="h-9 w-full"
               onClick={handleApplyDates}
               disabled={!companyId || loading}
             >
@@ -198,7 +198,7 @@ export function CompanyFinancialReportCard({
               type="button"
               size="sm"
               variant="outline"
-              className="h-9 gap-1.5"
+              className="h-9 w-full gap-1.5"
               onClick={fetchReport}
               disabled={!companyId || loading}
             >

@@ -361,7 +361,7 @@ export default function CompanyOverviewPage() {
         />
       </div> */}
 
-      <TransactionSummaryCard
+      {/* <TransactionSummaryCard
         data={transactionSummary}
         loading={transactionSummaryLoading || estatesLoading}
         emptyMessage={transactionEmptyMessage}
@@ -379,7 +379,7 @@ export default function CompanyOverviewPage() {
         addressFilterLabel="Address"
         addressFilterLoading={energyAddressOptionsLoading}
         emptyMessage={energyEmptyMessage}
-      />
+      /> */}
     </div>
   );
 }

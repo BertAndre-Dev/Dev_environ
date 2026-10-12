@@ -37,7 +37,7 @@ import {
 } from "@/components/resident/wallet/ResidentVirtualAccountCard";
 import { formatDateTime } from "@/lib/format-date";
 import { isPending } from "@/lib/async-status";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { getApiErrorMessage, getApiSuccessMessage } from "@/lib/api-error";
 
 interface TransactionData {
   walletId: string;
@@ -372,8 +372,8 @@ export default function TransactionPage() {
           verifyTransaction({ tx_ref, paymentType: "fundWallet" }),
         ).unwrap();
 
-        // console.log("✅ Verification response:", verificationRes);
-        toast.success("Wallet funded successfully!");
+        const successMessage = getApiSuccessMessage(verificationRes);
+        if (successMessage) toast.success(successMessage);
 
         // Refresh wallet balance
         await dispatch(getWallet(currentUserId));

@@ -6,7 +6,6 @@ import Select from "react-select";
 import { toast } from "react-toastify";
 
 import { CompanyFinancialReportCard } from "@/components/charts/CompanyFinancialReportCard";
-import { ComplaintsSummaryStatCard } from "@/components/charts/ComplaintsSummaryStatCard";
 import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
 import { MeterSummaryCard } from "@/components/charts/MeterSummaryCard";
 import { RoleBreakdownChart } from "@/components/charts/RoleBreakdownChart";
@@ -31,9 +30,6 @@ import {
 } from "@/redux/slice/company/overview-analytics/company-overview-analytics";
 import {
   clearCompanyOverviewAnalytics,
-  selectCompanyComplaintsSummaryData,
-  selectCompanyComplaintsSummaryError,
-  selectCompanyComplaintsSummaryLoading,
   selectCompanyMeterSummaryData,
   selectCompanyMeterSummaryError,
   selectCompanyMeterSummaryLoading,
@@ -97,15 +93,6 @@ export default function CompanyOverviewPage() {
   const meterSummary = useSelector(selectCompanyMeterSummaryData);
   const meterSummaryLoading = useSelector(selectCompanyMeterSummaryLoading);
   const meterSummaryError = useSelector(selectCompanyMeterSummaryError);
-
-  const complaintsSummary = useSelector(selectCompanyComplaintsSummaryData);
-  const complaintsSummaryLoading = useSelector(
-    selectCompanyComplaintsSummaryLoading,
-  );
-  const complaintsSummaryError = useSelector(
-    selectCompanyComplaintsSummaryError,
-  );
-  
 
   const selectedEstateName = selectedEstate?.label ?? "Estate";
 
@@ -197,11 +184,6 @@ export default function CompanyOverviewPage() {
     void dispatch(getCompanyMeterSummary({ estateId: selectedEstateId }));
   };
 
-  const handleComplaintsSummaryRetry = () => {
-    if (!selectedEstateId) return;
-    void dispatch(getCompanyComplaintsSummary({ estateId: selectedEstateId }));
-  };
-
   useEffect(() => {
     if (!selectedEstateId) return;
     dispatch(
@@ -288,15 +270,6 @@ export default function CompanyOverviewPage() {
         companyId={companyId}
         companyName={companyName}
       />
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <ComplaintsSummaryStatCard
-          data={complaintsSummary}
-          loading={complaintsSummaryLoading || estatesLoading}
-          error={complaintsSummaryError}
-          onRetry={handleComplaintsSummaryRetry}
-        />
-      </div>
 
       <UserSummaryCard
         data={userSummary}

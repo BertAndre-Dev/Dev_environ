@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
 import {
   IsoLinkedRangeEnd,
   IsoLinkedRangeStart,
@@ -31,6 +30,7 @@ import {
   FINANCIAL_REPORT_CURRENCY_CODE,
   checkByEstateTotalsMismatch,
   formatFinancialReportCurrency,
+  formatProfitMarginDisplay,
   formatWalletBalance,
   yearToDateRange,
 } from "@/lib/company-overview-financial-report";
@@ -45,21 +45,21 @@ const fieldWellClassName =
 
 type CompanyFinancialReportCardProps = Readonly<{
   companyId: string | null;
-  /** Label for the company-wide (no estateId) option. */
-  companyName?: string | null;
+  /** Page-level estate scope (`all` = company-wide). */
+  estateId?: string | null;
   className?: string;
 }>;
 
 /**
  * Company overview financial report.
- * Uses its own estate + date filters — independent of the page-level estate select.
+ * Estate scope comes from the page filter; date range stays local (YTD default).
  *
  * TODO: revenue.byHead and byEstate[].byHead are empty in current API samples —
  * do not render a revenue-by-head chart until that payload is confirmed.
  */
 export function CompanyFinancialReportCard({
   companyId,
-  companyName,
+  estateId = null,
   className,
 }: CompanyFinancialReportCardProps) {
   const dispatch = useDispatch<AppDispatch>();
@@ -68,15 +68,10 @@ export function CompanyFinancialReportCard({
   const error = useSelector(selectFinancialReportError);
 
   const ytd = useMemo(() => yearToDateRange(), []);
-  const [estateId, setEstateId] = useState<string>("");
   const [startDate, setStartDate] = useState(ytd.startDate);
   const [endDate, setEndDate] = useState(ytd.endDate);
   const [draftStartDate, setDraftStartDate] = useState(ytd.startDate);
   const [draftEndDate, setDraftEndDate] = useState(ytd.endDate);
-  /** Accumulate estatesIncluded so filtering to one estate does not shrink the select. */
-  const [knownEstates, setKnownEstates] = useState<
-    { label: string; value: string }[]
-  >([]);
 
   const fetchReport = useCallback(() => {
     if (!companyId) return;
@@ -93,28 +88,6 @@ export function CompanyFinancialReportCard({
   useEffect(() => {
     fetchReport();
   }, [fetchReport]);
-
-  useEffect(() => {
-    if (!report?.estatesIncluded?.length) return;
-    setKnownEstates((prev) => {
-      const map = new Map(prev.map((e) => [e.value, e]));
-      for (const e of report.estatesIncluded) {
-        map.set(e.id, { label: e.name, value: e.id });
-      }
-      return [...map.values()];
-    });
-  }, [report?.estatesIncluded]);
-
-  const estateOptions = useMemo(
-    () => [
-      {
-        label: (companyName?.trim() || "Company").toUpperCase(),
-        value: "",
-      },
-      ...knownEstates,
-    ],
-    [companyName, knownEstates],
-  );
 
   const totalsMismatch = useMemo(
     () => (report ? checkByEstateTotalsMismatch(report) : false),
@@ -167,24 +140,7 @@ export function CompanyFinancialReportCard({
       </div>
 
       <div className="space-y-5 px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className={fieldWellClassName}>
-            <label
-              htmlFor="financial-report-estate"
-              className="text-xs font-medium text-muted-foreground"
-            >
-              Estate
-            </label>
-            <Select
-              id="financial-report-estate"
-              options={estateOptions}
-              value={estateId}
-              onChange={(e) => setEstateId(e.target.value)}
-              disabled={!companyId || loading}
-              className="h-9 border-0 bg-transparent px-2 text-[13px] shadow-none"
-            />
-          </div>
-
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className={fieldWellClassName}>
             <label
               htmlFor="financial-report-start"
@@ -224,7 +180,7 @@ export function CompanyFinancialReportCard({
             />
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex items-end gap-2">
             <Button
               type="button"
               size="sm"
@@ -268,7 +224,7 @@ export function CompanyFinancialReportCard({
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {loading && !summary ? (
                 <>
                   <KpiSkeleton />
@@ -306,6 +262,12 @@ export function CompanyFinancialReportCard({
                     valueClassName={
                       netPositive ? "text-emerald-700" : "text-red-600"
                     }
+                  />
+                  <KpiCard
+                    label="Profit margin"
+                    value={formatProfitMarginDisplay(summary?.profitMargin)}
+                    icon={Percent}
+                    iconBgClassName="bg-slate-500/10 text-slate-700"
                   />
                 </>
               )}

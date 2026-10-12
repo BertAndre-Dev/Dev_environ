@@ -21,9 +21,6 @@ import {
 } from "@/redux/slice/company/energy-consumption/company-energy-consumption";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
 import {
-  getCompanyBillsSummary,
-  getCompanyComplaintsDashboard,
-  getCompanyComplaintsSummary,
   getCompanyMeterSummary,
   getCompanyUserRoleBreakdown,
   getCompanyUserSummary,
@@ -187,11 +184,6 @@ export default function CompanyOverviewPage() {
     void dispatch(getCompanyUserSummary({ estateId: selectedEstateId }));
     void dispatch(getCompanyUserRoleBreakdown({ estateId: selectedEstateId }));
     void dispatch(getCompanyMeterSummary({ estateId: selectedEstateId }));
-    void dispatch(getCompanyBillsSummary({ estateId: selectedEstateId }));
-    void dispatch(getCompanyComplaintsSummary({ estateId: selectedEstateId }));
-    void dispatch(
-      getCompanyComplaintsDashboard({ estateId: selectedEstateId }),
-    );
   }, [dispatch, selectedEstateId]);
 
   const handleUserSummaryRetry = () => {
@@ -329,10 +321,9 @@ export default function CompanyOverviewPage() {
         </div>
       </div>
 
-      {/* Own estate/date filters — not driven by the page-level estate select above */}
       <CompanyFinancialReportCard
         companyId={companyId}
-        companyName={companyName}
+        estateId={selectedEstateId || null}
       />
 
       <UserSummaryCard

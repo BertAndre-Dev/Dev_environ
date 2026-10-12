@@ -43,7 +43,14 @@ import {
 import { getCompanyTransactionSummary } from "@/redux/slice/company/transaction-summary/company-transaction-summary";
 import type { AppDispatch, RootState } from "@/redux/store";
 
-type EstateOption = { label: string; value: string };
+type EstateOption = {
+  label: string;
+  value: string;
+  /** Company-wide scope (`estateId=all`) — styled differently from estates. */
+  isCompanyWide?: boolean;
+};
+
+const COMPANY_WIDE_ESTATE_ID = "all";
 
 export default function CompanyOverviewPage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -58,7 +65,22 @@ export default function CompanyOverviewPage() {
     useState<EnergyConsumptionPeriod>("weekly");
   const [selectedAddressId, setSelectedAddressId] = useState("all");
 
+  const companyWideOption = useMemo<EstateOption>(
+    () => ({
+      label: companyName,
+      value: COMPANY_WIDE_ESTATE_ID,
+      isCompanyWide: true,
+    }),
+    [companyName],
+  );
+
+  const selectOptions = useMemo(
+    () => [companyWideOption, ...estateOptions],
+    [companyWideOption, estateOptions],
+  );
+
   const selectedEstateId = selectedEstate?.value ?? "";
+  const isCompanyWide = selectedEstate?.isCompanyWide === true;
 
   const { transactionSummary, transactionSummaryLoading } = useSelector(
     (state: RootState) => ({
@@ -115,6 +137,14 @@ export default function CompanyOverviewPage() {
     })();
   }, [dispatch]);
 
+  // Default (and keep in sync) the company-wide option once the company name is known.
+  useEffect(() => {
+    setSelectedEstate((current) => {
+      if (!current || current.isCompanyWide) return companyWideOption;
+      return current;
+    });
+  }, [companyWideOption]);
+
   useEffect(() => {
     if (!companyId) return;
     (async () => {
@@ -127,16 +157,17 @@ export default function CompanyOverviewPage() {
           (res?.data ?? [])
             .map((e: { id?: string; _id?: string; name?: string }) => {
               const value = String(e?._id || e?.id || "").trim();
-              if (!value) return null;
-              return { label: e?.name ?? "Unnamed estate", value };
+              if (!value || value === COMPANY_WIDE_ESTATE_ID) return null;
+              return {
+                label: e?.name ?? "Unnamed estate",
+                value,
+                isCompanyWide: false,
+              };
             })
             .filter((x: EstateOption | null): x is EstateOption =>
               Boolean(x),
             ) ?? [];
         setEstateOptions(options);
-        if (options.length > 0) {
-          setSelectedEstate((current) => current ?? options[0]);
-        }
       } catch (err: unknown) {
         const message = getApiErrorMessage(err);
         if (message) toast.error(message);
@@ -146,12 +177,6 @@ export default function CompanyOverviewPage() {
       }
     })();
   }, [dispatch, companyId]);
-
-  useEffect(() => {
-    if (selectedEstate?.value) return;
-    if (!estateOptions.length) return;
-    setSelectedEstate(estateOptions[0]);
-  }, [estateOptions, selectedEstate?.value]);
 
   useEffect(() => {
     if (!selectedEstateId) {
@@ -220,18 +245,16 @@ export default function CompanyOverviewPage() {
   }, [dispatch, selectedEstateId, energyPeriod, selectedAddressId]);
 
   const transactionEmptyMessage = useMemo(() => {
-    if (estatesLoading) return "Loading estates…";
-    if (!estateOptions.length) return "No estates found for this company.";
-    if (!selectedEstateId) return "Select an estate to view transactions.";
+    if (!selectedEstateId) return "Select a scope to view transactions.";
+    if (estatesLoading && !isCompanyWide) return "Loading estates…";
     return "No transaction data to display.";
-  }, [estatesLoading, estateOptions.length, selectedEstateId]);
+  }, [estatesLoading, isCompanyWide, selectedEstateId]);
 
   const energyEmptyMessage = useMemo(() => {
-    if (estatesLoading) return "Loading estates…";
-    if (!estateOptions.length) return "No estates found for this company.";
-    if (!selectedEstateId) return "Select an estate to view energy data.";
+    if (!selectedEstateId) return "Select a scope to view energy data.";
+    if (estatesLoading && !isCompanyWide) return "Loading estates…";
     return "No vending data for this period yet.";
-  }, [estatesLoading, estateOptions.length, selectedEstateId]);
+  }, [estatesLoading, isCompanyWide, selectedEstateId]);
 
   return (
     <div className="space-y-8">
@@ -247,17 +270,58 @@ export default function CompanyOverviewPage() {
           </p>
         </div>
 
-        <div className="w-48 min-w-[12rem]">
-          <Select
-            options={estateOptions}
+        <div className="w-56 min-w-56">
+          <Select<EstateOption>
+            options={selectOptions}
             placeholder="Filter by estate"
             value={selectedEstate}
             onChange={(option) => setSelectedEstate(option)}
             isSearchable
-            isDisabled={!estateOptions.length || estatesLoading}
+            isDisabled={!companyId || (estatesLoading && !selectedEstate)}
+            formatOptionLabel={(option) =>
+              option.isCompanyWide ? (
+                <span className="inline-flex items-center gap-2 font-semibold uppercase tracking-wide text-[#007a4d]">
+                  <span
+                    className="rounded bg-[#007a4d]/12 px-1.5 py-0.5 text-[10px] font-bold normal-case tracking-normal text-[#007a4d]"
+                    aria-hidden
+                  >
+                    Company
+                  </span>
+                  {option.label}
+                </span>
+              ) : (
+                <span className="text-foreground">{option.label}</span>
+              )
+            }
             styles={{
               control: (base) => ({ ...base, cursor: "pointer" }),
-              option: (base) => ({ ...base, cursor: "pointer" }),
+              option: (base, state) => {
+                if (!state.data.isCompanyWide) {
+                  return { ...base, cursor: "pointer" };
+                }
+                let backgroundColor = base.backgroundColor;
+                if (state.isFocused) backgroundColor = "rgba(0, 122, 77, 0.08)";
+                else if (state.isSelected) {
+                  backgroundColor = "rgba(0, 122, 77, 0.12)";
+                }
+                return {
+                  ...base,
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  color: "#007a4d",
+                  backgroundColor,
+                };
+              },
+              singleValue: (base, state) =>
+                state.data.isCompanyWide
+                  ? {
+                      ...base,
+                      fontWeight: 700,
+                      color: "#007a4d",
+                      textTransform: "uppercase" as const,
+                      letterSpacing: "0.02em",
+                    }
+                  : base,
               dropdownIndicator: (base) => ({ ...base, cursor: "pointer" }),
               clearIndicator: (base) => ({ ...base, cursor: "pointer" }),
             }}

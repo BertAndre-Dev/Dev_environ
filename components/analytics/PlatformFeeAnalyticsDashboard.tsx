@@ -316,7 +316,7 @@ export function PlatformFeeAnalyticsDashboard({
             pagination={pagination}
             pageSize={pageSize}
             onPageChange={setPage}
-            onPageSizeChange={(size) => {
+            onPageSizeChange={(size: number) => {
               setPageSize(size);
               setPage(1);
             }}

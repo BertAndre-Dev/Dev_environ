@@ -13,7 +13,7 @@ import type {
 
 type TableRow = PlatformFeeListItem;
 
-type PlatformFeeListProps = Readonly<{
+export type PlatformFeeListProps = Readonly<{
   items: PlatformFeeListItem[];
   pagination: PlatformFeePagination | null;
   onPageChange: (page: number) => void;

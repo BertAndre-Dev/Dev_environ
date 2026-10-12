@@ -75,10 +75,14 @@ export function CompanyFinancialReportCard({
 
   const fetchReport = useCallback(() => {
     if (!companyId) return;
+    // Page uses `all` for company-wide; this endpoint rejects that string —
+    // omit estateId so the API returns the full company report.
+    const scopedEstateId =
+      estateId && estateId !== "all" ? estateId : undefined;
     void dispatch(
       getCompanyOverviewFinancialReport({
         companyId,
-        estateId: estateId || undefined,
+        estateId: scopedEstateId,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
       }),

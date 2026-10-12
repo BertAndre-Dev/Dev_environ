@@ -190,6 +190,7 @@ export default function TrustedBy() {
           from phone → desktop without a brittle transform scale stack.
         */}
         <div className="relative z-10 mx-auto h-[clamp(20rem,62vw,38rem)] w-full max-w-[1100px] overflow-hidden">
+        <div className="relative z-10 mx-auto mt-4 h-[clamp(16rem,52vw,31.25rem)] w-full max-w-[1100px] overflow-hidden sm:mt-6">
           <div className="trustedby-orbit-center absolute bottom-[clamp(2.5rem,6vw,4.375rem)] left-1/2 size-0">
             <div
               className="pointer-events-none absolute left-1/2 top-1/2 z-10 h-[clamp(6rem,18vw,13rem)] w-[clamp(6rem,18vw,13rem)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#FA8128]/35 blur-3xl"

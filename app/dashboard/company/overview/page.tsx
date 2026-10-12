@@ -6,6 +6,7 @@ import Select from "react-select";
 import { toast } from "react-toastify";
 
 import { BillsSummaryChart } from "@/components/charts/BillsSummaryChart";
+import { CompanyFinancialReportCard } from "@/components/charts/CompanyFinancialReportCard";
 import { ComplaintsDashboardCard } from "@/components/charts/ComplaintsDashboardCard";
 import { ComplaintsSummaryStatCard } from "@/components/charts/ComplaintsSummaryStatCard";
 import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
@@ -306,6 +307,12 @@ export default function CompanyOverviewPage() {
           />
         </div>
       </div>
+
+      {/* Own estate/date filters — not driven by the page-level estate select above */}
+      <CompanyFinancialReportCard
+        companyId={companyId}
+        companyName={companyName}
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <ComplaintsSummaryStatCard

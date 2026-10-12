@@ -5,9 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import Select from "react-select";
 import { toast } from "react-toastify";
 
-import { BillsSummaryChart } from "@/components/charts/BillsSummaryChart";
 import { CompanyFinancialReportCard } from "@/components/charts/CompanyFinancialReportCard";
-import { ComplaintsDashboardCard } from "@/components/charts/ComplaintsDashboardCard";
 import { ComplaintsSummaryStatCard } from "@/components/charts/ComplaintsSummaryStatCard";
 import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
 import { MeterSummaryCard } from "@/components/charts/MeterSummaryCard";
@@ -36,9 +34,6 @@ import {
   selectCompanyBillsSummaryData,
   selectCompanyBillsSummaryError,
   selectCompanyBillsSummaryLoading,
-  selectCompanyComplaintsDashboardData,
-  selectCompanyComplaintsDashboardError,
-  selectCompanyComplaintsDashboardLoading,
   selectCompanyComplaintsSummaryData,
   selectCompanyComplaintsSummaryError,
   selectCompanyComplaintsSummaryLoading,
@@ -106,23 +101,14 @@ export default function CompanyOverviewPage() {
   const meterSummaryLoading = useSelector(selectCompanyMeterSummaryLoading);
   const meterSummaryError = useSelector(selectCompanyMeterSummaryError);
 
-  const billsSummary = useSelector(selectCompanyBillsSummaryData);
-  const billsSummaryLoading = useSelector(selectCompanyBillsSummaryLoading);
-  const billsSummaryError = useSelector(selectCompanyBillsSummaryError);
-
   const complaintsSummary = useSelector(selectCompanyComplaintsSummaryData);
   const complaintsSummaryLoading = useSelector(
     selectCompanyComplaintsSummaryLoading,
   );
-  const complaintsSummaryError = useSelector(selectCompanyComplaintsSummaryError);
-
-  const complaintsDashboard = useSelector(selectCompanyComplaintsDashboardData);
-  const complaintsDashboardLoading = useSelector(
-    selectCompanyComplaintsDashboardLoading,
+  const complaintsSummaryError = useSelector(
+    selectCompanyComplaintsSummaryError,
   );
-  const complaintsDashboardError = useSelector(
-    selectCompanyComplaintsDashboardError,
-  );
+  
 
   const selectedEstateName = selectedEstate?.label ?? "Estate";
 
@@ -194,7 +180,9 @@ export default function CompanyOverviewPage() {
     void dispatch(getCompanyMeterSummary({ estateId: selectedEstateId }));
     void dispatch(getCompanyBillsSummary({ estateId: selectedEstateId }));
     void dispatch(getCompanyComplaintsSummary({ estateId: selectedEstateId }));
-    void dispatch(getCompanyComplaintsDashboard({ estateId: selectedEstateId }));
+    void dispatch(
+      getCompanyComplaintsDashboard({ estateId: selectedEstateId }),
+    );
   }, [dispatch, selectedEstateId]);
 
   const handleUserSummaryRetry = () => {
@@ -222,19 +210,14 @@ export default function CompanyOverviewPage() {
     void dispatch(getCompanyComplaintsSummary({ estateId: selectedEstateId }));
   };
 
-  const handleComplaintsDashboardRetry = () => {
-    if (!selectedEstateId) return;
-    void dispatch(getCompanyComplaintsDashboard({ estateId: selectedEstateId }));
-  };
-
   useEffect(() => {
     if (!selectedEstateId) return;
-    dispatch(getCompanyTransactionSummary({ estateId: selectedEstateId })).catch(
-      (err: unknown) => {
-        const message = getApiErrorMessage(err);
-        if (message) toast.error(message);
-      },
-    );
+    dispatch(
+      getCompanyTransactionSummary({ estateId: selectedEstateId }),
+    ).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
   }, [dispatch, selectedEstateId]);
 
   useEffect(() => {
@@ -338,28 +321,12 @@ export default function CompanyOverviewPage() {
         estateName={selectedEstateName}
       />
 
-      <ComplaintsDashboardCard
-        data={complaintsDashboard}
-        loading={complaintsDashboardLoading || estatesLoading}
-        error={complaintsDashboardError}
-        onRetry={handleComplaintsDashboardRetry}
-        estateName={selectedEstateName}
+      <RoleBreakdownChart
+        data={roleBreakdown}
+        loading={roleBreakdownLoading || estatesLoading}
+        error={roleBreakdownError}
+        onRetry={handleRoleBreakdownRetry}
       />
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-        <RoleBreakdownChart
-          data={roleBreakdown}
-          loading={roleBreakdownLoading || estatesLoading}
-          error={roleBreakdownError}
-          onRetry={handleRoleBreakdownRetry}
-        />
-        <BillsSummaryChart
-          data={billsSummary}
-          loading={billsSummaryLoading || estatesLoading}
-          error={billsSummaryError}
-          onRetry={handleBillsSummaryRetry}
-        />
-      </div>
 
       <TransactionSummaryCard
         data={transactionSummary}

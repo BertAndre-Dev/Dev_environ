@@ -482,7 +482,7 @@ export default function CompanyTransactionPage() {
     },
     {
       key: "nextDueDate",
-      header: "Next Due Date",
+      header: "Next Payment Date",
       render: (item: any) => item.nextDueDate ?? "-",
       exportValue: (item: any) => String(item.nextDueDate ?? ""),
     },

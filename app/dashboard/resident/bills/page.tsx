@@ -174,7 +174,7 @@ function PayableBillCard({
         </div>
         {nextDueLabel ? (
           <div className="flex items-baseline justify-between gap-3 text-sm text-muted-foreground">
-            <span>Next due</span>
+            <span>Next payment date</span>
             <span className="tabular-nums">{nextDueLabel}</span>
           </div>
         ) : null}
@@ -496,7 +496,7 @@ export default function BillPage() {
     },
     {
       key: "nextDueDate",
-      header: "Next Due",
+      header: "Next Payment Date",
       render: (item: PaidBillData) => formatDateTime(item.nextDueDate, "-"),
       exportValue: (item: PaidBillData) => formatDateTime(item.nextDueDate, ""),
     },

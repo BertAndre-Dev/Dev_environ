@@ -128,7 +128,7 @@ export function PaidBillDetailsModal({
                     value={formatDateTime(item.startDate, "—")}
                   />
                   <DetailRow
-                    label="Next Due Date"
+                    label="Next Payment Date"
                     value={formatDateTime(item.nextDueDate, "—")}
                   />
                 </>

@@ -844,7 +844,7 @@ export default function UserDetailView({
     },
     {
       key: "nextDueDate",
-      header: "Next Due",
+      header: "Next Payment Date",
       render: (item: AssignedBillRow) => formatDateTime(item.nextDueDate),
     },
   ];
@@ -900,7 +900,7 @@ export default function UserDetailView({
     },
     {
       key: "nextDueDate",
-      header: "Next Due",
+      header: "Next Payment Date",
       render: (item: UserBillRow) => formatDateTime(item.nextDueDate),
     },
     {

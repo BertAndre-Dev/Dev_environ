@@ -536,7 +536,7 @@ export default function SuperAdminEstateTransactionsPage() {
     },
     {
       key: "nextDueDate",
-      header: "Next Due Date",
+      header: "Next Payment Date",  
       render: (item: any) => item.nextDueDate ?? "-",
       exportValue: (item: any) => String(item.nextDueDate ?? ""),
     },

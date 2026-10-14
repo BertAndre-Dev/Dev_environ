@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { createPortal } from "react-dom";
 import {
   animate,
@@ -50,7 +57,7 @@ function project(initialVelocity: number, decelerationRate = 0.99) {
 }
 
 function releaseVelocity(samples: { x: number; t: number }[]) {
-  const last = samples[samples.length - 1];
+  const last = samples.at(-1);
   if (!last) return 0;
   const recent = samples.filter((sample) => last.t - sample.t <= 100);
   const first = recent[0];
@@ -73,7 +80,7 @@ export function AuditDetailSheet({
   error: string | null;
   onClose: () => void;
 }) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReducedMotion() === true;
   const closeRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const animationRef = useRef<AnimationPlaybackControls | null>(null);
@@ -92,6 +99,15 @@ export function AuditDetailSheet({
 
   const [present, setPresent] = useState(false);
   const [session, setSession] = useState(0);
+  const dragRef = useRef<{
+    pointerId: number;
+    originX: number;
+    originY: number;
+    startX: number;
+    samples: { x: number; t: number }[];
+    armed: boolean;
+    cancelled: boolean;
+  } | null>(null);
 
   if (open && !present) {
     setPresent(true);
@@ -113,16 +129,14 @@ export function AuditDetailSheet({
     if (token !== tokenRef.current) return;
     closingRef.current = false;
     setPresent(false);
-    x.set(0);
-    fade.set(1);
     onClose();
   };
 
   const beginClose = (velocity: number) => {
     if (closingRef.current) return;
     closingRef.current = true;
-    animationRef.current?.stop();
     const token = ++tokenRef.current;
+    animationRef.current?.stop();
     const controls = reduceMotion
       ? animate(fade, 0, { duration: 0.2, ease: "easeOut" })
       : animate(x, panelWidth(), {
@@ -149,6 +163,9 @@ export function AuditDetailSheet({
     });
     animationRef.current = controls;
   };
+
+  const beginCloseRef = useRef(beginClose);
+  beginCloseRef.current = beginClose;
 
   useLayoutEffect(() => {
     if (!present) return;
@@ -182,36 +199,22 @@ export function AuditDetailSheet({
   }, [session, present, reduceMotion, fade, x]);
 
   useEffect(() => {
-    if (open || !present) return;
-    beginClose(0);
-    // beginClose is stable enough for the parent-driven close path.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (open || !present || dragRef.current?.armed) return;
+    beginCloseRef.current(0);
   }, [open, present]);
 
   useEffect(() => {
     if (!present) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        beginClose(0);
-      }
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      beginCloseRef.current(0);
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [present]);
 
-  const dragRef = useRef<{
-    pointerId: number;
-    originX: number;
-    originY: number;
-    startX: number;
-    samples: { x: number; t: number }[];
-    armed: boolean;
-    cancelled: boolean;
-  } | null>(null);
-
-  const onDragStart = (event: React.PointerEvent<HTMLDivElement>) => {
+  const onDragStart = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (reduceMotion || event.button !== 0) return;
     stopAnimation();
     dragRef.current = {
@@ -225,9 +228,9 @@ export function AuditDetailSheet({
     };
   };
 
-  const onDragMove = (event: React.PointerEvent<HTMLDivElement>) => {
+  const onDragMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId || drag.cancelled) return;
+    if (drag?.pointerId !== event.pointerId || drag?.cancelled) return;
     const dx = event.clientX - drag.originX;
     const dy = event.clientY - drag.originY;
     if (!drag.armed) {
@@ -246,9 +249,9 @@ export function AuditDetailSheet({
     x.set(next);
   };
 
-  const onDragEnd = (event: React.PointerEvent<HTMLDivElement>) => {
+  const onDragEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (drag?.pointerId !== event.pointerId) return;
     dragRef.current = null;
     if (!drag.armed || drag.cancelled) return;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
@@ -258,6 +261,10 @@ export function AuditDetailSheet({
     const current = x.get();
     const width = panelWidth();
     const projected = current + project(velocity);
+    if (!open) {
+      beginClose(Math.max(0, velocity));
+      return;
+    }
     const shouldClose =
       Math.abs(velocity) > FLICK_VELOCITY
         ? velocity > 0 && projected > width * 0.35
@@ -266,7 +273,7 @@ export function AuditDetailSheet({
     else settle(velocity);
   };
 
-  const trapTab = (event: React.KeyboardEvent<HTMLElement>) => {
+  const trapTab = (event: ReactKeyboardEvent<HTMLElement>) => {
     if (event.key !== "Tab") return;
     const root = panelRef.current;
     if (!root) return;
@@ -277,7 +284,8 @@ export function AuditDetailSheet({
     ).filter((node) => !node.hasAttribute("disabled"));
     if (focusable.length === 0) return;
     const first = focusable[0];
-    const last = focusable[focusable.length - 1];
+    const last = focusable.at(-1);
+    if (!first || !last) return;
     if (event.shiftKey && document.activeElement === first) {
       event.preventDefault();
       last.focus();
@@ -303,26 +311,26 @@ export function AuditDetailSheet({
         aria-labelledby="audit-detail-title"
         onKeyDown={trapTab}
         style={{ x, opacity: fade }}
-        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[28rem] flex-col border-l border-white/50 bg-background/85 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-2xl backdrop-saturate-150 will-change-transform [@media(prefers-contrast:more)]:border-foreground [@media(prefers-contrast:more)]:bg-background [@media(prefers-reduced-transparency:reduce)]:bg-background [@media(prefers-reduced-transparency:reduce)]:backdrop-filter-none"
+        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-white/50 bg-background/85 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-2xl backdrop-saturate-150 will-change-transform contrast-more:border-foreground contrast-more:bg-background [@media(prefers-reduced-transparency:reduce)]:bg-background [@media(prefers-reduced-transparency:reduce)]:backdrop-filter-none"
       >
         <header className="border-b border-border/70">
-          {reduceMotion ? null : (
-            <div className="flex justify-center pt-2" aria-hidden>
-              <div className="h-1 w-9 rounded-full bg-foreground/15" />
-            </div>
-          )}
           <div className="flex items-start justify-between gap-3 px-5 py-4">
             <div
               className={`min-w-0 flex-1 ${
                 reduceMotion
                   ? ""
-                  : "cursor-grab touch-none active:cursor-grabbing"
+                  : "cursor-grab touch-none select-none active:cursor-grabbing"
               }`}
               onPointerDown={onDragStart}
               onPointerMove={onDragMove}
               onPointerUp={onDragEnd}
               onPointerCancel={onDragEnd}
             >
+              {reduceMotion ? null : (
+                <div className="mb-3 flex justify-center" aria-hidden>
+                  <div className="h-1 w-9 rounded-full bg-foreground/15" />
+                </div>
+              )}
               <p className="text-[13px] font-medium tracking-tight text-muted-foreground">
                 Audit entry
               </p>
@@ -360,9 +368,9 @@ export function AuditDetailSheet({
           ) : null}
 
           {loading ? (
-            <p className="mt-4 text-sm text-muted-foreground" role="status">
+            <output className="mt-4 block text-sm text-muted-foreground">
               Loading the full entry…
-            </p>
+            </output>
           ) : null}
           {error ? (
             <p className="mt-4 text-sm text-red-600" role="alert">
@@ -380,7 +388,7 @@ export function AuditDetailSheet({
                   <dt className="text-[13px] font-medium text-muted-foreground">
                     {field.label}
                   </dt>
-                  <dd className="text-sm leading-5 break-words">{field.value}</dd>
+                  <dd className="text-sm leading-5 wrap-break-word">{field.value}</dd>
                 </div>
               ))}
             </dl>
@@ -391,7 +399,7 @@ export function AuditDetailSheet({
               <h3 className="text-[13px] font-medium tracking-tight text-muted-foreground">
                 {block.title}
               </h3>
-              <pre className="mt-2 max-h-72 overflow-auto rounded-xl bg-muted/70 p-3 text-xs leading-relaxed break-words whitespace-pre-wrap">
+              <pre className="mt-2 max-h-72 overflow-auto rounded-xl bg-muted/70 p-3 text-xs leading-relaxed wrap-break-word whitespace-pre-wrap">
                 {block.value}
               </pre>
             </section>

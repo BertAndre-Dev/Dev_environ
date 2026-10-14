@@ -315,11 +315,6 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
       toast.error("Please select when interest should start.");
       return;
     }
-    if (isPremiumPlan && !form.collectionDate) {
-      toast.error("Please select a collection date.");
-      return;
-    }
-
     try {
       setSubmitting(true);
       await onSubmit({
@@ -329,7 +324,9 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
         amount,
         frequency: "oneoff",
         compulsory: form.compulsory,
-        ...(isPremiumPlan ? { collectionDate: form.collectionDate } : {}),
+        ...(isPremiumPlan && form.collectionDate
+          ? { collectionDate: form.collectionDate }
+          : {}),
         ...(canAccrueInterest
           ? {
               accrueInterest: form.accrueInterest,
@@ -460,7 +457,10 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
             {isPremiumPlan ? (
               <div>
                 <Label htmlFor="address-bill-collection-date">
-                  Collection date
+                  Collection date{" "}
+                  <span className="font-normal text-muted-foreground">
+                    (optional)
+                  </span>
                 </Label>
                 <IsoDatePicker
                   id="address-bill-collection-date"

@@ -96,6 +96,8 @@ function PayableBillCard({
   description,
   frequency,
   compulsory,
+  isActive = true,
+  nextDueDate,
   amountPayable,
   principalDue,
   accruedInterest,
@@ -107,6 +109,8 @@ function PayableBillCard({
   description?: string;
   frequency?: string;
   compulsory?: boolean;
+  isActive?: boolean;
+  nextDueDate?: string | null;
   amountPayable: number;
   principalDue?: number;
   accruedInterest?: number;
@@ -116,11 +120,12 @@ function PayableBillCard({
 }) {
   const showInterest =
     Boolean(interestRatePercent) && Number(interestRatePercent) > 0;
+  const isSuspended = isActive === false;
   const badgeParts = [
     formatFrequencyLabel(frequency),
     compulsory ? "Compulsory" : null,
   ].filter(Boolean) as string[];
-  const startsLabel = formatInterestStart(interestStartsAt);
+  const nextDueLabel = formatInterestStart(nextDueDate);
 
   return (
     <button
@@ -132,6 +137,7 @@ function PayableBillCard({
         "hover:bg-muted/30 hover:shadow-md",
         "active:scale-[0.99] active:bg-muted/50",
         "motion-reduce:transition-none motion-reduce:active:scale-100",
+        isSuspended ? "opacity-90" : "",
       ].join(" ")}
     >
       <div className="flex items-start justify-between gap-3">
@@ -145,11 +151,18 @@ function PayableBillCard({
             </p>
           ) : null}
         </div>
-        {badgeParts.length > 0 ? (
-          <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium tracking-wide text-muted-foreground">
-            {badgeParts.join(" · ")}
-          </span>
-        ) : null}
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          {isSuspended ? (
+            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
+              Bill suspended
+            </span>
+          ) : null}
+          {badgeParts.length > 0 ? (
+            <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium tracking-wide text-muted-foreground">
+              {badgeParts.join(" · ")}
+            </span>
+          ) : null}
+        </div>
       </div>
 
       <div className="mt-5 space-y-1.5">
@@ -159,6 +172,12 @@ function PayableBillCard({
             {formatNaira(amountPayable)}
           </span>
         </div>
+        {nextDueLabel ? (
+          <div className="flex items-baseline justify-between gap-3 text-sm text-muted-foreground">
+            <span>Next due</span>
+            <span className="tabular-nums">{nextDueLabel}</span>
+          </div>
+        ) : null}
         {showInterest ? (
           <>
             <div className="flex items-baseline justify-between gap-3 text-sm text-muted-foreground">
@@ -433,10 +452,12 @@ export default function BillPage() {
 
   const columns = [
     {
-      key: "createdAt",
-      header: "Created At",
-      render: (item: PaidBillData) => formatDateTime(item.createdAt, "-"),
-      exportValue: (item: PaidBillData) => formatDateTime(item.createdAt, ""),
+      key: "paidDate",
+      header: "Paid Date",
+      render: (item: PaidBillData) =>
+        formatDateTime(item.paidDate || item.lastPaymentDate || item.createdAt, "-"),
+      exportValue: (item: PaidBillData) =>
+        formatDateTime(item.paidDate || item.lastPaymentDate || item.createdAt, ""),
     },
     {
       key: "billName",
@@ -472,6 +493,12 @@ export default function BillPage() {
       header: "Amount Paid",
       render: (item: PaidBillData) =>
         `₦${Number(item.amountPaid ?? 0).toLocaleString()}`,
+    },
+    {
+      key: "nextDueDate",
+      header: "Next Due",
+      render: (item: PaidBillData) => formatDateTime(item.nextDueDate, "-"),
+      exportValue: (item: PaidBillData) => formatDateTime(item.nextDueDate, ""),
     },
     {
       key: "status",
@@ -591,6 +618,8 @@ export default function BillPage() {
                   description={b.description}
                   frequency={b.frequency}
                   compulsory={b.compulsory}
+                  isActive={b.isActive}
+                  nextDueDate={b.nextDueDate}
                   amountPayable={Number(
                     b.amountPayable ?? b.yearlyAmount ?? 0,
                   )}
@@ -630,6 +659,8 @@ export default function BillPage() {
                     key={b.id || b._id || payId || assignedBillName(b)}
                     name={assignedBillName(b)}
                     frequency={b.frequency}
+                    isActive={b.isActive}
+                    nextDueDate={b.nextDueDate}
                     amountPayable={amount}
                     principalDue={Number(b.principalDue ?? amount)}
                     accruedInterest={Number(b.accruedInterest ?? 0)}

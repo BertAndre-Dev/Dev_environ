@@ -60,6 +60,8 @@ export function mapBillReceipt(
   const source = bill as PaidBillReceiptSource & Record<string, unknown>;
   const transactionId = extraString(source, ["tx_ref", "transactionId"]);
   const paymentDate =
+    formatReceiptDateTime(bill.paidDate) ??
+    formatReceiptDate(bill.paidDate) ??
     formatReceiptDateTime(bill.lastPaymentDate) ??
     formatReceiptDate(bill.lastPaymentDate) ??
     formatReceiptDateTime(bill.createdAt) ??

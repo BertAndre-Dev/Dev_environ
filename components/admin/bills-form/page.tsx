@@ -212,10 +212,6 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       toast.error("Please select when interest should start.");
       return;
     }
-    if (isPremiumPlan && !formData.collectionDate) {
-      toast.error("Please select a collection date.");
-      return;
-    }
     const payload: BillSubmitData = {
       estateId: formData.estateId,
       name: formData.name,
@@ -227,7 +223,9 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       ),
       isServiceCharge: formData.isServiceCharge,
       compulsory: isServiceChargeBill ? false : formData.compulsory,
-      ...(isPremiumPlan ? { collectionDate: formData.collectionDate } : {}),
+      ...(isPremiumPlan && formData.collectionDate
+        ? { collectionDate: formData.collectionDate }
+        : {}),
       accrueInterest: formData.accrueInterest,
       interestRatePercent: interestRate,
       interestStartsAt:
@@ -330,7 +328,10 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
             {isPremiumPlan ? (
               <div>
                 <Label htmlFor="estate-bill-collection-date">
-                  Collection date
+                  Collection date{" "}
+                  <span className="font-normal text-muted-foreground">
+                    (optional)
+                  </span>
                 </Label>
                 <IsoDatePicker
                   id="estate-bill-collection-date"

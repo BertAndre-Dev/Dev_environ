@@ -28,6 +28,7 @@ export interface EstateBillData {
   isActive?: boolean;
   isServiceCharge?: boolean;
   compulsory?: boolean;
+  nextDueDate?: string | null;
   createdAt?: string;
 }
 
@@ -49,8 +50,10 @@ export interface AssignedBillData {
   accrueInterest?: boolean;
   interestRatePercent?: number;
   interestStartsAt?: string;
+  isActive?: boolean;
   status?: string;
   addressId?: string;
+  nextDueDate?: string | null;
   createdAt?: string;
 }
 
@@ -64,10 +67,11 @@ export interface PaidBillData {
   addressId?: string;
   frequency?: string;
   amountPaid?: number;
+  paidDate?: string | null;
   lastPaymentDate?: string | null;
   createdAt?: string;
   startDate?: string;
-  nextDueDate?: string;
+  nextDueDate?: string | null;
   status?: string;
   isServiceCharge?: boolean;
   paidByUserId?: string;

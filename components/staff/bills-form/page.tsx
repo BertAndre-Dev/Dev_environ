@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch } from "@/redux/store";
+import { selectIsPremiumPlan } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 import {
   billFrequencyOptions,
   coerceFrequencyForServiceCharge,
@@ -83,6 +84,7 @@ function amountFromBill(data?: {
 }
 
 export default function BillsForm({ estateId, initialData, onSubmit }: BillsFormProps) {
+  const isPremiumPlan = useSelector(selectIsPremiumPlan);
   const seededAmount = amountFromBill(initialData);
   const [formData, setFormData] = useState<BillFormState>({
     estateId,
@@ -210,7 +212,7 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       toast.error("Please select when interest should start.");
       return;
     }
-    if (!formData.collectionDate) {
+    if (isPremiumPlan && !formData.collectionDate) {
       toast.error("Please select a collection date.");
       return;
     }
@@ -225,7 +227,7 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       ),
       isServiceCharge: formData.isServiceCharge,
       compulsory: isServiceChargeBill ? false : formData.compulsory,
-      collectionDate: formData.collectionDate,
+      ...(isPremiumPlan ? { collectionDate: formData.collectionDate } : {}),
       accrueInterest: formData.accrueInterest,
       interestRatePercent: interestRate,
       interestStartsAt:
@@ -325,16 +327,20 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
               />
             </div>
 
-            <div>
-              <Label htmlFor="estate-bill-collection-date">Collection date</Label>
-              <IsoDatePicker
-                id="estate-bill-collection-date"
-                value={formData.collectionDate}
-                onChange={(iso) => handleChange("collectionDate", iso)}
-                placeholder="Select collection date"
-                withPortal={false}
-              />
-            </div>
+            {isPremiumPlan ? (
+              <div>
+                <Label htmlFor="estate-bill-collection-date">
+                  Collection date
+                </Label>
+                <IsoDatePicker
+                  id="estate-bill-collection-date"
+                  value={formData.collectionDate}
+                  onChange={(iso) => handleChange("collectionDate", iso)}
+                  placeholder="Select collection date"
+                  withPortal={false}
+                />
+              </div>
+            ) : null}
 
             <AccrueInterestFields
               idPrefix="estate-bill"

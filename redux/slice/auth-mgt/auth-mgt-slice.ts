@@ -256,6 +256,13 @@ export const selectAuthToken = (state: RootState) => state.auth.token;
 export const selectUserRole = (state: RootState) =>
   (state.auth.user?.role ?? '').toString().toLowerCase();
 
+/** Plan from GET /api/v1/auth-mgt/me (`data.plan`), e.g. "premium". */
+export const selectUserPlan = (state: RootState): string =>
+  (state.auth.user?.plan ?? "").toString().trim().toLowerCase();
+
+export const selectIsPremiumPlan = (state: RootState): boolean =>
+  selectUserPlan(state) === "premium";
+
 export const selectEstateModules = (state: RootState): string[] => {
   const user = state.auth.user as
     | { modules?: unknown; estateId?: unknown }

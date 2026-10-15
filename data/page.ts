@@ -598,11 +598,11 @@ export const adminNav = [
     path: "/dashboard/admin/notifications",
     moduleKey: "notifications",
   },
-  {
-    label: "Audit",
-    icon: ScrollText,
-    path: "/dashboard/admin/audit",
-  },
+  // {
+  //   label: "Audit",
+  //   icon: ScrollText,
+  //   path: "/dashboard/admin/audit",
+  // },
   { label: "Settings", icon: FiSettings, path: "/dashboard/settings" },
   { label: "Logout", icon: FiLogOut },
 ];

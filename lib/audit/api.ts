@@ -325,6 +325,58 @@ export function formatActivity(key: string, label?: string): string {
   return activityLabel(trimmed, label);
 }
 
+const MODULE_LABELS: Record<string, string> = {
+  "auth-mgt": "Sign-in",
+  "user-mgt": "User Management",
+  designation: "Designations",
+  "estate-mgt": "Estate Management",
+  "address-mgt": "Address Management",
+  plan: "Estate Management",
+  "company-mgt": "Company Management",
+  "meter-mgt": "Energy Management",
+  sts: "Energy Management",
+  iec: "Energy Management",
+  "energy-provider": "Energy Provider",
+  rates: "Energy Management",
+  "payment-mgt": "Transactions",
+  "wallet-mgt": "Wallet",
+  "transaction-mgt": "Transactions",
+  "flutterwave-bills-mgt": "Bills Management",
+  "bills-mgt": "Bills Management",
+  "service-charge-overdue": "Bills Management",
+  "rent-mgt": "Rent Management",
+  "visitor-mgt": "Visitors Management",
+  complaints: "Maintenance Requests",
+  comments: "Maintenance Requests",
+  "request-mgt": "Request Management",
+  announcements: "Announcements",
+  chat: "Community Chat",
+  "support-mgt": "Contact Support Inbox",
+  "revenue-entry": "Revenue",
+  "revenue-head": "Revenue",
+  "expense-entry": "Expenses",
+  "expense-head": "Expenses",
+  "finnacial-report": "Report",
+  "asset-mgt": "Asset Management",
+  "asset-category": "Asset Management",
+  "asset-maintenance": "Asset Maintenance",
+  "market-place-mgt": "Marketplace",
+  "operations-reporting": "Operations Reporting",
+  analytics: "Analytics",
+  "bills-analytics": "Bills Management",
+  "complaints-analytics": "Maintenance Requests",
+  "meter-analytics": "Energy Management",
+  "rent-analytics": "Rent Management",
+  "transaction-analytics": "Transactions",
+  "user-analytics": "User Management",
+};
+
+export function formatModule(key: string): string {
+  const trimmed = key.trim();
+  if (!trimmed) return "";
+  return MODULE_LABELS[trimmed] ?? MODULE_LABELS[trimmed.toLowerCase()] ?? trimmed;
+}
+
 function readStringList(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value

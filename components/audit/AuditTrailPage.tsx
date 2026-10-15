@@ -23,6 +23,7 @@ import {
   DELETION_SOURCES,
   formatActivity,
   formatAuditError,
+  formatModule,
   formatJson,
   getAuditLog,
   getUserDeletion,
@@ -114,8 +115,6 @@ function toActivityDetail(
   companies: AuditFilterOption[],
 ): AuditDetailModel {
   const blocks = [
-    row.params ? { title: "Path params", value: formatJson(row.params) } : null,
-    row.requestBody ? { title: "Request body", value: formatJson(row.requestBody) } : null,
     row.query ? { title: "Query", value: formatJson(row.query) } : null,
   ].filter((block): block is { title: string; value: string } => Boolean(block?.value));
 
@@ -131,14 +130,10 @@ function toActivityDetail(
       { label: "Actor", value: display(row.actorName) },
       { label: "Email", value: display(row.actorEmail) },
       { label: "Role", value: display(row.actorRole) },
-      { label: "Actor id", value: display(row.actorId) },
       { label: "Activity", value: display(row.activityLabel || formatActivity(row.activity)) },
-      { label: "Module", value: display(row.module) },
+      { label: "Module", value: display(formatModule(row.module)) },
       { label: "Action", value: display(row.action) },
-      { label: "Method", value: display(row.method) },
       { label: "Route", value: display(row.route) },
-      { label: "Path", value: display(row.path) },
-      { label: "Target", value: display(row.targetId) },
       { label: "Status", value: display(row.statusCode) },
       { label: "Duration", value: display(formatDuration(row.durationMs)) },
       { label: "Error", value: display(row.errorMessage) },
@@ -166,11 +161,9 @@ function toDeletionDetail(row: UserDeletionRow): AuditDetailModel {
       { label: "Email", value: display(row.deletedEmail) },
       { label: "Phone", value: display(row.deletedPhone) },
       { label: "Role", value: display(row.deletedRole) },
-      { label: "User id", value: display(row.deletedUserId) },
       { label: "Deleted by", value: display(row.deleterName) },
       { label: "Deleter email", value: display(row.deleterEmail) },
       { label: "Deleter role", value: display(row.deleterRole) },
-      { label: "Deleter id", value: display(row.deletedBy) },
       { label: "Self-deleted", value: selfLabel(row.selfDeleted) },
       { label: "Source", value: sourceLabel(row.source) },
       { label: "Company", value: display(row.companyName) },
@@ -1001,7 +994,7 @@ export default function AuditTrailPage() {
                       <span className="block truncate text-xs text-muted-foreground">
                         {[
                           row.activityLabel || formatActivity(row.activity),
-                          row.module,
+                          formatModule(row.module),
                           linkedNames(row.estateIds, row.estateName, estates) ||
                             linkedNames(row.companyIds, row.companyName, companies),
                         ]
@@ -1010,14 +1003,7 @@ export default function AuditTrailPage() {
                       </span>
                     </span>
                     <span className="flex flex-col items-start gap-1 sm:items-end">
-                      <span className="flex items-center gap-2">
-                        {row.method ? (
-                          <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[11px]">
-                            {row.method}
-                          </span>
-                        ) : null}
-                        <ResultPill success={row.success} />
-                      </span>
+                      <ResultPill success={row.success} />
                       {row.ip ? (
                         <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
                           {row.ip}
@@ -1132,7 +1118,7 @@ function FilterSelect({
         <option value="">{emptyLabel}</option>
         {options.map((option) => (
           <option key={option} value={option}>
-            {option}
+            {label === "Module" ? formatModule(option) : option}
           </option>
         ))}
       </select>

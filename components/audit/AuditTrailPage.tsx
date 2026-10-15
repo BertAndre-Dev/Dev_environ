@@ -126,6 +126,8 @@ function toActivityDetail(
       tone: row.success === false ? "bad" : row.success === true ? "ok" : "neutral",
     },
     fields: [
+      { label: "Description", value: display(row.description) },
+      { label: "Error message", value: display(row.errorMessage) },
       { label: "When", value: formatDateTime(row.createdAt) },
       { label: "Actor", value: display(row.actorName) },
       { label: "Email", value: display(row.actorEmail) },
@@ -136,7 +138,6 @@ function toActivityDetail(
       { label: "Route", value: display(row.route) },
       { label: "Status", value: display(row.statusCode) },
       { label: "Duration", value: display(formatDuration(row.durationMs)) },
-      { label: "Error", value: display(row.errorMessage) },
       { label: "Company", value: display(linkedNames(row.companyIds, row.companyName, companies)) },
       { label: "Estate", value: display(linkedNames(row.estateIds, row.estateName, estates)) },
       { label: "IP", value: display(row.ip) },
@@ -991,6 +992,11 @@ export default function AuditTrailPage() {
                     </span>
                     <span className="min-w-0">
                       <span className="block truncate text-sm">{activityTitle(row)}</span>
+                      {row.errorMessage ? (
+                        <span className="block truncate text-xs text-red-600">
+                          {row.errorMessage}
+                        </span>
+                      ) : null}
                       <span className="block truncate text-xs text-muted-foreground">
                         {[
                           row.activityLabel || formatActivity(row.activity),

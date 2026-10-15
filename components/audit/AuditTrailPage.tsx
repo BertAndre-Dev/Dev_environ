@@ -16,7 +16,6 @@ import { formatDateTime } from "@/lib/format-date";
 import { selectUserRole } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 import {
   AUDIT_ACTIVITIES,
-  AUDIT_METHODS,
   AUDIT_PAGE_SIZES,
   AUDIT_RESULTS,
   DELETION_SELF,
@@ -102,13 +101,6 @@ function linkedNames(
     .join(", ");
 }
 
-function formatDuration(ms: number | null): string {
-  if (ms == null) return "";
-  if (ms < 1000) return `${ms} ms`;
-  const seconds = ms / 1000;
-  return `${seconds >= 10 ? Math.round(seconds) : seconds.toFixed(1)} s`;
-}
-
 function toActivityDetail(
   row: AuditLogRow,
   estates: AuditFilterOption[],
@@ -134,10 +126,7 @@ function toActivityDetail(
       { label: "Role", value: display(row.actorRole) },
       { label: "Activity", value: display(row.activityLabel || formatActivity(row.activity)) },
       { label: "Module", value: display(formatModule(row.module)) },
-      { label: "Action", value: display(row.action) },
-      { label: "Route", value: display(row.route) },
       { label: "Status", value: display(row.statusCode) },
-      { label: "Duration", value: display(formatDuration(row.durationMs)) },
       { label: "Company", value: display(linkedNames(row.companyIds, row.companyName, companies)) },
       { label: "Estate", value: display(linkedNames(row.estateIds, row.estateName, estates)) },
       { label: "IP", value: display(row.ip) },
@@ -190,7 +179,6 @@ export default function AuditTrailPage() {
   const [estateId, setEstateId] = useState("all");
   const [companyId, setCompanyId] = useState("");
   const [activity, setActivity] = useState("all");
-  const [method, setMethod] = useState("all");
   const [success, setSuccess] = useState("all");
   const [moduleName, setModuleName] = useState("");
   const [action, setAction] = useState("");
@@ -256,7 +244,6 @@ export default function AuditTrailPage() {
         estateId,
         companyId,
         activity,
-        method,
         success,
         source,
         selfDeleted,
@@ -270,7 +257,6 @@ export default function AuditTrailPage() {
       estateId,
       companyId,
       activity,
-      method,
       success,
       source,
       selfDeleted,
@@ -408,7 +394,6 @@ export default function AuditTrailPage() {
             startDate,
             endDate,
             activity,
-            method,
             success,
             module: debouncedText.moduleName,
             action: debouncedText.action,
@@ -462,7 +447,6 @@ export default function AuditTrailPage() {
     startDate,
     endDate,
     activity,
-    method,
     success,
     source,
     selfDeleted,
@@ -563,7 +547,6 @@ export default function AuditTrailPage() {
       companyId ||
       (tab === "activity" &&
         (activity !== "all" ||
-          method !== "all" ||
           success !== "all" ||
           moduleName ||
           action ||
@@ -589,7 +572,6 @@ export default function AuditTrailPage() {
     setEstateId("all");
     setCompanyId("");
     setActivity("all");
-    setMethod("all");
     setSuccess("all");
     setModuleName("");
     setAction("");
@@ -743,16 +725,24 @@ export default function AuditTrailPage() {
             <>
               <label className="block">
                 <span className="mb-1.5 block text-[13px] font-medium tracking-tight">
-                  Method
+                  Activity
                 </span>
                 <select
                   className={controlClass}
-                  value={method}
-                  onChange={(event) => setMethod(event.target.value)}
+                  value={activity}
+                  onChange={(event) => {
+                    setActivity(event.target.value);
+                    setModuleName("");
+                    setAction("");
+                  }}
                 >
-                  {AUDIT_METHODS.map((value) => (
-                    <option key={value} value={value}>
-                      {value === "all" ? "Any method" : value.toUpperCase()}
+                  {(activities.length > 0
+                    ? activities
+                    : [{ id: "all", label: "All activities", count: null }]
+                  ).map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.label}
+                      {item.count != null ? ` (${item.count})` : ""}
                     </option>
                   ))}
                 </select>
@@ -819,47 +809,6 @@ export default function AuditTrailPage() {
             </>
           )}
         </div>
-
-        {tab === "activity" && activities.length > 0 ? (
-          <div
-            className="mt-4 flex gap-2 overflow-x-auto overscroll-x-contain pb-1"
-            role="radiogroup"
-            aria-label="Activity"
-          >
-            {activities.map((item) => {
-              const selected = activity === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  onClick={() => {
-                    setActivity(item.id);
-                    setModuleName("");
-                    setAction("");
-                  }}
-                  className={`inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-full px-3 py-1.5 text-sm transition-transform duration-100 ease-out active:scale-[0.97] motion-reduce:active:scale-100 ${
-                    selected
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-foreground hover:bg-muted/80"
-                  }`}
-                >
-                  <span>{item.label}</span>
-                  {item.count != null ? (
-                    <span
-                      className={`rounded-full px-1.5 text-xs tabular-nums ${
-                        selected ? "bg-white/20" : "bg-background"
-                      }`}
-                    >
-                      {item.count}
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button

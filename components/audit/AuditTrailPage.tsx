@@ -181,9 +181,6 @@ export default function AuditTrailPage() {
   const [activity, setActivity] = useState("all");
   const [success, setSuccess] = useState("all");
   const [moduleName, setModuleName] = useState("");
-  const [action, setAction] = useState("");
-  const [actorId, setActorId] = useState("");
-  const [targetId, setTargetId] = useState("");
   const [source, setSource] = useState("all");
   const [selfDeleted, setSelfDeleted] = useState("all");
   const [deletedUserId, setDeletedUserId] = useState("");
@@ -214,13 +211,10 @@ export default function AuditTrailPage() {
     () => ({
       search: search.trim(),
       moduleName: moduleName.trim(),
-      action: action.trim(),
-      actorId: actorId.trim(),
-      targetId: targetId.trim(),
       deletedUserId: deletedUserId.trim(),
       deletedBy: deletedBy.trim(),
     }),
-    [action, actorId, deletedBy, deletedUserId, moduleName, search, targetId],
+    [deletedBy, deletedUserId, moduleName, search],
   );
   const [debouncedText, setDebouncedText] = useState(textQuery);
 
@@ -346,7 +340,6 @@ export default function AuditTrailPage() {
     if (activities.some((item) => item.id === activity)) return;
     setActivity("all");
     setModuleName("");
-    setAction("");
   }, [activities, activity]);
 
   const activityScope = useMemo(
@@ -363,23 +356,10 @@ export default function AuditTrailPage() {
       ),
     [activityScope],
   );
-  const actionChoices = useMemo(
-    () =>
-      [...new Set(activityScope.flatMap((item) => item.actions ?? []))].sort((a, b) =>
-        a.localeCompare(b),
-      ),
-    [activityScope],
-  );
-
   useEffect(() => {
     if (moduleChoices.length === 0 || !moduleName) return;
     if (!moduleChoices.includes(moduleName)) setModuleName("");
   }, [moduleChoices, moduleName]);
-
-  useEffect(() => {
-    if (actionChoices.length === 0 || !action) return;
-    if (!actionChoices.includes(action)) setAction("");
-  }, [actionChoices, action]);
 
   useEffect(() => {
     let cancelled = false;
@@ -396,9 +376,6 @@ export default function AuditTrailPage() {
             activity,
             success,
             module: debouncedText.moduleName,
-            action: debouncedText.action,
-            actorId: debouncedText.actorId,
-            targetId: debouncedText.targetId,
             estateId,
             companyId: isSuperAdmin ? companyId : undefined,
           })
@@ -548,10 +525,7 @@ export default function AuditTrailPage() {
       (tab === "activity" &&
         (activity !== "all" ||
           success !== "all" ||
-          moduleName ||
-          action ||
-          actorId ||
-          targetId)) ||
+          moduleName)) ||
       (tab === "deletions" &&
         (source !== "all" || selfDeleted !== "all" || deletedUserId || deletedBy)),
   );
@@ -561,9 +535,6 @@ export default function AuditTrailPage() {
     setDebouncedText({
       search: "",
       moduleName: "",
-      action: "",
-      actorId: "",
-      targetId: "",
       deletedUserId: "",
       deletedBy: "",
     });
@@ -574,9 +545,6 @@ export default function AuditTrailPage() {
     setActivity("all");
     setSuccess("all");
     setModuleName("");
-    setAction("");
-    setActorId("");
-    setTargetId("");
     setSource("all");
     setSelfDeleted("all");
     setDeletedUserId("");
@@ -733,7 +701,6 @@ export default function AuditTrailPage() {
                   onChange={(event) => {
                     setActivity(event.target.value);
                     setModuleName("");
-                    setAction("");
                   }}
                 >
                   {(activities.length > 0
@@ -850,19 +817,6 @@ export default function AuditTrailPage() {
                 ) : (
                   <FilterField label="Module" value={moduleName} onChange={setModuleName} placeholder="user-mgt" />
                 )}
-                {actionChoices.length > 0 ? (
-                  <FilterSelect
-                    label="Action"
-                    value={action}
-                    onChange={setAction}
-                    emptyLabel="Any action"
-                    options={actionChoices}
-                  />
-                ) : (
-                  <FilterField label="Action" value={action} onChange={setAction} placeholder="UserMgtController.deleteUser" />
-                )}
-                <FilterField label="Actor id" value={actorId} onChange={setActorId} placeholder="User id" />
-                <FilterField label="Target id" value={targetId} onChange={setTargetId} placeholder="Record id" />
               </>
             ) : (
               <>

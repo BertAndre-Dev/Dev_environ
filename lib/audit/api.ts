@@ -2,21 +2,21 @@ import axiosInstance from "@/utils/axiosInstance";
 import { getApiErrorMessage } from "@/lib/api-error";
 
 export const AUDIT_ACTIVITIES = [
-  ["all", "All"],
-  ["authentication", "Authentication"],
-  ["users", "Users"],
-  ["estates", "Estates"],
+  ["all", "All activities"],
+  ["authentication", "Sign-in & accounts"],
+  ["users", "Users & staff"],
+  ["estates", "Estates & addresses"],
   ["companies", "Companies"],
-  ["meter", "Meters"],
-  ["payment", "Payments"],
-  ["bills", "Bills"],
-  ["visitor", "Visitors"],
-  ["request", "Requests"],
-  ["communication", "Communication"],
-  ["finance", "Finance"],
-  ["asset", "Assets"],
+  ["meters", "Meters & vending"],
+  ["payments", "Payments & wallets"],
+  ["bills", "Bills, rent & service charge"],
+  ["visitors", "Visitors & occupants"],
+  ["requests", "Complaints & requests"],
+  ["communication", "Announcements, chat & support"],
+  ["finance", "Revenue & expenses"],
+  ["assets", "Assets & maintenance"],
   ["marketplace", "Marketplace"],
-  ["operations", "Operations"],
+  ["operations", "Operations reporting"],
   ["analytics", "Analytics"],
   ["other", "Other"],
 ] as const;
@@ -39,6 +39,8 @@ export interface AuditFilterOption {
   label: string;
   count: number | null;
   companyId?: string;
+  modules?: string[];
+  actions?: string[];
 }
 
 export interface AuditPageInfo {
@@ -58,20 +60,27 @@ export interface AuditLogRow {
   action: string;
   module: string;
   activity: string;
+  activityLabel: string;
   method: string;
   success: boolean | null;
   description: string;
   path: string;
+  route: string;
   targetId: string;
   ip: string;
   device: string;
   estateName: string;
   estateId: string;
+  estateIds: string[];
   companyName: string;
   companyId: string;
+  companyIds: string[];
   statusCode: string;
+  errorMessage: string;
+  durationMs: number | null;
   requestBody: unknown;
   query: unknown;
+  params: unknown;
 }
 
 export interface UserDeletionRow {
@@ -282,19 +291,48 @@ function compactParams(
   return params;
 }
 
+function decodeHtml(value: string): string {
+  return value.replace(
+    /&(?:#(\d+)|#x([\da-fA-F]+)|amp|lt|gt|quot|apos|nbsp);/gi,
+    (entity, dec: string | undefined, hex: string | undefined) => {
+      if (dec) return String.fromCodePoint(Number(dec));
+      if (hex) return String.fromCodePoint(Number.parseInt(hex, 16));
+      const named: Record<string, string> = {
+        "&amp;": "&",
+        "&lt;": "<",
+        "&gt;": ">",
+        "&quot;": '"',
+        "&apos;": "'",
+        "&nbsp;": " ",
+      };
+      return named[entity.toLowerCase()] ?? entity;
+    },
+  );
+}
+
 function activityLabel(key: string, fallback?: string): string {
   const known = ACTIVITY_LABELS[key] ?? ACTIVITY_LABELS[key.toLowerCase()];
-  const provided = fallback?.trim();
+  const provided = decodeHtml(fallback ?? "").trim();
   if (provided && provided.toLowerCase() !== key.toLowerCase()) return provided;
   if (known) return known;
   if (provided) return provided;
   return key.replaceAll("-", " ");
 }
 
-export function formatActivity(key: string): string {
+export function formatActivity(key: string, label?: string): string {
   const trimmed = key.trim();
-  if (!trimmed) return "";
-  return activityLabel(trimmed);
+  if (!trimmed && !label?.trim()) return "";
+  return activityLabel(trimmed, label);
+}
+
+function readStringList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .filter((item): item is string => typeof item === "string" && Boolean(item.trim()))
+      .map((item) => item.trim());
+  }
+  if (typeof value === "string" && value.trim()) return [value.trim()];
+  return [];
 }
 
 function readFilterOptions(
@@ -311,15 +349,16 @@ function readFilterOptions(
           ? readId(record, ["id", "_id", "estateId", "key", "value"])
           : firstString(record, ["key", "id", "value", "activity", "slug"]);
       if (!id) return null;
-      const label =
+      const rawLabel =
         kind === "estate"
           ? firstString(record, ["label", "name", "estateName", "title"]) ||
             (id.toLowerCase() === "all" ? "All estates" : id)
-          : activityLabel(
-              id,
-              firstString(record, ["label", "name", "title"]),
-            );
+          : firstString(record, ["label", "name", "title"]);
+      const label =
+        kind === "estate" ? decodeHtml(rawLabel) : activityLabel(id, rawLabel);
       const companyId = readId(record, ["companyId", "company"]);
+      const modules = readStringList(record.modules);
+      const actions = readStringList(record.actions);
       return {
         id,
         label,
@@ -327,6 +366,8 @@ function readFilterOptions(
           record.count ?? record.total ?? record.entries ?? record.entryCount,
         ),
         companyId: companyId || undefined,
+        modules: modules.length > 0 ? modules : undefined,
+        actions: actions.length > 0 ? actions : undefined,
       };
     })
     .filter((item): item is AuditFilterOption => item != null);
@@ -400,8 +441,19 @@ export function normalizeAuditLog(value: unknown): AuditLogRow | null {
   const action = firstString(record, ["action"]);
   const path = firstString(record, ["path", "url", "endpoint"]);
   const description =
-    firstString(record, ["description", "message", "summary"]) || action || path;
+    decodeHtml(firstString(record, ["description", "message", "summary"])) ||
+    action ||
+    path;
   const id = readId(record, ["id", "_id"]);
+  const activity = firstString(record, ["activity"]);
+  const estateIds = uniqueIds([
+    ...readStringList(record.estateIds),
+    readId(record, ["estateId"]) || firstString(estate, ["id", "_id"]),
+  ]);
+  const companyIds = uniqueIds([
+    ...readStringList(record.companyIds),
+    readId(record, ["companyId"]) || firstString(company, ["id", "_id"]),
+  ]);
   return {
     id,
     createdAt: firstString(record, ["createdAt", "timestamp", "occurredAt", "date"]),
@@ -412,28 +464,42 @@ export function normalizeAuditLog(value: unknown): AuditLogRow | null {
     actorRole: firstString(record, ["actorRole"]) || firstString(actor, ["role"]),
     action,
     module: firstString(record, ["module"]),
-    activity: firstString(record, ["activity"]),
+    activity,
+    activityLabel: activityLabel(
+      activity,
+      firstString(record, ["activityLabel", "activityName"]),
+    ),
     method: firstString(record, ["method"]).toUpperCase(),
     success: readSuccess(record),
     description,
     path,
+    route: firstString(record, ["route"]),
     targetId: readId(record, ["targetId", "target"]),
     ip: firstString(record, ["ip", "ipAddress", "requestIp", "remoteAddress"]),
     device: firstString(record, ["device", "userAgent", "user_agent"]),
     estateName: firstString(record, ["estateName"]) || firstString(estate, ["name"]),
-    estateId: readId(record, ["estateId"]) || firstString(estate, ["id", "_id"]),
+    estateId: estateIds[0] ?? "",
+    estateIds,
     companyName:
       firstString(record, ["companyName"]) || firstString(company, ["name"]),
-    companyId: readId(record, ["companyId"]) || firstString(company, ["id", "_id"]),
+    companyId: companyIds[0] ?? "",
+    companyIds,
     statusCode: firstString(record, ["statusCode", "status"]),
+    errorMessage: decodeHtml(firstString(record, ["errorMessage"])),
+    durationMs: readNumber(record.durationMs),
     requestBody: readJson(record, [
+      "body",
       "requestBody",
       "sanitizedRequestBody",
       "sanitizedBody",
-      "body",
     ]),
     query: readJson(record, ["query", "requestQuery", "queryParams"]),
+    params: readJson(record, ["params", "pathParams"]),
   };
+}
+
+function uniqueIds(ids: string[]): string[] {
+  return [...new Set(ids.filter(Boolean))];
 }
 
 export function normalizeUserDeletion(value: unknown): UserDeletionRow | null {

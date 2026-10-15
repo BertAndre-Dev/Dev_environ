@@ -89,8 +89,32 @@ function deletionTitle(row: UserDeletionRow): string {
   return row.deletedName || row.deletedEmail || "Deleted account";
 }
 
-function toActivityDetail(row: AuditLogRow): AuditDetailModel {
+function linkedNames(
+  ids: string[],
+  explicitName: string,
+  options: AuditFilterOption[],
+): string {
+  if (explicitName.trim()) return explicitName.trim();
+  return ids
+    .map((id) => options.find((option) => option.id === id)?.label || id)
+    .filter(Boolean)
+    .join(", ");
+}
+
+function formatDuration(ms: number | null): string {
+  if (ms == null) return "";
+  if (ms < 1000) return `${ms} ms`;
+  const seconds = ms / 1000;
+  return `${seconds >= 10 ? Math.round(seconds) : seconds.toFixed(1)} s`;
+}
+
+function toActivityDetail(
+  row: AuditLogRow,
+  estates: AuditFilterOption[],
+  companies: AuditFilterOption[],
+): AuditDetailModel {
   const blocks = [
+    row.params ? { title: "Path params", value: formatJson(row.params) } : null,
     row.requestBody ? { title: "Request body", value: formatJson(row.requestBody) } : null,
     row.query ? { title: "Query", value: formatJson(row.query) } : null,
   ].filter((block): block is { title: string; value: string } => Boolean(block?.value));
@@ -108,18 +132,21 @@ function toActivityDetail(row: AuditLogRow): AuditDetailModel {
       { label: "Email", value: display(row.actorEmail) },
       { label: "Role", value: display(row.actorRole) },
       { label: "Actor id", value: display(row.actorId) },
-      { label: "Activity", value: display(formatActivity(row.activity)) },
+      { label: "Activity", value: display(row.activityLabel || formatActivity(row.activity)) },
       { label: "Module", value: display(row.module) },
       { label: "Action", value: display(row.action) },
       { label: "Method", value: display(row.method) },
+      { label: "Route", value: display(row.route) },
       { label: "Path", value: display(row.path) },
       { label: "Target", value: display(row.targetId) },
       { label: "Status", value: display(row.statusCode) },
-      { label: "Company", value: display(row.companyName || row.companyId) },
-      { label: "Estate", value: display(row.estateName || row.estateId) },
+      { label: "Duration", value: display(formatDuration(row.durationMs)) },
+      { label: "Error", value: display(row.errorMessage) },
+      { label: "Company", value: display(linkedNames(row.companyIds, row.companyName, companies)) },
+      { label: "Estate", value: display(linkedNames(row.estateIds, row.estateName, estates)) },
       { label: "IP", value: display(row.ip) },
       { label: "Device", value: display(row.device) },
-    ],
+    ].filter((field) => field.value !== "—"),
     blocks,
   };
 }
@@ -338,7 +365,41 @@ export default function AuditTrailPage() {
     if (activities.length === 0) return;
     if (activities.some((item) => item.id === activity)) return;
     setActivity("all");
+    setModuleName("");
+    setAction("");
   }, [activities, activity]);
+
+  const activityScope = useMemo(
+    () =>
+      activity === "all"
+        ? activities
+        : activities.filter((item) => item.id === activity),
+    [activities, activity],
+  );
+  const moduleChoices = useMemo(
+    () =>
+      [...new Set(activityScope.flatMap((item) => item.modules ?? []))].sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    [activityScope],
+  );
+  const actionChoices = useMemo(
+    () =>
+      [...new Set(activityScope.flatMap((item) => item.actions ?? []))].sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    [activityScope],
+  );
+
+  useEffect(() => {
+    if (moduleChoices.length === 0 || !moduleName) return;
+    if (!moduleChoices.includes(moduleName)) setModuleName("");
+  }, [moduleChoices, moduleName]);
+
+  useEffect(() => {
+    if (actionChoices.length === 0 || !action) return;
+    if (!actionChoices.includes(action)) setAction("");
+  }, [actionChoices, action]);
 
   useEffect(() => {
     let cancelled = false;
@@ -494,7 +555,7 @@ export default function AuditTrailPage() {
     : null;
 
   const detailModel = shownLog
-    ? toActivityDetail(shownLog)
+    ? toActivityDetail(shownLog, estates, companies)
     : shownDeletion
       ? toDeletionDetail(shownDeletion)
       : null;
@@ -779,7 +840,11 @@ export default function AuditTrailPage() {
                   type="button"
                   role="radio"
                   aria-checked={selected}
-                  onClick={() => setActivity(item.id)}
+                  onClick={() => {
+                    setActivity(item.id);
+                    setModuleName("");
+                    setAction("");
+                  }}
                   className={`inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-full px-3 py-1.5 text-sm transition-transform duration-100 ease-out active:scale-[0.97] motion-reduce:active:scale-100 ${
                     selected
                       ? "bg-primary text-primary-foreground"
@@ -831,8 +896,28 @@ export default function AuditTrailPage() {
           <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {tab === "activity" ? (
               <>
-                <FilterField label="Module" value={moduleName} onChange={setModuleName} placeholder="user-mgt" />
-                <FilterField label="Action" value={action} onChange={setAction} placeholder="UserMgtController.deleteUser" />
+                {moduleChoices.length > 0 ? (
+                  <FilterSelect
+                    label="Module"
+                    value={moduleName}
+                    onChange={setModuleName}
+                    emptyLabel="Any module"
+                    options={moduleChoices}
+                  />
+                ) : (
+                  <FilterField label="Module" value={moduleName} onChange={setModuleName} placeholder="user-mgt" />
+                )}
+                {actionChoices.length > 0 ? (
+                  <FilterSelect
+                    label="Action"
+                    value={action}
+                    onChange={setAction}
+                    emptyLabel="Any action"
+                    options={actionChoices}
+                  />
+                ) : (
+                  <FilterField label="Action" value={action} onChange={setAction} placeholder="UserMgtController.deleteUser" />
+                )}
                 <FilterField label="Actor id" value={actorId} onChange={setActorId} placeholder="User id" />
                 <FilterField label="Target id" value={targetId} onChange={setTargetId} placeholder="Record id" />
               </>
@@ -915,9 +1000,10 @@ export default function AuditTrailPage() {
                       <span className="block truncate text-sm">{activityTitle(row)}</span>
                       <span className="block truncate text-xs text-muted-foreground">
                         {[
-                          formatActivity(row.activity),
+                          row.activityLabel || formatActivity(row.activity),
                           row.module,
-                          row.estateName || row.companyName,
+                          linkedNames(row.estateIds, row.estateName, estates) ||
+                            linkedNames(row.companyIds, row.companyName, companies),
                         ]
                           .filter(Boolean)
                           .join(" · ") || "—"}
@@ -1017,6 +1103,40 @@ export default function AuditTrailPage() {
         onClose={closeDetail}
       />
     </div>
+  );
+}
+
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  emptyLabel,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  emptyLabel: string;
+  options: string[];
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[13px] font-medium tracking-tight">
+        {label}
+      </span>
+      <select
+        className={controlClass}
+        value={options.includes(value) ? value : ""}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        <option value="">{emptyLabel}</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

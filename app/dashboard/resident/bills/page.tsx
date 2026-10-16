@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { IconTooltip } from "@/components/ui/tooltip";
@@ -30,9 +30,12 @@ import {
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { parseResidentEstate } from "@/app/dashboard/resident/asset/lib/estate";
 import {
+  formatAddressEntryLabel,
+  formatAddressLabel,
   normalizeAddresses,
   type AddressOption,
 } from "@/lib/address";
+import axiosInstance from "@/utils/axiosInstance";
 import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
@@ -336,6 +339,13 @@ function assignedBillPayId(bill: AssignedBillData): string | null {
   return bill.billId || bill.id || bill._id || null;
 }
 
+function addressOptionLabel(address: AddressOption): string {
+  const fromData = formatAddressEntryLabel(address.data);
+  if (fromData) return fromData;
+  const formatted = formatAddressLabel(address);
+  return formatted && formatted !== address.id ? formatted : "";
+}
+
 export default function BillPage() {
   const dispatch = useDispatch<AppDispatch>();
   const authUser = useSelector((state: RootState) => state.auth.user);
@@ -361,6 +371,10 @@ export default function BillPage() {
   );
   const [bootstrapping, setBootstrapping] = useState(true);
   const [viewBill, setViewBill] = useState<PaidBillData | null>(null);
+  const [extraAddressLabels, setExtraAddressLabels] = useState<
+    Record<string, string>
+  >({});
+  const fetchedAddressIds = useRef(new Set<string>());
   const [payBillId, setPayBillId] = useState<string | null>(null);
 
   const {
@@ -389,6 +403,53 @@ export default function BillPage() {
       paying: s?.payBillState === "isLoading",
     };
   });
+
+  const addressLabels = useMemo(() => {
+    const labels: Record<string, string> = { ...extraAddressLabels };
+    for (const address of addressOptions) {
+      const label = addressOptionLabel(address);
+      if (label) labels[address.id] = label;
+    }
+    return labels;
+  }, [addressOptions, extraAddressLabels]);
+
+  const paidAddressIds = useMemo(() => {
+    const ids = paidBills
+      .map((bill) => bill.addressId?.trim())
+      .filter((id): id is string => Boolean(id));
+    return Array.from(new Set(ids));
+  }, [paidBills]);
+
+  useEffect(() => {
+    const missing = paidAddressIds.filter(
+      (id) => !addressLabels[id] && !fetchedAddressIds.current.has(id),
+    );
+    if (missing.length === 0) return;
+    for (const id of missing) fetchedAddressIds.current.add(id);
+
+    (async () => {
+      const found: Record<string, string> = {};
+      await Promise.all(
+        missing.map(async (id) => {
+          try {
+            const res = await axiosInstance.get(
+              `/api/v1/address-mgt/entry/${id}`,
+            );
+            const entry = (res.data?.data ?? res.data) as {
+              data?: Record<string, unknown>;
+            };
+            const label = formatAddressEntryLabel(entry?.data);
+            if (label) found[id] = label;
+          } catch {
+            // Leave the cell empty when this address cannot be loaded.
+          }
+        }),
+      );
+      if (Object.keys(found).length > 0) {
+        setExtraAddressLabels((prev) => ({ ...prev, ...found }));
+      }
+    })();
+  }, [addressLabels, paidAddressIds]);
 
   const loadingEstate = isPending(getBillsByEstateState);
   const loadingAssigned = isPending(getBillsForAddressState);
@@ -593,6 +654,14 @@ export default function BillPage() {
       key: "billName",
       header: "Bill Name",
       render: (item: PaidBillData) => item.billName || "-",
+    },
+    {
+      key: "address",
+      header: "Address",
+      render: (item: PaidBillData) =>
+        (item.addressId && addressLabels[item.addressId]) || "-",
+      exportValue: (item: PaidBillData) =>
+        (item.addressId && addressLabels[item.addressId]) || "",
     },
     {
       key: "paidBy",
@@ -989,10 +1058,12 @@ export default function BillPage() {
             payerName: payerName || undefined,
             email: payerEmail || undefined,
             estateName: estateName || undefined,
-            addressLabel: resolveReceiptAddressLabel(
-              addressOptions,
-              viewBill?.addressId || selectedAddressId,
-            ),
+            addressLabel:
+              (viewBill?.addressId && addressLabels[viewBill.addressId]) ||
+              resolveReceiptAddressLabel(
+                addressOptions,
+                viewBill?.addressId || selectedAddressId,
+              ),
           }}
         />
       </div>

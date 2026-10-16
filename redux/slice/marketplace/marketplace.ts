@@ -73,10 +73,6 @@ export interface CreateMarketplacePayload {
   image?: string;
   images?: string[];
   videos?: string[];
-  /** New photos. Sent with the listing so the API stores their URLs. */
-  imageFiles?: File[];
-  /** New videos. Sent with the listing so the API stores their URLs. */
-  videoFiles?: File[];
   startDate: string;
   endDate: string;
   audience: MarketplaceAudience;
@@ -93,63 +89,12 @@ function withAbsoluteLink<T extends { link?: string }>(body: T): T {
   return { ...body, link: ensureHttpUrl(body.link) };
 }
 
-function isBrowserFile(value: unknown): value is File {
-  return typeof File !== "undefined" && value instanceof File;
+function marketplaceWriteBody<T extends { link?: string; estateId?: string; userId?: string }>(
+  body: T,
+) {
+  const { estateId: _estateId, userId: _userId, ...rest } = body;
+  return withAbsoluteLink(rest);
 }
-
-function appendFormValue(form: FormData, key: string, value: unknown) {
-  if (value == null || value === "") return;
-  if (Array.isArray(value)) {
-    for (const entry of value) appendFormValue(form, key, entry);
-    return;
-  }
-  if (isBrowserFile(value)) {
-    form.append(key, value, value.name);
-    return;
-  }
-  form.append(key, String(value));
-}
-
-/**
- * Marketplace create/update accepts the files and turns them into URLs.
- * Kept media stays as URL strings on `images` / `videos`.
- */
-function marketplaceWriteBody(
-  body: CreateMarketplacePayload | Omit<UpdateMarketplacePayload, "marketPlaceId">,
-): FormData {
-  const {
-    estateId: _estateId,
-    userId: _userId,
-    imageFiles,
-    videoFiles,
-    ...rest
-  } = body as CreateMarketplacePayload & { estateId?: string; userId?: string };
-  const form = new FormData();
-  const fields = withAbsoluteLink(rest);
-  for (const [key, value] of Object.entries(fields)) {
-    appendFormValue(form, key, value);
-  }
-  for (const file of imageFiles ?? []) {
-    if (isBrowserFile(file)) form.append("images", file, file.name);
-  }
-  for (const file of videoFiles ?? []) {
-    if (isBrowserFile(file)) form.append("videos", file, file.name);
-  }
-  return form;
-}
-
-const multipartRequest = {
-  transformRequest: [
-    (data: unknown, headers: { setContentType?: (value: false) => void; [key: string]: unknown }) => {
-      if (typeof headers?.setContentType === "function") {
-        headers.setContentType(false);
-      } else if (headers) {
-        delete headers["Content-Type"];
-      }
-      return data;
-    },
-  ],
-};
 
 /** GET /api/v1/marketplace — public feed for the active estate */
 export const getMarketplaceFeed = createAsyncThunk(
@@ -245,7 +190,6 @@ export const createMarketplaceAd = createAsyncThunk(
       const res = await axiosInstance.post(
         "/api/v1/marketplace/create",
         marketplaceWriteBody(payload),
-        multipartRequest,
       );
       return res.data;
     } catch (error: unknown) {
@@ -263,7 +207,6 @@ export const updateMarketplaceAd = createAsyncThunk(
       const res = await axiosInstance.put(
         `/api/v1/marketplace/${marketPlaceId}/update`,
         marketplaceWriteBody(body),
-        multipartRequest,
       );
       return res.data;
     } catch (error: unknown) {

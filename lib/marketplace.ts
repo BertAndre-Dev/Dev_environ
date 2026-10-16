@@ -93,19 +93,93 @@ export function marketplaceStatusLabel(value: unknown): string {
   }
 }
 
-export function marketplaceAudienceLabel(value: unknown): string {
-  if (typeof value !== "string") return "This estate";
-  const audience = value.trim().toUpperCase();
-  switch (audience) {
-    case "WITHIN_ESTATE":
-      return "This estate";
-    case "OTHER_ESTATES":
-      return "Select estates";
-    case "ALL_ESTATES":
-      return "All estates";
-    default:
-      return "This estate";
+function namedText(value: unknown): string {
+  if (typeof value === "string") return value.trim();
+  if (value && typeof value === "object" && "name" in value) {
+    const name = (value as { name?: unknown }).name;
+    if (typeof name === "string") return name.trim();
   }
+  return "";
+}
+
+export function marketplaceAudienceLabel(
+  value: unknown,
+  estateName?: string | null,
+): string {
+  const named = typeof estateName === "string" ? estateName.trim() : "";
+  const audience =
+    typeof value === "string" ? value.trim().toUpperCase() : "";
+  if (audience === "OTHER_ESTATES") return "Select estates";
+  if (audience === "ALL_ESTATES") return "All estates";
+  return named || "This estate";
+}
+
+type EstateNameSource = {
+  audience?: unknown;
+  estateName?: string | null;
+  estate?: unknown;
+  estateId?: unknown;
+};
+
+/** Name attached to a listing, when the API includes it. */
+export function adEstateName(item: EstateNameSource): string {
+  return (
+    namedText(item.estateName) ||
+    namedText(item.estate) ||
+    namedText(item.estateId)
+  );
+}
+
+export function audienceLabelForAd(
+  item: EstateNameSource,
+  options?: {
+    fallbackName?: string | null;
+    estates?: ReadonlyArray<{ label: string; value: string }>;
+    selectedEstateId?: string | null;
+  },
+): string {
+  const direct = adEstateName(item);
+  const estateId =
+    resolveEstateId(item.estateId) || resolveEstateId(item.estate);
+  const fromList =
+    estateId && options?.estates
+      ? options.estates.find((row) => row.value === estateId)?.label ?? ""
+      : "";
+  const selectedId = options?.selectedEstateId?.trim() ?? "";
+  const fallbackName = options?.fallbackName?.trim() ?? "";
+  const sameEstate = !estateId || !selectedId || estateId === selectedId;
+  const fallback = sameEstate ? fallbackName : "";
+  return marketplaceAudienceLabel(
+    item.audience,
+    direct || fromList || fallback,
+  );
+}
+
+export function resolveCurrentEstateName(
+  user: unknown,
+  memberships: ReadonlyArray<{
+    isCurrent?: boolean | null;
+    isActive?: boolean | null;
+    estateName?: string | null;
+    estateId?: unknown;
+  }> = [],
+): string {
+  const record =
+    user && typeof user === "object"
+      ? (user as Record<string, unknown>)
+      : {};
+  const current =
+    memberships.find((item) => item.isCurrent) ??
+    memberships.find((item) => item.isActive && (item.estateName || item.estateId)) ??
+    memberships.find((item) => item.estateName || namedText(item.estateId));
+  const fromMembership =
+    namedText(current?.estateName) || namedText(current?.estateId);
+  return (
+    fromMembership ||
+    namedText(record.estateName) ||
+    namedText(record.estate) ||
+    namedText(record.estateId)
+  );
 }
 
 export function audiencesForRole(role: string | null | undefined): MarketplaceAudience[] {

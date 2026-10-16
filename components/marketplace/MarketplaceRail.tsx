@@ -22,6 +22,7 @@ import {
   marketplacePathForRole,
 } from "@/lib/marketplace";
 import { coverMedia } from "@/lib/marketplace-media";
+import { useCurrentEstateName } from "@/hooks/useCurrentEstateName";
 import { useMarketplaceFeedEstate } from "@/hooks/useMarketplaceFeedEstate";
 import {
   selectEstateModules,
@@ -276,7 +277,11 @@ export function MarketplaceRail() {
   );
   const [collapsed, setCollapsed] = useState(false);
   const [selected, setSelected] = useState<MarketplaceAd | null>(null);
-  const { estateId, ready: feedReady } = useMarketplaceFeedEstate();
+  const { estateId, estateOptions, ready: feedReady } = useMarketplaceFeedEstate();
+  const viewerEstateName = useCurrentEstateName();
+  const audienceEstateName =
+    estateOptions.find((option) => option.value === estateId)?.label ||
+    viewerEstateName;
 
   const hidden =
     isSettingsPath(pathname) || !isMarketplaceModuleEnabled(role, modules);
@@ -409,6 +414,9 @@ export function MarketplaceRail() {
           <MarketplaceAdDetail
             key={detail.id ?? detail.productName}
             item={detail}
+            estateName={audienceEstateName}
+            estates={estateOptions}
+            selectedEstateId={estateId}
           />
         ) : null}
       </Modal>

@@ -4,7 +4,7 @@ import { ExternalLink, Pencil, PauseCircle, PlayCircle, Trash2 } from "lucide-re
 import { Button } from "@/components/ui/button";
 import { MarketplaceStatusBadge } from "@/components/marketplace/MarketplaceStatusBadge";
 import {
-  marketplaceAudienceLabel,
+  audienceLabelForAd,
   MARKETPLACE_PRESS,
   normalizeMarketplaceStatus,
 } from "@/lib/marketplace";
@@ -23,6 +23,9 @@ type Props = Readonly<{
   onActivate?: (item: MarketplaceAd) => void;
   onApprove?: (item: MarketplaceAd) => void;
   onReject?: (item: MarketplaceAd) => void;
+  estateName?: string;
+  estates?: ReadonlyArray<{ label: string; value: string }>;
+  selectedEstateId?: string;
 }>;
 
 export function MarketplaceAdCard({
@@ -35,6 +38,9 @@ export function MarketplaceAdCard({
   onActivate,
   onApprove,
   onReject,
+  estateName,
+  estates,
+  selectedEstateId,
 }: Props) {
   const cover = coverMedia(item);
   const status = normalizeMarketplaceStatus(item.status);
@@ -94,7 +100,11 @@ export function MarketplaceAdCard({
           </p>
           {showStatus ? (
             <p className="text-[11px] text-muted-foreground">
-              {marketplaceAudienceLabel(item.audience)}
+              {audienceLabelForAd(item, {
+                fallbackName: estateName,
+                estates,
+                selectedEstateId,
+              })}
               {item.startDate && item.endDate
                 ? ` · ${String(item.startDate).slice(0, 10)} – ${String(item.endDate).slice(0, 10)}`
                 : ""}

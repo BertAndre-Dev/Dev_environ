@@ -24,6 +24,7 @@ import {
   MARKETPLACE_PRESS,
   canCreateMarketplaceAds,
 } from "@/lib/marketplace";
+import { useCurrentEstateName } from "@/hooks/useCurrentEstateName";
 import { useMarketplaceFeedEstate } from "@/hooks/useMarketplaceFeedEstate";
 import { selectUserRole } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 import {
@@ -153,6 +154,10 @@ export function MarketplaceWorkspace() {
     setEstateId,
     ready: feedReady,
   } = useMarketplaceFeedEstate();
+  const viewerEstateName = useCurrentEstateName();
+  const audienceEstateName =
+    estateOptions.find((option) => option.value === estateId)?.label ||
+    viewerEstateName;
 
   const tabs = useMemo(() => {
     const items: { key: TabKey; label: string }[] = [
@@ -420,6 +425,9 @@ export function MarketplaceWorkspace() {
                 key={item.id ?? item.productName}
                 item={item}
                 showStatus={tab !== "discover"}
+                estateName={audienceEstateName}
+                estates={estateOptions}
+                selectedEstateId={estateId}
                 onOpen={setDetail}
                 onEdit={
                   tab === "mine" ? (ad) => {
@@ -495,6 +503,9 @@ export function MarketplaceWorkspace() {
             key={detail.id ?? detail.productName}
             item={detail}
             showStatus={tab !== "discover"}
+            estateName={audienceEstateName}
+            estates={estateOptions}
+            selectedEstateId={estateId}
           />
         ) : null}
       </Modal>

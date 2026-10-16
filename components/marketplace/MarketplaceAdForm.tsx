@@ -16,6 +16,7 @@ import {
   audiencesForRole,
   defaultAudienceForRole,
   ensureHttpUrl,
+  adEstateName,
   marketplaceAudienceLabel,
   normalizeMarketplaceStatus,
   plusDaysDateInput,
@@ -25,6 +26,7 @@ import {
 } from "@/lib/marketplace";
 import { listingImages, listingVideos } from "@/lib/marketplace-media";
 import { MarketplaceEstatePicker } from "@/components/marketplace/MarketplaceEstatePicker";
+import { useCurrentEstateName } from "@/hooks/useCurrentEstateName";
 import { selectUserRole } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 import {
   getMarketplaceEstates,
@@ -100,6 +102,9 @@ export function MarketplaceAdForm({
   const dispatch = useDispatch<AppDispatch>();
   const role = useSelector(selectUserRole);
   const isSuperAdmin = role === "super admin";
+  const viewerEstateName = useCurrentEstateName();
+  const withinEstateName =
+    (initialData ? adEstateName(initialData) : "") || viewerEstateName;
 
   const [companyName, setCompanyName] = useState("");
   const [link, setLink] = useState("");
@@ -365,7 +370,9 @@ export function MarketplaceAdForm({
                   : "border-border text-muted-foreground hover:bg-muted/50",
               )}
             >
-              {marketplaceAudienceLabel(value)}
+              {value === "WITHIN_ESTATE" && withinEstateName
+                ? withinEstateName
+                : marketplaceAudienceLabel(value)}
             </button>
           ))}
         </div>

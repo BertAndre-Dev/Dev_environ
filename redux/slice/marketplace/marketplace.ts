@@ -19,6 +19,8 @@ export interface MarketplaceAd {
   startDate?: string;
   endDate?: string;
   audience?: MarketplaceAudience | string;
+  estateName?: string | null;
+  estate?: { id?: string; _id?: string; name?: string } | string | null;
   targetEstateIds?: string[];
   targetEstates?: Array<{
     id?: string;
@@ -28,7 +30,7 @@ export interface MarketplaceAd {
     country?: string;
   }>;
   notes?: string;
-  estateId?: string;
+  estateId?: string | { id?: string; _id?: string; name?: string } | null;
   status?: string;
   isSuspended?: boolean;
   rejectionReason?: string;

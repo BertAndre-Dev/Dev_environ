@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MarketplaceStatusBadge } from "@/components/marketplace/MarketplaceStatusBadge";
-import { MARKETPLACE_PRESS, marketplaceAudienceLabel } from "@/lib/marketplace";
+import { MARKETPLACE_PRESS, audienceLabelForAd } from "@/lib/marketplace";
 import { listingImages, listingVideos } from "@/lib/marketplace-media";
 import type { MarketplaceAd } from "@/redux/slice/marketplace/marketplace";
 import { cn } from "@/lib/utils";
@@ -12,9 +12,15 @@ import { cn } from "@/lib/utils";
 export function MarketplaceAdDetail({
   item,
   showStatus = false,
+  estateName,
+  estates,
+  selectedEstateId,
 }: Readonly<{
   item: MarketplaceAd;
   showStatus?: boolean;
+  estateName?: string;
+  estates?: ReadonlyArray<{ label: string; value: string }>;
+  selectedEstateId?: string;
 }>) {
   const images = listingImages(item);
   const videos = listingVideos(item);
@@ -87,7 +93,11 @@ export function MarketplaceAdDetail({
       </p>
 
       <p className="text-xs text-muted-foreground">
-        {marketplaceAudienceLabel(item.audience)}
+        {audienceLabelForAd(item, {
+          fallbackName: estateName,
+          estates,
+          selectedEstateId,
+        })}
         {item.startDate && item.endDate
           ? ` · ${String(item.startDate).slice(0, 10)} – ${String(item.endDate).slice(0, 10)}`
           : ""}

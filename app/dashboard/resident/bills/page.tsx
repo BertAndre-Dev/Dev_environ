@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { IconTooltip } from "@/components/ui/tooltip";
@@ -24,6 +24,7 @@ import {
   clearAssignedBills,
   type AssignedBillData,
   type EstateBillData,
+  type MissedBillPeriod,
   type PaidBillData,
 } from "@/redux/slice/resident/bill-mgt/bills-mgt-slice";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
@@ -96,6 +97,28 @@ function hasActiveInterest(bill: {
   return Boolean(bill.accrueInterest) && Number(bill.interestRatePercent) > 0;
 }
 
+function formatPeriodRange(period: MissedBillPeriod): string {
+  const start = period.periodStart ? new Date(period.periodStart) : null;
+  const end = period.periodEnd ? new Date(period.periodEnd) : null;
+  const startOk = start != null && !Number.isNaN(start.getTime());
+  const endOk = end != null && !Number.isNaN(end.getTime());
+  if (!startOk || !start) return period.label?.trim() || "Missed period";
+  const full: Intl.DateTimeFormatOptions = {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  };
+  if (!endOk || !end || start.toDateString() === end.toDateString()) {
+    return start.toLocaleDateString("en-US", full);
+  }
+  const sameYear = start.getFullYear() === end.getFullYear();
+  const startText = start.toLocaleDateString(
+    "en-US",
+    sameYear ? { month: "short", day: "numeric" } : full,
+  );
+  return `${startText} – ${end.toLocaleDateString("en-US", full)}`;
+}
+
 function PayableBillCard({
   name,
   description,
@@ -107,7 +130,7 @@ function PayableBillCard({
   principalDue,
   accruedInterest,
   interestRatePercent,
-  interestStartsAt,
+  missedPeriods,
   onPay,
 }: {
   name: string;
@@ -121,6 +144,7 @@ function PayableBillCard({
   accruedInterest?: number;
   interestRatePercent?: number;
   interestStartsAt?: string;
+  missedPeriods?: MissedBillPeriod[];
   onPay: () => void;
 }) {
   const showInterest =
@@ -131,95 +155,170 @@ function PayableBillCard({
     compulsory ? "Compulsory" : null,
   ].filter(Boolean) as string[];
   const nextDueLabel = formatInterestStart(nextDueDate);
+  const periods = (missedPeriods ?? []).filter(
+    (period) => period.label || period.periodStart || period.total != null,
+  );
+  const missedCount = periods.length;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [moreBelow, setMoreBelow] = useState(false);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const measure = () => {
+      setMoreBelow(el.scrollHeight - el.scrollTop - el.clientHeight > 8);
+    };
+    measure();
+    el.addEventListener("scroll", measure, { passive: true });
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => {
+      el.removeEventListener("scroll", measure);
+      observer.disconnect();
+    };
+  }, [missedCount, showInterest, description]);
 
   return (
-    <button
-      type="button"
-      onClick={onPay}
+    <article
       className={[
-        "flex w-full cursor-pointer flex-col rounded-2xl border border-border/80 bg-card p-5 text-left",
-        "shadow-sm transition-[transform,background-color,box-shadow] duration-100 ease-out",
-        "hover:bg-muted/30 hover:shadow-md",
-        "active:scale-[0.99] active:bg-muted/50",
-        "motion-reduce:transition-none motion-reduce:active:scale-100",
+        "relative flex h-72 w-full flex-col overflow-hidden rounded-2xl border border-border/80 bg-card text-left shadow-sm",
         isSuspended ? "opacity-90" : "",
       ].join(" ")}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="text-lg text-primary font-semibold leading-tight tracking-[-0.02em] capitalize">
-            {name}
-          </h3>
-          {description ? (
-            <p className="mt-1 text-sm leading-snug text-muted-foreground">
-              {description}
-            </p>
-          ) : null}
+      <div
+        ref={scrollRef}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [scrollbar-width:thin]"
+      >
+      <button
+        type="button"
+        onClick={onPay}
+        className={[
+          "flex w-full cursor-pointer flex-col p-5 text-left",
+          "transition-[transform,background-color] duration-100 ease-out",
+          "hover:bg-muted/30",
+          "active:scale-[0.99] active:bg-muted/50",
+          "motion-reduce:transition-none motion-reduce:active:scale-100",
+        ].join(" ")}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-lg font-semibold leading-tight tracking-[-0.02em] text-primary capitalize">
+              {name}
+            </h3>
+            {description ? (
+              <p className="mt-1 text-sm leading-snug text-muted-foreground">
+                {description}
+              </p>
+            ) : null}
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            {isSuspended ? (
+              <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
+                Bill suspended
+              </span>
+            ) : null}
+            {badgeParts.length > 0 ? (
+              <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium tracking-wide text-muted-foreground">
+                {badgeParts.join(" · ")}
+              </span>
+            ) : null}
+          </div>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1.5">
-          {isSuspended ? (
-            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
-              Bill suspended
-            </span>
-          ) : null}
-          {badgeParts.length > 0 ? (
-            <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium tracking-wide text-muted-foreground">
-              {badgeParts.join(" · ")}
-            </span>
-          ) : null}
-        </div>
-      </div>
 
-      <div className="mt-5 space-y-1.5">
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="text-sm">Amount payable</span>
-          <span className="text-lg font-semibold tabular-nums tracking-tight">
-            {formatNaira(amountPayable)}
-          </span>
+        <div className="mt-5 space-y-1.5">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-sm">Amount payable</span>
+            <span className="text-lg font-semibold tabular-nums tracking-tight">
+              {formatNaira(amountPayable)}
+            </span>
+          </div>
+          {nextDueLabel ? (
+            <div className="flex items-baseline justify-between gap-3 text-sm text-muted-foreground">
+              <span>Next payment date</span>
+              <span className="tabular-nums">{nextDueLabel}</span>
+            </div>
+          ) : null}
+          {showInterest ? (
+            <>
+              <div className="flex items-baseline justify-between gap-3 text-sm text-muted-foreground">
+                <span>Principal due</span>
+                <span className="tabular-nums">
+                  {formatNaira(Number(principalDue ?? 0))}
+                </span>
+              </div>
+              <div className="flex items-baseline justify-between gap-3 text-sm text-muted-foreground">
+                <span>Accrued interest</span>
+                <span className="tabular-nums">
+                  {formatNaira(Number(accruedInterest ?? 0))}
+                </span>
+              </div>
+            </>
+          ) : null}
         </div>
-        {nextDueLabel ? (
-          <div className="flex items-baseline justify-between gap-3 text-sm text-muted-foreground">
-            <span>Next payment date</span>
-            <span className="tabular-nums">{nextDueLabel}</span>
+
+        {showInterest ? (
+          <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-700/45 dark:bg-amber-950/35">
+            <AlertTriangle
+              className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-500"
+              aria-hidden
+            />
+            <p className="text-[13px] leading-snug text-muted-foreground">
+              This fee accrues interest at{" "}
+              <span className="font-semibold text-foreground">
+                {Number(interestRatePercent)}% monthly
+              </span>
+              . Unpaid balances will continue to grow — the amount shown
+              reflects interest accrued as of today and will increase if left
+              unpaid.
+            </p>
           </div>
         ) : null}
-        {showInterest ? (
-          <>
-            <div className="flex items-baseline justify-between gap-3 text-sm text-muted-foreground">
-              <span>Principal due</span>
-              <span className="tabular-nums">
-                {formatNaira(Number(principalDue ?? 0))}
-              </span>
-            </div>
-            <div className="flex items-baseline justify-between gap-3 text-sm text-muted-foreground">
-              <span>Accrued interest</span>
-              <span className="tabular-nums">
-                {formatNaira(Number(accruedInterest ?? 0))}
-              </span>
-            </div>
-          </>
-        ) : null}
-      </div>
+      </button>
 
-      {showInterest ? (
-        <div
-          className="mt-4 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-700/45 dark:bg-amber-950/35"
-        >
-          <AlertTriangle
-            className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-500"
-            aria-hidden
-          />
-          <p className="text-[13px] leading-snug text-muted-foreground">
-            This fee accrues interest at{" "}
-            <span className="font-semibold text-foreground">
-              {Number(interestRatePercent)}% monthly
-            </span>. Unpaid balances
-            will continue to grow — the amount shown reflects interest accrued
-            as of today and will increase if left unpaid.
-          </p>
+      {missedCount > 0 ? (
+        <div className="border-t border-border/70 px-5 py-4">
+          <div className="flex items-center justify-between gap-3">
+            <h4 className="text-[13px] font-medium tracking-tight">
+              {missedCount === 1 ? "Missed period" : "Missed periods"}
+            </h4>
+            <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[11px] font-medium tabular-nums text-red-700 dark:text-red-300">
+              {missedCount}
+            </span>
+          </div>
+          <ul className="mt-2 space-y-1">
+            {periods.map((period, index) => {
+              const interest = Number(period.interest ?? 0);
+              const total = Number(period.total ?? period.principal ?? 0);
+              return (
+                <li
+                  key={period.index ?? `${period.periodStart}-${index}`}
+                  className="flex items-baseline justify-between gap-3 rounded-lg px-2 py-1.5 text-sm"
+                >
+                  <span className="min-w-0 leading-snug text-muted-foreground">
+                    {formatPeriodRange(period)}
+                    {interest > 0 ? (
+                      <span className="mt-0.5 block text-[12px]">
+                        Includes {formatNaira(interest)} interest
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="shrink-0 font-medium tabular-nums">
+                    {formatNaira(total)}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       ) : null}
-    </button>
+      </div>
+      {moreBelow ? (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-linear-to-t from-card to-transparent"
+        />
+      ) : null}
+    </article>
   );
 }
 
@@ -665,6 +764,7 @@ export default function BillPage() {
                         : undefined
                     }
                     interestStartsAt={b.interestStartsAt}
+                    missedPeriods={b.missedPeriods}
                     onPay={() => b.id && setPayBillId(b.id)}
                   />
                 ))
@@ -735,6 +835,7 @@ export default function BillPage() {
                           : undefined
                       }
                       interestStartsAt={b.interestStartsAt}
+                      missedPeriods={b.missedPeriods}
                       onPay={() =>
                         payId &&
                         handlePayBill({

@@ -192,6 +192,13 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
     isServiceChargeBill,
   );
 
+  const collectionDateRequired =
+    isPremiumPlan &&
+    coerceFrequencyForServiceCharge(
+      formData.frequency,
+      isServiceChargeBill,
+    ) !== "oneoff";
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const interestRate = formData.accrueInterest
@@ -210,6 +217,10 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       !formData.interestStartsAt
     ) {
       toast.error("Please select when interest should start.");
+      return;
+    }
+    if (collectionDateRequired && !formData.collectionDate) {
+      toast.error("Please select a collection date.");
       return;
     }
     const payload: BillSubmitData = {
@@ -328,10 +339,15 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
             {isPremiumPlan ? (
               <div>
                 <Label htmlFor="estate-bill-collection-date">
-                  Collection date{" "}
-                  <span className="font-normal text-muted-foreground">
-                    (optional)
-                  </span>
+                  Collection date
+                  {collectionDateRequired ? (
+                    <span className="text-destructive"> *</span>
+                  ) : (
+                    <span className="font-normal text-muted-foreground">
+                      {" "}
+                      (optional)
+                    </span>
+                  )}
                 </Label>
                 <IsoDatePicker
                   id="estate-bill-collection-date"

@@ -36,6 +36,11 @@ import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
 import Loader from "@/components/ui/Loader";
+import Pagination from "@/components/ui/pagination";
+import {
+  DEFAULT_TABLE_PAGE_SIZE,
+  TABLE_PAGE_SIZE_OPTIONS,
+} from "@/lib/table-pagination";
 import { isPending, isSettled } from "@/lib/async-status";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatDateTime } from "@/lib/format-date";
@@ -240,7 +245,11 @@ export default function BillPage() {
   const [activeTab, setActiveTab] = useState<BillsTab>("estate");
   const [paidStartDate, setPaidStartDate] = useState("");
   const [paidEndDate, setPaidEndDate] = useState("");
-  const [paidPageSize, setPaidPageSize] = useState(10);
+  const [paidPageSize, setPaidPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE);
+  const [estatePageSize, setEstatePageSize] = useState(DEFAULT_TABLE_PAGE_SIZE);
+  const [assignedPageSize, setAssignedPageSize] = useState(
+    DEFAULT_TABLE_PAGE_SIZE,
+  );
   const [userId, setUserId] = useState("");
   const [walletId, setWalletId] = useState("");
   const [estateId, setEstateId] = useState("");
@@ -259,6 +268,8 @@ export default function BillPage() {
     estateBills,
     assignedBills,
     paidBills,
+    estatePagination,
+    assignedPagination,
     paidPagination,
     getBillsByEstateState,
     getBillsForAddressState,
@@ -270,6 +281,8 @@ export default function BillPage() {
       estateBills: (s?.estateBills?.data || []) as EstateBillData[],
       assignedBills: (s?.assignedBills?.data || []) as AssignedBillData[],
       paidBills: (s?.paidBills?.data || []) as PaidBillData[],
+      estatePagination: s?.estateBills?.pagination || {},
+      assignedPagination: s?.assignedBills?.pagination || {},
       paidPagination: s?.paidBills?.pagination || {},
       getBillsByEstateState: s?.getBillsByEstateState as string,
       getBillsForAddressState: s?.getBillsForAddressState as string,
@@ -319,10 +332,6 @@ export default function BillPage() {
 
         if (!eId) {
           toast.warning("The signed-in user does not have an estate assigned.");
-        } else {
-          await dispatch(
-            getBillsByEstate({ estateId: eId, page: 1, limit: 50 }),
-          ).unwrap();
         }
       } catch (err: unknown) {
         const message = getApiErrorMessage(err);
@@ -332,6 +341,18 @@ export default function BillPage() {
       }
     })();
   }, [dispatch]);
+
+  useEffect(() => {
+    if (!estateId) return;
+    dispatch(
+      getBillsByEstate({ estateId, page: 1, limit: estatePageSize }),
+    )
+      .unwrap()
+      .catch((err: unknown) => {
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      });
+  }, [dispatch, estateId, estatePageSize]);
 
   // Paid bills — date filter pattern matches rent/other pages
   useEffect(() => {
@@ -366,7 +387,7 @@ export default function BillPage() {
         addressId: selectedAddressId,
         estateId,
         page: 1,
-        limit: 50,
+        limit: assignedPageSize,
       }),
     )
       .unwrap()
@@ -374,24 +395,34 @@ export default function BillPage() {
         const message = getApiErrorMessage(err);
         if (message) toast.error(message);
       });
-  }, [dispatch, selectedAddressId, estateId]);
+  }, [dispatch, selectedAddressId, estateId, assignedPageSize]);
 
   const refreshAfterPay = async () => {
     if (!userId) return;
     const shouldApplyDate = Boolean(paidStartDate && paidEndDate);
 
     if (estateId) {
-      dispatch(getBillsByEstate({ estateId, page: 1, limit: 50 })).catch(
-        () => {},
-      );
+      dispatch(
+        getBillsByEstate({
+          estateId,
+          page:
+            Number(estatePagination?.page) ||
+            Number(estatePagination?.currentPage) ||
+            1,
+          limit: estatePageSize,
+        }),
+      ).catch(() => {});
     }
     if (selectedAddressId && estateId) {
       dispatch(
         getBillsForAddress({
           addressId: selectedAddressId,
           estateId,
-          page: 1,
-          limit: 50,
+          page:
+            Number(assignedPagination?.page) ||
+            Number(assignedPagination?.currentPage) ||
+            1,
+          limit: assignedPageSize,
         }),
       ).catch(() => {});
     }
@@ -603,66 +634,30 @@ export default function BillPage() {
         </div>
 
         {activeTab === "estate" ? (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {!bootstrapping &&
-            isSettled(getBillsByEstateState) &&
-            estateBills.length === 0 ? (
-              <p className="text-muted-foreground">
-                No payable bills for this estate.
-              </p>
-            ) : (
-              estateBills.map((b) => (
-                <PayableBillCard
-                  key={b.id}
-                  name={b.name || "Untitled bill"}
-                  description={b.description}
-                  frequency={b.frequency}
-                  compulsory={b.compulsory}
-                  isActive={b.isActive}
-                  nextDueDate={b.nextDueDate}
-                  amountPayable={Number(
-                    b.amountPayable ?? b.yearlyAmount ?? 0,
-                  )}
-                  principalDue={Number(
-                    b.principalDue ?? b.amount ?? b.yearlyAmount ?? 0,
-                  )}
-                  accruedInterest={Number(b.accruedInterest ?? 0)}
-                  interestRatePercent={
-                    canAccrueInterest && hasActiveInterest(b)
-                      ? Number(b.interestRatePercent)
-                      : undefined
-                  }
-                  interestStartsAt={b.interestStartsAt}
-                  onPay={() => b.id && setPayBillId(b.id)}
-                />
-              ))
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {!selectedAddressId ? (
-              <p className="text-muted-foreground">
-                Select an address to view assigned bills.
-              </p>
-            ) : !bootstrapping &&
-              isSettled(getBillsForAddressState) &&
-              assignedBills.length === 0 ? (
-              <p className="text-muted-foreground">
-                No bills assigned to this address.
-              </p>
-            ) : (
-              assignedBills.map((b) => {
-                const payId = assignedBillPayId(b);
-                const amount = assignedBillAmount(b);
-                return (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {!bootstrapping &&
+              isSettled(getBillsByEstateState) &&
+              estateBills.length === 0 ? (
+                <p className="text-muted-foreground">
+                  No payable bills for this estate.
+                </p>
+              ) : (
+                estateBills.map((b) => (
                   <PayableBillCard
-                    key={b.id || b._id || payId || assignedBillName(b)}
-                    name={assignedBillName(b)}
+                    key={b.id}
+                    name={b.name || "Untitled bill"}
+                    description={b.description}
                     frequency={b.frequency}
+                    compulsory={b.compulsory}
                     isActive={b.isActive}
                     nextDueDate={b.nextDueDate}
-                    amountPayable={amount}
-                    principalDue={Number(b.principalDue ?? amount)}
+                    amountPayable={Number(
+                      b.amountPayable ?? b.yearlyAmount ?? 0,
+                    )}
+                    principalDue={Number(
+                      b.principalDue ?? b.amount ?? b.yearlyAmount ?? 0,
+                    )}
                     accruedInterest={Number(b.accruedInterest ?? 0)}
                     interestRatePercent={
                       canAccrueInterest && hasActiveInterest(b)
@@ -670,18 +665,124 @@ export default function BillPage() {
                         : undefined
                     }
                     interestStartsAt={b.interestStartsAt}
-                    onPay={() =>
-                      payId &&
-                      handlePayBill({
-                        billId: payId,
-                        frequency: b.frequency || "oneOff",
-                        amountPaid: amount,
-                      })
-                    }
+                    onPay={() => b.id && setPayBillId(b.id)}
                   />
-                );
-              })
-            )}
+                ))
+              )}
+            </div>
+            {estateId ? (
+              <Pagination
+                itemLabel="bills"
+                disabled={loadingEstate}
+                pageSizeOptions={TABLE_PAGE_SIZE_OPTIONS}
+                paginationInfo={{
+                  total: Number(estatePagination?.total) || estateBills.length || 0,
+                  current:
+                    Number(estatePagination?.page) ||
+                    Number(estatePagination?.currentPage) ||
+                    1,
+                  pageSize: estatePageSize,
+                }}
+                onPageChange={(page) => {
+                  if (!estateId) return;
+                  dispatch(
+                    getBillsByEstate({
+                      estateId,
+                      page,
+                      limit: estatePageSize,
+                    }),
+                  )
+                    .unwrap()
+                    .catch((err: unknown) => {
+                      const message = getApiErrorMessage(err);
+                      if (message) toast.error(message);
+                    });
+                }}
+                onPageSizeChange={setEstatePageSize}
+              />
+            ) : null}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {!selectedAddressId ? (
+                <p className="text-muted-foreground">
+                  Select an address to view assigned bills.
+                </p>
+              ) : !bootstrapping &&
+                isSettled(getBillsForAddressState) &&
+                assignedBills.length === 0 ? (
+                <p className="text-muted-foreground">
+                  No bills assigned to this address.
+                </p>
+              ) : (
+                assignedBills.map((b) => {
+                  const payId = assignedBillPayId(b);
+                  const amount = assignedBillAmount(b);
+                  return (
+                    <PayableBillCard
+                      key={b.id || b._id || payId || assignedBillName(b)}
+                      name={assignedBillName(b)}
+                      frequency={b.frequency}
+                      isActive={b.isActive}
+                      nextDueDate={b.nextDueDate}
+                      amountPayable={amount}
+                      principalDue={Number(b.principalDue ?? amount)}
+                      accruedInterest={Number(b.accruedInterest ?? 0)}
+                      interestRatePercent={
+                        canAccrueInterest && hasActiveInterest(b)
+                          ? Number(b.interestRatePercent)
+                          : undefined
+                      }
+                      interestStartsAt={b.interestStartsAt}
+                      onPay={() =>
+                        payId &&
+                        handlePayBill({
+                          billId: payId,
+                          frequency: b.frequency || "oneOff",
+                          amountPaid: amount,
+                        })
+                      }
+                    />
+                  );
+                })
+              )}
+            </div>
+            {selectedAddressId ? (
+              <Pagination
+                itemLabel="bills"
+                disabled={loadingAssigned}
+                pageSizeOptions={TABLE_PAGE_SIZE_OPTIONS}
+                paginationInfo={{
+                  total:
+                    Number(assignedPagination?.total) ||
+                    assignedBills.length ||
+                    0,
+                  current:
+                    Number(assignedPagination?.page) ||
+                    Number(assignedPagination?.currentPage) ||
+                    1,
+                  pageSize: assignedPageSize,
+                }}
+                onPageChange={(page) => {
+                  if (!selectedAddressId || !estateId) return;
+                  dispatch(
+                    getBillsForAddress({
+                      addressId: selectedAddressId,
+                      estateId,
+                      page,
+                      limit: assignedPageSize,
+                    }),
+                  )
+                    .unwrap()
+                    .catch((err: unknown) => {
+                      const message = getApiErrorMessage(err);
+                      if (message) toast.error(message);
+                    });
+                }}
+                onPageSizeChange={setAssignedPageSize}
+              />
+            ) : null}
           </div>
         )}
 

@@ -16,6 +16,30 @@ export type BlogPostMeta = {
 
 export const blogPosts: BlogPostMeta[] = [
   {
+    slug: "the-generator-is-running-is-your-estate-getting-its-moneys-worth",
+    title:
+      "The Generator Is Running. Is Your Estate Getting Its Money’s Worth?",
+    excerpt:
+      "Knowing a generator ran for six hours does not show how much fuel it used, how much energy it delivered, or what that energy cost the estate.",
+    hook: "Understanding generator runtime, fuel consumption and energy intelligence in modern property management.",
+    publishedAt: "2026-10-16",
+    readTimeMinutes: 6,
+    wordCount: 850,
+    category: "Energy Management",
+    author: "Bertahub Team",
+    featuredImage: "/assets/blog/blog-10.jpeg",
+    featuredImageAlt:
+      "Outdoor standby generator on a paved plinth beside a modern residential estate at sunset",
+    keywords: [
+      "generator runtime estate management",
+      "fuel consumption generator efficiency",
+      "energy intelligence property management",
+      "estate energy costs Nigeria",
+      "facility manager generator monitoring",
+      "Bertahub",
+    ],
+  },
+  {
     slug: "creating-safer-communities-through-smart-technology",
     title: "Creating Safer Communities Through Smart Technology",
     excerpt:

@@ -1,320 +1,186 @@
 "use client";
 
-import { useCallback, useEffect, useId, useState } from "react";
-import { useSelector } from "react-redux";
+import { useId } from "react";
 import { toast } from "react-toastify";
 import { ImagePlus, Trash2, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { MultiFileUploadItem } from "@/hooks/useMultiFileUpload";
-import { getApiErrorMessage } from "@/lib/api-error";
 import { getAttachmentFilename } from "@/lib/download-attachment";
 import { MARKETPLACE_PRESS } from "@/lib/marketplace";
 import {
   MARKETPLACE_MEDIA_ACCEPT,
   marketplaceFileKind,
 } from "@/lib/marketplace-media";
-import { uploadFile } from "@/lib/uploads/uploadFile";
+import { compressImageIfNeeded } from "@/lib/uploads/compressImage";
 import { validateFile } from "@/lib/uploads/validate";
-import { selectAuthToken } from "@/redux/slice/auth-mgt/auth-mgt-slice";
-import type { RootState } from "@/redux/store";
 import { cn } from "@/lib/utils";
 import { IconTooltip } from "@/components/ui/tooltip";
 
 const PRESS = MARKETPLACE_PRESS;
 
-type MediaKind = "image" | "video";
+export type ListingMedia = {
+  id: string;
+  kind: "image" | "video";
+  name: string;
+  preview: string;
+  file?: File;
+};
 
-type GalleryItem = MultiFileUploadItem & { kind: MediaKind };
-
-let uploadSeq = 0;
+let mediaSeq = 0;
 function newId() {
-  uploadSeq += 1;
-  return `media-${Date.now()}-${uploadSeq}`;
+  mediaSeq += 1;
+  return `media-${Date.now()}-${mediaSeq}`;
 }
 
-function doneItems(urls: string[], kind: MediaKind): GalleryItem[] {
+export function remoteListingMedia(
+  urls: string[],
+  kind: ListingMedia["kind"],
+): ListingMedia[] {
   return urls.map((url, index) => ({
-    id: `done-${kind}-${index}-${url}`,
-    name: getAttachmentFilename(url, index),
-    url,
-    status: "succeeded" as const,
-    progress: 100,
-    error: null,
+    id: `remote-${kind}-${index}-${url}`,
     kind,
+    name: getAttachmentFilename(url, index),
+    preview: url,
   }));
 }
 
-function uploadStatusCopy(item: GalleryItem) {
-  if (item.status === "uploading") return `${item.progress}%`;
-  if (item.status === "failed") return item.error ?? "Upload failed";
-  return item.kind === "video" ? "Video" : "Photo";
-}
-
-function MediaPreview({ item }: Readonly<{ item: GalleryItem }>) {
-  if (item.kind === "image" && item.url) {
+function MediaPreview({ item }: Readonly<{ item: ListingMedia }>) {
+  if (item.kind === "image") {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={item.url}
+        src={item.preview}
         alt={item.name}
         className="h-28 w-full object-cover"
       />
     );
   }
-  if (item.kind === "video" && item.url) {
-    return (
-      <video
-        src={item.url}
-        muted
-        playsInline
-        preload="metadata"
-        className="h-28 w-full object-cover"
-      />
-    );
-  }
   return (
-    <div className="flex h-28 items-center gap-3 px-4">
-      {item.kind === "video" ? (
-        <Video className="size-4 shrink-0 text-muted-foreground" />
-      ) : (
-        <ImagePlus className="size-4 shrink-0 text-muted-foreground" />
-      )}
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{item.name}</p>
-        <p
-          className={cn(
-            "text-xs",
-            item.status === "failed"
-              ? "text-destructive"
-              : "text-muted-foreground",
-          )}
-        >
-          {uploadStatusCopy(item)}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function MediaTile({
-  item,
-  disabled,
-  onRemove,
-}: Readonly<{
-  item: GalleryItem;
-  disabled: boolean;
-  onRemove: () => void;
-}>) {
-  const uploading = item.status === "uploading";
-  return (
-    <div className="relative overflow-hidden rounded-2xl border border-black/5 bg-muted/40">
-      <MediaPreview item={item} />
-      {uploading ? null : (
-        <span className="pointer-events-none absolute bottom-2 left-2 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium tracking-[0.01em] text-white">
-          {item.kind === "video" ? "Video" : "Photo"}
-        </span>
-      )}
-      <IconTooltip label={`Remove ${item.name}`}>
-        <Button
-          type="button"
-          size="icon"
-          variant="secondary"
-          className={cn("absolute top-2 right-2 size-8 rounded-full", PRESS)}
-          onClick={onRemove}
-          disabled={disabled || uploading}
-          aria-label={`Remove ${item.name}`}
-        >
-          <Trash2 className="size-3.5" />
-        </Button>
-      </IconTooltip>
-    </div>
+    <video
+      src={item.preview}
+      muted
+      playsInline
+      preload="metadata"
+      className="h-28 w-full object-cover"
+    />
   );
 }
 
 type Props = Readonly<{
-  images: string[];
-  videos: string[];
+  items: ListingMedia[];
   maxImages: number;
   maxVideos: number;
   disabled?: boolean;
-  onImagesChange: (urls: string[]) => void;
-  onVideosChange: (urls: string[]) => void;
-  onBusyChange?: (busy: boolean) => void;
+  onChange: (items: ListingMedia[]) => void;
 }>;
 
 export function MarketplaceMediaPicker({
-  images,
-  videos,
+  items,
   maxImages,
   maxVideos,
   disabled = false,
-  onImagesChange,
-  onVideosChange,
-  onBusyChange,
+  onChange,
 }: Props) {
   const inputId = useId();
-  const token = useSelector((state: RootState) => selectAuthToken(state));
-  const [pending, setPending] = useState<GalleryItem[]>([]);
-  const isUploading = pending.some((item) => item.status === "uploading");
-
-  useEffect(() => {
-    onBusyChange?.(isUploading);
-  }, [isUploading, onBusyChange]);
-
-  const pendingImages = pending.filter(
-    (item) => item.kind === "image" && item.status !== "failed",
-  ).length;
-  const pendingVideos = pending.filter(
-    (item) => item.kind === "video" && item.status !== "failed",
-  ).length;
-  const imageRemaining = maxImages - images.length - pendingImages;
-  const videoRemaining = maxVideos - videos.length - pendingVideos;
+  const imageCount = items.filter((item) => item.kind === "image").length;
+  const videoCount = items.filter((item) => item.kind === "video").length;
+  const imageRemaining = maxImages - imageCount;
+  const videoRemaining = maxVideos - videoCount;
   const canAdd = imageRemaining > 0 || videoRemaining > 0;
 
-  const items: GalleryItem[] = [
-    ...doneItems(images, "image"),
-    ...doneItems(videos, "video"),
-    ...pending,
-  ];
+  const addFiles = async (files: File[]) => {
+    if (!files.length) return;
+    let imageSlots = imageRemaining;
+    let videoSlots = videoRemaining;
+    const next = [...items];
 
-  const addFiles = useCallback(
-    async (files: File[]) => {
-      if (!files.length) return;
-      if (!token) {
-        toast.error("You must be signed in to upload a file.");
-        return;
+    for (const raw of files) {
+      const kind = marketplaceFileKind(raw);
+      if (!kind) {
+        toast.error(`${raw.name} is not a photo or video.`);
+        continue;
+      }
+      if (kind === "image" && imageSlots <= 0) {
+        toast.error(`You can add up to ${maxImages} photos.`);
+        continue;
+      }
+      if (kind === "video" && videoSlots <= 0) {
+        toast.error(`You can add up to ${maxVideos} videos.`);
+        continue;
       }
 
-      let imageSlots = maxImages - images.length - pendingImages;
-      let videoSlots = maxVideos - videos.length - pendingVideos;
-      let nextImages = [...images];
-      let nextVideos = [...videos];
-
-      for (const file of files) {
-        const kind = marketplaceFileKind(file);
-        if (!kind) {
-          toast.error(`${file.name} is not a photo or video.`);
-          continue;
-        }
-        if (kind === "image" && imageSlots <= 0) {
-          toast.error(`You can add up to ${maxImages} photos.`);
-          continue;
-        }
-        if (kind === "video" && videoSlots <= 0) {
-          toast.error(`You can add up to ${maxVideos} videos.`);
-          continue;
-        }
-
-        const validation = validateFile(file, { kind });
-        if (!validation.ok) {
-          toast.error(validation.error);
-          continue;
-        }
-
-        const id = newId();
-        if (kind === "image") imageSlots -= 1;
-        else videoSlots -= 1;
-
-        setPending((prev) => [
-          ...prev,
-          {
-            id,
-            name: file.name,
-            url: null,
-            status: "uploading",
-            progress: 0,
-            error: null,
-            kind,
-          },
-        ]);
-
-        try {
-          const result = await uploadFile(file, token, "general", {
-            accept: kind,
-            onProgress: (percent) => {
-              setPending((prev) =>
-                prev.map((item) =>
-                  item.id === id ? { ...item, progress: percent } : item,
-                ),
-              );
-            },
-          });
-          setPending((prev) => prev.filter((item) => item.id !== id));
-          if (kind === "image") {
-            nextImages = [...nextImages, result.file_url];
-            onImagesChange(nextImages);
-          } else {
-            nextVideos = [...nextVideos, result.file_url];
-            onVideosChange(nextVideos);
-          }
-        } catch (err: unknown) {
-          const message = getApiErrorMessage(err) || "Failed to upload file.";
-          setPending((prev) =>
-            prev.map((item) =>
-              item.id === id
-                ? { ...item, status: "failed", error: message }
-                : item,
-            ),
-          );
-          toast.error(message);
-        }
+      const validation = validateFile(raw, { kind });
+      if (!validation.ok) {
+        toast.error(validation.error);
+        continue;
       }
-    },
-    [
-      images,
-      maxImages,
-      maxVideos,
-      onImagesChange,
-      onVideosChange,
-      pendingImages,
-      pendingVideos,
-      token,
-      videos,
-    ],
-  );
 
-  const removeItem = (item: GalleryItem) => {
-    if (item.id.startsWith("done-")) {
-      if (item.kind === "image") {
-        onImagesChange(images.filter((url) => url !== item.url));
-        return;
-      }
-      onVideosChange(videos.filter((url) => url !== item.url));
-      return;
+      const file = kind === "image" ? await compressImageIfNeeded(raw) : raw;
+      if (kind === "image") imageSlots -= 1;
+      else videoSlots -= 1;
+      next.push({
+        id: newId(),
+        kind,
+        name: file.name,
+        preview: URL.createObjectURL(file),
+        file,
+      });
     }
-    setPending((prev) => prev.filter((entry) => entry.id !== item.id));
+
+    onChange(next);
+  };
+
+  const removeItem = (item: ListingMedia) => {
+    if (item.file) URL.revokeObjectURL(item.preview);
+    onChange(items.filter((entry) => entry.id !== item.id));
   };
 
   return (
-    <div className="space-y-2">
-      <div className="">
-        {items.map((item) => (
-          <MediaTile
-            key={item.id}
-            item={item}
-            disabled={disabled}
-            onRemove={() => removeItem(item)}
-          />
-        ))}
+    <div className="grid gap-3 sm:grid-cols-2">
+      {items.map((item) => (
+        <div
+          key={item.id}
+          className="relative overflow-hidden rounded-2xl border border-black/5 bg-muted/40"
+        >
+          <MediaPreview item={item} />
+          <span className="pointer-events-none absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium tracking-[0.01em] text-white">
+            {item.kind === "video" ? (
+              <Video className="size-3" aria-hidden />
+            ) : null}
+            {item.kind === "video" ? "Video" : "Photo"}
+          </span>
+          <IconTooltip label={`Remove ${item.name}`}>
+            <Button
+              type="button"
+              size="icon"
+              variant="secondary"
+              className={cn("absolute top-2 right-2 size-8 rounded-full", PRESS)}
+              onClick={() => removeItem(item)}
+              disabled={disabled}
+              aria-label={`Remove ${item.name}`}
+            >
+              <Trash2 className="size-3.5" />
+            </Button>
+          </IconTooltip>
+        </div>
+      ))}
 
-        {canAdd ? (
-          <label
-            htmlFor={inputId}
-            className={cn(
-              "flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-black/15 bg-muted/20 px-4 py-5 text-center",
-              "transition-colors hover:bg-muted/40",
-              PRESS,
-              (disabled || isUploading) && "pointer-events-none opacity-60",
-            )}
-          >
-            <ImagePlus className="size-5 text-muted-foreground" />
-            <span className="text-sm font-medium">Add photos or videos</span>
-            <span className="text-xs text-muted-foreground">
-              {imageRemaining} photos · {videoRemaining} videos left
-            </span>
-          </label>
-        ) : null}
-      </div>
+      {canAdd ? (
+        <label
+          htmlFor={inputId}
+          className={cn(
+            "flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-black/15 bg-muted/20 px-4 py-5 text-center",
+            "transition-colors hover:bg-muted/40",
+            PRESS,
+            disabled && "pointer-events-none opacity-60",
+          )}
+        >
+          <ImagePlus className="size-5 text-muted-foreground" />
+          <span className="text-sm font-medium">Add photos or videos</span>
+          <span className="text-xs text-muted-foreground">
+            {imageRemaining} photos · {videoRemaining} videos left
+          </span>
+        </label>
+      ) : null}
       <input
         id={inputId}
         type="file"

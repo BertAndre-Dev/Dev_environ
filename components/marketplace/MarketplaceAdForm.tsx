@@ -1,13 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { MarketplaceMediaPicker } from "@/components/marketplace/MarketplaceMediaPicker";
+import {
+  MarketplaceMediaPicker,
+  remoteListingMedia,
+  type ListingMedia,
+} from "@/components/marketplace/MarketplaceMediaPicker";
 import {
   MARKETPLACE_CATEGORIES,
   MARKETPLACE_MAX_IMAGES,
@@ -118,9 +122,9 @@ export function MarketplaceAdForm({
   );
   const [targetEstateIds, setTargetEstateIds] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
-  const [images, setImages] = useState<string[]>([]);
-  const [videos, setVideos] = useState<string[]>([]);
-  const [mediaBusy, setMediaBusy] = useState(false);
+  const [media, setMedia] = useState<ListingMedia[]>([]);
+  const mediaRef = useRef(media);
+  mediaRef.current = media;
 
   const targetEstates = useSelector(
     (state: RootState) => state.marketplace.targetEstates,
@@ -131,6 +135,9 @@ export function MarketplaceAdForm({
   );
 
   useEffect(() => {
+    for (const item of mediaRef.current) {
+      if (item.file) URL.revokeObjectURL(item.preview);
+    }
     if (initialData) {
       setCompanyName(initialData.companyName ?? "");
       setLink(initialData.link ?? "");
@@ -150,8 +157,10 @@ export function MarketplaceAdForm({
       setAudience(nextAudience);
       setTargetEstateIds(initialData.targetEstateIds ?? []);
       setNotes(initialData.notes ?? "");
-      setImages(listingImages(initialData));
-      setVideos(listingVideos(initialData));
+      setMedia([
+        ...remoteListingMedia(listingImages(initialData), "image"),
+        ...remoteListingMedia(listingVideos(initialData), "video"),
+      ]);
       return;
     }
     setCompanyName("");
@@ -164,8 +173,7 @@ export function MarketplaceAdForm({
     setAudience(defaultAudienceForRole(role));
     setTargetEstateIds([]);
     setNotes("");
-    setImages([]);
-    setVideos([]);
+    setMedia([]);
   }, [initialData, role]);
 
   useEffect(() => {
@@ -206,14 +214,13 @@ export function MarketplaceAdForm({
     if (audience === "OTHER_ESTATES" && targetEstateIds.length === 0) {
       return false;
     }
-    return !mediaBusy && !loading;
+    return !loading;
   }, [
     audience,
     companyName,
     endDate,
     link,
     loading,
-    mediaBusy,
     productCategory,
     productDescription,
     productName,
@@ -233,6 +240,10 @@ export function MarketplaceAdForm({
       return;
     }
 
+    const images = media.filter((item) => item.kind === "image");
+    const videos = media.filter((item) => item.kind === "video");
+    const imageUrls = images.flatMap((item) => (item.file ? [] : [item.preview]));
+    const videoUrls = videos.flatMap((item) => (item.file ? [] : [item.preview]));
     const payload: CreateMarketplacePayload = {
       companyName: companyName.trim(),
       productName: productName.trim(),
@@ -242,10 +253,12 @@ export function MarketplaceAdForm({
       startDate,
       endDate,
       audience,
-      images,
-      videos,
+      images: imageUrls,
+      videos: videoUrls,
+      imageFiles: images.flatMap((item) => (item.file ? [item.file] : [])),
+      videoFiles: videos.flatMap((item) => (item.file ? [item.file] : [])),
     };
-    if (images[0]) payload.image = images[0];
+    if (imageUrls[0]) payload.image = imageUrls[0];
     if (audience === "OTHER_ESTATES") payload.targetEstateIds = targetEstateIds;
     if (notes.trim()) payload.notes = notes.trim();
     await onSubmit(payload);
@@ -394,14 +407,11 @@ export function MarketplaceAdForm({
           videos in one place.
         </p>
         <MarketplaceMediaPicker
-          images={images}
-          videos={videos}
+          items={media}
           maxImages={MARKETPLACE_MAX_IMAGES}
           maxVideos={MARKETPLACE_MAX_VIDEOS}
           disabled={loading}
-          onImagesChange={setImages}
-          onVideosChange={setVideos}
-          onBusyChange={setMediaBusy}
+          onChange={setMedia}
         />
       </section>
 

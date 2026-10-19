@@ -150,7 +150,7 @@ function OwnerBalances({
 }>) {
   const withdrawHint = "You can only withdraw from this balance.";
   return (
-    <div className="space-y-3">
+    <div className="">
       {/* <div className={cn(TILE, "px-5 py-5")}>
         <BalanceFigure
           label="Available"

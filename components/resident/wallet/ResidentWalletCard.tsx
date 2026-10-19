@@ -151,18 +151,18 @@ function OwnerBalances({
   const withdrawHint = "You can only withdraw from this balance.";
   return (
     <div className="space-y-3">
-      <div className={cn(TILE, "px-5 py-5")}>
+      {/* <div className={cn(TILE, "px-5 py-5")}>
         <BalanceFigure
           label="Available"
           amount={available}
           show={show}
           hint={withdrawHint}
         />
-      </div>
+      </div> */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-2xl bg-muted/40 px-5 py-4">
           <BalanceFigure
-            label="Total"
+            label="Balance"
             amount={total}
             show={show}
             size="support"

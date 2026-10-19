@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CountryDropdown, RegionDropdown } from "react-country-region-selector";
-import { labelForPlan, normalizePlanKey } from "@/lib/plans";
+import { InvitePlanSelect } from "@/components/invite/InvitePlanSelect";
+import { normalizePlanKey } from "@/lib/plans";
 import type { RootState } from "@/redux/store";
 import {
   type EstateData,
@@ -143,18 +144,12 @@ export default function CompanyEstateForm({
           </select>
         </div>
 
-        <div>
-          <Label htmlFor="company-estate-plan">Plan</Label>
-          <p className="mb-1.5 text-sm text-muted-foreground">
-            This estate uses your company plan. It cannot be changed here.
-          </p>
-          <Input
-            id="company-estate-plan"
-            value={labelForPlan(companyPlan)}
-            readOnly
-            disabled
-          />
-        </div>
+        <InvitePlanSelect
+          value={companyPlan}
+          onChange={() => {}}
+          disabled
+          description="This estate uses your company plan. It cannot be changed here."
+        />
 
         <div className="w-full pt-1">
           <Button type="submit" className="w-full cursor-pointer">

@@ -127,7 +127,7 @@ export const TransactionsFilterBar: React.FC<TransactionsFilterBarProps> = ({
   };
 
   return (
-    <div className="bg-white p-4 rounded-lg border flex flex-wrap gap-3 items-center">
+    <div className="flex flex-col gap-3 rounded-lg border bg-white p-4 sm:flex-row sm:flex-wrap sm:items-center">
       <DateRangeFilter
         startDate={fromDate ?? ""}
         endDate={toDate ?? ""}

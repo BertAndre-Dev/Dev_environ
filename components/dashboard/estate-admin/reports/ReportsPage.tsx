@@ -391,7 +391,7 @@ export default function ReportsPage() {
             <p className="text-sm text-muted-foreground">Revenue vs Expense</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full min-w-0 flex-col gap-2 xl:w-auto xl:flex-row xl:flex-wrap xl:items-center">
             <DateRangeFilter
               startId="chart-start"
               endId="chart-end"

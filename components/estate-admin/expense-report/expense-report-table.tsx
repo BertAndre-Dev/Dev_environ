@@ -79,7 +79,7 @@ export function ReportTable({
   return (
     <div className="rounded-lg border border-border bg-white">
       {/* Controls */}
-      <div className="flex flex-wrap items-center justify-end gap-2 border-b p-4">
+      <div className="flex w-full min-w-0 flex-col gap-2 border-b p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
         <DateRangeFilter
           startDate={startDate}
           endDate={endDate}

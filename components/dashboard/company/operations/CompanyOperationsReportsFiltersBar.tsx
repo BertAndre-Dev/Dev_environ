@@ -122,7 +122,7 @@ export function CompanyOperationsReportsFiltersBar({
         </div>
 
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full min-w-0 flex-col gap-2 md:w-auto md:flex-row md:flex-wrap md:items-center">
             <DateRangeFilter
               startId="ops-start-date"
               endId="ops-end-date"

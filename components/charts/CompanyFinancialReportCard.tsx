@@ -128,7 +128,7 @@ export function CompanyFinancialReportCard({
       </div>
 
       <div className="space-y-5 px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex w-full min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <DateRangeFilter
             startId="financial-report-start"
             endId="financial-report-end"

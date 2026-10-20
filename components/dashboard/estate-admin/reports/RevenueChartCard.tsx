@@ -160,7 +160,7 @@ export function RevenueChartCard({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full min-w-0 flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
           <DateRangeFilter
             startId={`${idPrefix}revenue-chart-start`}
             endId={`${idPrefix}revenue-chart-end`}

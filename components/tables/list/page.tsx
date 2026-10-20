@@ -194,7 +194,7 @@ export default function Table<T extends { id?: string }>({
     <div className="overflow-visible border rounded-lg">
       {(enableSearch || enableExport || enableDateRangeFilter) && (
         <div className="relative z-20 overflow-visible border-b border-white/50 bg-white/70 p-3 backdrop-blur-[20px] backdrop-saturate-150 supports-[backdrop-filter]:bg-white/55 dark:border-white/10 dark:bg-background/70 sm:p-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div className="flex min-w-0 flex-1 flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
               {enableDateRangeFilter && (
                 <DateRangeFilter

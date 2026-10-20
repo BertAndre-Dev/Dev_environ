@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { Calendar } from "lucide-react";
 import {
   IsoLinkedRangeEnd,
@@ -11,7 +12,9 @@ const inputClassName =
   "w-full min-w-0 px-3 py-2 border rounded-lg text-sm cursor-pointer";
 
 const fieldClassName =
-  "min-w-0 w-full @min-[24rem]/date-range:w-auto @min-[24rem]/date-range:min-w-36 @min-[24rem]/date-range:max-w-48 @min-[24rem]/date-range:flex-1 md:w-40 md:max-w-none md:flex-none";
+  "flex min-w-0 w-full flex-col gap-1 @min-[24rem]/date-range:w-auto @min-[24rem]/date-range:min-w-36 @min-[24rem]/date-range:max-w-48 @min-[24rem]/date-range:flex-1 md:w-40 md:max-w-none md:flex-none";
+
+const labelClassName = "text-xs font-medium text-muted-foreground";
 
 type DateRangeFilterProps = {
   startDate: string;
@@ -36,36 +39,47 @@ export function DateRangeFilter({
   endId,
 }: Readonly<DateRangeFilterProps>) {
   const examples = getDateRangePlaceholders();
+  const uid = useId();
+  const startFieldId = startId ?? `${uid}-start`;
+  const endFieldId = endId ?? `${uid}-end`;
 
   return (
     <div className="w-full min-w-0 md:w-fit">
       <div className="@container/date-range w-full md:contents">
-        <div className="flex w-full min-w-0 flex-col gap-2 @min-[24rem]/date-range:flex-row @min-[24rem]/date-range:items-center md:w-auto md:flex-row md:items-center">
+        <div className="flex w-full min-w-0 flex-col gap-2 @min-[24rem]/date-range:flex-row @min-[24rem]/date-range:items-end md:w-auto md:flex-row md:items-end">
           <Calendar
-            className="hidden h-4 w-4 shrink-0 text-muted-foreground @min-[24rem]/date-range:block md:block"
+            className="mb-3 hidden h-4 w-4 shrink-0 text-muted-foreground @min-[24rem]/date-range:block md:block"
             aria-hidden
           />
           <div className={fieldClassName}>
+            <label htmlFor={startFieldId} className={labelClassName}>
+              Start date
+            </label>
             <IsoLinkedRangeStart
-              id={startId}
+              id={startFieldId}
               startDate={startDate}
               endDate={endDate}
               onStartChange={onStartChange}
               onEndChange={onEndChange}
               className={inputClassName}
-              ariaLabel="From Date"
+              ariaLabel="Start date"
               placeholder={startPlaceholder ?? examples.start}
             />
           </div>
-          <span className="text-sm text-muted-foreground">to</span>
+          <span className="text-sm text-muted-foreground @min-[24rem]/date-range:mb-2.5 md:mb-2.5">
+            to
+          </span>
           <div className={fieldClassName}>
+            <label htmlFor={endFieldId} className={labelClassName}>
+              End date
+            </label>
             <IsoLinkedRangeEnd
-              id={endId}
+              id={endFieldId}
               startDate={startDate}
               endDate={endDate}
               onEndChange={onEndChange}
               className={inputClassName}
-              ariaLabel="To Date"
+              ariaLabel="End date"
               placeholder={endPlaceholder ?? examples.end}
             />
           </div>

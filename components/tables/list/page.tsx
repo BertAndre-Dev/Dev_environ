@@ -195,7 +195,7 @@ export default function Table<T extends { id?: string }>({
       {(enableSearch || enableExport || enableDateRangeFilter) && (
         <div className="relative z-20 overflow-visible border-b border-white/50 bg-white/70 p-3 backdrop-blur-[20px] backdrop-saturate-150 supports-[backdrop-filter]:bg-white/55 dark:border-white/10 dark:bg-background/70 sm:p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div className="flex min-w-0 flex-1 flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
+            <div className="flex w-full min-w-0 flex-1 flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
               {enableDateRangeFilter && (
                 <DateRangeFilter
                   startId="table-start-date-input"
@@ -230,7 +230,7 @@ export default function Table<T extends { id?: string }>({
                     setSearchValue(value);
                     onSearch?.(value);
                   }}
-                  className="h-11 min-h-11 w-full touch-manipulation rounded-md border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary md:max-w-64 md:flex-1"
+                  className="h-11 min-h-11 w-full max-w-none touch-manipulation rounded-md border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary lg:max-w-64 lg:flex-1"
                 />
               )}
             </div>

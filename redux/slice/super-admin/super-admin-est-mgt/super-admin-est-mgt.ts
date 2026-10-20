@@ -91,7 +91,20 @@ export const getAllEstates = createAsyncThunk(
   },
 );
 
-/** GET /api/v1/estate-mgt/company/{companyId} — estates belonging to one company */
+function readLinkedCompanyId(value: unknown): string {
+  if (typeof value === "string") return value.trim();
+  if (value && typeof value === "object") {
+    const record = value as { id?: unknown; _id?: unknown };
+    return String(record.id ?? record._id ?? "").trim();
+  }
+  return "";
+}
+
+/**
+ * Estates for one company. `/api/v1/estate-mgt` is the list endpoint;
+ * rows are kept when `companyId` (or `company`) matches the company.
+ * Does not write the global estate list.
+ */
 export const getEstatesByCompany = createAsyncThunk(
   "super-admin-est-mgt/getEstatesByCompany",
   async (
@@ -113,18 +126,57 @@ export const getEstatesByCompany = createAsyncThunk(
     { rejectWithValue },
   ) => {
     try {
-      const params = new URLSearchParams();
-      if (page != null) params.set("page", String(page));
-      if (limit != null) params.set("limit", String(limit));
-      if (search?.trim()) params.set("search", search.trim());
-      if (startDate) params.set("startDate", startDate);
-      if (endDate) params.set("endDate", endDate);
-      const query = params.toString();
-      const suffix = query ? `?${query}` : "";
-      const res = await axiosInstance.get(
-        `/api/v1/estate-mgt/company/${companyId}${suffix}`,
-      );
-      return res.data;
+      const targetId = companyId.trim();
+      const pageSize = 100;
+      const collected: Record<string, unknown>[] = [];
+      let fetchPage = 1;
+      let reportedTotal = Number.POSITIVE_INFINITY;
+
+      while (fetchPage <= 30 && collected.length < reportedTotal) {
+        const params = new URLSearchParams();
+        params.set("page", String(fetchPage));
+        params.set("limit", String(pageSize));
+        if (search?.trim()) params.set("search", search.trim());
+        if (startDate) params.set("startDate", startDate);
+        if (endDate) params.set("endDate", endDate);
+
+        const res = await axiosInstance.get(
+          `/api/v1/estate-mgt?${params.toString()}`,
+        );
+        const rows = Array.isArray(res.data?.data) ? res.data.data : [];
+        const reported = Number(res.data?.pagination?.total);
+        if (Number.isFinite(reported) && reported > 0) reportedTotal = reported;
+        collected.push(...rows);
+
+        if (rows.length === 0 || rows.length !== pageSize) break;
+        fetchPage += 1;
+      }
+
+      const needle = search?.trim().toLowerCase();
+      const matched = collected.filter((item) => {
+        const linked =
+          readLinkedCompanyId(item.companyId) ||
+          readLinkedCompanyId(item.company);
+        if (linked !== targetId) return false;
+        if (!needle) return true;
+        const name = String(item.name ?? "").toLowerCase();
+        const address = String(item.address ?? "").toLowerCase();
+        return name.includes(needle) || address.includes(needle);
+      });
+
+      const safeLimit = Math.max(1, limit);
+      const safePage = Math.max(1, page);
+      const start = (safePage - 1) * safeLimit;
+
+      return {
+        data: matched.slice(start, start + safeLimit),
+        pagination: {
+          total: matched.length,
+          currentPage: safePage,
+          totalPages: Math.max(1, Math.ceil(matched.length / safeLimit)),
+          pageSize: safeLimit,
+        },
+      };
     } catch (error: unknown) {
       return rejectWithValue(apiErrorRejectValue(error));
     }

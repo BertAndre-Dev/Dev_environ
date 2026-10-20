@@ -153,14 +153,13 @@ export default function SuperAdminEstateTransactionsPage() {
     (async () => {
       setLoadingVends(true);
       try {
-        const shouldApplyDateFilter = Boolean(vendsStartDate && vendsEndDate);
         const res = await dispatch(
           getSuperAdminEstateVends({
             estateId: selectedEstateId,
             page: vendsPage,
             limit: pageSize,
-            startDate: shouldApplyDateFilter ? vendsStartDate : undefined,
-            endDate: shouldApplyDateFilter ? vendsEndDate : undefined,
+            startDate: vendsStartDate || undefined,
+            endDate: vendsEndDate || undefined,
           }),
         ).unwrap();
         setVendsData(res?.data ?? []);
@@ -701,14 +700,8 @@ export default function SuperAdminEstateTransactionsPage() {
                         estateId: selectedEstateId,
                         page: 1,
                         limit: 50000,
-                        startDate:
-                          vendsStartDate && vendsEndDate
-                            ? vendsStartDate
-                            : undefined,
-                        endDate:
-                          vendsStartDate && vendsEndDate
-                            ? vendsEndDate
-                            : undefined,
+                        startDate: vendsStartDate || undefined,
+                        endDate: vendsEndDate || undefined,
                       }),
                     ).unwrap();
                     return res?.data ?? [];

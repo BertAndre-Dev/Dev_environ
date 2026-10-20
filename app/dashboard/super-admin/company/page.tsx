@@ -85,14 +85,13 @@ export default function SuperAdminCompanyPage() {
 
   const fetchList = useCallback(
     (targetPage: number, limit = pageSize) => {
-      const shouldApplyDate = Boolean(startDate && endDate);
       return dispatch(
         getCompanies({
           page: targetPage,
           limit,
           search: searchQuery.trim() || undefined,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         }),
       )
         .unwrap()
@@ -467,14 +466,13 @@ export default function SuperAdminCompanyPage() {
             enableExport
             exportFileName="companies"
             onExportRequest={async () => {
-              const shouldApplyDate = Boolean(startDate && endDate);
               const res: any = await dispatch(
                 getCompanies({
                   page: 1,
                   limit: 99999,
                   search: searchQuery.trim() || undefined,
-                  startDate: shouldApplyDate ? startDate : undefined,
-                  endDate: shouldApplyDate ? endDate : undefined,
+                  startDate: startDate || undefined,
+                  endDate: endDate || undefined,
                 }),
               ).unwrap();
               return (res?.data ?? []) as CompanyItem[];

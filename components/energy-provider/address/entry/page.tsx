@@ -118,14 +118,13 @@ export default function EnergyProviderFieldEntry() {
         return;
       }
 
-      const shouldApplyDate = Boolean(startDate && endDate);
       const entryRes = await dispatch(
         getEnergyProviderEntriesByField({
           fieldId,
           page: 1,
           limit: pageSize,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         }),
       ).unwrap();
 
@@ -147,7 +146,6 @@ export default function EnergyProviderFieldEntry() {
   useEffect(() => {
     const fieldId = fields[0]?.id || fields[0]?._id;
     if (!fieldId) return;
-    const shouldApplyDate = Boolean(startDate && endDate);
 
     setLoading(true);
     dispatch(
@@ -155,8 +153,8 @@ export default function EnergyProviderFieldEntry() {
         fieldId,
         page: 1,
         limit: pageSize,
-        startDate: shouldApplyDate ? startDate : undefined,
-        endDate: shouldApplyDate ? endDate : undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       }),
     )
       .unwrap()
@@ -364,7 +362,6 @@ export default function EnergyProviderFieldEntry() {
           onPageChange={(page) => {
             const fieldId = fields[0]?.id || fields[0]?._id;
             if (!fieldId) return;
-            const shouldApplyDate = Boolean(startDate && endDate);
 
             setLoading(true);
             dispatch(
@@ -372,8 +369,8 @@ export default function EnergyProviderFieldEntry() {
                 fieldId,
                 page,
                 limit: pageSize,
-                startDate: shouldApplyDate ? startDate : undefined,
-                endDate: shouldApplyDate ? endDate : undefined,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
               }),
             )
               .unwrap()
@@ -384,7 +381,6 @@ export default function EnergyProviderFieldEntry() {
           onPageSizeChange={(size) => {
             const fieldId = fields[0]?.id || fields[0]?._id;
             if (!fieldId) return;
-            const shouldApplyDate = Boolean(startDate && endDate);
             setPageSize(size);
             setCurrentPage(1);
             setLoading(true);
@@ -393,8 +389,8 @@ export default function EnergyProviderFieldEntry() {
                 fieldId,
                 page: 1,
                 limit: size,
-                startDate: shouldApplyDate ? startDate : undefined,
-                endDate: shouldApplyDate ? endDate : undefined,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
               }),
             )
               .unwrap()
@@ -409,14 +405,13 @@ export default function EnergyProviderFieldEntry() {
               ? async () => {
                   const fieldId = fields[0]?.id || fields[0]?._id;
                   if (!fieldId) return [];
-                  const shouldApplyDate = Boolean(startDate && endDate);
                   const res = await dispatch(
                     getEnergyProviderEntriesByField({
                       fieldId,
                       page: 1,
                       limit: 50000,
-                      startDate: shouldApplyDate ? startDate : undefined,
-                      endDate: shouldApplyDate ? endDate : undefined,
+                      startDate: startDate || undefined,
+                      endDate: endDate || undefined,
                     }),
                   ).unwrap();
                   return res?.data ?? [];

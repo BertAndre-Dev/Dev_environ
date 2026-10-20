@@ -117,14 +117,13 @@ export default function ActivityLogPage() {
   const fetchVisitors = useCallback(
     async (page = 1, limit = pageSize) => {
       if (!estateId) return;
-      const shouldApplyDate = Boolean(startDate && endDate);
       await dispatch(
         getAllVisitors({
           estateId,
           page,
           limit,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         }),
       ).unwrap();
     },

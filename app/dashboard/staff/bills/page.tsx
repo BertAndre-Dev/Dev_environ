@@ -206,15 +206,14 @@ export default function StaffBillPage() {
         endDate?: string;
       },
     ) => {
-      const shouldApplyDate = Boolean(opts?.startDate && opts?.endDate);
       await dispatch(
         getBillsForAddress({
           addressId,
           estateId: eId,
           page: opts?.page ?? 1,
           limit: opts?.limit ?? assignedPageSize,
-          startDate: shouldApplyDate ? opts?.startDate : undefined,
-          endDate: shouldApplyDate ? opts?.endDate : undefined,
+          startDate: opts?.startDate || undefined,
+          endDate: opts?.endDate || undefined,
         }),
       ).unwrap();
     },
@@ -301,14 +300,13 @@ export default function StaffBillPage() {
 
   useEffect(() => {
     if (!estateId || activeTab !== "bills") return;
-    const shouldApplyDate = Boolean(billsStartDate && billsEndDate);
     dispatch(
       getBillsByEstate({
         estateId,
         page: 1,
         limit: billsPageSize,
-        startDate: shouldApplyDate ? billsStartDate : undefined,
-        endDate: shouldApplyDate ? billsEndDate : undefined,
+        startDate: billsStartDate || undefined,
+        endDate: billsEndDate || undefined,
       }),
     )
       .unwrap()
@@ -388,9 +386,8 @@ export default function StaffBillPage() {
         estateId,
         page: 1,
         limit: billsPageSize,
-        startDate:
-          billsStartDate && billsEndDate ? billsStartDate : undefined,
-        endDate: billsStartDate && billsEndDate ? billsEndDate : undefined,
+        startDate: billsStartDate || undefined,
+        endDate: billsEndDate || undefined,
       }),
     ).unwrap();
   };
@@ -478,9 +475,8 @@ export default function StaffBillPage() {
           estateId,
           page: 1,
           limit: billsPageSize,
-          startDate:
-            billsStartDate && billsEndDate ? billsStartDate : undefined,
-          endDate: billsStartDate && billsEndDate ? billsEndDate : undefined,
+          startDate: billsStartDate || undefined,
+          endDate: billsEndDate || undefined,
         }),
       ).unwrap();
     } catch (err: unknown) {
@@ -925,14 +921,13 @@ export default function StaffBillPage() {
               }}
               onPageChange={(page) => {
                 if (!estateId) return;
-                const shouldApplyDate = Boolean(billsStartDate && billsEndDate);
                 dispatch(
                   getBillsByEstate({
                     estateId,
                     page,
                     limit: billsPageSize,
-                    startDate: shouldApplyDate ? billsStartDate : undefined,
-                    endDate: shouldApplyDate ? billsEndDate : undefined,
+                    startDate: billsStartDate || undefined,
+                    endDate: billsEndDate || undefined,
                   }),
                 )
                   .unwrap()
@@ -949,18 +944,13 @@ export default function StaffBillPage() {
               onExportRequest={
                 estateId
                   ? async () => {
-                      const shouldApplyDate = Boolean(
-                        billsStartDate && billsEndDate,
-                      );
                       const res = await dispatch(
                         getBillsByEstate({
                           estateId,
                           page: 1,
                           limit: 50000,
-                          startDate: shouldApplyDate
-                            ? billsStartDate
-                            : undefined,
-                          endDate: shouldApplyDate ? billsEndDate : undefined,
+                          startDate: billsStartDate || undefined,
+                          endDate: billsEndDate || undefined,
                         }),
                       ).unwrap();
                       return res?.data ?? [];
@@ -1048,14 +1038,8 @@ export default function StaffBillPage() {
                             estateId,
                             page: 1,
                             limit: 50000,
-                            startDate:
-                              assignedStartDate && assignedEndDate
-                                ? assignedStartDate
-                                : undefined,
-                            endDate:
-                              assignedStartDate && assignedEndDate
-                                ? assignedEndDate
-                                : undefined,
+                            startDate: assignedStartDate || undefined,
+                            endDate: assignedEndDate || undefined,
                           }),
                         ).unwrap();
                         return res?.data ?? [];

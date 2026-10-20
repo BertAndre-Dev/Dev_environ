@@ -28,10 +28,7 @@ import {
   type FinancialChartPoint,
 } from "@/components/dashboard/estate-admin/reports/financial-report-chart-utils";
 import { ReportTable } from "@/components/estate-admin/expense-report/expense-report-table";
-import {
-  IsoLinkedRangeEnd,
-  IsoLinkedRangeStart,
-} from "@/components/ui/iso-date-picker";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 import {
   buildRevenueFilterOptions,
@@ -395,39 +392,16 @@ export default function ReportsPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2">
-              <label
-                className="text-sm text-muted-foreground"
-                htmlFor="chart-start"
-              >
-                From
-              </label>
-              <IsoLinkedRangeStart
-                id="chart-start"
-                startDate={chartStartDate}
-                endDate={chartEndDate}
-                onStartChange={setChartStartDate}
-                placeholder={datePlaceholders.start}
-                className="cursor-pointer"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <label
-                className="text-sm text-muted-foreground"
-                htmlFor="chart-end"
-              >
-                To
-              </label>
-              <IsoLinkedRangeEnd
-                id="chart-end"
-                startDate={chartStartDate}
-                endDate={chartEndDate}
-                onEndChange={setChartEndDate}
-                placeholder={datePlaceholders.end}
-                className="cursor-pointer"
-              />
-            </div>
+            <DateRangeFilter
+              startId="chart-start"
+              endId="chart-end"
+              startDate={chartStartDate}
+              endDate={chartEndDate}
+              onStartChange={setChartStartDate}
+              onEndChange={setChartEndDate}
+              startPlaceholder={datePlaceholders.start}
+              endPlaceholder={datePlaceholders.end}
+            />
 
             <Select
               value={chartRevenueCategory}

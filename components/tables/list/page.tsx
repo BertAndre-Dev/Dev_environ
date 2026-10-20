@@ -2,10 +2,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import {
-  IsoLinkedRangeEnd,
-  IsoLinkedRangeStart,
-} from "@/components/ui/iso-date-picker";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
 import { Download } from "lucide-react";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 import Pagination from "@/components/ui/pagination";
@@ -154,7 +151,6 @@ export default function Table<T extends { id?: string }>({
 
   const effectiveStartDate = isStartControlled ? startDate ?? "" : internalStartDate;
   const effectiveEndDate = isEndControlled ? endDate ?? "" : internalEndDate;
-  const showDateReset = Boolean(effectiveStartDate && effectiveEndDate);
   const exampleDateRange = React.useMemo(() => getDateRangePlaceholders(), []);
   const effectiveStartPlaceholder =
     startDatePlaceholder ??
@@ -201,70 +197,28 @@ export default function Table<T extends { id?: string }>({
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
               {enableDateRangeFilter && (
-                <div className="grid w-full min-w-0 grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:flex md:w-auto md:flex-wrap md:items-end">
-                  <div className="min-w-0">
-                    <label
-                      htmlFor="table-start-date-input"
-                      className="mb-1.5 block text-[13px] font-medium leading-none tracking-tight text-foreground"
-                    >
-                      From
-                    </label>
-                    <IsoLinkedRangeStart
-                      id="table-start-date-input"
-                      startDate={effectiveStartDate}
-                      endDate={effectiveEndDate}
-                      withPortal={false}
-                      onStartChange={(value) => {
-                        if (!isStartControlled) setInternalStartDate(value);
-                        onDateRangeChange?.({
-                          startDate: value,
-                          endDate: effectiveEndDate,
-                        });
-                      }}
-                      ariaLabel="Start date"
-                      placeholder={effectiveStartPlaceholder}
-                      className="h-11 min-h-11 touch-manipulation"
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <label
-                      htmlFor="table-end-date-input"
-                      className="mb-1.5 block text-[13px] font-medium leading-none tracking-tight text-foreground"
-                    >
-                      To
-                    </label>
-                    <IsoLinkedRangeEnd
-                      id="table-end-date-input"
-                      startDate={effectiveStartDate}
-                      endDate={effectiveEndDate}
-                      withPortal={false}
-                      onEndChange={(value) => {
-                        if (!isEndControlled) setInternalEndDate(value);
-                        onDateRangeChange?.({
-                          startDate: effectiveStartDate,
-                          endDate: value,
-                        });
-                      }}
-                      ariaLabel="End date"
-                      placeholder={effectiveEndPlaceholder}
-                      className="h-11 min-h-11 touch-manipulation"
-                    />
-                  </div>
-                  {showDateReset ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-11 min-h-11 w-full touch-manipulation active:scale-[0.97] motion-reduce:active:scale-100 min-[420px]:col-span-2 md:col-auto md:w-auto md:self-end"
-                      onClick={() => {
-                        if (!isStartControlled) setInternalStartDate("");
-                        if (!isEndControlled) setInternalEndDate("");
-                        onDateRangeChange?.({ startDate: "", endDate: "" });
-                      }}
-                    >
-                      Reset
-                    </Button>
-                  ) : null}
-                </div>
+                <DateRangeFilter
+                  startId="table-start-date-input"
+                  endId="table-end-date-input"
+                  startDate={effectiveStartDate}
+                  endDate={effectiveEndDate}
+                  startPlaceholder={effectiveStartPlaceholder}
+                  endPlaceholder={effectiveEndPlaceholder}
+                  onStartChange={(value) => {
+                    if (!isStartControlled) setInternalStartDate(value);
+                    onDateRangeChange?.({
+                      startDate: value,
+                      endDate: effectiveEndDate,
+                    });
+                  }}
+                  onEndChange={(value) => {
+                    if (!isEndControlled) setInternalEndDate(value);
+                    onDateRangeChange?.({
+                      startDate: effectiveStartDate,
+                      endDate: value,
+                    });
+                  }}
+                />
               )}
               {enableSearch && (
                 <input

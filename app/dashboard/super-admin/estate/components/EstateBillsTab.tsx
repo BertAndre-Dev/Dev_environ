@@ -131,14 +131,13 @@ export function EstateBillsTab({ estateId }: Props) {
       if (!estateId) return;
       setBillsLoading(true);
       try {
-        const shouldApplyDate = Boolean(billsStartDate && billsEndDate);
         const res = await dispatch(
           getBillsByEstate({
             estateId,
             page,
             limit,
-            startDate: shouldApplyDate ? billsStartDate : undefined,
-            endDate: shouldApplyDate ? billsEndDate : undefined,
+            startDate: billsStartDate || undefined,
+            endDate: billsEndDate || undefined,
           }),
         ).unwrap();
         setBills(Array.isArray(res?.data) ? res.data : []);
@@ -160,15 +159,14 @@ export function EstateBillsTab({ estateId }: Props) {
       if (!estateId || !addressId) return;
       setAssignedLoading(true);
       try {
-        const shouldApplyDate = Boolean(assignedStartDate && assignedEndDate);
         const res = await dispatch(
           getBillsForAddress({
             addressId,
             estateId,
             page,
             limit,
-            startDate: shouldApplyDate ? assignedStartDate : undefined,
-            endDate: shouldApplyDate ? assignedEndDate : undefined,
+            startDate: assignedStartDate || undefined,
+            endDate: assignedEndDate || undefined,
           }),
         ).unwrap();
         setAssignedBills(Array.isArray(res?.data) ? res.data : []);

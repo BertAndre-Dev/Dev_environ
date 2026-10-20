@@ -220,14 +220,13 @@ export default function TransactionPage() {
     (async () => {
       setLoadingVends(true);
       try {
-        const shouldApplyDateFilter = Boolean(vendsStartDate && vendsEndDate);
         const res = await dispatch(
           getEstateVends({
             estateId,
             page: vendsPage,
             limit: pageSize,
-            startDate: shouldApplyDateFilter ? vendsStartDate : undefined,
-            endDate: shouldApplyDateFilter ? vendsEndDate : undefined,
+            startDate: vendsStartDate || undefined,
+            endDate: vendsEndDate || undefined,
           }),
         ).unwrap();
         setVendsData(res?.data ?? []);
@@ -864,14 +863,8 @@ export default function TransactionPage() {
                         estateId,
                         page: 1,
                         limit: 50000,
-                        startDate:
-                          vendsStartDate && vendsEndDate
-                            ? vendsStartDate
-                            : undefined,
-                        endDate:
-                          vendsStartDate && vendsEndDate
-                            ? vendsEndDate
-                            : undefined,
+                        startDate: vendsStartDate || undefined,
+                        endDate: vendsEndDate || undefined,
                       }),
                     ).unwrap();
                     return res?.data ?? [];

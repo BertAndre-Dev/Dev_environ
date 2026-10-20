@@ -105,7 +105,7 @@ function formatPeriodRange(period: MissedBillPeriod): string {
   const end = period.periodEnd ? new Date(period.periodEnd) : null;
   const startOk = start != null && !Number.isNaN(start.getTime());
   const endOk = end != null && !Number.isNaN(end.getTime());
-  if (!startOk || !start) return period.label?.trim() || "Missed period";
+  if (!startOk || !start) return period.label?.trim() || "Missed Payment";
   const full: Intl.DateTimeFormatOptions = {
     month: "short",
     day: "numeric",
@@ -282,7 +282,7 @@ function PayableBillCard({
         <div className="border-t border-border/70 px-5 py-4">
           <div className="flex items-center justify-between gap-3">
             <h4 className="text-[13px] font-medium tracking-tight">
-              {missedCount === 1 ? "Missed period" : "Missed periods"}
+              {missedCount === 1 ? "Missed Payment" : "Missed Payments"}
             </h4>
             <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[11px] font-medium tabular-nums text-red-700 dark:text-red-300">
               {missedCount}
@@ -518,14 +518,13 @@ export default function BillPage() {
   useEffect(() => {
     if (!userId) return;
 
-    const shouldApplyDate = Boolean(paidStartDate && paidEndDate);
     dispatch(
       getResidentBills({
         residentId: userId,
         page: 1,
         limit: paidPageSize,
-        startDate: shouldApplyDate ? paidStartDate : undefined,
-        endDate: shouldApplyDate ? paidEndDate : undefined,
+        startDate: paidStartDate || undefined,
+        endDate: paidEndDate || undefined,
       }),
     )
       .unwrap()
@@ -559,7 +558,6 @@ export default function BillPage() {
 
   const refreshAfterPay = async () => {
     if (!userId) return;
-    const shouldApplyDate = Boolean(paidStartDate && paidEndDate);
 
     if (estateId) {
       dispatch(
@@ -591,8 +589,8 @@ export default function BillPage() {
         residentId: userId,
         page: Number(paidPagination?.page) || 1,
         limit: paidPageSize,
-        startDate: shouldApplyDate ? paidStartDate : undefined,
-        endDate: shouldApplyDate ? paidEndDate : undefined,
+        startDate: paidStartDate || undefined,
+        endDate: paidEndDate || undefined,
       }),
     ).catch(() => {});
   };
@@ -985,14 +983,13 @@ export default function BillPage() {
             }}
             onPageChange={(page) => {
               if (!userId) return;
-              const shouldApplyDate = Boolean(paidStartDate && paidEndDate);
               dispatch(
                 getResidentBills({
                   residentId: userId,
                   page,
                   limit: paidPageSize,
-                  startDate: shouldApplyDate ? paidStartDate : undefined,
-                  endDate: shouldApplyDate ? paidEndDate : undefined,
+                  startDate: paidStartDate || undefined,
+                  endDate: paidEndDate || undefined,
                 }),
               )
                 .unwrap()
@@ -1009,18 +1006,13 @@ export default function BillPage() {
             onExportRequest={
               userId
                 ? async () => {
-                    const shouldApplyDate = Boolean(
-                      paidStartDate && paidEndDate,
-                    );
                     const res = await dispatch(
                       getResidentBills({
                         residentId: userId,
                         page: 1,
                         limit: 50000,
-                        startDate: shouldApplyDate
-                          ? paidStartDate
-                          : undefined,
-                        endDate: shouldApplyDate ? paidEndDate : undefined,
+                        startDate: paidStartDate || undefined,
+                        endDate: paidEndDate || undefined,
                       }),
                     ).unwrap();
                     return res?.data ?? [];

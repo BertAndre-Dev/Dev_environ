@@ -7,10 +7,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Search } from "lucide-react";
 
 import { AuditDetailSheet, type AuditDetailModel } from "@/components/audit/AuditDetailSheet";
-import {
-  IsoLinkedRangeEnd,
-  IsoLinkedRangeStart,
-} from "@/components/ui/iso-date-picker";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
 import Pagination from "@/components/ui/pagination";
 import { formatDateTime } from "@/lib/format-date";
 import { selectUserRole } from "@/redux/slice/auth-mgt/auth-mgt-slice";
@@ -627,30 +624,15 @@ export default function AuditTrailPage() {
               />
             </span>
           </label>
-          <div>
+          <div className="md:col-span-2">
             <span className="mb-1.5 block text-[13px] font-medium tracking-tight">
-              From
+              Date
             </span>
-            <IsoLinkedRangeStart
+            <DateRangeFilter
               startDate={startDate}
               endDate={endDate}
               onStartChange={setStartDate}
-              ariaLabel="Start date"
-              placeholder="Start date"
-              className="h-11"
-            />
-          </div>
-          <div>
-            <span className="mb-1.5 block text-[13px] font-medium tracking-tight">
-              To
-            </span>
-            <IsoLinkedRangeEnd
-              startDate={startDate}
-              endDate={endDate}
               onEndChange={setEndDate}
-              ariaLabel="End date"
-              placeholder="End date"
-              className="h-11"
             />
           </div>
           <label className="block">

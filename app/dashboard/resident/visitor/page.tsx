@@ -150,14 +150,13 @@ export default function VisitorPage() {
   const refreshVisitors = async () => {
     if (!userId) return;
     try {
-      const shouldApplyDate = Boolean(startDate && endDate);
       const visitorsRes = await dispatch(
         getVisitorsByResident({
           residentId: userId,
           page: pagination?.page || 1,
           limit: pageSize,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         }),
       ).unwrap();
       setVisitors(visitorsRes?.data || []);
@@ -185,15 +184,14 @@ export default function VisitorPage() {
 
   useEffect(() => {
     if (!userId) return;
-    const shouldApplyDate = Boolean(startDate && endDate);
     setLoading(true);
     dispatch(
       getVisitorsByResident({
         residentId: userId,
         page: 1,
         limit: pageSize,
-        startDate: shouldApplyDate ? startDate : undefined,
-        endDate: shouldApplyDate ? endDate : undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       }),
     )
       .unwrap()
@@ -276,14 +274,13 @@ export default function VisitorPage() {
   const handlePageChange = async (newPage: number, limit = pageSize) => {
     if (!userId) return;
     try {
-      const shouldApplyDate = Boolean(startDate && endDate);
       const visitorsRes = await dispatch(
         getVisitorsByResident({
           residentId: userId,
           page: newPage,
           limit,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         }),
       ).unwrap();
       setVisitors(visitorsRes?.data || []);
@@ -452,14 +449,13 @@ export default function VisitorPage() {
             onExportRequest={
               userId
                 ? async () => {
-                    const shouldApplyDate = Boolean(startDate && endDate);
                     const res = await dispatch(
                       getVisitorsByResident({
                         residentId: userId,
                         page: 1,
                         limit: 50000,
-                        startDate: shouldApplyDate ? startDate : undefined,
-                        endDate: shouldApplyDate ? endDate : undefined,
+                        startDate: startDate || undefined,
+                        endDate: endDate || undefined,
                       }),
                     ).unwrap();
                     return res?.data ?? [];

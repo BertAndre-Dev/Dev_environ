@@ -88,14 +88,13 @@ export default function EnergyProviderEstatePage() {
   const [pageSize, setPageSize] = useState(10);
 
   const fetchEstates = (page = 1, limit = pageSize) => {
-    const shouldApplyDate = Boolean(startDate && endDate);
     return dispatch(
       getEnergyProviderEstates({
         page,
         limit,
         search: search.trim() || undefined,
-        startDate: shouldApplyDate ? startDate : undefined,
-        endDate: shouldApplyDate ? endDate : undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       }),
     ).unwrap();
   };
@@ -448,14 +447,13 @@ export default function EnergyProviderEstatePage() {
             enableExport
             exportFileName="energy-provider-estates"
             onExportRequest={async () => {
-              const shouldApplyDate = Boolean(startDate && endDate);
               const res = await dispatch(
                 getEnergyProviderEstates({
                   page: 1,
                   limit: 50000,
                   search: search.trim() || undefined,
-                  startDate: shouldApplyDate ? startDate : undefined,
-                  endDate: shouldApplyDate ? endDate : undefined,
+                  startDate: startDate || undefined,
+                  endDate: endDate || undefined,
                 }),
               ).unwrap();
               return res?.data ?? [];

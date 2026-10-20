@@ -253,13 +253,12 @@ export default function SuperAdminUserPage() {
   const fetchUsers = useCallback(
     (page = 1, limit = pageSize) => {
       if (!selectedFilterEntity?.value) return Promise.resolve();
-      const shouldApplyDate = Boolean(startDate && endDate);
       const common = {
         page,
         limit,
         role: roleFilter,
-        startDate: shouldApplyDate ? startDate : undefined,
-        endDate: shouldApplyDate ? endDate : undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       };
 
       const request =
@@ -868,13 +867,12 @@ export default function SuperAdminUserPage() {
             onExportRequest={
               selectedFilterEntity?.value
                 ? async () => {
-                    const shouldApplyDate = Boolean(startDate && endDate);
                     const common = {
                       page: 1,
                       limit: 50000,
                       role: roleFilter,
-                      startDate: shouldApplyDate ? startDate : undefined,
-                      endDate: shouldApplyDate ? endDate : undefined,
+                      startDate: startDate || undefined,
+                      endDate: endDate || undefined,
                     };
                     const res =
                       filterScope === "company"

@@ -91,6 +91,46 @@ export const getAllEstates = createAsyncThunk(
   },
 );
 
+/** GET /api/v1/estate-mgt/company/{companyId} — estates belonging to one company */
+export const getEstatesByCompany = createAsyncThunk(
+  "super-admin-est-mgt/getEstatesByCompany",
+  async (
+    {
+      companyId,
+      page = 1,
+      limit = 10,
+      search,
+      startDate,
+      endDate,
+    }: {
+      companyId: string;
+      page?: number;
+      limit?: number;
+      search?: string;
+      startDate?: string;
+      endDate?: string;
+    },
+    { rejectWithValue },
+  ) => {
+    try {
+      const params = new URLSearchParams();
+      if (page != null) params.set("page", String(page));
+      if (limit != null) params.set("limit", String(limit));
+      if (search?.trim()) params.set("search", search.trim());
+      if (startDate) params.set("startDate", startDate);
+      if (endDate) params.set("endDate", endDate);
+      const query = params.toString();
+      const suffix = query ? `?${query}` : "";
+      const res = await axiosInstance.get(
+        `/api/v1/estate-mgt/company/${companyId}${suffix}`,
+      );
+      return res.data;
+    } catch (error: unknown) {
+      return rejectWithValue(apiErrorRejectValue(error));
+    }
+  },
+);
+
 // get individual estate
 export const getEstate = createAsyncThunk(
   "super-admin-est-mgt/getEstate",

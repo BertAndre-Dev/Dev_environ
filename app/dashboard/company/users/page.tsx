@@ -198,7 +198,6 @@ export default function CompanyUsersPage() {
   const fetchUsers = useCallback(
     (page = 1, limit = pageSize) => {
       if (!selectedEstate?.value) return Promise.resolve();
-      const shouldApplyDate = Boolean(startDate && endDate);
       return dispatch(
         getCompanyUsersByEstate({
           estateId: selectedEstate.value,
@@ -206,8 +205,8 @@ export default function CompanyUsersPage() {
           limit,
           role: roleFilter,
           search: search.trim() || undefined,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         }),
       ).unwrap();
     },
@@ -831,7 +830,6 @@ export default function CompanyUsersPage() {
             onExportRequest={
               selectedEstate?.value
                 ? async () => {
-                    const shouldApplyDate = Boolean(startDate && endDate);
                     const res = await dispatch(
                       getCompanyUsersByEstate({
                         estateId: selectedEstate.value,
@@ -839,8 +837,8 @@ export default function CompanyUsersPage() {
                         limit: 50000,
                         role: roleFilter,
                         search: search.trim() || undefined,
-                        startDate: shouldApplyDate ? startDate : undefined,
-                        endDate: shouldApplyDate ? endDate : undefined,
+                        startDate: startDate || undefined,
+                        endDate: endDate || undefined,
                       }),
                     ).unwrap();
                     return res?.data ?? [];

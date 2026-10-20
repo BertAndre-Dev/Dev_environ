@@ -17,10 +17,7 @@ import {
   type FinancialChartPoint,
 } from "@/components/dashboard/estate-admin/reports/financial-report-chart-utils";
 import { ReportTable } from "@/components/estate-admin/expense-report/expense-report-table";
-import {
-  IsoLinkedRangeEnd,
-  IsoLinkedRangeStart,
-} from "@/components/ui/iso-date-picker";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
@@ -429,39 +426,16 @@ export default function CompanyReportsPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex items-center gap-2">
-                    <label
-                      className="text-sm text-muted-foreground"
-                      htmlFor="company-chart-start"
-                    >
-                      From
-                    </label>
-                    <IsoLinkedRangeStart
-                      id="company-chart-start"
-                      startDate={chartStartDate}
-                      endDate={chartEndDate}
-                      onStartChange={setChartStartDate}
-                      className="cursor-pointer"
-                      placeholder={datePlaceholders.start}
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <label
-                      className="text-sm text-muted-foreground"
-                      htmlFor="company-chart-end"
-                    >
-                      To
-                    </label>
-                    <IsoLinkedRangeEnd
-                      id="company-chart-end"
-                      startDate={chartStartDate}
-                      endDate={chartEndDate}
-                      onEndChange={setChartEndDate}
-                      className="cursor-pointer"
-                      placeholder={datePlaceholders.end}
-                    />
-                  </div>
+                  <DateRangeFilter
+                    startId="company-chart-start"
+                    endId="company-chart-end"
+                    startDate={chartStartDate}
+                    endDate={chartEndDate}
+                    onStartChange={setChartStartDate}
+                    onEndChange={setChartEndDate}
+                    startPlaceholder={datePlaceholders.start}
+                    endPlaceholder={datePlaceholders.end}
+                  />
 
                   <UiSelect
                     value={chartRevenueCategory}

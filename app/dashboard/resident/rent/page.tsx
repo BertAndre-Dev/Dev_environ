@@ -136,15 +136,14 @@ export default function ResidentRentPage() {
 
   useEffect(() => {
     if (!residentType) return;
-    const shouldApplyDate = Boolean(startDate && endDate);
     setCurrentPage(1);
     if (residentType === "owner") {
       dispatch(
         getOwnerRents({
           page: 1,
           limit: pageSize,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         }),
       )
         .unwrap()
@@ -157,8 +156,8 @@ export default function ResidentRentPage() {
         getTenantRents({
           page: 1,
           limit: pageSize,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         }),
       )
         .unwrap()
@@ -184,14 +183,13 @@ export default function ResidentRentPage() {
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
-    const shouldApplyDate = Boolean(startDate && endDate);
     const fetcher = isOwner ? getOwnerRents : getTenantRents;
     dispatch(
       fetcher({
         page: newPage,
         limit: pageSize,
-        startDate: shouldApplyDate ? startDate : undefined,
-        endDate: shouldApplyDate ? endDate : undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       } as any),
     )
       .unwrap()
@@ -213,13 +211,12 @@ export default function ResidentRentPage() {
 
   const refreshList = () => {
     const fetcher = isOwner ? getOwnerRents : getTenantRents;
-    const shouldApplyDate = Boolean(startDate && endDate);
     dispatch(
       fetcher({
         page: currentPage,
         limit: pageSize,
-        startDate: shouldApplyDate ? startDate : undefined,
-        endDate: shouldApplyDate ? endDate : undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       } as any),
     )
       .unwrap()
@@ -551,25 +548,23 @@ export default function ResidentRentPage() {
             onExportRequest={
               isOwner
                 ? async () => {
-                    const shouldApplyDate = Boolean(startDate && endDate);
                     const res = await dispatch(
                       getOwnerRents({
                         page: 1,
                         limit: 50000,
-                        startDate: shouldApplyDate ? startDate : undefined,
-                        endDate: shouldApplyDate ? endDate : undefined,
+                        startDate: startDate || undefined,
+                        endDate: endDate || undefined,
                       }),
                     ).unwrap();
                     return res?.data ?? [];
                   }
                 : async () => {
-                    const shouldApplyDate = Boolean(startDate && endDate);
                     const res = await dispatch(
                       getTenantRents({
                         page: 1,
                         limit: 50000,
-                        startDate: shouldApplyDate ? startDate : undefined,
-                        endDate: shouldApplyDate ? endDate : undefined,
+                        startDate: startDate || undefined,
+                        endDate: endDate || undefined,
                       }),
                     ).unwrap();
                     return res?.data ?? [];

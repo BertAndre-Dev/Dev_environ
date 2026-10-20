@@ -108,14 +108,13 @@ export default function AdminVisitorManagement() {
   const fetchVisitors = useCallback(
     async (page = 1, limit = pageSize) => {
       if (!estateId) return;
-      const shouldApplyDate = Boolean(startDate && endDate);
       await dispatch(
         getVisitorsByEstate({
           estateId,
           page,
           limit,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         }),
       ).unwrap();
     },
@@ -694,14 +693,13 @@ export default function AdminVisitorManagement() {
             onExportRequest={
               estateId
                 ? async () => {
-                    const shouldApplyDate = Boolean(startDate && endDate);
                     const res = await dispatch(
                       getVisitorsByEstate({
                         estateId,
                         page: 1,
                         limit: 50000,
-                        startDate: shouldApplyDate ? startDate : undefined,
-                        endDate: shouldApplyDate ? endDate : undefined,
+                        startDate: startDate || undefined,
+                        endDate: endDate || undefined,
                       }),
                     ).unwrap();
                     return res?.data ?? [];

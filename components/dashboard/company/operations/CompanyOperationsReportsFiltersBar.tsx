@@ -6,10 +6,7 @@ import Select from "react-select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  IsoLinkedRangeEnd,
-  IsoLinkedRangeStart,
-} from "@/components/ui/iso-date-picker";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 import type {
   CompanyOperationsReportingField,
@@ -126,30 +123,16 @@ export function CompanyOperationsReportsFiltersBar({
 
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-muted-foreground" htmlFor="ops-start-date">
-                From
-              </label>
-              <IsoLinkedRangeStart
-                id="ops-start-date"
-                startDate={startDate}
-                endDate={endDate}
-                onStartChange={onStartDateChange}
-                placeholder={datePlaceholders.start}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-muted-foreground" htmlFor="ops-end-date">
-                To
-              </label>
-              <IsoLinkedRangeEnd
-                id="ops-end-date"
-                startDate={startDate}
-                endDate={endDate}
-                onEndChange={onEndDateChange}
-                placeholder={datePlaceholders.end}
-              />
-            </div>
+            <DateRangeFilter
+              startId="ops-start-date"
+              endId="ops-end-date"
+              startDate={startDate}
+              endDate={endDate}
+              onStartChange={onStartDateChange}
+              onEndChange={onEndDateChange}
+              startPlaceholder={datePlaceholders.start}
+              endPlaceholder={datePlaceholders.end}
+            />
             {startDate && endDate ? (
               <Button type="button" size="sm" variant="outline" onClick={onResetDates}>
                 Reset dates

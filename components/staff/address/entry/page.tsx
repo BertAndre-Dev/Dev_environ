@@ -115,14 +115,13 @@ export default function EntryPage() {
         return;
       }
 
-      const shouldApplyDate = Boolean(startDate && endDate);
       const entryRes = await dispatch(
         getEntriesByField({
           fieldId,
           page: 1,
           limit: pageSize,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         }),
       ).unwrap();
 
@@ -147,7 +146,6 @@ export default function EntryPage() {
   useEffect(() => {
     const fieldId = fields[0]?.id || fields[0]?._id;
     if (!fieldId) return;
-    const shouldApplyDate = Boolean(startDate && endDate);
 
     setLoading(true);
     dispatch(
@@ -155,8 +153,8 @@ export default function EntryPage() {
         fieldId,
         page: 1,
         limit: pageSize,
-        startDate: shouldApplyDate ? startDate : undefined,
-        endDate: shouldApplyDate ? endDate : undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       }),
     )
       .unwrap()
@@ -439,7 +437,6 @@ export default function EntryPage() {
           onPageChange={(page) => {
             const fieldId = fields[0]?.id || fields[0]?._id;
             if (!fieldId) return;
-            const shouldApplyDate = Boolean(startDate && endDate);
 
             setLoading(true);
             dispatch(
@@ -447,8 +444,8 @@ export default function EntryPage() {
                 fieldId,
                 page,
                 limit: pageSize,
-                startDate: shouldApplyDate ? startDate : undefined,
-                endDate: shouldApplyDate ? endDate : undefined,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
               }),
             )
               .unwrap()
@@ -462,7 +459,6 @@ export default function EntryPage() {
           onPageSizeChange={(size) => {
             const fieldId = fields[0]?.id || fields[0]?._id;
             if (!fieldId) return;
-            const shouldApplyDate = Boolean(startDate && endDate);
             setPageSize(size);
             setCurrentPage(1);
             setLoading(true);
@@ -471,8 +467,8 @@ export default function EntryPage() {
                 fieldId,
                 page: 1,
                 limit: size,
-                startDate: shouldApplyDate ? startDate : undefined,
-                endDate: shouldApplyDate ? endDate : undefined,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
               }),
             )
               .unwrap()
@@ -490,14 +486,13 @@ export default function EntryPage() {
               ? async () => {
                   const fieldId = fields[0]?.id || fields[0]?._id;
                   if (!fieldId) return [];
-                  const shouldApplyDate = Boolean(startDate && endDate);
                   const res = await dispatch(
                     getEntriesByField({
                       fieldId,
                       page: 1,
                       limit: 50000,
-                      startDate: shouldApplyDate ? startDate : undefined,
-                      endDate: shouldApplyDate ? endDate : undefined,
+                      startDate: startDate || undefined,
+                      endDate: endDate || undefined,
                     }),
                   ).unwrap();
                   return res?.data ?? [];

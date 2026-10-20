@@ -268,7 +268,6 @@ export function EstateUsersPage({
       const estateId = selectedEstate?.value;
       if (!estateId) return;
 
-      const shouldApplyDate = Boolean(startDate && endDate);
       await dispatch(
         getAllUsersByEstate({
           estateId,
@@ -276,8 +275,8 @@ export function EstateUsersPage({
           limit,
           role: roleFilter,
           search: searchQuery || undefined,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         }),
       ).unwrap();
       setCurrentPage(page);
@@ -937,7 +936,6 @@ export function EstateUsersPage({
             onExportRequest={
               selectedEstate?.value
                 ? async () => {
-                    const shouldApplyDate = Boolean(startDate && endDate);
                     const res = await dispatch(
                       getAllUsersByEstate({
                         estateId: selectedEstate.value,
@@ -945,8 +943,8 @@ export function EstateUsersPage({
                         limit: 50000,
                         role: roleFilter,
                         search: searchQuery || undefined,
-                        startDate: shouldApplyDate ? startDate : undefined,
-                        endDate: shouldApplyDate ? endDate : undefined,
+                        startDate: startDate || undefined,
+                        endDate: endDate || undefined,
                       }),
                     ).unwrap();
                     return res?.data ?? [];

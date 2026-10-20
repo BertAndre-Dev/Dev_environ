@@ -76,14 +76,13 @@ export default function CompanyEstatePage() {
   const [pageSize, setPageSize] = useState(10);
 
   const fetchEstates = (page = 1, limit = pageSize) => {
-    const shouldApplyDate = Boolean(startDate && endDate);
     return dispatch(
       getCompanyEstates({
         page,
         limit,
         search: search.trim() || undefined,
-        startDate: shouldApplyDate ? startDate : undefined,
-        endDate: shouldApplyDate ? endDate : undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       }),
     ).unwrap();
   };
@@ -444,14 +443,13 @@ export default function CompanyEstatePage() {
             enableExport
             exportFileName="company-estates"
             onExportRequest={async () => {
-              const shouldApplyDate = Boolean(startDate && endDate);
               const res = await dispatch(
                 getCompanyEstates({
                   page: 1,
                   limit: 50000,
                   search: search.trim() || undefined,
-                  startDate: shouldApplyDate ? startDate : undefined,
-                  endDate: shouldApplyDate ? endDate : undefined,
+                  startDate: startDate || undefined,
+                  endDate: endDate || undefined,
                 }),
               ).unwrap();
               return res?.data ?? [];

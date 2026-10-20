@@ -135,14 +135,13 @@ export default function CompanyEnergyProviderPage() {
   const fetchVends = useCallback(
     (page = 1, limit = vendsPageSize) => {
       if (!selectedEstate?.value) return Promise.resolve();
-      const shouldApplyDate = Boolean(vendsStartDate && vendsEndDate);
       return dispatch(
         getCompanyEnergyProviderVends({
           estateId: selectedEstate.value,
           page,
           limit,
-          startDate: shouldApplyDate ? vendsStartDate : undefined,
-          endDate: shouldApplyDate ? vendsEndDate : undefined,
+          startDate: vendsStartDate || undefined,
+          endDate: vendsEndDate || undefined,
         }),
       ).unwrap();
     },
@@ -375,14 +374,13 @@ export default function CompanyEnergyProviderPage() {
               }}
               onExportRequest={async () => {
                 if (!selectedEstate?.value) return [];
-                const shouldApplyDate = Boolean(vendsStartDate && vendsEndDate);
                 const res = await dispatch(
                   getCompanyEnergyProviderVends({
                     estateId: selectedEstate.value,
                     page: 1,
                     limit: 50000,
-                    startDate: shouldApplyDate ? vendsStartDate : undefined,
-                    endDate: shouldApplyDate ? vendsEndDate : undefined,
+                    startDate: vendsStartDate || undefined,
+                    endDate: vendsEndDate || undefined,
                   }),
                 ).unwrap();
                 return res.data;

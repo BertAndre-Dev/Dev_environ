@@ -31,10 +31,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import {
-  IsoLinkedRangeEnd,
-  IsoLinkedRangeStart,
-} from "@/components/ui/iso-date-picker";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 import { ExpenseChartBarChart } from "./ExpenseChartBarChart";
 import { buildExpenseChartSeries } from "./expense-chart-series";
@@ -154,39 +151,16 @@ export function ExpenseChartCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2">
-            <label
-              className="text-sm text-muted-foreground"
-              htmlFor={`${idPrefix}expense-chart-start`}
-            >
-              From
-            </label>
-            <IsoLinkedRangeStart
-              id={`${idPrefix}expense-chart-start`}
-              startDate={startDate}
-              endDate={endDate}
-              onStartChange={setStartDate}
-              placeholder={datePlaceholders.start}
-              className="cursor-pointer"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label
-              className="text-sm text-muted-foreground"
-              htmlFor={`${idPrefix}expense-chart-end`}
-            >
-              To
-            </label>
-            <IsoLinkedRangeEnd
-              id={`${idPrefix}expense-chart-end`}
-              startDate={startDate}
-              endDate={endDate}
-              onEndChange={setEndDate}
-              placeholder={datePlaceholders.end}
-              className="cursor-pointer"
-            />
-          </div>
+          <DateRangeFilter
+            startId={`${idPrefix}expense-chart-start`}
+            endId={`${idPrefix}expense-chart-end`}
+            startDate={startDate}
+            endDate={endDate}
+            onStartChange={setStartDate}
+            onEndChange={setEndDate}
+            startPlaceholder={datePlaceholders.start}
+            endPlaceholder={datePlaceholders.end}
+          />
 
           <Select
             value={period}

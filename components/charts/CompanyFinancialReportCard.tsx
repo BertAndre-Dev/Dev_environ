@@ -13,10 +13,7 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  IsoLinkedRangeEnd,
-  IsoLinkedRangeStart,
-} from "@/components/ui/iso-date-picker";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
 import { KpiCard } from "@/app/dashboard/super-admin/dashboard/components/kpi-card";
 import { cn } from "@/lib/utils";
 import type { AppDispatch } from "@/redux/store";
@@ -36,12 +33,6 @@ import {
 } from "@/lib/company-overview-financial-report";
 import { CompanyFinancialReportByEstateChart } from "@/components/charts/CompanyFinancialReportByEstateChart";
 import { CompanyFinancialReportExpensesByHeadChart } from "@/components/charts/CompanyFinancialReportExpensesByHeadChart";
-
-const dateInputClassName =
-  "h-9 w-full min-w-0 cursor-pointer border-0 bg-transparent px-2 text-[13px] shadow-none ring-0 focus:ring-0";
-
-const fieldWellClassName =
-  "flex flex-col gap-1.5 rounded-xl bg-black/4 p-2.5 dark:bg-white/6";
 
 type CompanyFinancialReportCardProps = Readonly<{
   companyId: string | null;
@@ -70,8 +61,6 @@ export function CompanyFinancialReportCard({
   const ytd = useMemo(() => yearToDateRange(), []);
   const [startDate, setStartDate] = useState(ytd.startDate);
   const [endDate, setEndDate] = useState(ytd.endDate);
-  const [draftStartDate, setDraftStartDate] = useState(ytd.startDate);
-  const [draftEndDate, setDraftEndDate] = useState(ytd.endDate);
 
   const fetchReport = useCallback(() => {
     if (!companyId) return;
@@ -101,11 +90,6 @@ export function CompanyFinancialReportCard({
   const summary = report?.summary;
   const net = Number(summary?.netProfitLoss) || 0;
   const netPositive = net >= 0;
-
-  const handleApplyDates = () => {
-    setStartDate(draftStartDate);
-    setEndDate(draftEndDate);
-  };
 
   const showFullError = Boolean(error) && !report && !loading;
 
@@ -144,56 +128,17 @@ export function CompanyFinancialReportCard({
       </div>
 
       <div className="space-y-5 px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className={fieldWellClassName}>
-            <label
-              htmlFor="financial-report-start"
-              className="text-xs font-medium text-muted-foreground"
-            >
-              Start date
-            </label>
-            <IsoLinkedRangeStart
-              id="financial-report-start"
-              startDate={draftStartDate}
-              endDate={draftEndDate}
-              onStartChange={setDraftStartDate}
-              onEndChange={setDraftEndDate}
-              ariaLabel="Start date"
-              placeholder="Start date"
-              className={dateInputClassName}
-              withPortal={false}
-            />
-          </div>
-
-          <div className={fieldWellClassName}>
-            <label
-              htmlFor="financial-report-end"
-              className="text-xs font-medium text-muted-foreground"
-            >
-              End date
-            </label>
-            <IsoLinkedRangeEnd
-              id="financial-report-end"
-              startDate={draftStartDate}
-              endDate={draftEndDate}
-              onEndChange={setDraftEndDate}
-              ariaLabel="End date"
-              placeholder="End date"
-              className={dateInputClassName}
-              withPortal={false}
-            />
-          </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <DateRangeFilter
+            startId="financial-report-start"
+            endId="financial-report-end"
+            startDate={startDate}
+            endDate={endDate}
+            onStartChange={setStartDate}
+            onEndChange={setEndDate}
+          />
 
           <div className="flex flex-col items-end gap-2">
-            <Button
-              type="button"
-              size="sm"
-              className="h-9 w-full"
-              onClick={handleApplyDates}
-              disabled={!companyId || loading}
-            >
-              Apply dates
-            </Button>
             <Button
               type="button"
               size="sm"

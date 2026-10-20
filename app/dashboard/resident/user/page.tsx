@@ -109,14 +109,13 @@ export default function ResidentUserPage() {
   }, [dispatch, router]);
 
   useEffect(() => {
-    const shouldApplyDate = Boolean(startDate && endDate);
     setCurrentPage(1);
     dispatch(
       getInvitedTenants({
         page: 1,
         limit: pageSize,
-        startDate: shouldApplyDate ? startDate : undefined,
-        endDate: shouldApplyDate ? endDate : undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       }),
     )
       .unwrap()
@@ -132,8 +131,8 @@ export default function ResidentUserPage() {
       getInvitedTenants({
         page: newPage,
         limit: pageSize,
-        startDate: startDate && endDate ? startDate : undefined,
-        endDate: startDate && endDate ? endDate : undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       }),
     )
       .unwrap()
@@ -148,13 +147,12 @@ export default function ResidentUserPage() {
 
   const refreshTenants = useCallback(
     async (page = currentPage) => {
-      const shouldApplyDate = Boolean(startDate && endDate);
       await dispatch(
         getInvitedTenants({
           page,
           limit: pageSize,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         }),
       ).unwrap();
     },
@@ -387,13 +385,12 @@ export default function ResidentUserPage() {
           enableExport
           exportFileName="tenants"
           onExportRequest={async () => {
-            const shouldApplyDate = Boolean(startDate && endDate);
             const res = await dispatch(
               getInvitedTenants({
                 page: 1,
                 limit: 50000,
-                startDate: shouldApplyDate ? startDate : undefined,
-                endDate: shouldApplyDate ? endDate : undefined,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
               }),
             ).unwrap();
             return (res?.data ?? []) as InvitedTenantItem[];

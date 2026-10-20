@@ -82,14 +82,13 @@ export default function EstatePage() {
 
   const fetchEstates = useCallback(
     (page = 1, search = searchQuery) => {
-      const shouldApplyDate = Boolean(startDate && endDate);
       return dispatch(
         getAllEstates({
           page,
           limit: pageSize,
           search: search.trim() || undefined,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         }),
       )
         .unwrap()
@@ -493,14 +492,13 @@ export default function EstatePage() {
           enableExport
           exportFileName="estates"
           onExportRequest={async () => {
-            const shouldApplyDate = Boolean(startDate && endDate);
             const res = await dispatch(
               getAllEstates({
                 page: 1,
                 limit: 50000,
                 search: searchQuery.trim() || undefined,
-                startDate: shouldApplyDate ? startDate : undefined,
-                endDate: shouldApplyDate ? endDate : undefined,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
               }),
             ).unwrap();
             return res?.data ?? [];

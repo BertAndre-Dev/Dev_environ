@@ -113,14 +113,13 @@ export default function SuperAdminEnergyProviderPage() {
   const fetchVends = useCallback(
     (page = 1, limit = vendsPageSize) => {
       if (!selectedEstate?.value) return Promise.resolve();
-      const shouldApplyDate = Boolean(vendsStartDate && vendsEndDate);
       return dispatch(
         getEnergyProviderVends({
           estateId: selectedEstate.value,
           page,
           limit,
-          startDate: shouldApplyDate ? vendsStartDate : undefined,
-          endDate: shouldApplyDate ? vendsEndDate : undefined,
+          startDate: vendsStartDate || undefined,
+          endDate: vendsEndDate || undefined,
         }),
       ).unwrap();
     },
@@ -353,14 +352,13 @@ export default function SuperAdminEnergyProviderPage() {
               }}
               onExportRequest={async () => {
                 if (!selectedEstate?.value) return [];
-                const shouldApplyDate = Boolean(vendsStartDate && vendsEndDate);
                 const res = await dispatch(
                   getEnergyProviderVends({
                     estateId: selectedEstate.value,
                     page: 1,
                     limit: 50000,
-                    startDate: shouldApplyDate ? vendsStartDate : undefined,
-                    endDate: shouldApplyDate ? vendsEndDate : undefined,
+                    startDate: vendsStartDate || undefined,
+                    endDate: vendsEndDate || undefined,
                   }),
                 ).unwrap();
                 return res.data;

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Copy, CheckCircle } from "lucide-react";
-import Modal from "@/components/modal/page";
+import { toast } from "react-toastify";
 import { IconTooltip } from "@/components/ui/tooltip";
 
 export function CopyButton({
@@ -22,7 +22,6 @@ export function CopyButton({
   className?: string;
 }>) {
   const [copied, setCopied] = React.useState(false);
-  const [feedbackOpen, setFeedbackOpen] = React.useState(false);
 
   const computedCopiedMessage = React.useMemo(() => {
     if (copiedMessage?.trim()) return copiedMessage.trim();
@@ -45,18 +44,12 @@ export function CopyButton({
     try {
       await navigator.clipboard.writeText(value);
       setCopied(true);
-      setFeedbackOpen(true);
+      toast.success(computedCopiedMessage);
       window.setTimeout(() => setCopied(false), 1500);
     } catch {
       // No fallback UI required
     }
   };
-
-  React.useEffect(() => {
-    if (!feedbackOpen) return;
-    const timer = window.setTimeout(() => setFeedbackOpen(false), 5000);
-    return () => window.clearTimeout(timer);
-  }, [feedbackOpen]);
 
   const accessibleName = (title ?? label ?? "Copy").trim() || "Copy";
   const isIconOnly = !label.trim();
@@ -93,24 +86,6 @@ export function CopyButton({
       ) : (
         button
       )}
-
-      <Modal
-        visible={feedbackOpen}
-        onClose={() => setFeedbackOpen(false)}
-        contentClassName="md:w-[350px] max-w-[350px] p-4"
-      >
-        <div className="w-full">
-          <div className="flex items-start gap-3">
-            <CheckCircle className="mt-0.5 h-5 w-5 text-green-600" />
-            <div className="min-w-0">
-              <h2 className="font-heading text-lg font-bold mb-1">Copied</h2>
-              <p className="text-sm text-muted-foreground">
-                {computedCopiedMessage}
-              </p>
-            </div>
-          </div>
-        </div>
-      </Modal>
     </>
   );
 }

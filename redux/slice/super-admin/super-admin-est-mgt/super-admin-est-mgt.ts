@@ -172,9 +172,9 @@ export const getEstatesByCompany = createAsyncThunk(
         data: matched.slice(start, start + safeLimit),
         pagination: {
           total: matched.length,
-          currentPage: safePage,
-          totalPages: Math.max(1, Math.ceil(matched.length / safeLimit)),
-          pageSize: safeLimit,
+          page: safePage,
+          limit: safeLimit,
+          pages: Math.max(1, Math.ceil(matched.length / safeLimit)),
         },
       };
     } catch (error: unknown) {

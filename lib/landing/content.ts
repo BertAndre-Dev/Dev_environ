@@ -1,4 +1,36 @@
+export const LAGOS_ESTATE_SEO_PHRASES = [
+  "Top 10 best property management companies in Lagos",
+  "Property managers in Lagos",
+  "List of property management companies in Lagos",
+  "Top property management company",
+  "Estate management company",
+  "Estate management services",
+  "Estate management services for homes and communities",
+  "Facility and estate management",
+  "Facility management company",
+] as const;
+
 export const LANDING_FAQ_ITEMS = [
+  {
+    question: "What is Bertahub?",
+    answer:
+      "Bertahub, also called Berta Hub, is an estate operating system from BertAndre Consulting Limited for residential communities in Nigeria. Estate teams use it to run smart metering, electricity vending, rent and service-charge billing, resident and visitor management, maintenance, and announcements from one dashboard. Residents use the Bertahub web app or the iOS and Android apps.",
+  },
+  {
+    question: "Who is Bertahub for?",
+    answer:
+      "Bertahub is for estate administrators, facility and property managers, developers, and residents of residential estates and serviced apartments in Nigeria. Admins run the estate from the dashboard. Residents manage bills, electricity tokens, visitors, and maintenance from the web or mobile app.",
+  },
+  {
+    question: "How does Bertahub work?",
+    answer:
+      "An estate is set up on Bertahub, addresses and meters are assigned, and residents are invited by email or phone. Admins create rent or service-charge bills, track payments, manage visitors and maintenance, and monitor energy use. Residents pay bills, buy electricity tokens, submit maintenance requests, and read announcements in the app.",
+  },
+  {
+    question: "Does Bertahub support property managers in Lagos?",
+    answer:
+      "Yes. Property managers in Lagos use Bertahub, along with an estate management company or facility management company that needs estate management services for homes and communities. The platform covers facility and estate management: billing, residents, visitors, maintenance, smart metering, and electricity vending. It is the operating system for those estate management services.",
+  },
   {
     question: "What is Berta Hub and how does it help property administrators?",
     answer:

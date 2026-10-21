@@ -1,9 +1,4 @@
-import {
-  createLandingFaqJsonLd,
-  createLandingOrganizationJsonLd,
-  createLandingSoftwareApplicationJsonLd,
-  createLandingWebSiteJsonLd,
-} from "@/lib/landing/seo";
+import { createLandingJsonLdGraph } from "@/lib/landing/seo";
 
 function JsonLdScript({ data }: { readonly data: Record<string, unknown> }) {
   return (
@@ -17,10 +12,9 @@ function JsonLdScript({ data }: { readonly data: Record<string, unknown> }) {
 export function LandingJsonLd() {
   return (
     <>
-      <JsonLdScript data={createLandingOrganizationJsonLd()} />
-      <JsonLdScript data={createLandingWebSiteJsonLd()} />
-      <JsonLdScript data={createLandingSoftwareApplicationJsonLd()} />
-      <JsonLdScript data={createLandingFaqJsonLd()} />
+      <JsonLdScript
+        data={createLandingJsonLdGraph() as Record<string, unknown>}
+      />
     </>
   );
 }

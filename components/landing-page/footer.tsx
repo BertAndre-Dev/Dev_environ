@@ -117,7 +117,7 @@ export default function Footer() {
               <div className="flex flex-col items-start md:gap-3">
                 <Image
                   src="/assets/Logo2.svg"
-                  alt="Logo"
+                  alt="Bertahub"
                   width={500}
                   height={350}
                   loading="lazy"

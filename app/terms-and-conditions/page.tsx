@@ -1,11 +1,13 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalPageHeader } from "@/components/legal-pages/legal-page-header";
+import { createPublicPageMetadata } from "@/lib/seo/public-metadata";
 
-export const metadata: Metadata = {
-  title: "Terms and Conditions | Berta Estate Hub",
-  description: "Terms and Conditions for the Berta Estate Hub platform - Bertandre Consulting",
-};
+export const metadata = createPublicPageMetadata({
+  title: "Terms and Conditions | Bertahub",
+  description:
+    "Terms and conditions for using Bertahub, the estate management platform from BertAndre Consulting Limited.",
+  path: "/terms-and-conditions",
+});
 
 export default function TermsAndConditionsPage() {
   return (

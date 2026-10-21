@@ -10,6 +10,7 @@ export default function EstateAdminUserPage() {
       allowAdminRole
       invitePolicy="staff"
       manageDesignations
+      canEditStaff
     />
   );
 }

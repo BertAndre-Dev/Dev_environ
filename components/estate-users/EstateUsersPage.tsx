@@ -132,6 +132,8 @@ type Props = {
   invitePolicy?: EstateUsersInvitePolicy;
   /** Estate-admin staff page: designations tab and create. */
   manageDesignations?: boolean;
+  /** Estate admin can open the staff edit modal. */
+  canEditStaff?: boolean;
 };
 
 export function EstateUsersPage({
@@ -140,6 +142,7 @@ export function EstateUsersPage({
   allowAdminRole = false,
   invitePolicy = "standard",
   manageDesignations = false,
+  canEditStaff = false,
 }: Readonly<Props>) {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
@@ -659,7 +662,7 @@ export function EstateUsersPage({
                   </IconTooltip>
                 )}
 
-                {roleFilter !== "staff" ? (
+                {roleFilter !== "staff" || canEditStaff ? (
                   <IconTooltip label="Edit user details">
                     <Button
                       variant="ghost"

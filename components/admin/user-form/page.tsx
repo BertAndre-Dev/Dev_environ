@@ -113,6 +113,8 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
           return;
         }
 
+        if (lockedRole !== "resident") return;
+
         const fieldRes = await dispatch(getFieldByEstate(estateId)).unwrap();
         const fields = fieldRes?.data || [];
         if (!fields.length) {

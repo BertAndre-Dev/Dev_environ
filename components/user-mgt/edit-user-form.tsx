@@ -222,6 +222,11 @@ export default function EditUserForm({
         ).map((addr) => addr.id);
         setAddressIds(selectedIds);
 
+        if (!isResidentRole(user.role)) {
+          setEntryOptions([]);
+          return;
+        }
+
         const userAddressOptions = optionsFromUserAddresses(user);
         let estateId = resolveEstateId(user.estateId);
 

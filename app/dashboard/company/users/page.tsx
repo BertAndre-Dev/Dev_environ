@@ -419,14 +419,18 @@ export default function CompanyUsersPage() {
         render: (item: CompanyUserDetails) => item.phoneNumber?.trim() || "—",
         exportValue: (item: CompanyUserDetails) => item.phoneNumber?.trim() || "",
       },
-      {
-        key: "address" as const,
-        header: "Address",
-        render: (item: CompanyUserDetails) =>
-          formatUserAddresses(item.addressIds) || "—",
-        exportValue: (item: CompanyUserDetails) =>
-          formatUserAddresses(item.addressIds),
-      },
+      ...(showResidentColumns
+        ? [
+            {
+              key: "address" as const,
+              header: "Address",
+              render: (item: CompanyUserDetails) =>
+                formatUserAddresses(item.addressIds) || "—",
+              exportValue: (item: CompanyUserDetails) =>
+                formatUserAddresses(item.addressIds),
+            },
+          ]
+        : []),
       { key: "role" as const, header: "Role" },
       ...(showResidentColumns
         ? [

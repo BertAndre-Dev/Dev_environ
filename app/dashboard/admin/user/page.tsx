@@ -7,6 +7,7 @@ export default function AdminUserPage() {
     <EstateUsersPage
       basePath="/dashboard/admin/user"
       staffPolicy="company-only"
+      invitePolicy="residents"
     />
   );
 }

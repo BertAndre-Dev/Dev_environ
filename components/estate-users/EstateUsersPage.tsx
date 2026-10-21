@@ -114,15 +114,24 @@ const PAGE_LIMIT = 10;
 
 export type EstateUsersStaffPolicy = "company-only" | "estate-always";
 
-export type EstateUsersInvitePolicy = "standard" | "none";
+export type EstateUsersInvitePolicy =
+  | "standard"
+  | "none"
+  | "residents"
+  | "staff";
 
 type Props = {
   basePath: string;
   staffPolicy: EstateUsersStaffPolicy;
   /** Estate-admin can list admins; company/estate admin pages cannot. */
   allowAdminRole?: boolean;
-  /** `none` hides invite on every role page. */
+  /**
+   * `none` hides invite. `residents` and `staff` limit invite to that role.
+   * `standard` keeps the existing staff-dashboard rules.
+   */
   invitePolicy?: EstateUsersInvitePolicy;
+  /** Estate-admin staff page: designations tab and create. */
+  manageDesignations?: boolean;
 };
 
 export function EstateUsersPage({
@@ -130,6 +139,7 @@ export function EstateUsersPage({
   staffPolicy,
   allowAdminRole = false,
   invitePolicy = "standard",
+  manageDesignations = false,
 }: Readonly<Props>) {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
@@ -177,15 +187,17 @@ export function EstateUsersPage({
     ? parseEstateAdminUserRoleQuery
     : parseAdminUserRoleQuery;
   const hasCompany = Boolean(adminCompanyId);
-  const isStandaloneEstate = !bootstrapping && !hasCompany;
   const staffAllowed = true;
   const canInvite =
-    invitePolicy !== "none" &&
-    isAdminInviteRole(roleFilter) &&
-    (roleFilter !== "staff" || isStandaloneEstate);
+    invitePolicy === "residents"
+      ? roleFilter === "resident"
+      : invitePolicy === "staff"
+        ? roleFilter === "staff"
+        : invitePolicy !== "none" &&
+          isAdminInviteRole(roleFilter) &&
+          (roleFilter !== "staff" || (!bootstrapping && !hasCompany));
   const canManageDesignations =
-    staffPolicy === "company-only" &&
-    isStandaloneEstate &&
+    manageDesignations &&
     canUseDesignationModule(authUser ?? user, estateModules);
   const requestedStaffTab = parseAdminStaffTab(searchParams.get("tab"));
   const staffTab = canManageDesignations ? requestedStaffTab : "staff";

@@ -493,14 +493,18 @@ export default function SuperAdminUserPage() {
       render: (item: SuperAdminUserData) => item.phoneNumber?.trim() || "—",
       exportValue: (item: SuperAdminUserData) => item.phoneNumber?.trim() || "",
     },
-    {
-      key: "address",
-      header: "Address",
-      render: (item: SuperAdminUserData) =>
-        formatUserAddresses(item.addressIds) || "—",
-      exportValue: (item: SuperAdminUserData) =>
-        formatUserAddresses(item.addressIds),
-    },
+    ...(showResidentColumns
+      ? [
+          {
+            key: "address",
+            header: "Address",
+            render: (item: SuperAdminUserData) =>
+              formatUserAddresses(item.addressIds) || "—",
+            exportValue: (item: SuperAdminUserData) =>
+              formatUserAddresses(item.addressIds),
+          },
+        ]
+      : []),
     ...(showResidentColumns
       ? [
           {

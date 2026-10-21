@@ -111,6 +111,8 @@ export type EditUserFormProps = {
   userId: string;
   close: () => void;
   onUpdated?: () => void;
+  /** Estate admin lists designations with this estate, not the company. */
+  designationEstateId?: string;
   fetchUser: (id: string) => Promise<unknown>;
   saveUser: (id: string, data: UpdateUserDetailsData) => Promise<unknown>;
 };
@@ -207,6 +209,7 @@ export default function EditUserForm({
   userId,
   close,
   onUpdated,
+  designationEstateId,
   fetchUser,
   saveUser,
 }: EditUserFormProps) {
@@ -274,24 +277,30 @@ export default function EditUserForm({
           const companyId =
             parseCompanyFromUser(user as Record<string, unknown>)?.id ?? "";
           const staffEstateId =
+            designationEstateId?.trim() ||
             resolveEstateId(user.estateId) ||
             resolveEstateId(user.estate) ||
             resolveEstateId(
               user.memberships?.find((membership) => membership.isCurrent)
                 ?.estateId,
             );
+          const listByEstate = Boolean(designationEstateId?.trim());
           const namedEstate = extractEstateNameFromUser(
             user as Record<string, unknown>,
           );
           setEstateLabel(namedEstate || "");
           setEntryOptions([]);
 
-          if (companyId || staffEstateId) {
+          if ((!listByEstate && companyId) || staffEstateId) {
             setDesignationLoading(true);
             try {
               const designationRes = await dispatch(
                 getDesignations({
-                  ...(companyId ? { companyId } : { estateId: staffEstateId }),
+                  ...(listByEstate
+                    ? { estateId: staffEstateId }
+                    : companyId
+                      ? { companyId }
+                      : { estateId: staffEstateId }),
                   page: 1,
                   limit: DESIGNATIONS_PAGE_SIZE,
                 }),
@@ -301,7 +310,9 @@ export default function EditUserForm({
                 (item) => item.isActive,
               );
               const options = (
-                companyId ? items.filter(isCompanyScopedDesignation) : items
+                !listByEstate && companyId
+                  ? items.filter(isCompanyScopedDesignation)
+                  : items
               ).map((item) => ({ value: item.id, label: item.name }));
               if (
                 currentDesignationId &&
@@ -413,7 +424,7 @@ export default function EditUserForm({
     return () => {
       cancelled = true;
     };
-  }, [dispatch, userId]);
+  }, [designationEstateId, dispatch, userId]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -469,8 +480,9 @@ export default function EditUserForm({
         lastName: formData.lastName.trim(),
         email: formData.email.trim(),
         countryCode: formData.countryCode.trim(),
-        ...(staff ? {} : { dateOfBirth: formData.dateOfBirth }),
-        gender: formData.gender,
+        ...(staff
+          ? {}
+          : { dateOfBirth: formData.dateOfBirth, gender: formData.gender }),
         phoneNumber: e164Phone || undefined,
         address: staff ? undefined : formData.address.trim(),
         addressIds: resident ? cleanedAddressIds : [],
@@ -603,8 +615,8 @@ export default function EditUserForm({
               </>
             ) : null}
 
+            {showStaffFields ? null : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {showStaffFields ? null : (
               <div>
                 <Label htmlFor="edit-dateOfBirth">Date of Birth</Label>
                 <IsoDatePicker
@@ -617,7 +629,6 @@ export default function EditUserForm({
                   ariaLabel="Date of Birth"
                 />
               </div>
-              )}
               <div>
                 <Label htmlFor="edit-gender">Gender</Label>
                 <select
@@ -635,6 +646,7 @@ export default function EditUserForm({
                 </select>
               </div>
             </div>
+            )}
 
             {showResidentFields ? (
               <>

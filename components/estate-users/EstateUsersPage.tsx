@@ -980,6 +980,9 @@ export function EstateUsersPage({
           >
             <InviteUserForm
               close={handleCloseModal}
+              designationEstateId={
+                canEditStaff ? selectedEstate?.value : undefined
+              }
               refresh={() =>
                 fetchAdminUsers(1).catch((err: unknown) => {
                   const message = getApiErrorMessage(err);
@@ -998,6 +1001,9 @@ export function EstateUsersPage({
           >
             <EditUserForm
               userId={editingUserId}
+              designationEstateId={
+                canEditStaff ? selectedEstate?.value : undefined
+              }
               close={() => setEditingUserId(null)}
               fetchUser={(id) => dispatch(getUser(id)).unwrap()}
               saveUser={(id, data) => dispatch(updateUser({ id, data })).unwrap()}

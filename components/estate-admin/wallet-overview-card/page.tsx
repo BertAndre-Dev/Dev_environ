@@ -62,12 +62,12 @@ function WalletBalancesAndActions({
       {autoSettlement}
 
       <div className="grid grid-cols-1 gap-2 md:grid-cols-3 lg:gap-6">
-        <div className="flex h-[150px] w-full flex-col items-center justify-center rounded-lg border border-[#CCCCCC] lg:px-4 lg:py-4">
+        {/* <div className="flex h-[150px] w-full flex-col items-center justify-center rounded-lg border border-[#CCCCCC] lg:px-4 lg:py-4">
           <p className="text-sm text-muted-foreground">Total Balance</p>
           <p className="mt-1 text-3xl font-bold md:text-4xl">
             {formatNaira(computeWalletTotalBalance(wallet))}
           </p>
-        </div>
+        </div> */}
         <div className="flex h-[150px] w-full flex-col items-center justify-center rounded-lg border border-[#CCCCCC] lg:px-4 lg:py-4">
           <p className="text-sm text-muted-foreground">Available Balance</p>
           <p className="mt-1 text-3xl font-bold md:text-4xl">

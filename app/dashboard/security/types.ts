@@ -1,4 +1,4 @@
-/** Shared type for visitor view-details API response (used by security visitor-management, verify-visitor, view-visitor). */
+/** Shared visitor shape from gate / legacy view-details responses. */
 export type VisitingType = "SHORT_VISIT" | "LONG_VISIT";
 
 export interface VisitorDetailsData {
@@ -12,15 +12,22 @@ export interface VisitorDetailsData {
   phone?: string;
   purpose?: string;
   isVerified?: boolean;
+  isCheckedOut?: boolean;
   visitingType?: VisitingType;
+  visitStartDate?: string | null;
   visitEndDate?: string | null;
   verificationCode?: string;
   createdAt?: string;
   updatedAt?: string;
   viewedBy?: { id: string; firstName: string; lastName: string; role?: string };
   verifiedBy?: { id: string; firstName: string; lastName: string; role?: string };
+  checkedOutBy?: { id: string; firstName: string; lastName: string; role?: string };
   validFrom?: string;
   validUntil?: string;
   checkinTime?: string | null;
   checkoutTime?: string | null;
+  verificationMode?: string;
+  /** Echoed when present on gate responses */
+  action?: string;
+  nextAction?: string | null;
 }

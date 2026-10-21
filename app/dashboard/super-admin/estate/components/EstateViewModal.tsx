@@ -265,7 +265,7 @@ export function EstateViewModal({
             ) : null}
           </>
         ) : estateId ? (
-          <EstateRatesTab estateId={estateId} />
+          <EstateRatesTab estateId={estateId} estateName={display?.name} />
         ) : (
           <p className="text-sm text-muted-foreground py-6 text-center">
             Estate ID is required to load rates.

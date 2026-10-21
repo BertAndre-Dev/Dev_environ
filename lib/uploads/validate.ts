@@ -2,6 +2,7 @@ import {
   ALLOWED_DOCUMENT_MIME_TYPES,
   ALLOWED_GENERAL_MIME_TYPES,
   ALLOWED_IMAGE_MIME_TYPES,
+  ALLOWED_VIDEO_MIME_TYPES,
   inferFileMimeType,
   MAX_FILE_SIZE_BYTES,
   MAX_IMAGE_SIZE_BYTES,
@@ -44,6 +45,13 @@ function rulesFor(
       maxBytes: MAX_FILE_SIZE_BYTES,
       allowed: ALLOWED_DOCUMENT_MIME_TYPES,
       label: "PDF, DOC, DOCX, XLS, or XLSX file",
+    };
+  }
+  if (kind === "video") {
+    return {
+      maxBytes: MAX_FILE_SIZE_BYTES,
+      allowed: ALLOWED_VIDEO_MIME_TYPES,
+      label: "MP4, WebM, or MOV video",
     };
   }
   return {

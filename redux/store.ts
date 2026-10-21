@@ -61,6 +61,7 @@ import adminAnnouncementsSliceReducer from "@/redux/slice/admin/announcements/an
 import adminRequestSliceReducer from "@/redux/slice/admin/request/admin-request-slice";
 import superAdminMarketplaceSliceReducer from "@/redux/slice/super-admin/marketplace/marketplace-slice";
 import residentMarketplaceSliceReducer from "@/redux/slice/resident/marketplace/marketplace-slice";
+import marketplaceSliceReducer from "@/redux/slice/marketplace/marketplace-slice";
 import residentAnnouncementsSliceReducer from "@/redux/slice/resident/announcements/announcements-slice";
 import adminExpenseHeadSliceReducer from "@/redux/slice/admin/expense-head/expense-head-slice";
 import adminExpenseEntrySliceReducer from "@/redux/slice/admin/expense-entry/expense-entry-slice";
@@ -91,6 +92,7 @@ import companyTransactionSliceReducer from "@/redux/slice/company/transaction/co
 import companyTransactionSummarySliceReducer from "@/redux/slice/company/transaction-summary/company-transaction-summary-slice";
 import companyEnergyConsumptionSliceReducer from "@/redux/slice/company/energy-consumption/company-energy-consumption-slice";
 import companyOverviewAnalyticsSliceReducer from "@/redux/slice/company/overview-analytics/company-overview-analytics-slice";
+import companyOverviewFinancialReportSliceReducer from "@/redux/slice/company/overview-financial-report/overview-financial-report-slice";
 import companyEstateEnergyUsageSliceReducer from "@/redux/slice/company/estate-energy-usage/company-estate-energy-usage-slice";
 import companyMeterSliceReducer from "@/redux/slice/company/meter-mgt/company-meter-slice";
 import reassignMeterSliceReducer from "@/redux/slice/meter/reassign-meter/reassign-meter-slice";
@@ -426,6 +428,7 @@ export const store = configureStore({
     residentInvitedTenants: residentInvitedTenantsSliceReducer,
     adminAnnouncements: adminAnnouncementsSliceReducer,
     adminRequest: adminRequestSliceReducer,
+    marketplace: marketplaceSliceReducer,
     superAdminMarketplace: superAdminMarketplaceSliceReducer,
     superAdminCompany: persistedSuperAdminCompanySliceReducer,
     companyMarketplace: persistedCompanyMarketplaceSliceReducer,
@@ -449,6 +452,7 @@ export const store = configureStore({
     companyTransactionSummary: companyTransactionSummarySliceReducer,
     companyEnergyConsumption: companyEnergyConsumptionSliceReducer,
     companyOverviewAnalytics: companyOverviewAnalyticsSliceReducer,
+    companyOverviewFinancialReport: companyOverviewFinancialReportSliceReducer,
     companyEstateEnergyUsage: companyEstateEnergyUsageSliceReducer,
     companyMeter: companyMeterSliceReducer,
     reassignMeter: reassignMeterSliceReducer,

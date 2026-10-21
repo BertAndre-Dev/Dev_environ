@@ -2,6 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Edit2, Trash2, ScrollText, Power, PowerOff, ChevronDown } from "lucide-react";
@@ -57,6 +58,7 @@ interface BillData {
   isActive?: boolean;
   isServiceCharge?: boolean;
   compulsory?: boolean;
+  collectionDate?: string;
   accrueInterest?: boolean;
   interestRatePercent?: number;
   interestStartsAt?: string;
@@ -155,6 +157,8 @@ export default function StaffBillPage() {
   const [assignedEndDate, setAssignedEndDate] = useState("");
   const [loadingAddresses, setLoadingAddresses] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
+  const [billsPageSize, setBillsPageSize] = useState(10);
+  const [assignedPageSize, setAssignedPageSize] = useState(10);
 
   const {
     allBills,
@@ -208,13 +212,13 @@ export default function StaffBillPage() {
           addressId,
           estateId: eId,
           page: opts?.page ?? 1,
-          limit: opts?.limit ?? 10,
+          limit: opts?.limit ?? assignedPageSize,
           startDate: shouldApplyDate ? opts?.startDate : undefined,
           endDate: shouldApplyDate ? opts?.endDate : undefined,
         }),
       ).unwrap();
     },
-    [dispatch],
+    [dispatch, assignedPageSize],
   );
 
   useEffect(() => {
@@ -248,7 +252,7 @@ export default function StaffBillPage() {
         setEstateId(foundEstateId);
 
         await dispatch(
-          getBillsByEstate({ estateId: foundEstateId, page: 1, limit: 10 }),
+          getBillsByEstate({ estateId: foundEstateId, page: 1, limit: billsPageSize }),
         ).unwrap();
       } catch (err: unknown) {
         const message = getApiErrorMessage(err);
@@ -302,7 +306,7 @@ export default function StaffBillPage() {
       getBillsByEstate({
         estateId,
         page: 1,
-        limit: 10,
+        limit: billsPageSize,
         startDate: shouldApplyDate ? billsStartDate : undefined,
         endDate: shouldApplyDate ? billsEndDate : undefined,
       }),
@@ -312,7 +316,7 @@ export default function StaffBillPage() {
         const message = getApiErrorMessage(err);
         if (message) toast.error(message);
       });
-  }, [dispatch, estateId, billsStartDate, billsEndDate, activeTab]);
+  }, [dispatch, estateId, billsStartDate, billsEndDate, activeTab, billsPageSize]);
 
   useEffect(() => {
     if (!estateId || activeTab !== "assigned" || !assignedAddressId) return;
@@ -383,7 +387,7 @@ export default function StaffBillPage() {
       getBillsByEstate({
         estateId,
         page: 1,
-        limit: 10,
+        limit: billsPageSize,
         startDate:
           billsStartDate && billsEndDate ? billsStartDate : undefined,
         endDate: billsStartDate && billsEndDate ? billsEndDate : undefined,
@@ -473,7 +477,7 @@ export default function StaffBillPage() {
         getBillsByEstate({
           estateId,
           page: 1,
-          limit: 10,
+          limit: billsPageSize,
           startDate:
             billsStartDate && billsEndDate ? billsStartDate : undefined,
           endDate: billsStartDate && billsEndDate ? billsEndDate : undefined,
@@ -502,6 +506,7 @@ export default function StaffBillPage() {
               amount: data.amount,
               frequency: "oneoff",
               compulsory: data.compulsory,
+              collectionDate: data.collectionDate,
               accrueInterest: data.accrueInterest,
               interestRatePercent: data.interestRatePercent,
               interestStartsAt: data.interestStartsAt,
@@ -519,6 +524,7 @@ export default function StaffBillPage() {
             amount: data.amount,
             frequency: "oneoff",
             compulsory: data.compulsory,
+            collectionDate: data.collectionDate,
             accrueInterest: data.accrueInterest,
             interestRatePercent: data.interestRatePercent,
             interestStartsAt: data.interestStartsAt,
@@ -618,43 +624,53 @@ export default function StaffBillPage() {
       header: "Actions",
       render: (item: BillData) => (
         <div className="flex items-center gap-2">
-          <Button
-            className="text-blue-600 hover:text-blue-700 cursor-pointer"
-            variant="ghost"
-            size="sm"
-            onClick={() => handleOpenModal(item)}
-          >
-            <Edit2 className="w-4 h-4" />
-          </Button>
+          <IconTooltip label="Edit">
+            <Button
+              className="text-blue-600 hover:text-blue-700 cursor-pointer"
+              variant="ghost"
+              size="sm"
+              onClick={() => handleOpenModal(item)}
+              aria-label="Edit"
+            >
+              <Edit2 className="w-4 h-4" />
+            </Button>
+          </IconTooltip>
           {item.isActive ? (
+            <IconTooltip label="Suspend bill">
+              <Button
+                className="text-red-600 hover:text-red-700 cursor-pointer"
+                variant="ghost"
+                size="sm"
+                onClick={() => openSuspendModal(item)}
+                aria-label="Suspend bill"
+              >
+                <PowerOff className="w-4 h-4" />
+              </Button>
+            </IconTooltip>
+          ) : (
+            <IconTooltip label="Activate bill">
+              <Button
+                className="text-green-600 hover:text-green-700 cursor-pointer"
+                variant="ghost"
+                size="sm"
+                onClick={() => handleActivateBill(item)}
+                aria-label="Activate bill"
+              >
+                <Power className="w-4 h-4" />
+              </Button>
+            </IconTooltip>
+          )}
+          <IconTooltip label="Delete">
             <Button
               className="text-red-600 hover:text-red-700 cursor-pointer"
               variant="ghost"
               size="sm"
-              onClick={() => openSuspendModal(item)}
-              title="Suspend bill"
+              onClick={() => handleDeleteBill(item.id, item.name)}
+              aria-label="Delete"
             >
-              <PowerOff className="w-4 h-4" />
+              <Trash2 className="w-4 h-4" />
             </Button>
-          ) : (
-            <Button
-              className="text-green-600 hover:text-green-700 cursor-pointer"
-              variant="ghost"
-              size="sm"
-              onClick={() => handleActivateBill(item)}
-              title="Activate bill"
-            >
-              <Power className="w-4 h-4" />
-            </Button>
-          )}
-          <Button
-            className="text-red-600 hover:text-red-700 cursor-pointer"
-            variant="ghost"
-            size="sm"
-            onClick={() => handleDeleteBill(item.id, item.name)}
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
+          </IconTooltip>
         </div>
       ),
     },
@@ -748,25 +764,30 @@ export default function StaffBillPage() {
 
         return (
           <div className="flex items-center gap-2">
-            <Button
-              className="text-blue-600 hover:text-blue-700 cursor-pointer"
-              variant="ghost"
-              size="sm"
-              onClick={() => openEditAssignedModal(item)}
-              title="Edit bill"
-              disabled={!actionId}
-            >
-              <Edit2 className="w-4 h-4" />
-            </Button>
-            <Button
-              className="text-red-600 hover:text-red-700 cursor-pointer"
-              variant="ghost"
-              size="sm"
-              onClick={() => handleDeleteBill(actionId, name)}
-              disabled={!actionId}
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
+            <IconTooltip label="Edit bill">
+              <Button
+                className="text-blue-600 hover:text-blue-700 cursor-pointer"
+                variant="ghost"
+                size="sm"
+                onClick={() => openEditAssignedModal(item)}
+                aria-label="Edit bill"
+                disabled={!actionId}
+              >
+                <Edit2 className="w-4 h-4" />
+              </Button>
+            </IconTooltip>
+            <IconTooltip label="Delete">
+              <Button
+                className="text-red-600 hover:text-red-700 cursor-pointer"
+                variant="ghost"
+                size="sm"
+                onClick={() => handleDeleteBill(actionId, name)}
+                disabled={!actionId}
+                aria-label="Delete"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </IconTooltip>
           </div>
         );
       },
@@ -900,7 +921,7 @@ export default function StaffBillPage() {
               paginationInfo={{
                 total: pagination?.total || 0,
                 current: Number(pagination?.page) || 1,
-                pageSize: Number(pagination?.limit) || 10,
+                pageSize: billsPageSize,
               }}
               onPageChange={(page) => {
                 if (!estateId) return;
@@ -909,7 +930,7 @@ export default function StaffBillPage() {
                   getBillsByEstate({
                     estateId,
                     page,
-                    limit: 10,
+                    limit: billsPageSize,
                     startDate: shouldApplyDate ? billsStartDate : undefined,
                     endDate: shouldApplyDate ? billsEndDate : undefined,
                   }),
@@ -919,6 +940,9 @@ export default function StaffBillPage() {
                     const message = getApiErrorMessage(err);
                     if (message) toast.error(message);
                   });
+              }}
+              onPageSizeChange={(size) => {
+                setBillsPageSize(size);
               }}
               enableExport
               exportFileName="bills"
@@ -997,10 +1021,7 @@ export default function StaffBillPage() {
                     Number(assignedPagination?.page) ||
                     Number(assignedPagination?.currentPage) ||
                     1,
-                  pageSize:
-                    Number(assignedPagination?.limit) ||
-                    Number(assignedPagination?.pageSize) ||
-                    10,
+                  pageSize: assignedPageSize,
                 }}
                 onPageChange={(page) => {
                   if (!estateId || !assignedAddressId) return;
@@ -1012,6 +1033,9 @@ export default function StaffBillPage() {
                     const message = getApiErrorMessage(err);
                     if (message) toast.error(message);
                   });
+                }}
+                onPageSizeChange={(size) => {
+                  setAssignedPageSize(size);
                 }}
                 enableExport
                 exportFileName="assigned-bills"

@@ -66,7 +66,7 @@ export function PlatformFeeList({
   );
 
   const page = pagination?.page ?? 1;
-  const limit = pagination?.limit ?? items.length;
+  const limit = pageSize ?? pagination?.limit ?? items.length;
   const total = pagination?.total ?? items.length;
 
   return (

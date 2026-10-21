@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { IsoDatePicker } from "@/components/ui/iso-date-picker";
 import { toast } from "react-toastify";
 import { getApiErrorMessage } from "@/lib/api-error";
 import {
@@ -32,7 +33,9 @@ export interface BillForAddressFormData {
   description: string;
   amount: number;
   frequency: "oneoff";
+  isServiceCharge?: boolean;
   compulsory: boolean;
+  collectionDate?: string;
   accrueInterest?: boolean;
   interestRatePercent?: number;
   interestStartsAt?: string;
@@ -45,7 +48,9 @@ export interface BillForAddressInitialData {
   name?: string;
   description?: string;
   amount?: number;
+  isServiceCharge?: boolean;
   compulsory?: boolean;
+  collectionDate?: string;
   accrueInterest?: boolean;
   interestRatePercent?: number;
   interestStartsAt?: string;
@@ -112,6 +117,7 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
         ? formatAmountInput(String(initialData.amount))
         : "",
     compulsory: Boolean(initialData?.compulsory),
+    collectionDate: toInterestStartDate(initialData?.collectionDate),
     accrueInterest: Boolean(initialData?.accrueInterest),
     interestRatePercent:
       initialData?.interestRatePercent != null
@@ -230,6 +236,10 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
           compulsory: Boolean(
             fetchData.compulsory ?? initialData?.compulsory ?? prev.compulsory,
           ),
+          collectionDate:
+            toInterestStartDate(fetchData.collectionDate) ||
+            toInterestStartDate(initialData?.collectionDate) ||
+            prev.collectionDate,
           accrueInterest: Boolean(
             fetchData.accrueInterest ??
               initialData?.accrueInterest ??
@@ -301,6 +311,10 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
       toast.error("Please select when interest should start.");
       return;
     }
+    if (!form.collectionDate) {
+      toast.error("Please select a collection date.");
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -311,6 +325,7 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
         amount,
         frequency: "oneoff",
         compulsory: form.compulsory,
+        collectionDate: form.collectionDate,
         ...(canAccrueInterest
           ? {
               accrueInterest: form.accrueInterest,
@@ -338,24 +353,6 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
           <p className="text-gray-500 italic">Loading bill...</p>
         ) : (
           <>
-            {canAccrueInterest ? (
-            <AccrueInterestFields
-              idPrefix="address-bill"
-              accrueInterest={form.accrueInterest}
-              interestRatePercent={form.interestRatePercent}
-              interestStartsAt={form.interestStartsAt}
-              onAccrueInterestChange={(value) =>
-                handleChange("accrueInterest", value)
-              }
-              onInterestRateChange={(value) =>
-                handleChange("interestRatePercent", value)
-              }
-              onInterestStartsAtChange={(value) =>
-                handleChange("interestStartsAt", value)
-              }
-            />
-            ) : null}
-
             <div className="space-y-2">
               <Label htmlFor="addressId">Address</Label>
               <select
@@ -435,6 +432,35 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
                   handleChange("amount", formatAmountInput(e.target.value))
                 }
                 placeholder="25,000"
+              />
+            </div>
+
+            {canAccrueInterest ? (
+              <AccrueInterestFields
+                idPrefix="address-bill"
+                accrueInterest={form.accrueInterest}
+                interestRatePercent={form.interestRatePercent}
+                interestStartsAt={form.interestStartsAt}
+                onAccrueInterestChange={(value) =>
+                  handleChange("accrueInterest", value)
+                }
+                onInterestRateChange={(value) =>
+                  handleChange("interestRatePercent", value)
+                }
+                onInterestStartsAtChange={(value) =>
+                  handleChange("interestStartsAt", value)
+                }
+              />
+            ) : null}
+
+            <div>
+              <Label htmlFor="address-bill-collection-date">Collection date</Label>
+              <IsoDatePicker
+                id="address-bill-collection-date"
+                value={form.collectionDate}
+                onChange={(iso) => handleChange("collectionDate", iso)}
+                placeholder="Select collection date"
+                withPortal={false}
               />
             </div>
 

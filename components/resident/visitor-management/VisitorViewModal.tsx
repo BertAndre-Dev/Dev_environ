@@ -3,7 +3,12 @@
 import React from "react";
 import Modal from "@/components/modal/page";
 import { Button } from "@/components/ui/button";
-import type { ResidentVisitorData } from "./types";
+import {
+  formatVisitorDateTime,
+  formatVisitorPerson,
+  visitorGateStatus,
+  type ResidentVisitorData,
+} from "./types";
 
 export function VisitorViewModal({
   open,
@@ -15,6 +20,10 @@ export function VisitorViewModal({
   onClose: () => void;
 }>) {
   if (!open || !visitor) return null;
+
+  const status = visitorGateStatus(visitor);
+  const viewedBy = formatVisitorPerson(visitor.viewedBy);
+  const checkedOutBy = formatVisitorPerson(visitor.checkedOutBy);
 
   return (
     <Modal visible={open} onClose={onClose}>
@@ -29,37 +38,31 @@ export function VisitorViewModal({
         </div>
 
         <div className="space-y-5">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="mb-1 text-xs font-medium uppercase tracking-wider text-gray-500">
                 Visitor Code
               </p>
-              <p className="text-lg font-semibold text-gray-900">
+              <p className="font-mono text-lg font-semibold text-gray-900">
                 {visitor.visitorCode || "—"}
               </p>
             </div>
-            <div className="flex-shrink-0">
-              <span
-                className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${
-                  visitor.isVerified
-                    ? "bg-green-50 text-green-700 ring-1 ring-green-600/20"
-                    : "bg-amber-50 text-amber-700 ring-1 ring-amber-600/20"
-                }`}
-              >
-                {visitor.isVerified ? "✓ Verified" : "⋯ Pending"}
-              </span>
-            </div>
+            <span
+              className={`inline-flex shrink-0 items-center rounded-full px-3 py-1.5 text-xs font-medium ${status.className}`}
+            >
+              {status.label}
+            </span>
           </div>
 
-          <div className="border-t border-gray-100"></div>
+          <div className="border-t border-gray-100" />
 
           <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">
+            <h3 className="mb-3 text-sm font-semibold text-gray-700">
               Personal Information
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-xs font-medium text-gray-500 mb-1">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="rounded-lg bg-gray-50 p-3">
+                <p className="mb-1 text-xs font-medium text-gray-500">
                   Full Name
                 </p>
                 <p className="text-base text-gray-900">
@@ -67,8 +70,8 @@ export function VisitorViewModal({
                     "—"}
                 </p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-xs font-medium text-gray-500 mb-1">
+              <div className="rounded-lg bg-gray-50 p-3">
+                <p className="mb-1 text-xs font-medium text-gray-500">
                   Phone Number
                 </p>
                 <p className="text-base text-gray-900">{visitor.phone || "—"}</p>
@@ -77,82 +80,112 @@ export function VisitorViewModal({
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">
+            <h3 className="mb-3 text-sm font-semibold text-gray-700">
               Visit Information
             </h3>
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs font-medium text-gray-500 mb-1">
-                Purpose of Visit
-              </p>
-              <p className="text-base text-gray-900">{visitor.purpose || "—"}</p>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="rounded-lg bg-gray-50 p-3">
+                <p className="mb-1 text-xs font-medium text-gray-500">Purpose</p>
+                <p className="text-base text-gray-900">
+                  {visitor.purpose || "—"}
+                </p>
+              </div>
+              <div className="rounded-lg bg-gray-50 p-3">
+                <p className="mb-1 text-xs font-medium text-gray-500">
+                  Visit type
+                </p>
+                <p className="text-base text-gray-900">
+                  {visitor.visitingType === "LONG_VISIT"
+                    ? "Long visit"
+                    : visitor.visitingType === "SHORT_VISIT"
+                      ? "Short visit"
+                      : "—"}
+                </p>
+              </div>
+              <div className="rounded-lg bg-gray-50 p-3">
+                <p className="mb-1 text-xs font-medium text-gray-500">
+                  Visit start
+                </p>
+                <p className="text-base text-gray-900">
+                  {formatVisitorDateTime(visitor.visitStartDate)}
+                </p>
+              </div>
+              <div className="rounded-lg bg-gray-50 p-3">
+                <p className="mb-1 text-xs font-medium text-gray-500">Visit end</p>
+                <p className="text-base text-gray-900">
+                  {formatVisitorDateTime(visitor.visitEndDate)}
+                </p>
+              </div>
             </div>
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">
+            <h3 className="mb-3 text-sm font-semibold text-gray-700">
+              Gate activity
+            </h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="rounded-lg bg-gray-50 p-3">
+                <p className="mb-1 text-xs font-medium text-gray-500">Check-in</p>
+                <p className="text-base text-gray-900">
+                  {formatVisitorDateTime(visitor.checkinTime)}
+                </p>
+              </div>
+              <div className="rounded-lg bg-gray-50 p-3">
+                <p className="mb-1 text-xs font-medium text-gray-500">
+                  Check-out
+                </p>
+                <p className="text-base text-gray-900">
+                  {formatVisitorDateTime(visitor.checkoutTime)}
+                </p>
+              </div>
+              <div className="rounded-lg bg-gray-50 p-3">
+                <p className="mb-1 text-xs font-medium text-gray-500">
+                  Viewed by
+                </p>
+                <p className="text-base text-gray-900">{viewedBy || "—"}</p>
+              </div>
+              <div className="rounded-lg bg-gray-50 p-3">
+                <p className="mb-1 text-xs font-medium text-gray-500">
+                  Checked out by
+                </p>
+                <p className="text-base text-gray-900">
+                  {checkedOutBy || "—"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="mb-3 text-sm font-semibold text-gray-700">
               Timestamps
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-start space-x-2">
-                <svg
-                  className="w-4 h-4 text-gray-400 mt-0.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <div>
-                  <p className="text-xs font-medium text-gray-500">Created</p>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="rounded-lg bg-gray-50 p-3">
+                <p className="mb-1 text-xs font-medium text-gray-500">Created</p>
+                <p className="text-sm text-gray-900">
+                  {formatVisitorDateTime(visitor.createdAt)}
+                </p>
+              </div>
+              {visitor.updatedAt ? (
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <p className="mb-1 text-xs font-medium text-gray-500">
+                    Last updated
+                  </p>
                   <p className="text-sm text-gray-900">
-                    {visitor.createdAt
-                      ? new Date(visitor.createdAt).toLocaleString("en-US", {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })
-                      : "—"}
+                    {formatVisitorDateTime(visitor.updatedAt)}
                   </p>
                 </div>
-              </div>
-              {visitor.updatedAt && (
-                <div className="flex items-start space-x-2">
-                  <svg
-                    className="w-4 h-4 text-gray-400 mt-0.5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    />
-                  </svg>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500">
-                      Last Updated
-                    </p>
-                    <p className="text-sm text-gray-900">
-                      {new Date(visitor.updatedAt).toLocaleString("en-US", {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
-                    </p>
-                  </div>
-                </div>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
 
         <div className="pt-4">
-          <Button variant="outline" onClick={onClose} className="w-full cursor-pointer">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="w-full cursor-pointer"
+          >
             Close
           </Button>
         </div>
@@ -160,4 +193,3 @@ export function VisitorViewModal({
     </Modal>
   );
 }
-

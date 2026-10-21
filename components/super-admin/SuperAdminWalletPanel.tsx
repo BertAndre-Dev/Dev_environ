@@ -38,6 +38,8 @@ type SuperAdminWalletPanelProps = Readonly<{
     pages?: number;
   } | null;
   onCreditsPageChange?: (page: number) => void;
+  onCreditsPageSizeChange?: (pageSize: number) => void;
+  creditsPageSize?: number;
   walletLoading?: boolean;
   walletError?: string | null;
 }>;
@@ -52,6 +54,8 @@ export function SuperAdminWalletPanel({
   creditsLoading = false,
   creditsPagination,
   onCreditsPageChange,
+  onCreditsPageSizeChange,
+  creditsPageSize,
   walletLoading = false,
   walletError = null,
 }: SuperAdminWalletPanelProps) {
@@ -131,10 +135,10 @@ export function SuperAdminWalletPanel({
       ) : null}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <BalanceCard
+        {/* <BalanceCard
           label="Total balance"
           value={computeWalletTotalBalance(wallet)}
-        />
+        /> */}
         <BalanceCard label="Available balance" value={wallet.availableBalance} />
         <BalanceCard
           label="Withdrawable balance"
@@ -144,7 +148,7 @@ export function SuperAdminWalletPanel({
           label="Temporary balance"
           value={wallet.temporaryBalance}
         />
-        <BalanceCard label="Locked balance" value={wallet.lockedBalance} />
+        {/* <BalanceCard label="Locked balance" value={wallet.lockedBalance} /> */}
       </div>
 
       {wallet.autoSettlementEnabled != null ? (
@@ -183,11 +187,13 @@ export function SuperAdminWalletPanel({
                   ? {
                       total: creditsPagination.total,
                       current: creditsPagination.page,
-                      pageSize: creditsPagination.limit,
+                      pageSize:
+                        creditsPageSize ?? creditsPagination.limit,
                     }
                   : undefined
               }
               onPageChange={onCreditsPageChange}
+              onPageSizeChange={onCreditsPageSizeChange}
             />
           )}
         </div>

@@ -570,3 +570,94 @@ export interface PlatformFeeQueryParams {
   page?: number;
   limit?: number;
 }
+
+/** GET /api/v1/financial-report/company/generate */
+export type CompanyGenerateFinancialReportStatus = "Profit" | "Loss";
+
+export interface CompanyGenerateFinancialReportEstateRef {
+  id: string;
+  name: string;
+}
+
+export interface CompanyGenerateFinancialReportWallet {
+  availableBalance: number;
+  withdrawableBalance: number;
+  balance: number;
+}
+
+/**
+ * Revenue/estate `byHead` is empty in current API samples.
+ * Kept as unknown[] until the payload shape is confirmed.
+ */
+export type CompanyGenerateFinancialReportByHead = unknown;
+
+export interface CompanyGenerateFinancialReportByEstate {
+  estateId: string;
+  estateName: string;
+  vendingRevenue: number;
+  billPaymentRevenue: number;
+  byHead: CompanyGenerateFinancialReportByHead[];
+  totalRevenue: number;
+  totalExpenses: number;
+  netProfitLoss: number;
+  status: CompanyGenerateFinancialReportStatus;
+}
+
+export interface CompanyGenerateFinancialReportPeriod {
+  startDate: string;
+  endDate: string;
+}
+
+export interface CompanyGenerateFinancialReportRevenue {
+  vendingRevenue: number;
+  billPaymentRevenue: number;
+  byHead: CompanyGenerateFinancialReportByHead[];
+  totalRevenue: number;
+}
+
+export interface CompanyGenerateFinancialReportExpenseHead {
+  _id: string;
+  headName: string;
+  estateId: string;
+  totalAmount: number;
+  entryCount: number;
+}
+
+export interface CompanyGenerateFinancialReportExpenses {
+  totalExpenses: number;
+  byHead: CompanyGenerateFinancialReportExpenseHead[];
+}
+
+export interface CompanyGenerateFinancialReportSummary {
+  totalRevenue: number;
+  totalExpenses: number;
+  netProfitLoss: number;
+  /** API returns a string; values can be extreme when revenue is tiny. */
+  profitMargin: string;
+  status: CompanyGenerateFinancialReportStatus;
+}
+
+export interface CompanyGenerateFinancialReportData {
+  companyId: string;
+  estateFilter: string | null;
+  estatesIncluded: CompanyGenerateFinancialReportEstateRef[];
+  wallet: CompanyGenerateFinancialReportWallet;
+  byEstate: CompanyGenerateFinancialReportByEstate[];
+  reportPeriod: CompanyGenerateFinancialReportPeriod;
+  revenue: CompanyGenerateFinancialReportRevenue;
+  expenses: CompanyGenerateFinancialReportExpenses;
+  summary: CompanyGenerateFinancialReportSummary;
+}
+
+export interface CompanyGenerateFinancialReportResponse {
+  success: boolean;
+  message: string;
+  data: CompanyGenerateFinancialReportData;
+}
+
+export interface CompanyGenerateFinancialReportQueryParams {
+  companyId: string;
+  estateId?: string;
+  startDate?: string;
+  endDate?: string;
+}

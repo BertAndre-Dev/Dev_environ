@@ -1,21 +1,14 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Eye, ShieldCheck } from "lucide-react";
 import RecentVisitorInvites from "@/components/security/recent-visitor-invites";
-import ViewVisitorModal from "@/components/security/ViewVisitorModal";
-import VerifyModal from "@/components/security/VerifyModal";
-import ClockOutCard from "@/components/security/ClockOutCard";
-import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import GateConsole from "@/components/security/GateConsole";
 import Loader from "@/components/ui/Loader";
 import { isPending } from "@/lib/async-status";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getAllVisitors } from "@/redux/slice/security/visitor/visitor";
 import {
-  clearActiveVisitor,
-  setActiveVisitor,
-  setLookupSource,
   setSecurityEstateId,
   setSecurityVerificationContext,
 } from "@/redux/slice/security/visitor/visitor-slice";
@@ -37,10 +30,18 @@ function readInitialVerificationMode(): VisitorVerificationMode | null {
   );
 }
 
+function modeSubtitle(mode: VisitorVerificationMode | null): string {
+  if (mode === VisitorVerificationMode.VIEW_ONLY) {
+    return "View only — check in on first scan, check out on the next.";
+  }
+  if (mode === VisitorVerificationMode.VERIFY_ONLY) {
+    return "Verify only — verify and check in on first scan, check out on the next.";
+  }
+  return "View and verify — view, then a different officer verifies and checks in.";
+}
+
 export default function VisitorManagementPage() {
   const dispatch = useDispatch<AppDispatch>();
-  const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [verifyModalOpen, setVerifyModalOpen] = useState(false);
 
   const authUser = useSelector((state: RootState) => state.auth.user);
   const {
@@ -50,8 +51,6 @@ export default function VisitorManagementPage() {
     visitorVerificationMode,
     verificationDescription,
     contextReady,
-    activeVisitor,
-    lookupSource,
   } = useSelector((state: RootState) => {
     const v = state.securityVisitor;
     return {
@@ -61,16 +60,14 @@ export default function VisitorManagementPage() {
       visitorVerificationMode: v?.visitorVerificationMode ?? null,
       verificationDescription: v?.verificationDescription ?? null,
       contextReady: Boolean(v?.contextReady),
-      activeVisitor: v?.activeVisitor ?? null,
-      lookupSource: v?.lookupSource ?? null,
     };
   });
 
   const verificationFlags = useMemo(
     () =>
-      visitorVerificationMode
-        ? getVerificationFlags(visitorVerificationMode)
-        : null,
+      getVerificationFlags(
+        visitorVerificationMode ?? VisitorVerificationMode.VIEW_AND_VERIFY,
+      ),
     [visitorVerificationMode],
   );
 
@@ -148,135 +145,39 @@ export default function VisitorManagementPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch]);
 
-  const handleCloseViewModal = () => {
-    setViewModalOpen(false);
-    dispatch(clearActiveVisitor());
-  };
-
-  const showViewCard =
-    contextReady &&
-    Boolean(
-      verificationFlags?.viewOnly || verificationFlags?.viewAndVerify,
-    );
-  const showVerifyCard =
-    contextReady &&
-    Boolean(
-      verificationFlags?.verifyOnly || verificationFlags?.viewAndVerify,
-    );
-  const actionCardCount = Number(showViewCard) + Number(showVerifyCard);
-  // Gate list pending on estateId so idle never sticks after context is ready with no estate.
   const pageLoading =
     !contextReady ||
     (Boolean(estateId) && isPending(getAllVisitorsStatus));
 
   return (
     <div className="relative">
-      {pageLoading && <Loader fullScreen label="Loading visitors..." />}
+      {pageLoading && <Loader fullScreen label="Loading gate..." />}
 
       <div
-        className={`space-y-6${pageLoading ? " pointer-events-none select-none" : ""}`}
+        className={`space-y-8${pageLoading ? " pointer-events-none select-none" : ""}`}
       >
         <div>
-          <h1 className="font-heading text-3xl font-bold">
+          <h1 className="font-heading text-3xl font-bold tracking-[-0.02em]">
             Visitor Management
           </h1>
-          <p className="text-muted-foreground mt-1">
-            View visitors at the gate, or verify and clock them out.
+          <p className="mt-1 text-muted-foreground">
+            {modeSubtitle(visitorVerificationMode)}
           </p>
         </div>
 
-        <div className="space-y-8 pb-6">
-          <div
-            className={`grid gap-4 ${
-              actionCardCount <= 1
-                ? "grid-cols-1"
-                : "grid-cols-1 sm:grid-cols-2"
-            }`}
-          >
-            {showViewCard ? (
-              <button
-                type="button"
-                onClick={() => setViewModalOpen(true)}
-                className="text-left rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <Card className="h-full transition-shadow hover:shadow-md cursor-pointer border-border">
-                  <div className="px-4 pt-2 flex items-center gap-2">
-                    <Eye className="h-6 w-6" />
-                    <CardTitle className="text-xl">
-                      Click here to view visitor
-                    </CardTitle>
-                  </div>
-
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      Scan or enter a visitor code to view visitor and resident
-                      details.
-                    </p>
-                  </CardContent>
-                </Card>
-              </button>
-            ) : null}
-
-            {showVerifyCard ? (
-              <button
-                type="button"
-                onClick={() => setVerifyModalOpen(true)}
-                className="text-left rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <Card className="h-full transition-shadow hover:shadow-md cursor-pointer border-border">
-                  <div className="px-4 pt-2 flex items-center gap-2">
-                    <ShieldCheck className="h-6 w-6" />
-                    <CardTitle className="text-xl">Verify</CardTitle>
-                  </div>
-
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      Enter a visitor code to verify and allow access.
-                    </p>
-                  </CardContent>
-                </Card>
-              </button>
-            ) : null}
-          </div>
-
-          {contextReady ? <ClockOutCard onClockedOut={refreshVisitors} /> : null}
-        </div>
+        {contextReady ? (
+          <GateConsole
+            verificationFlags={verificationFlags}
+            verificationDescription={verificationDescription}
+            onGateSuccess={refreshVisitors}
+          />
+        ) : null}
 
         <RecentVisitorInvites
           visitors={allVisitors?.data ?? []}
           loading={false}
         />
       </div>
-
-      <ViewVisitorModal
-        open={viewModalOpen}
-        onClose={handleCloseViewModal}
-        visitorDetails={activeVisitor}
-        lookupSource={lookupSource}
-        verificationFlags={
-          verificationFlags ??
-          getVerificationFlags(VisitorVerificationMode.VIEW_AND_VERIFY)
-        }
-        verificationDescription={verificationDescription}
-        onLookupSource={(source) => dispatch(setLookupSource(source))}
-        onDetailsLoaded={(visitor) => {
-          dispatch(setActiveVisitor(visitor));
-        }}
-        onVerified={(visitor) => {
-          if (visitor) dispatch(setActiveVisitor(visitor));
-          refreshVisitors();
-        }}
-      />
-
-      <VerifyModal
-        open={verifyModalOpen}
-        onClose={() => setVerifyModalOpen(false)}
-        initialCode={activeVisitor?.visitorCode}
-        onVerified={(visitor) => {
-          if (visitor) dispatch(setActiveVisitor(visitor));
-          refreshVisitors();
-        }}
-      />
     </div>
   );
 }

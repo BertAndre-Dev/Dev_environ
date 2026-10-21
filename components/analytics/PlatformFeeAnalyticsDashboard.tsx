@@ -120,6 +120,7 @@ export function PlatformFeeAnalyticsDashboard({
     }
     return options;
   }, [estates]);
+  
 
   const fetchedCompanyOptions = useMemo<FilterOption[]>(
     () =>
@@ -156,9 +157,9 @@ export function PlatformFeeAnalyticsDashboard({
       estateId: filters.estateId ?? undefined,
       companyId: filters.companyId ?? undefined,
       page,
-      limit: PAGE_LIMIT,
+      limit: pageSize,
     }),
-    [filters, page],
+    [filters, page, pageSize],
   );
 
   useEffect(() => {
@@ -312,6 +313,7 @@ export function PlatformFeeAnalyticsDashboard({
           <PlatformFeeList
             items={data.list ?? []}
             pagination={pagination}
+            pageSize={pageSize}
             onPageChange={setPage}
             onExportRequest={async () => {
               try {

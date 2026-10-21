@@ -85,7 +85,7 @@ export default function PayBillsPage() {
   const [amount, setAmount] = useState<string>("");
   const [pin, setPin] = useState("");
   const [historyPage, setHistoryPage] = useState(1);
-  const historyLimit = 10;
+  const [historyLimit, setHistoryLimit] = useState(10);
 
   const [payResultModal, setPayResultModal] = useState<{
     open: boolean;
@@ -175,7 +175,7 @@ export default function PayBillsPage() {
     dispatch(
       getBillPaymentHistory({ page: historyPage, limit: historyLimit }),
     ).catch(() => {});
-  }, [dispatch, historyPage]);
+  }, [dispatch, historyPage, historyLimit]);
 
   // ── 4. Fetch billers when category changes ────────────────────────────────
   useEffect(() => {
@@ -310,10 +310,7 @@ export default function PayBillsPage() {
             pageLoading ? "pointer-events-none select-none" : "",
           ].join(" ")}
         >
-          <h1 className="text-2xl font-bold">Pay Bills</h1>
-          <p className="text-sm text-muted-foreground">
-            Set up your 4-digit bill payment PIN to continue.
-          </p>
+          <h1 className="text-2xl font-bold tracking-[-0.02em]">Pay Bills</h1>
           <div className="w-full">
             <SetUpPinCard onSubmitPin={handleSubmitBillPin} />
           </div>
@@ -446,6 +443,10 @@ export default function PayBillsPage() {
           historyPage={historyPage}
           historyLimit={historyLimit}
           onHistoryPageChange={setHistoryPage}
+          onHistoryPageSizeChange={(size) => {
+            setHistoryLimit(size);
+            setHistoryPage(1);
+          }}
         />
 
         <FundWalletModal

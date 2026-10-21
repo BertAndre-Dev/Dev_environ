@@ -225,6 +225,17 @@ export function userHasDesignationModule(user: unknown): boolean {
   return false;
 }
 
+/** True when the signed-in user or estate modules include designation. */
+export function canUseDesignationModule(
+  user: unknown,
+  estateModules: string[] = [],
+): boolean {
+  if (userHasDesignationModule(user)) return true;
+  return estateModules.some(
+    (key) => key.trim().toLowerCase() === DESIGNATION_MODULE_KEY,
+  );
+}
+
 export function getDesignationScope(item: Designation): DesignationScope {
   return item.estateId ? "estate" : "company";
 }

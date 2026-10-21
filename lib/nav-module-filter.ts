@@ -67,6 +67,12 @@ export function filterNavItemsByEstateModules<T extends NavItemWithModule>(
       alwaysVisible.add(label);
     }
   }
+  if (
+    options?.role === "company" ||
+    options?.role === "energy provider"
+  ) {
+    alwaysVisible.add("Marketplace");
+  }
 
   if (!Array.isArray(estateModules) || estateModules.length === 0) {
     return items.filter((item) => alwaysVisible.has(item.label));

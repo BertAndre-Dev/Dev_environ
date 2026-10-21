@@ -10,6 +10,7 @@ import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
+import { IconTooltip } from "@/components/ui/tooltip";
 import { resetPassword } from "@/redux/slice/auth-mgt/auth-mgt";
 import type { AppDispatch } from "@/redux/store";
 
@@ -35,6 +36,8 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [newPasswordEditable, setNewPasswordEditable] = useState(false);
+  const [confirmPasswordEditable, setConfirmPasswordEditable] = useState(false);
 
   // Prefill email from query param if present
   useEffect(() => {
@@ -105,7 +108,7 @@ export default function ResetPasswordPage() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
         {error && (
           <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
             {error}
@@ -118,11 +121,14 @@ export default function ResetPasswordPage() {
           </label>
           <Input
             id="reset-email"
-            name="email"
+            name="reset-email"
             type="email"
             placeholder="admin@estate.com"
             value={formData.email}
-            onChange={handleChange}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, email: e.target.value }))
+            }
+            autoComplete="off"
             className="h-11"
           />
         </div>
@@ -135,9 +141,11 @@ export default function ResetPasswordPage() {
             id="reset-code"
             name="resetToken"
             type="text"
+            inputMode="numeric"
             placeholder="Enter the 6-digit code"
             value={formData.resetToken}
             onChange={handleChange}
+            autoComplete="one-time-code"
             className="h-11"
           />
         </div>
@@ -154,20 +162,25 @@ export default function ResetPasswordPage() {
               placeholder="••••••••"
               value={formData.newPassword}
               onChange={handleChange}
+              autoComplete="new-password"
+              readOnly={!newPasswordEditable}
+              onFocus={() => setNewPasswordEditable(true)}
               className="h-11 pr-12"
             />
-            <button
-              type="button"
-              onClick={() => setShowNewPassword((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              aria-label={showNewPassword ? "Hide password" : "Show password"}
-            >
-              {showNewPassword ? (
-                <EyeOff className="h-4 w-4 cursor-pointer" />
-              ) : (
-                <Eye className="h-4 w-4 cursor-pointer" />
-              )}
-            </button>
+            <IconTooltip label={showNewPassword ? "Hide password" : "Show password"}>
+              <button
+                type="button"
+                onClick={() => setShowNewPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label={showNewPassword ? "Hide password" : "Show password"}
+              >
+                {showNewPassword ? (
+                  <EyeOff className="h-4 w-4 cursor-pointer" />
+                ) : (
+                  <Eye className="h-4 w-4 cursor-pointer" />
+                )}
+              </button>
+            </IconTooltip>
           </div>
         </div>
 
@@ -183,22 +196,27 @@ export default function ResetPasswordPage() {
               placeholder="••••••••"
               value={formData.confirmPassword}
               onChange={handleChange}
+              autoComplete="new-password"
+              readOnly={!confirmPasswordEditable}
+              onFocus={() => setConfirmPasswordEditable(true)}
               className="h-11 pr-12"
             />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              aria-label={
-                showConfirmPassword ? "Hide password" : "Show password"
-              }
-            >
-              {showConfirmPassword ? (
-                <EyeOff className="h-4 w-4 cursor-pointer" />
-              ) : (
-                <Eye className="h-4 w-4 cursor-pointer" />
-              )}
-            </button>
+            <IconTooltip label={showConfirmPassword ? "Hide password" : "Show password"}>
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label={
+                  showConfirmPassword ? "Hide password" : "Show password"
+                }
+              >
+                {showConfirmPassword ? (
+                  <EyeOff className="h-4 w-4 cursor-pointer" />
+                ) : (
+                  <Eye className="h-4 w-4 cursor-pointer" />
+                )}
+              </button>
+            </IconTooltip>
           </div>
         </div>
 

@@ -375,12 +375,12 @@ export function SetEstateRateModal({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="rate-notes">Notes (optional)</Label>
+              <Label htmlFor="rate-notes">Notes</Label>
               <Input
                 id="rate-notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Optional note"
+                placeholder="Note"
               />
             </div>
           </>

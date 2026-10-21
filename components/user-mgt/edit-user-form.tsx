@@ -61,10 +61,16 @@ export type EditableUser = {
   estateId?: string | { id?: string; _id?: string; name?: string };
   estate?: { id?: string; _id?: string; name?: string };
   estateName?: string;
-  designationId?: string | null;
+  designationId?:
+    | string
+    | null
+    | { id?: string; _id?: string; name?: string };
   designation?: { id?: string; _id?: string; name?: string } | string | null;
   memberships?: Array<{
-    designationId?: string | null;
+    designationId?:
+      | string
+      | null
+      | { id?: string; _id?: string; name?: string };
     isCurrent?: boolean;
     estateId?: string | { id?: string; _id?: string; name?: string };
   }>;
@@ -252,10 +258,13 @@ export default function EditUserForm({
 
         if (isStaffRole(user.role)) {
           const currentDesignationId = userDesignationId(user);
-          const designationName =
+          const populatedDesignation =
             user.designation && typeof user.designation === "object"
-              ? user.designation.name?.trim()
-              : "";
+              ? user.designation
+              : user.designationId && typeof user.designationId === "object"
+                ? user.designationId
+                : null;
+          const designationName = populatedDesignation?.name?.trim() ?? "";
           setDesignationId(currentDesignationId);
           if (currentDesignationId && designationName) {
             setDesignationOptions([

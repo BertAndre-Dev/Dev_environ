@@ -80,10 +80,6 @@ export function ViewVendLimitModal({ open, estateId, onClose }: Props) {
           <h2 className="font-heading text-lg font-bold text-foreground">
             Vend limits
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Minimum and maximum amounts residents can vend, plus any monthly
-            kWh cap per meter.
-          </p>
         </div>
 
         {loading ? (

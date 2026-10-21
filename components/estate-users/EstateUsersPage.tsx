@@ -126,8 +126,8 @@ type Props = {
   /** Estate-admin can list admins; company/estate admin pages cannot. */
   allowAdminRole?: boolean;
   /**
-   * `none` hides invite. `residents` and `staff` limit invite to that role.
-   * `standard` keeps the existing staff-dashboard rules.
+   * `none` hides invite. `residents` allows residents and security.
+   * `staff` limits invite to staff. `standard` keeps the staff-dashboard rules.
    */
   invitePolicy?: EstateUsersInvitePolicy;
   /** Estate-admin staff page: designations tab and create. */
@@ -193,7 +193,7 @@ export function EstateUsersPage({
   const staffAllowed = true;
   const canInvite =
     invitePolicy === "residents"
-      ? roleFilter === "resident"
+      ? roleFilter === "resident" || roleFilter === "security"
       : invitePolicy === "staff"
         ? roleFilter === "staff"
         : invitePolicy !== "none" &&

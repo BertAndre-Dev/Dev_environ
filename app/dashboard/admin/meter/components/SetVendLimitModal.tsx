@@ -131,11 +131,6 @@ export function SetVendLimitModal({
           <h2 className="font-heading text-lg font-bold text-foreground">
             Set / update vend limits
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Configure the minimum and maximum amounts residents can vend, and
-            optionally cap kWh per meter each calendar month. Leave the unit
-            cap blank to disable it.
-          </p>
         </div>
 
         {loadingInitial ? (

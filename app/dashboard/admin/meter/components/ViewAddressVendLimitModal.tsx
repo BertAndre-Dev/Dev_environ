@@ -101,12 +101,6 @@ export function ViewAddressVendLimitModal({ open, estateId, onClose }: Props) {
           <h2 className="font-heading text-lg font-bold text-foreground">
             Vend limit for address
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Effective minimum and maximum vend amounts, plus any monthly kWh
-            cap for meters at this address. Address limits override the estate
-            limits. Unset fields fall back to the estate, then the defaults
-            (₦1 – ₦250,000).
-          </p>
         </div>
 
         <div className="space-y-1.5">

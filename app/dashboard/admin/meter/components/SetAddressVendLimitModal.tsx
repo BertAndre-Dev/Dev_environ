@@ -153,11 +153,6 @@ export function SetAddressVendLimitModal({
           <h2 className="font-heading text-lg font-bold text-foreground">
             Set / update vend limit for address
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            These amounts override the estate limits for the selected address.
-            Leave the monthly unit cap blank to clear it so the estate cap
-            applies.
-          </p>
         </div>
 
         <div className="space-y-1.5">

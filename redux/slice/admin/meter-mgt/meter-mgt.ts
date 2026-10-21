@@ -186,6 +186,73 @@ export const setEstateVendLimits = createAsyncThunk(
   },
 );
 
+export interface AddressVendLimitsDefaults {
+  minVendAmount: number;
+  maxVendAmount: number;
+  monthlyVendUnitCap?: number | null;
+}
+
+export interface AddressVendLimitsData {
+  addressId?: string;
+  minVendAmount: number;
+  maxVendAmount: number;
+  monthlyVendUnitCap?: number | null;
+  isConfigured?: boolean;
+  defaults?: AddressVendLimitsDefaults;
+}
+
+export interface AddressVendLimitsResponse {
+  success: boolean;
+  message: string;
+  data: AddressVendLimitsData;
+}
+
+/** GET /api/v1/meters/address/{addressId}/vend-limits */
+export const getAddressVendLimits = createAsyncThunk(
+  "meter-mgt/getAddressVendLimits",
+  async ({ addressId }: { addressId: string }, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.get<AddressVendLimitsResponse>(
+        `/api/v1/meters/address/${addressId}/vend-limits`,
+      );
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: unknown } };
+      return rejectWithValue(err?.response?.data);
+    }
+  },
+);
+
+/** PUT /api/v1/meters/address/{addressId}/vend-limits */
+export const setAddressVendLimits = createAsyncThunk(
+  "meter-mgt/setAddressVendLimits",
+  async (
+    {
+      addressId,
+      minVendAmount,
+      maxVendAmount,
+      monthlyVendUnitCap,
+    }: {
+      addressId: string;
+      minVendAmount: number;
+      maxVendAmount: number;
+      monthlyVendUnitCap: number | null;
+    },
+    { rejectWithValue },
+  ) => {
+    try {
+      const res = await axiosInstance.put<AddressVendLimitsResponse>(
+        `/api/v1/meters/address/${addressId}/vend-limits`,
+        { minVendAmount, maxVendAmount, monthlyVendUnitCap },
+      );
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: unknown } };
+      return rejectWithValue(err?.response?.data);
+    }
+  },
+);
+
 /** POST /api/v1/meters/clear-tamper-token — body: { meterNumber } */
 export const clearTamperToken = createAsyncThunk(
   "admin-meter-mgt/clearTamperToken",

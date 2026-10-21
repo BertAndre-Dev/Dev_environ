@@ -44,6 +44,8 @@ import { resolveEstateDisplayName } from "@/lib/user-id";
 import { formatAddressRecordCreatedAt, formatAddressEntryLabel } from "@/lib/address";
 import { ViewVendLimitModal } from "./components/ViewVendLimitModal";
 import { SetVendLimitModal } from "./components/SetVendLimitModal";
+import { ViewAddressVendLimitModal } from "./components/ViewAddressVendLimitModal";
+import { SetAddressVendLimitModal } from "./components/SetAddressVendLimitModal";
 
 interface VendorData {
   name: string;
@@ -100,6 +102,10 @@ export default function AdminMeterManagement() {
     useState<MeterUsageRange>("weekly");
   const [viewVendLimitOpen, setViewVendLimitOpen] = useState(false);
   const [setVendLimitOpen, setSetVendLimitOpen] = useState(false);
+  const [viewAddressVendLimitOpen, setViewAddressVendLimitOpen] =
+    useState(false);
+  const [setAddressVendLimitOpen, setSetAddressVendLimitOpen] =
+    useState(false);
   const [meterToUnassign, setMeterToUnassign] = useState<AdminMeterData | null>(
     null,
   );
@@ -616,7 +622,7 @@ export default function AdminMeterManagement() {
             <DropdownMenu.Content
               align="end"
               sideOffset={8}
-              className="z-50 min-w-[200px] rounded-md border bg-white p-1 shadow-md"
+              className="z-50 min-w-60 rounded-md border bg-white p-1 shadow-md"
             >
               <DropdownMenu.Item
                 onSelect={() => setViewVendLimitOpen(true)}
@@ -629,6 +635,19 @@ export default function AdminMeterManagement() {
                 className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100"
               >
                 Set / update vend limit
+              </DropdownMenu.Item>
+              <DropdownMenu.Separator className="my-1 h-px bg-gray-200" />
+              <DropdownMenu.Item
+                onSelect={() => setViewAddressVendLimitOpen(true)}
+                className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100"
+              >
+                Vend limit for address
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                onSelect={() => setSetAddressVendLimitOpen(true)}
+                className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100"
+              >
+                Set / update vend limit for address
               </DropdownMenu.Item>
             </DropdownMenu.Content>
           </DropdownMenu.Portal>
@@ -845,6 +864,16 @@ export default function AdminMeterManagement() {
             open={setVendLimitOpen}
             estateId={estateId}
             onClose={() => setSetVendLimitOpen(false)}
+          />
+          <ViewAddressVendLimitModal
+            open={viewAddressVendLimitOpen}
+            estateId={estateId}
+            onClose={() => setViewAddressVendLimitOpen(false)}
+          />
+          <SetAddressVendLimitModal
+            open={setAddressVendLimitOpen}
+            estateId={estateId}
+            onClose={() => setSetAddressVendLimitOpen(false)}
           />
         </>
       ) : null}

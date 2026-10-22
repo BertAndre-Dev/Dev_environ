@@ -171,7 +171,7 @@ export default function TrustedBy() {
   return (
     <section className="relative mt-10 w-full overflow-hidden text-white">
       {/* Black stage — clips rings so they never spill into the white band */}
-      <div className="relative overflow-hidden bg-[#101010]">
+      {/* <div className="relative overflow-hidden bg-[#101010]"> */}
         <div className="relative z-20 mx-auto flex max-w-3xl flex-col items-center px-4 pt-8 text-center sm:px-6 sm:pt-10">
           <h2 className="text-[24px] font-semibold leading-tight tracking-[-0.02em] text-white sm:text-[36px] lg:text-[40px]">
             Powering Leading Estates Across Africa

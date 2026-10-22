@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 
@@ -22,6 +22,7 @@ type EntryRow = {
   description?: string;
   amount?: number;
   documentNumber?: string;
+  headName?: string;
 };
 
 type EntryListPayload = {
@@ -46,6 +47,7 @@ function entryId(item: { id?: string; _id?: string }, index: number): string {
 
 export function ReportHeadEntriesPage({ kind }: { readonly kind: EntryKind }) {
   const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
   const params = useParams<{ headId: string }>();
   const searchParams = useSearchParams();
   const headId = params?.headId ?? "";
@@ -93,6 +95,7 @@ export function ReportHeadEntriesPage({ kind }: { readonly kind: EntryKind }) {
           rows.map((item, index) => ({
             ...item,
             id: entryId(item, index),
+            headName,
           })),
         );
         setTotal(payload.pagination?.total ?? rows.length);
@@ -111,49 +114,66 @@ export function ReportHeadEntriesPage({ kind }: { readonly kind: EntryKind }) {
     return () => {
       cancelled = true;
     };
-  }, [dispatch, endDate, headId, kind, page, pageSize, startDate]);
+  }, [dispatch, endDate, headId, headName, kind, page, pageSize, startDate]);
+
+  const headColumnLabel = kind === "expense" ? "Expense Head" : "Revenue Head";
 
   const columns = useMemo(
     () => [
+      {
+        key: "headName",
+        header: headColumnLabel,
+        render: (item: EntryRow) => item.headName || headName,
+        exportValue: (item: EntryRow) => item.headName || headName,
+      },
       {
         key: "createdAt",
         header: "Date",
         render: (item: EntryRow) =>
           item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "—",
+        exportValue: (item: EntryRow) =>
+          item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "",
       },
       {
         key: "description",
         header: "Description",
         render: (item: EntryRow) => item.description || "—",
+        exportValue: (item: EntryRow) => item.description || "",
       },
       {
         key: "amount",
         header: "Amount",
         render: (item: EntryRow) =>
           `₦${Number(item.amount ?? 0).toLocaleString()}`,
+        exportValue: (item: EntryRow) => item.amount ?? 0,
       },
       {
         key: "documentNumber",
         header: "Reference No",
         render: (item: EntryRow) => item.documentNumber || "—",
+        exportValue: (item: EntryRow) => item.documentNumber || "",
       },
     ],
-    [],
+    [headColumnLabel, headName],
   );
 
   const title = kind === "expense" ? "Expense entries" : "Revenue entries";
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link
-          href="/dashboard/estate-admin/reports"
-          className="text-sm text-muted-foreground hover:underline"
+      <div className="flex items-start gap-2">
+        <button
+          type="button"
+          aria-label="Back to estate reports"
+          onClick={() => router.push("/dashboard/estate-admin/reports")}
+          className="mt-1 grid h-8 w-8 cursor-pointer place-items-center rounded-full hover:bg-muted"
         >
-          Back to estate reports
-        </Link>
-        <h1 className="font-heading text-3xl font-bold mt-2">{headName}</h1>
-        <p className="text-muted-foreground mt-1">{title}</p>
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <div>
+          <h1 className="font-heading text-3xl font-bold">{headName}</h1>
+          <p className="text-muted-foreground mt-1">{title}</p>
+        </div>
       </div>
 
       <Card className="p-4">

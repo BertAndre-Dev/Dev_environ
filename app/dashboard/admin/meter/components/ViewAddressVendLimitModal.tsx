@@ -101,6 +101,9 @@ export function ViewAddressVendLimitModal({ open, estateId, onClose }: Props) {
           <h2 className="font-heading text-lg font-bold text-foreground">
             Vend limit for address
           </h2>
+          <p className="text-sm text-muted-foreground">
+            Select an address to view the vend limit for that address.
+          </p>
         </div>
 
         <div className="space-y-1.5">

@@ -641,13 +641,13 @@ export default function AdminMeterManagement() {
                 onSelect={() => setViewAddressVendLimitOpen(true)}
                 className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100"
               >
-                Vend limit for address
+                View vend limit for an address
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 onSelect={() => setSetAddressVendLimitOpen(true)}
                 className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100"
               >
-                Set / update vend limit for address
+                Set / update vend limit for an address
               </DropdownMenu.Item>
             </DropdownMenu.Content>
           </DropdownMenu.Portal>

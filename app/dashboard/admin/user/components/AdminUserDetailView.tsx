@@ -13,6 +13,7 @@ import { toast } from "react-toastify";
 import DeleteModal from "@/components/resident/delete-modal/page";
 import Image from "next/image";
 import {
+  ArrowLeftRight,
   ChevronDown,
   Edit,
   FileText,
@@ -60,7 +61,7 @@ import type { ResidentComplaintItem } from "@/redux/slice/resident/maintenance/r
 import { getVisitorsByResident } from "@/redux/slice/resident/visitor/visitor";
 import { UserWalletBalanceCard } from "@/components/user-mgt/UserWalletBalanceCard";
 
-type DetailTab = "bills" | "complaints" | "visitors";
+type DetailTab = "bills" | "complaints" | "visitors" | "transactions";
 
 interface PaymentHistoryRow {
   id: string;
@@ -452,6 +453,8 @@ export interface UserDetailViewProps {
   showWalletBalance?: boolean;
   /** Super-admin payment history reads transaction-mgt instead of resident bills. */
   paymentHistory?: "bills" | "transactions";
+  /** Admin user detail: paginated GET /api/v1/transaction-mgt/history. */
+  showTransactions?: boolean;
 }
 
 export default function UserDetailView({
@@ -462,6 +465,7 @@ export default function UserDetailView({
   actions,
   showWalletBalance = false,
   paymentHistory = "bills",
+  showTransactions = false,
 }: UserDetailViewProps) {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
@@ -482,6 +486,11 @@ export default function UserDetailView({
   >({});
   const [visitors, setVisitors] = useState<UserVisitorRow[]>([]);
   const [visitorsTotal, setVisitorsTotal] = useState(0);
+  const [transactions, setTransactions] = useState<PaymentHistoryRow[]>([]);
+  const [transactionsTotal, setTransactionsTotal] = useState(0);
+  const [transactionsPage, setTransactionsPage] = useState(1);
+  const [transactionsPageSize, setTransactionsPageSize] = useState(10);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
 
   const [suspendOpen, setSuspendOpen] = useState(false);
   const [activateOpen, setActivateOpen] = useState(false);
@@ -767,7 +776,61 @@ export default function UserDetailView({
     fetchRelatedData().catch(() => {});
   }, [fetchRelatedData]);
 
-  const tabs = BASE_TABS;
+  useEffect(() => {
+    if (!showTransactions || !user) return;
+    const uid = getUserId(user);
+    if (!uid) return;
+
+    let cancelled = false;
+    setTransactionsLoading(true);
+    dispatch(
+      getUserTransactionHistory({
+        userId: uid,
+        page: transactionsPage,
+        limit: transactionsPageSize,
+      }),
+    )
+      .unwrap()
+      .then((res: { data?: Record<string, unknown>[]; pagination?: { total?: number } }) => {
+        if (cancelled) return;
+        const rows = (res?.data ?? []).map((item, index) => ({
+          id: String(item.id ?? item._id ?? index),
+          createdAt: item.createdAt as string | undefined,
+          type: item.type as string | undefined,
+          amount: item.amount as number | undefined,
+          serviceCharge: item.serviceCharge as number | undefined,
+          paymentStatus: item.paymentStatus as string | undefined,
+          description: item.description as string | undefined,
+          tx_ref: item.tx_ref as string | undefined,
+        }));
+        setTransactions(rows);
+        setTransactionsTotal(Number(res?.pagination?.total ?? rows.length));
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setTransactions([]);
+        setTransactionsTotal(0);
+        const message = getApiErrorMessage(err);
+        if (message) toast.error(message);
+      })
+      .finally(() => {
+        if (!cancelled) setTransactionsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    dispatch,
+    showTransactions,
+    transactionsPage,
+    transactionsPageSize,
+    user,
+  ]);
+
+  const tabs = showTransactions
+    ? [...BASE_TABS, { id: "transactions" as const, label: "Transactions" }]
+    : BASE_TABS;
 
   const displayName = useMemo(() => {
     if (!user) return "User";
@@ -1231,7 +1294,14 @@ export default function UserDetailView({
             ) : null}
 
             {/* Quick stats */}
-            <div className="grid grid-cols-1 gap-3 pt-8 sm:grid-cols-3">
+            <div
+              className={[
+                "grid grid-cols-1 gap-3 pt-8",
+                showTransactions
+                  ? "sm:grid-cols-2 xl:grid-cols-4"
+                  : "sm:grid-cols-3",
+              ].join(" ")}
+            >
               <SummaryCard
                 label="Assigned Bills"
                 value={assignedBills.length}
@@ -1253,6 +1323,15 @@ export default function UserDetailView({
                 active={activeTab === "visitors"}
                 onClick={() => setActiveTab("visitors")}
               />
+              {showTransactions ? (
+                <SummaryCard
+                  label="Transactions"
+                  value={transactionsTotal}
+                  icon={ArrowLeftRight}
+                  active={activeTab === "transactions"}
+                  onClick={() => setActiveTab("transactions")}
+                />
+              ) : null}
             </div>
 
             {/* Tabs */}
@@ -1280,6 +1359,9 @@ export default function UserDetailView({
                   (visitorsTotal || visitors.length) > 0
                     ? ` (${visitorsTotal || visitors.length})`
                     : ""}
+                  {tab.id === "transactions" && transactionsTotal > 0
+                    ? ` (${transactionsTotal})`
+                    : ""}
                 </button>
               ))}
             </div>
@@ -1288,7 +1370,7 @@ export default function UserDetailView({
             {activeTab === "bills" ? (
               <div className="space-y-4">
                 <Card className="p-4">
-                  <h3 className="mb-3 text-sm font-semibold">Assigned Bills</h3>
+                  <h3 className="mb-3 text-sm font-semibold">Bills</h3>
                   <Table
                     columns={assignedBillColumns}
                     data={assignedBills}
@@ -1346,6 +1428,31 @@ export default function UserDetailView({
                   columns={visitorColumns}
                   data={visitors}
                   emptyMessage="No visitors found for this user."
+                />
+              </Card>
+            ) : null}
+
+            {activeTab === "transactions" ? (
+              <Card className="p-4">
+                <Table
+                  columns={paymentColumns}
+                  data={transactions}
+                  emptyMessage={
+                    transactionsLoading
+                      ? "Loading transactions..."
+                      : "No transactions found for this user."
+                  }
+                  showPagination
+                  paginationInfo={{
+                    total: transactionsTotal,
+                    current: transactionsPage,
+                    pageSize: transactionsPageSize,
+                  }}
+                  onPageChange={setTransactionsPage}
+                  onPageSizeChange={(size) => {
+                    setTransactionsPageSize(size);
+                    setTransactionsPage(1);
+                  }}
                 />
               </Card>
             ) : null}

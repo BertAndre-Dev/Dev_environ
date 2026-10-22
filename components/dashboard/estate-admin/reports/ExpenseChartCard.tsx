@@ -58,9 +58,9 @@ export function ExpenseChartCard({
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [period, setPeriod] = useState<ExpenseChartPeriod | CompanyExpenseChartPeriod>(
-    "monthly",
-  );
+  const [period, setPeriod] = useState<
+    ExpenseChartPeriod | CompanyExpenseChartPeriod
+  >("monthly");
   const [headId, setHeadId] = useState("all");
 
   const datePlaceholders = useMemo(() => getDateRangePlaceholders(), []);
@@ -162,34 +162,36 @@ export function ExpenseChartCard({
             endPlaceholder={datePlaceholders.end}
           />
 
-          <Select
-            value={period}
-            onChange={(e) => setPeriod(e.target.value as ExpenseChartPeriod)}
-            options={[
-              { label: "Daily", value: "daily" },
-              { label: "Weekly", value: "weekly" },
-              { label: "Monthly", value: "monthly" },
-              { label: "Yearly", value: "yearly" },
-            ]}
-            className="w-[140px] cursor-pointer"
-          />
+          <div className="flex items-center gap-2">
+            <Select
+              value={period}
+              onChange={(e) => setPeriod(e.target.value as ExpenseChartPeriod)}
+              options={[
+                { label: "Daily", value: "daily" },
+                { label: "Weekly", value: "weekly" },
+                { label: "Monthly", value: "monthly" },
+                { label: "Yearly", value: "yearly" },
+              ]}
+              className="w-[140px] cursor-pointer"
+            />
 
-          <Select
-            value={headId}
-            onChange={(e) => setHeadId(e.target.value)}
-            options={headOptions}
-            className="w-[190px] cursor-pointer"
-          />
+            <Select
+              value={headId}
+              onChange={(e) => setHeadId(e.target.value)}
+              options={headOptions}
+              className="w-[190px] cursor-pointer"
+            />
 
-          <Button
-            type="button"
-            variant="outline"
-            onClick={exportCsv}
-            disabled={series.length === 0}
-            className="cursor-pointer disabled:cursor-not-allowed"
-          >
-            Export
-          </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={exportCsv}
+              disabled={series.length === 0}
+              className="cursor-pointer disabled:cursor-not-allowed"
+            >
+              Export
+            </Button>
+          </div>
         </div>
       </div>
 

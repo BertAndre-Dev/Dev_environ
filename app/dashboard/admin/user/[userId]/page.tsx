@@ -55,6 +55,7 @@ export default function AdminUserDetailPage() {
       userLoading={loading}
       listPath="/dashboard/admin/user"
       actions={ADMIN_USER_ACTIONS}
+      showTransactions
     />
   );
 }

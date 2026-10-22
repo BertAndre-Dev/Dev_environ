@@ -95,14 +95,14 @@ export function ReportTable({
           }
         />
 
-        <button
+        {/* <button
           onClick={handleExport}
           disabled={!rows.length}
           className="flex items-center gap-2 rounded-full border px-4 py-2 text-sm hover:bg-muted/40 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Download className="h-4 w-4" />
           Export
-        </button>
+        </button> */}
       </div>
 
       {/* Table */}

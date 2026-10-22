@@ -58,9 +58,9 @@ export function RevenueChartCard({
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [period, setPeriod] = useState<RevenueChartPeriod | CompanyRevenueChartPeriod>(
-    "monthly",
-  );
+  const [period, setPeriod] = useState<
+    RevenueChartPeriod | CompanyRevenueChartPeriod
+  >("monthly");
   const [headId, setHeadId] = useState("all");
 
   const datePlaceholders = useMemo(() => getDateRangePlaceholders(), []);
@@ -135,9 +135,11 @@ export function RevenueChartCard({
     const body = series.map((r) =>
       singleHead
         ? [r.label, r.value].join(",")
-        : [r.label, r.value, ...segmentKeys.map((k) => r.segments[k] ?? 0)].join(
-            ",",
-          ),
+        : [
+            r.label,
+            r.value,
+            ...segmentKeys.map((k) => r.segments[k] ?? 0),
+          ].join(","),
     );
 
     const csv = [headers.join(","), ...body].join("\r\n");
@@ -160,7 +162,7 @@ export function RevenueChartCard({
           </p>
         </div>
 
-        <div className="flex w-full min-w-0 flex-col gap-2 md:flex-row md:flex-wrap md:items-center justify-between ">
+        <div className="flex w-full min-w-0 flex-col gap-2 md:flex-row md:flex-wrap md:items-center justify-between">
           <DateRangeFilter
             startId={`${idPrefix}revenue-chart-start`}
             endId={`${idPrefix}revenue-chart-end`}
@@ -172,34 +174,36 @@ export function RevenueChartCard({
             endPlaceholder={datePlaceholders.end}
           />
 
-          <Select
-            value={period}
-            onChange={(e) => setPeriod(e.target.value as RevenueChartPeriod)}
-            options={[
-              { label: "Daily", value: "daily" },
-              { label: "Weekly", value: "weekly" },
-              { label: "Monthly", value: "monthly" },
-              { label: "Yearly", value: "yearly" },
-            ]}
-            className="w-[140px] cursor-pointer"
-          />
+          <div className="flex items-center gap-2">
+            <Select
+              value={period}
+              onChange={(e) => setPeriod(e.target.value as RevenueChartPeriod)}
+              options={[
+                { label: "Daily", value: "daily" },
+                { label: "Weekly", value: "weekly" },
+                { label: "Monthly", value: "monthly" },
+                { label: "Yearly", value: "yearly" },
+              ]}
+              className="w-[140px] cursor-pointer"
+            />
 
-          <Select
-            value={headId}
-            onChange={(e) => setHeadId(e.target.value)}
-            options={headOptions}
-            className="w-[190px] cursor-pointer"
-          />
+            <Select
+              value={headId}
+              onChange={(e) => setHeadId(e.target.value)}
+              options={headOptions}
+              className="w-[190px] cursor-pointer"
+            />
 
-          <Button
-            type="button"
-            variant="outline"
-            onClick={exportCsv}
-            disabled={series.length === 0}
-            className="cursor-pointer disabled:cursor-not-allowed"
-          >
-            Export
-          </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={exportCsv}
+              disabled={series.length === 0}
+              className="cursor-pointer disabled:cursor-not-allowed"
+            >
+              Export
+            </Button>
+          </div>
         </div>
       </div>
 

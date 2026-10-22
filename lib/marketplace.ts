@@ -55,6 +55,16 @@ export function isPlatformCreator(role: string | null | undefined): boolean {
   return PLATFORM_CREATOR_ROLES.has((role ?? "").toString().trim().toLowerCase());
 }
 
+/** Estate chosen for GET /api/v1/marketplace when the role is not estate-bound. */
+export const MARKETPLACE_FEED_ESTATE_KEY = "bertahub.marketplace.feedEstateId";
+
+/** Company, energy provider, and super admin must pass estateId. Other roles use the JWT estate. */
+export function marketplaceFeedNeedsEstateId(
+  role: string | null | undefined,
+): boolean {
+  return isPlatformCreator(role);
+}
+
 export function normalizeMarketplaceStatus(value: unknown): string {
   if (typeof value !== "string") return "";
   return value.trim().replace(/\s+/g, "_").toUpperCase();

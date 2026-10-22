@@ -20,6 +20,8 @@ export interface ExpenseEntriesTableProps {
   onView: (item: ExpenseEntry) => void;
   onEdit: (item: ExpenseEntry) => void;
   onDelete: (item: ExpenseEntry) => void;
+  onExportRequest?: () => Promise<ExpenseEntry[]>;
+  exportFileName?: string;
 }
 
 export function ExpenseEntriesTable({
@@ -34,6 +36,8 @@ export function ExpenseEntriesTable({
   onView,
   onEdit,
   onDelete,
+  onExportRequest,
+  exportFileName = "expense-entries",
 }: Readonly<ExpenseEntriesTableProps>) {
   const columns = useMemo(() => {
     return [
@@ -42,22 +46,27 @@ export function ExpenseEntriesTable({
         header: "Date",
         render: (item: ExpenseEntry) =>
           item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "—",
+        exportValue: (item: ExpenseEntry) =>
+          item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "",
       },
       {
         key: "headId",
         header: "Expense Head",
         render: () => headName,
+        exportValue: () => headName,
       },
       { key: "description", header: "Description" },
       {
         key: "amount",
         header: "Amount",
         render: (item: ExpenseEntry) => `₦${(item.amount ?? 0).toLocaleString()}`,
+        exportValue: (item: ExpenseEntry) => item.amount ?? 0,
       },
       {
         key: "documentNumber",
         header: "Reference No",
         render: (item: ExpenseEntry) => item.documentNumber ?? "—",
+        exportValue: (item: ExpenseEntry) => item.documentNumber ?? "",
       },
       {
         key: "attachments",
@@ -130,6 +139,9 @@ export function ExpenseEntriesTable({
         }}
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
+        enableExport
+        exportFileName={exportFileName}
+        onExportRequest={onExportRequest}
       />
     </Card>
   );

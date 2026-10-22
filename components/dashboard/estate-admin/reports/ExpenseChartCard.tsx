@@ -150,7 +150,7 @@ export function ExpenseChartCard({
           </p>
         </div>
 
-        <div className="flex w-full min-w-0 flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
+        <div className="flex w-full min-w-0 flex-col gap-2 md:flex-row md:flex-wrap md:items-center justify-between">
           <DateRangeFilter
             startId={`${idPrefix}expense-chart-start`}
             endId={`${idPrefix}expense-chart-end`}

@@ -9,6 +9,16 @@ import {
 } from "./bills-mgt";
 
 /** Estate-level payable bill */
+export interface MissedBillPeriod {
+  index?: number;
+  periodStart?: string;
+  periodEnd?: string;
+  label?: string;
+  principal?: number;
+  interest?: number;
+  total?: number;
+}
+
 export interface EstateBillData {
   id?: string;
   estateId?: string;
@@ -28,6 +38,9 @@ export interface EstateBillData {
   isActive?: boolean;
   isServiceCharge?: boolean;
   compulsory?: boolean;
+  nextDueDate?: string | null;
+  missedPeriodCount?: number;
+  missedPeriods?: MissedBillPeriod[];
   createdAt?: string;
 }
 
@@ -49,8 +62,12 @@ export interface AssignedBillData {
   accrueInterest?: boolean;
   interestRatePercent?: number;
   interestStartsAt?: string;
+  isActive?: boolean;
   status?: string;
   addressId?: string;
+  nextDueDate?: string | null;
+  missedPeriodCount?: number;
+  missedPeriods?: MissedBillPeriod[];
   createdAt?: string;
 }
 
@@ -64,10 +81,11 @@ export interface PaidBillData {
   addressId?: string;
   frequency?: string;
   amountPaid?: number;
+  paidDate?: string | null;
   lastPaymentDate?: string | null;
   createdAt?: string;
   startDate?: string;
-  nextDueDate?: string;
+  nextDueDate?: string | null;
   status?: string;
   isServiceCharge?: boolean;
   paidByUserId?: string;

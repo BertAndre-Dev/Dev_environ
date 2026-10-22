@@ -42,6 +42,8 @@ export default function SuperAdminEnergyProviderPage() {
   const [selectedEstate, setSelectedEstate] = useState<EstateOption | null>(null);
   const [loadingEstates, setLoadingEstates] = useState(true);
   const [vendsPage, setVendsPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  const [vendsPageSize, setVendsPageSize] = useState(PAGE_SIZE);
   const [vendsStartDate, setVendsStartDate] = useState("");
   const [vendsEndDate, setVendsEndDate] = useState("");
 
@@ -94,35 +96,34 @@ export default function SuperAdminEnergyProviderPage() {
   }, [estateOptions, selectedEstate?.value]);
 
   const fetchConfigs = useCallback(
-    (page = 1) => {
+    (page = 1, limit = pageSize) => {
       if (!selectedEstate?.value) return Promise.resolve();
       return dispatch(
         getEnergyProviderConfigs({
           estateId: selectedEstate.value,
           estateName: selectedEstate.label,
           page,
-          limit: PAGE_SIZE,
+          limit,
         }),
       ).unwrap();
     },
-    [dispatch, selectedEstate],
+    [dispatch, pageSize, selectedEstate],
   );
 
   const fetchVends = useCallback(
-    (page = 1) => {
+    (page = 1, limit = vendsPageSize) => {
       if (!selectedEstate?.value) return Promise.resolve();
-      const shouldApplyDate = Boolean(vendsStartDate && vendsEndDate);
       return dispatch(
         getEnergyProviderVends({
           estateId: selectedEstate.value,
           page,
-          limit: PAGE_SIZE,
-          startDate: shouldApplyDate ? vendsStartDate : undefined,
-          endDate: shouldApplyDate ? vendsEndDate : undefined,
+          limit,
+          startDate: vendsStartDate || undefined,
+          endDate: vendsEndDate || undefined,
         }),
       ).unwrap();
     },
-    [dispatch, selectedEstate, vendsStartDate, vendsEndDate],
+    [dispatch, selectedEstate, vendsPageSize, vendsStartDate, vendsEndDate],
   );
 
   useEffect(() => {
@@ -299,10 +300,17 @@ export default function SuperAdminEnergyProviderPage() {
               paginationInfo={{
                 total: pagination?.total ?? 0,
                 current: pagination?.currentPage ?? 1,
-                pageSize: pagination?.pageSize ?? PAGE_SIZE,
+                pageSize,
               }}
               onPageChange={(page) => {
                 fetchConfigs(page).catch((err: unknown) => {
+                  const message = getApiErrorMessage(err);
+                  if (message) toast.error(message);
+                });
+              }}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                fetchConfigs(1, size).catch((err: unknown) => {
                   const message = getApiErrorMessage(err);
                   if (message) toast.error(message);
                 });
@@ -335,19 +343,22 @@ export default function SuperAdminEnergyProviderPage() {
               paginationInfo={{
                 total: vendsPagination?.total ?? 0,
                 current: vendsPagination?.currentPage ?? 1,
-                pageSize: vendsPagination?.pageSize ?? PAGE_SIZE,
+                pageSize: vendsPageSize,
               }}
               onPageChange={setVendsPage}
+              onPageSizeChange={(size) => {
+                setVendsPageSize(size);
+                setVendsPage(1);
+              }}
               onExportRequest={async () => {
                 if (!selectedEstate?.value) return [];
-                const shouldApplyDate = Boolean(vendsStartDate && vendsEndDate);
                 const res = await dispatch(
                   getEnergyProviderVends({
                     estateId: selectedEstate.value,
                     page: 1,
                     limit: 50000,
-                    startDate: shouldApplyDate ? vendsStartDate : undefined,
-                    endDate: shouldApplyDate ? vendsEndDate : undefined,
+                    startDate: vendsStartDate || undefined,
+                    endDate: vendsEndDate || undefined,
                   }),
                 ).unwrap();
                 return res.data;

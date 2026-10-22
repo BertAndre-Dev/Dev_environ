@@ -13,10 +13,12 @@ import type {
 
 type TableRow = PlatformFeeListItem;
 
-type PlatformFeeListProps = Readonly<{
+export type PlatformFeeListProps = Readonly<{
   items: PlatformFeeListItem[];
   pagination: PlatformFeePagination | null;
   onPageChange: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
+  pageSize?: number;
   onExportRequest?: () => Promise<PlatformFeeListItem[]> | PlatformFeeListItem[];
   className?: string;
 }>;
@@ -25,6 +27,8 @@ export function PlatformFeeList({
   items,
   pagination,
   onPageChange,
+  onPageSizeChange,
+  pageSize,
   onExportRequest,
   className,
 }: PlatformFeeListProps) {
@@ -66,7 +70,7 @@ export function PlatformFeeList({
   );
 
   const page = pagination?.page ?? 1;
-  const limit = pagination?.limit ?? items.length;
+  const limit = pageSize ?? pagination?.limit ?? items.length;
   const total = pagination?.total ?? items.length;
 
   return (
@@ -100,6 +104,7 @@ export function PlatformFeeList({
               : undefined
           }
           onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
           enableExport
           exportFileName="platform_fee_transactions"
           onExportRequest={onExportRequest}

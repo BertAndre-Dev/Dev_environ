@@ -7,7 +7,7 @@ const STATIC_ROUTES: MetadataRoute.Sitemap = [
     url: absoluteUrl("/"),
     lastModified: new Date(),
     changeFrequency: "weekly",
-    priority: 1,
+    priority: 1.0,
   },
   {
     url: absoluteUrl("/blog"),

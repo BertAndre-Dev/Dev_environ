@@ -2,6 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/tooltip";
 import {
   Power,
   PowerOff,
@@ -51,6 +52,7 @@ import { isPending } from "@/lib/async-status";
 import { UserNameWithAvatar } from "@/components/ui/user-avatar";
 import { getDesignations } from "@/redux/slice/designations/designations";
 import {
+  canUseDesignationModule,
   designationLabelForUser,
   designationNamesById,
   designationWriteScope,
@@ -58,6 +60,7 @@ import {
 } from "@/lib/designations";
 import { DesignationsManager } from "@/components/designations/DesignationsManager";
 import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
+import { selectEstateModules } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 
 type AdminStaffPageTab = "staff" | "designations";
 
@@ -111,15 +114,26 @@ const PAGE_LIMIT = 10;
 
 export type EstateUsersStaffPolicy = "company-only" | "estate-always";
 
-export type EstateUsersInvitePolicy = "standard" | "none";
+export type EstateUsersInvitePolicy =
+  | "standard"
+  | "none"
+  | "residents"
+  | "staff";
 
 type Props = {
   basePath: string;
   staffPolicy: EstateUsersStaffPolicy;
   /** Estate-admin can list admins; company/estate admin pages cannot. */
   allowAdminRole?: boolean;
-  /** `none` hides invite on every role page. */
+  /**
+   * `none` hides invite. `residents` allows residents and security.
+   * `staff` limits invite to staff. `standard` keeps the staff-dashboard rules.
+   */
   invitePolicy?: EstateUsersInvitePolicy;
+  /** Estate-admin staff page: designations tab and create. */
+  manageDesignations?: boolean;
+  /** Estate admin can open the staff edit modal. */
+  canEditStaff?: boolean;
 };
 
 export function EstateUsersPage({
@@ -127,10 +141,14 @@ export function EstateUsersPage({
   staffPolicy,
   allowAdminRole = false,
   invitePolicy = "standard",
+  manageDesignations = false,
+  canEditStaff = false,
 }: Readonly<Props>) {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const authUser = useSelector((state: RootState) => state.auth.user);
+  const estateModules = useSelector(selectEstateModules);
 
   const [user, setUser] = useState<any>(null);
   const [estateName, setEstateName] = useState("Estate");
@@ -144,6 +162,7 @@ export function EstateUsersPage({
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_LIMIT);
   const [suspendUserItem, setSuspendUserItem] = useState<AdminUserData | null>(
     null,
   );
@@ -171,14 +190,18 @@ export function EstateUsersPage({
     ? parseEstateAdminUserRoleQuery
     : parseAdminUserRoleQuery;
   const hasCompany = Boolean(adminCompanyId);
-  const isStandaloneEstate = !bootstrapping && !hasCompany;
   const staffAllowed = true;
   const canInvite =
-    invitePolicy !== "none" &&
-    isAdminInviteRole(roleFilter) &&
-    (roleFilter !== "staff" || isStandaloneEstate);
+    invitePolicy === "residents"
+      ? roleFilter === "resident" || roleFilter === "security"
+      : invitePolicy === "staff"
+        ? roleFilter === "staff"
+        : invitePolicy !== "none" &&
+          isAdminInviteRole(roleFilter) &&
+          (roleFilter !== "staff" || (!bootstrapping && !hasCompany));
   const canManageDesignations =
-    staffPolicy === "company-only" && isStandaloneEstate;
+    manageDesignations &&
+    canUseDesignationModule(authUser ?? user, estateModules);
   const requestedStaffTab = parseAdminStaffTab(searchParams.get("tab"));
   const staffTab = canManageDesignations ? requestedStaffTab : "staff";
   const showStaffTabs = roleFilter === "staff" && canManageDesignations;
@@ -256,25 +279,24 @@ export function EstateUsersPage({
       listPending);
 
   const fetchAdminUsers = useCallback(
-    async (page = 1) => {
+    async (page = 1, limit = pageSize) => {
       const estateId = selectedEstate?.value;
       if (!estateId) return;
 
-      const shouldApplyDate = Boolean(startDate && endDate);
       await dispatch(
         getAllUsersByEstate({
           estateId,
           page,
-          limit: PAGE_LIMIT,
+          limit,
           role: roleFilter,
           search: searchQuery || undefined,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         }),
       ).unwrap();
       setCurrentPage(page);
     },
-    [dispatch, selectedEstate?.value, searchQuery, startDate, endDate, roleFilter],
+    [dispatch, selectedEstate?.value, searchQuery, startDate, endDate, roleFilter, pageSize],
   );
 
   // Bootstrap signed-in user and estate only (no user list fetch here).
@@ -477,6 +499,7 @@ export function EstateUsersPage({
 
   const showResidentColumns = roleFilter === "resident";
   const showStaffColumns = roleFilter === "staff";
+  const showAddressColumn = roleFilter === "resident";
   const hideActionsColumn = roleFilter === "admin";
 
   const columns = [
@@ -510,13 +533,18 @@ export function EstateUsersPage({
       header: "Phone",
       render: (item: AdminUserData) => item.phoneNumber?.trim() || "—",
     },
-    {
-      key: "address",
-      header: "Address",
-      render: (item: AdminUserData) =>
-        formatUserAddresses(item.addressIds) || "—",
-      exportValue: (item: AdminUserData) => formatUserAddresses(item.addressIds),
-    },
+    ...(showAddressColumn
+      ? [
+          {
+            key: "address",
+            header: "Address",
+            render: (item: AdminUserData) =>
+              formatUserAddresses(item.addressIds) || "—",
+            exportValue: (item: AdminUserData) =>
+              formatUserAddresses(item.addressIds),
+          },
+        ]
+      : []),
     // { key: "role", header: "Role" },
     ...(showResidentColumns
       ? [
@@ -618,63 +646,73 @@ export function EstateUsersPage({
             render: (item: AdminUserData) => (
               <div className="flex items-center gap-1">
                 {item.role?.toLowerCase() === "resident" && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      if (item.id) router.push(`${basePath}/${item.id}`);
-                    }}
-                    title="View user details"
-                    disabled={!item.id}
-                    className="text-[#0150AC] hover:bg-blue-50 hover:text-[#01408A]"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </Button>
+                  <IconTooltip label="View user details">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (item.id) router.push(`${basePath}/${item.id}`);
+                      }}
+                      aria-label="View user details"
+                      disabled={!item.id}
+                      className="text-[#0150AC] hover:bg-blue-50 hover:text-[#01408A]"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  </IconTooltip>
                 )}
 
-                {roleFilter !== "staff" && roleFilter !== "security" ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditUser(item)}
-                    title="Edit user details"
-                    className="text-blue-600 hover:text-blue-700"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
+                {roleFilter !== "staff" || canEditStaff ? (
+                  <IconTooltip label="Edit user details">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditUser(item)}
+                      aria-label="Edit user details"
+                      className="text-blue-600 hover:text-blue-700"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                  </IconTooltip>
                 ) : null}
 
                 {item.isActive ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => openSuspendModal(item)}
-                    title="Suspend user"
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <PowerOff className="w-4 h-4" />
-                  </Button>
+                  <IconTooltip label="Suspend user">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openSuspendModal(item)}
+                      aria-label="Suspend user"
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <PowerOff className="w-4 h-4" />
+                    </Button>
+                  </IconTooltip>
                 ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => openActivateModal(item)}
-                    title="Activate user"
-                    className="text-green-600 hover:text-green-700"
-                  >
-                    <Power className="w-4 h-4" />
-                  </Button>
+                  <IconTooltip label="Activate user">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openActivateModal(item)}
+                      aria-label="Activate user"
+                      className="text-green-600 hover:text-green-700"
+                    >
+                      <Power className="w-4 h-4" />
+                    </Button>
+                  </IconTooltip>
                 )}
 
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDeleteUser(item.id, item.firstName)}
-                  title="Delete user"
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                <IconTooltip label="Delete user">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteUser(item.id, item.firstName)}
+                    aria-label="Delete user"
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </IconTooltip>
                 {/* <Button
                   variant="ghost"
                   size="sm"
@@ -893,10 +931,17 @@ export function EstateUsersPage({
             paginationInfo={{
               total: pagination?.total || 0,
               current: currentPage,
-              pageSize: Number(pagination?.pageSize) || 10,
+              pageSize,
             }}
             onPageChange={(page) => {
               fetchAdminUsers(page).catch((err: unknown) => {
+                const message = getApiErrorMessage(err);
+                if (message) toast.error(message);
+              });
+            }}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              fetchAdminUsers(1, size).catch((err: unknown) => {
                 const message = getApiErrorMessage(err);
                 if (message) toast.error(message);
               });
@@ -906,7 +951,6 @@ export function EstateUsersPage({
             onExportRequest={
               selectedEstate?.value
                 ? async () => {
-                    const shouldApplyDate = Boolean(startDate && endDate);
                     const res = await dispatch(
                       getAllUsersByEstate({
                         estateId: selectedEstate.value,
@@ -914,8 +958,8 @@ export function EstateUsersPage({
                         limit: 50000,
                         role: roleFilter,
                         search: searchQuery || undefined,
-                        startDate: shouldApplyDate ? startDate : undefined,
-                        endDate: shouldApplyDate ? endDate : undefined,
+                        startDate: startDate || undefined,
+                        endDate: endDate || undefined,
                       }),
                     ).unwrap();
                     return res?.data ?? [];
@@ -936,6 +980,9 @@ export function EstateUsersPage({
           >
             <InviteUserForm
               close={handleCloseModal}
+              designationEstateId={
+                canEditStaff ? selectedEstate?.value : undefined
+              }
               refresh={() =>
                 fetchAdminUsers(1).catch((err: unknown) => {
                   const message = getApiErrorMessage(err);
@@ -954,6 +1001,9 @@ export function EstateUsersPage({
           >
             <EditUserForm
               userId={editingUserId}
+              designationEstateId={
+                canEditStaff ? selectedEstate?.value : undefined
+              }
               close={() => setEditingUserId(null)}
               fetchUser={(id) => dispatch(getUser(id)).unwrap()}
               saveUser={(id, data) => dispatch(updateUser({ id, data })).unwrap()}

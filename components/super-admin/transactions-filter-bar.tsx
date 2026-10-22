@@ -1,12 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef } from "react";
-import { Calendar } from "lucide-react";
-import {
-  IsoLinkedRangeEnd,
-  IsoLinkedRangeStart,
-} from "@/components/ui/iso-date-picker";
-import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
+import React, { useEffect, useRef } from "react";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
 
 function toIsoDateUTC(d: Date): string {
   return new Date(
@@ -65,8 +60,6 @@ export const TransactionsFilterBar: React.FC<TransactionsFilterBarProps> = ({
   defaultDateRangeDays = 0,
 }) => {
   const hasInitializedDefaultRange = useRef(false);
-  const exampleDateRange = useMemo(() => getDateRangePlaceholders(), []);
-  const showExamplePlaceholders = !defaultDateRangeDays;
 
   useEffect(() => {
     if (!defaultDateRangeDays) return;
@@ -134,34 +127,15 @@ export const TransactionsFilterBar: React.FC<TransactionsFilterBarProps> = ({
   };
 
   return (
-    <div className="bg-white p-4 rounded-lg border flex flex-wrap gap-3 items-center">
-      <div className="flex items-center gap-2">
-        <Calendar
-          className="h-4 w-4 shrink-0 text-muted-foreground cursor-pointer"
-          aria-hidden
-        />
-        <IsoLinkedRangeStart
-          startDate={fromDate ?? ""}
-          endDate={toDate ?? ""}
-          onStartChange={handleFromDateChange}
-          className="px-3 py-2 border rounded-lg text-sm cursor-pointer min-w-[140px]"
-          ariaLabel="From Date"
-          placeholder={
-            showExamplePlaceholders ? exampleDateRange.start : undefined
-          }
-        />
-        <span className="text-sm text-muted-foreground">to</span>
-        <IsoLinkedRangeEnd
-          startDate={fromDate ?? ""}
-          endDate={toDate ?? ""}
-          onEndChange={handleToDateChange}
-          className="px-3 py-2 border rounded-lg text-sm cursor-pointer min-w-[140px]"
-          ariaLabel="To Date"
-          placeholder={
-            showExamplePlaceholders ? exampleDateRange.end : undefined
-          }
-        />
-      </div>
+    <div className="flex flex-col gap-3 rounded-lg border bg-white p-4 sm:flex-row sm:flex-wrap sm:items-center">
+      <DateRangeFilter
+        startDate={fromDate ?? ""}
+        endDate={toDate ?? ""}
+        onStartChange={handleFromDateChange}
+        onEndChange={handleToDateChange}
+        startPlaceholder={defaultDateRangeDays ? "" : undefined}
+        endPlaceholder={defaultDateRangeDays ? "" : undefined}
+      />
 
       {showSearchInput && (
         <div className="flex items-center gap-2">

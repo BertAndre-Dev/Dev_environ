@@ -5,8 +5,14 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Table from "@/components/tables/list/page";
 import { Eye, Edit, Trash2, QrCode } from "lucide-react";
-import type { ResidentVisitorData } from "./types";
+import {
+  formatVisitorDateTime,
+  formatVisitorPerson,
+  visitorGateStatus,
+  type ResidentVisitorData,
+} from "./types";
 import { CopyButton } from "@/components/ui/copy-button";
+import { IconTooltip } from "@/components/ui/tooltip";
 
 export function VisitorsTableCard({
   visitors,
@@ -16,6 +22,7 @@ export function VisitorsTableCard({
   onDateRangeChange,
   paginationInfo,
   onPageChange,
+  onPageSizeChange,
   onExportRequest,
   onView,
   onEdit,
@@ -29,6 +36,7 @@ export function VisitorsTableCard({
   onDateRangeChange: (range: { startDate: string; endDate: string }) => void;
   paginationInfo: { total: number; current: number; pageSize: number };
   onPageChange: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
   onExportRequest?: () => Promise<any[]>;
   onView: (id: string) => void;
   onEdit: (id: string) => void;
@@ -39,9 +47,9 @@ export function VisitorsTableCard({
     () => [
       {
         key: "createdAt",
-        header: "Created At",
+        header: "Created",
         render: (item: ResidentVisitorData) =>
-          item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "—",
+          formatVisitorDateTime(item.createdAt),
       },
       {
         key: "name",
@@ -97,101 +105,120 @@ export function VisitorsTableCard({
         key: "visitStartDate",
         header: "Visit Start",
         render: (item: ResidentVisitorData) =>
-          item.visitStartDate
-            ? new Date(item.visitStartDate).toLocaleString()
-            : "—",
+          formatVisitorDateTime(item.visitStartDate),
       },
       {
         key: "visitEndDate",
         header: "Visit End",
         render: (item: ResidentVisitorData) =>
-          item.visitEndDate
-            ? new Date(item.visitEndDate).toLocaleString()
-            : "—",
+          formatVisitorDateTime(item.visitEndDate),
       },
-      // {
-      //   key: "isVerified",
-      //   header: "Status",
-      //   render: (item: ResidentVisitorData) => (
-      //     <span
-      //       className={`px-2 py-1 rounded text-xs font-semibold ${
-      //         item.isVerified
-      //           ? "bg-green-100 text-green-800"
-      //           : "bg-yellow-100 text-yellow-800"
-      //       }`}
-      //     >
-      //       {item.isVerified ? "Verified" : "Pending"}
-      //     </span>
-      //   ),
-      // },
+      {
+        key: "status",
+        header: "Status",
+        render: (item: ResidentVisitorData) => {
+          const status = visitorGateStatus(item);
+          return (
+            <span
+              className={`px-2 py-1 rounded text-xs font-semibold ${status.className}`}
+            >
+              {status.label}
+            </span>
+          );
+        },
+      },
+      {
+        key: "checkinTime",
+        header: "Check-in",
+        render: (item: ResidentVisitorData) =>
+          formatVisitorDateTime(item.checkinTime),
+      },
       {
         key: "checkoutTime",
-        header: "Checkout Time",
+        header: "Check-out",
         render: (item: ResidentVisitorData) =>
-          item.checkoutTime
-            ? new Date(item.checkoutTime).toLocaleTimeString()
-            : "—",
+          formatVisitorDateTime(item.checkoutTime),
       },
       {
-        key: "isCheckedOut",
-        header: "Checked Out",
+        key: "viewedBy",
+        header: "Viewed By",
         render: (item: ResidentVisitorData) =>
-          item.isCheckedOut ? "Yes" : "No",
+          formatVisitorPerson(item.viewedBy) || "—",
+      },
+      {
+        key: "checkedOutBy",
+        header: "Checked Out By",
+        render: (item: ResidentVisitorData) =>
+          formatVisitorPerson(item.checkedOutBy) || "—",
       },
       {
         key: "actions",
         header: "Actions",
         render: (item: ResidentVisitorData) => (
           <div className="flex flex-row items-center gap-2">
-            <Button
-              className="cursor-pointer"
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onView(item.id);
-              }}
-            >
-              <Eye className="w-4 h-4 mr-1" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-blue-600 hover:text-blue-700 cursor-pointer hover:bg-blue-200 disabled:opacity-50"
-              disabled={!item.qrCodeDataUrl}
-              onClick={(e) => {
-                e.stopPropagation();
-                onViewQrCode(item);
-              }}
-              title={
+            <IconTooltip label="View">
+              <Button
+                className="cursor-pointer"
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onView(item.id);
+                }}
+                aria-label="View"
+              >
+                <Eye className="w-4 h-4 mr-1" />
+              </Button>
+            </IconTooltip>
+            <IconTooltip
+              label={
                 item.qrCodeDataUrl ? "View QR code" : "QR code not available"
               }
             >
-              <QrCode className="w-4 h-4 mr-1" />
-            </Button>
-            <Button
-              variant="outline"
-              className="cursor-pointer"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(item.id);
-              }}
-            >
-              <Edit className="w-4 h-4 mr-1 cursor-pointer" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-destructive hover:text-destructive cursor-pointer hover:bg-destructive/10"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(item);
-              }}
-              title="Delete visitor"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-blue-600 hover:text-blue-700 cursor-pointer hover:bg-blue-200 disabled:opacity-50"
+                disabled={!item.qrCodeDataUrl}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewQrCode(item);
+                }}
+                aria-label={
+                  item.qrCodeDataUrl ? "View QR code" : "QR code not available"
+                }
+              >
+                <QrCode className="w-4 h-4 mr-1" />
+              </Button>
+            </IconTooltip>
+            <IconTooltip label="Edit">
+              <Button
+                variant="outline"
+                className="cursor-pointer"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(item.id);
+                }}
+                aria-label="Edit"
+              >
+                <Edit className="w-4 h-4 mr-1 cursor-pointer" />
+              </Button>
+            </IconTooltip>
+            <IconTooltip label="Delete visitor">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-destructive hover:text-destructive cursor-pointer hover:bg-destructive/10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(item);
+                }}
+                aria-label="Delete visitor"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </IconTooltip>
           </div>
         ),
       },
@@ -218,6 +245,7 @@ export function VisitorsTableCard({
         showPagination
         paginationInfo={paginationInfo}
         onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
         enableExport
         exportFileName="visitors"
         onExportRequest={onExportRequest}

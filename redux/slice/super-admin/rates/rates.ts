@@ -27,7 +27,6 @@ export interface PlatformRate {
   amount?: number | null;
   feeAmount?: number | null;
   currency?: string | null;
-  calculationType?: string | null;
   splits?: RateSplit[] | null;
   notes?: string | null;
   isActive?: boolean;

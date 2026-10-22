@@ -26,6 +26,7 @@ interface BillData {
   isActive?: boolean;
   isServiceCharge?: boolean;
   compulsory?: boolean;
+  collectionDate?: string;
   accrueInterest?: boolean;
   interestRatePercent?: number;
   interestStartsAt?: string;
@@ -47,6 +48,7 @@ export interface AssignedBillData {
   createdAt?: string;
   isServiceCharge?: boolean;
   compulsory?: boolean;
+  collectionDate?: string;
   accrueInterest?: boolean;
   interestRatePercent?: number;
   interestStartsAt?: string;

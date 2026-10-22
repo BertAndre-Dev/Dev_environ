@@ -5,9 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import Select from "react-select";
 import { toast } from "react-toastify";
 
-import { BillsSummaryChart } from "@/components/charts/BillsSummaryChart";
-import { ComplaintsDashboardCard } from "@/components/charts/ComplaintsDashboardCard";
-import { ComplaintsSummaryStatCard } from "@/components/charts/ComplaintsSummaryStatCard";
+import { CompanyFinancialReportCard } from "@/components/charts/CompanyFinancialReportCard";
 import { EnergyConsumptionOverTimeCard } from "@/components/charts/energy-consumption-over-time-card";
 import { MeterSummaryCard } from "@/components/charts/MeterSummaryCard";
 import { RoleBreakdownChart } from "@/components/charts/RoleBreakdownChart";
@@ -23,24 +21,12 @@ import {
 } from "@/redux/slice/company/energy-consumption/company-energy-consumption";
 import { getCompanyEstates } from "@/redux/slice/company/estate-mgt/company-estate";
 import {
-  getCompanyBillsSummary,
-  getCompanyComplaintsDashboard,
-  getCompanyComplaintsSummary,
   getCompanyMeterSummary,
   getCompanyUserRoleBreakdown,
   getCompanyUserSummary,
 } from "@/redux/slice/company/overview-analytics/company-overview-analytics";
 import {
   clearCompanyOverviewAnalytics,
-  selectCompanyBillsSummaryData,
-  selectCompanyBillsSummaryError,
-  selectCompanyBillsSummaryLoading,
-  selectCompanyComplaintsDashboardData,
-  selectCompanyComplaintsDashboardError,
-  selectCompanyComplaintsDashboardLoading,
-  selectCompanyComplaintsSummaryData,
-  selectCompanyComplaintsSummaryError,
-  selectCompanyComplaintsSummaryLoading,
   selectCompanyMeterSummaryData,
   selectCompanyMeterSummaryError,
   selectCompanyMeterSummaryLoading,
@@ -54,7 +40,14 @@ import {
 import { getCompanyTransactionSummary } from "@/redux/slice/company/transaction-summary/company-transaction-summary";
 import type { AppDispatch, RootState } from "@/redux/store";
 
-type EstateOption = { label: string; value: string };
+type EstateOption = {
+  label: string;
+  value: string;
+  /** Company-wide scope (`estateId=all`) — styled differently from estates. */
+  isCompanyWide?: boolean;
+};
+
+const COMPANY_WIDE_ESTATE_ID = "all";
 
 export default function CompanyOverviewPage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -69,7 +62,22 @@ export default function CompanyOverviewPage() {
     useState<EnergyConsumptionPeriod>("weekly");
   const [selectedAddressId, setSelectedAddressId] = useState("all");
 
+  const companyWideOption = useMemo<EstateOption>(
+    () => ({
+      label: companyName,
+      value: COMPANY_WIDE_ESTATE_ID,
+      isCompanyWide: true,
+    }),
+    [companyName],
+  );
+
+  const selectOptions = useMemo(
+    () => [companyWideOption, ...estateOptions],
+    [companyWideOption, estateOptions],
+  );
+
   const selectedEstateId = selectedEstate?.value ?? "";
+  const isCompanyWide = selectedEstate?.isCompanyWide === true;
 
   const { transactionSummary, transactionSummaryLoading } = useSelector(
     (state: RootState) => ({
@@ -105,24 +113,6 @@ export default function CompanyOverviewPage() {
   const meterSummaryLoading = useSelector(selectCompanyMeterSummaryLoading);
   const meterSummaryError = useSelector(selectCompanyMeterSummaryError);
 
-  const billsSummary = useSelector(selectCompanyBillsSummaryData);
-  const billsSummaryLoading = useSelector(selectCompanyBillsSummaryLoading);
-  const billsSummaryError = useSelector(selectCompanyBillsSummaryError);
-
-  const complaintsSummary = useSelector(selectCompanyComplaintsSummaryData);
-  const complaintsSummaryLoading = useSelector(
-    selectCompanyComplaintsSummaryLoading,
-  );
-  const complaintsSummaryError = useSelector(selectCompanyComplaintsSummaryError);
-
-  const complaintsDashboard = useSelector(selectCompanyComplaintsDashboardData);
-  const complaintsDashboardLoading = useSelector(
-    selectCompanyComplaintsDashboardLoading,
-  );
-  const complaintsDashboardError = useSelector(
-    selectCompanyComplaintsDashboardError,
-  );
-
   const selectedEstateName = selectedEstate?.label ?? "Estate";
 
   useEffect(() => {
@@ -144,6 +134,14 @@ export default function CompanyOverviewPage() {
     })();
   }, [dispatch]);
 
+  // Default (and keep in sync) the company-wide option once the company name is known.
+  useEffect(() => {
+    setSelectedEstate((current) => {
+      if (!current || current.isCompanyWide) return companyWideOption;
+      return current;
+    });
+  }, [companyWideOption]);
+
   useEffect(() => {
     if (!companyId) return;
     (async () => {
@@ -156,16 +154,17 @@ export default function CompanyOverviewPage() {
           (res?.data ?? [])
             .map((e: { id?: string; _id?: string; name?: string }) => {
               const value = String(e?._id || e?.id || "").trim();
-              if (!value) return null;
-              return { label: e?.name ?? "Unnamed estate", value };
+              if (!value || value === COMPANY_WIDE_ESTATE_ID) return null;
+              return {
+                label: e?.name ?? "Unnamed estate",
+                value,
+                isCompanyWide: false,
+              };
             })
             .filter((x: EstateOption | null): x is EstateOption =>
               Boolean(x),
             ) ?? [];
         setEstateOptions(options);
-        if (options.length > 0) {
-          setSelectedEstate((current) => current ?? options[0]);
-        }
       } catch (err: unknown) {
         const message = getApiErrorMessage(err);
         if (message) toast.error(message);
@@ -177,12 +176,6 @@ export default function CompanyOverviewPage() {
   }, [dispatch, companyId]);
 
   useEffect(() => {
-    if (selectedEstate?.value) return;
-    if (!estateOptions.length) return;
-    setSelectedEstate(estateOptions[0]);
-  }, [estateOptions, selectedEstate?.value]);
-
-  useEffect(() => {
     if (!selectedEstateId) {
       dispatch(clearCompanyOverviewAnalytics());
       return;
@@ -191,9 +184,6 @@ export default function CompanyOverviewPage() {
     void dispatch(getCompanyUserSummary({ estateId: selectedEstateId }));
     void dispatch(getCompanyUserRoleBreakdown({ estateId: selectedEstateId }));
     void dispatch(getCompanyMeterSummary({ estateId: selectedEstateId }));
-    void dispatch(getCompanyBillsSummary({ estateId: selectedEstateId }));
-    void dispatch(getCompanyComplaintsSummary({ estateId: selectedEstateId }));
-    void dispatch(getCompanyComplaintsDashboard({ estateId: selectedEstateId }));
   }, [dispatch, selectedEstateId]);
 
   const handleUserSummaryRetry = () => {
@@ -211,29 +201,14 @@ export default function CompanyOverviewPage() {
     void dispatch(getCompanyMeterSummary({ estateId: selectedEstateId }));
   };
 
-  const handleBillsSummaryRetry = () => {
-    if (!selectedEstateId) return;
-    void dispatch(getCompanyBillsSummary({ estateId: selectedEstateId }));
-  };
-
-  const handleComplaintsSummaryRetry = () => {
-    if (!selectedEstateId) return;
-    void dispatch(getCompanyComplaintsSummary({ estateId: selectedEstateId }));
-  };
-
-  const handleComplaintsDashboardRetry = () => {
-    if (!selectedEstateId) return;
-    void dispatch(getCompanyComplaintsDashboard({ estateId: selectedEstateId }));
-  };
-
   useEffect(() => {
     if (!selectedEstateId) return;
-    dispatch(getCompanyTransactionSummary({ estateId: selectedEstateId })).catch(
-      (err: unknown) => {
-        const message = getApiErrorMessage(err);
-        if (message) toast.error(message);
-      },
-    );
+    dispatch(
+      getCompanyTransactionSummary({ estateId: selectedEstateId }),
+    ).catch((err: unknown) => {
+      const message = getApiErrorMessage(err);
+      if (message) toast.error(message);
+    });
   }, [dispatch, selectedEstateId]);
 
   useEffect(() => {
@@ -262,18 +237,16 @@ export default function CompanyOverviewPage() {
   }, [dispatch, selectedEstateId, energyPeriod, selectedAddressId]);
 
   const transactionEmptyMessage = useMemo(() => {
-    if (estatesLoading) return "Loading estates…";
-    if (!estateOptions.length) return "No estates found for this company.";
-    if (!selectedEstateId) return "Select an estate to view transactions.";
+    if (!selectedEstateId) return "Select a scope to view transactions.";
+    if (estatesLoading && !isCompanyWide) return "Loading estates…";
     return "No transaction data to display.";
-  }, [estatesLoading, estateOptions.length, selectedEstateId]);
+  }, [estatesLoading, isCompanyWide, selectedEstateId]);
 
   const energyEmptyMessage = useMemo(() => {
-    if (estatesLoading) return "Loading estates…";
-    if (!estateOptions.length) return "No estates found for this company.";
-    if (!selectedEstateId) return "Select an estate to view energy data.";
+    if (!selectedEstateId) return "Select a scope to view energy data.";
+    if (estatesLoading && !isCompanyWide) return "Loading estates…";
     return "No vending data for this period yet.";
-  }, [estatesLoading, estateOptions.length, selectedEstateId]);
+  }, [estatesLoading, isCompanyWide, selectedEstateId]);
 
   return (
     <div className="space-y-8">
@@ -289,17 +262,58 @@ export default function CompanyOverviewPage() {
           </p>
         </div>
 
-        <div className="w-48 min-w-[12rem]">
-          <Select
-            options={estateOptions}
+        <div className="w-56 min-w-56">
+          <Select<EstateOption>
+            options={selectOptions}
             placeholder="Filter by estate"
             value={selectedEstate}
             onChange={(option) => setSelectedEstate(option)}
             isSearchable
-            isDisabled={!estateOptions.length || estatesLoading}
+            isDisabled={!companyId || (estatesLoading && !selectedEstate)}
+            formatOptionLabel={(option) =>
+              option.isCompanyWide ? (
+                <span className="inline-flex items-center gap-2 font-semibold uppercase tracking-wide text-[#007a4d]">
+                  <span
+                    className="rounded bg-[#007a4d]/12 px-1.5 py-0.5 text-[10px] font-bold normal-case tracking-normal text-[#007a4d]"
+                    aria-hidden
+                  >
+                    Company
+                  </span>
+                  {option.label}
+                </span>
+              ) : (
+                <span className="text-foreground">{option.label}</span>
+              )
+            }
             styles={{
               control: (base) => ({ ...base, cursor: "pointer" }),
-              option: (base) => ({ ...base, cursor: "pointer" }),
+              option: (base, state) => {
+                if (!state.data.isCompanyWide) {
+                  return { ...base, cursor: "pointer" };
+                }
+                let backgroundColor = base.backgroundColor;
+                if (state.isFocused) backgroundColor = "rgba(0, 122, 77, 0.08)";
+                else if (state.isSelected) {
+                  backgroundColor = "rgba(0, 122, 77, 0.12)";
+                }
+                return {
+                  ...base,
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  color: "#007a4d",
+                  backgroundColor,
+                };
+              },
+              singleValue: (base, state) =>
+                state.data.isCompanyWide
+                  ? {
+                      ...base,
+                      fontWeight: 700,
+                      color: "#007a4d",
+                      textTransform: "uppercase" as const,
+                      letterSpacing: "0.02em",
+                    }
+                  : base,
               dropdownIndicator: (base) => ({ ...base, cursor: "pointer" }),
               clearIndicator: (base) => ({ ...base, cursor: "pointer" }),
             }}
@@ -307,21 +321,26 @@ export default function CompanyOverviewPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <ComplaintsSummaryStatCard
-          data={complaintsSummary}
-          loading={complaintsSummaryLoading || estatesLoading}
-          error={complaintsSummaryError}
-          onRetry={handleComplaintsSummaryRetry}
+      <CompanyFinancialReportCard
+        companyId={companyId}
+        estateId={selectedEstateId || null}
+      />
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+        <UserSummaryCard
+          data={userSummary}
+          loading={userSummaryLoading || estatesLoading}
+          error={userSummaryError}
+          onRetry={handleUserSummaryRetry}
+        />
+
+        <RoleBreakdownChart
+          data={roleBreakdown}
+          loading={roleBreakdownLoading || estatesLoading}
+          error={roleBreakdownError}
+          onRetry={handleRoleBreakdownRetry}
         />
       </div>
-
-      <UserSummaryCard
-        data={userSummary}
-        loading={userSummaryLoading || estatesLoading}
-        error={userSummaryError}
-        onRetry={handleUserSummaryRetry}
-      />
 
       <MeterSummaryCard
         data={meterSummary}
@@ -330,29 +349,6 @@ export default function CompanyOverviewPage() {
         onRetry={handleMeterSummaryRetry}
         estateName={selectedEstateName}
       />
-
-      <ComplaintsDashboardCard
-        data={complaintsDashboard}
-        loading={complaintsDashboardLoading || estatesLoading}
-        error={complaintsDashboardError}
-        onRetry={handleComplaintsDashboardRetry}
-        estateName={selectedEstateName}
-      />
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-        <RoleBreakdownChart
-          data={roleBreakdown}
-          loading={roleBreakdownLoading || estatesLoading}
-          error={roleBreakdownError}
-          onRetry={handleRoleBreakdownRetry}
-        />
-        <BillsSummaryChart
-          data={billsSummary}
-          loading={billsSummaryLoading || estatesLoading}
-          error={billsSummaryError}
-          onRetry={handleBillsSummaryRetry}
-        />
-      </div>
 
       <TransactionSummaryCard
         data={transactionSummary}

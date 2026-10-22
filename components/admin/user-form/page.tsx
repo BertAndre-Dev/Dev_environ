@@ -32,6 +32,8 @@ type InviteUserFormProps = {
   close: () => void;
   refresh: () => void;
   role?: AdminInviteRole;
+  /** Estate admin lists designations with this estate, not the company. */
+  designationEstateId?: string;
 };
 
 interface InviteUserFormData {
@@ -59,6 +61,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
   close,
   refresh,
   role: lockedRole,
+  designationEstateId,
 }) => {
   const dispatch = useDispatch<AppDispatch>();
 
@@ -113,6 +116,8 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
           return;
         }
 
+        if (lockedRole !== "resident") return;
+
         const fieldRes = await dispatch(getFieldByEstate(estateId)).unwrap();
         const fields = fieldRes?.data || [];
         if (!fields.length) {
@@ -159,8 +164,9 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
     }
 
     const companyId = formData.companyId.trim();
-    const estateId = formData.estateId.trim();
-    if (!companyId && !estateId) {
+    const estateId = (designationEstateId || formData.estateId).trim();
+    const listByEstate = Boolean(designationEstateId?.trim());
+    if (!estateId && (listByEstate || !companyId)) {
       setDesignationOptions([]);
       return;
     }
@@ -171,11 +177,11 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
       try {
         const res = await dispatch(
           getDesignations({
-            ...(companyId
-              ? { companyId }
-              : estateId
-                ? { estateId }
-                : {}),
+            ...(listByEstate
+              ? { estateId }
+              : companyId
+                ? { companyId }
+                : { estateId }),
             page: 1,
             limit: DESIGNATIONS_PAGE_SIZE,
           }),
@@ -183,7 +189,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
         if (cancelled) return;
         const items = (res.items ?? []).filter((item) => item.isActive);
         setDesignationOptions(
-          (companyId
+          (!listByEstate && companyId
             ? items.filter(isCompanyScopedDesignation)
             : items
           ).map((item) => ({ value: item.id, label: item.name })),
@@ -201,7 +207,13 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [dispatch, formData.role, formData.companyId, formData.estateId]);
+  }, [
+    designationEstateId,
+    dispatch,
+    formData.role,
+    formData.companyId,
+    formData.estateId,
+  ]);
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));

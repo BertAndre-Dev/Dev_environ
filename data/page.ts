@@ -17,6 +17,7 @@ import {
   Building2,
   MessagesSquare,
   Package,
+  ScrollText,
   Store,
   UserCheck,
   UserCog,
@@ -96,6 +97,11 @@ export const superAdminNav: NavItem[] = [
     icon: Inbox,
     path: "/dashboard/super-admin/chat",
   },
+  {
+    label: "Audit",
+    icon: ScrollText,
+    path: "/dashboard/super-admin/audit",
+  },
   //   {
   //     label: "Visitors Management",
   //     icon: FiUsers,
@@ -154,6 +160,12 @@ export const energyProviderNav = [
     icon: IoSpeedometerOutline,
     path: "/dashboard/energy-provider/meter",
     moduleKey: "meter",
+  },
+  {
+    label: "Marketplace",
+    icon: Store,
+    path: "/dashboard/energy-provider/marketplace",
+    moduleKey: "marketplace",
   },
   {
     label: "Notifications",
@@ -431,11 +443,22 @@ export const companyNav = [
     path: "/dashboard/company/reports",
     moduleKey: "reporting",
   },
+  {
+    label: "Marketplace",
+    icon: Store,
+    path: "/dashboard/company/marketplace",
+    moduleKey: "marketplace",
+  },
   // {
   //   label: "Community Chat",
   //   icon: MessagesSquare,
   //   path: "/dashboard/company/community",
   // },
+  {
+    label: "Audit",
+    icon: ScrollText,
+    path: "/dashboard/company/audit",
+  },
   {
     label: "Settings",
     icon: FiSettings,
@@ -564,11 +587,22 @@ export const adminNav = [
     moduleKey: "chat",
   },
   {
+    label: "Marketplace",
+    icon: Store,
+    path: "/dashboard/admin/marketplace",
+    moduleKey: "marketplace",
+  },
+  {
     label: "Notifications",
     icon: Inbox,
     path: "/dashboard/admin/notifications",
     moduleKey: "notifications",
   },
+  // {
+  //   label: "Audit",
+  //   icon: ScrollText,
+  //   path: "/dashboard/admin/audit",
+  // },
   { label: "Settings", icon: FiSettings, path: "/dashboard/settings" },
   { label: "Logout", icon: FiLogOut },
 ];
@@ -762,10 +796,21 @@ export const estateAdminNav = [
     moduleKey: "announcements",
   },
   {
+    label: "Marketplace",
+    icon: Store,
+    path: "/dashboard/estate-admin/marketplace",
+    moduleKey: "marketplace",
+  },
+  {
     label: "Notifications",
     icon: Inbox,
     path: "/dashboard/estate-admin/notifications",
     moduleKey: "notifications",
+  },
+  {
+    label: "Audit",
+    icon: ScrollText,
+    path: "/dashboard/estate-admin/audit",
   },
   { label: "Settings", icon: FiSettings, path: "/dashboard/settings" },
   { label: "Logout", icon: FiLogOut },

@@ -16,22 +16,25 @@ import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   IsoLinkedRangeEnd,
   IsoLinkedRangeStart,
+  localPickerValueToApiIso,
+  parseIsoToDate,
   todayIsoString,
 } from "@/components/ui/iso-date-picker";
 import { toast } from "react-toastify";
 import { getApiErrorMessage } from "@/lib/api-error";
-
-function toIsoOrNull(val: string, endOfDay = false) {
-  if (!val) return null;
-  const d = new Date(`${val}T${endOfDay ? "23:59:59" : "00:00:00"}`);
-  return Number.isNaN(d.getTime()) ? null : d.toISOString();
-}
+import InvitePhoneNumberField from "@/components/invite/InvitePhoneNumberField";
+import {
+  DEFAULT_COUNTRY_CODE,
+  getPhoneValidationError,
+  toE164PhoneNumber,
+} from "@/lib/phone-e164";
 
 type VisitorDraft = {
   id: string;
   firstName: string;
   lastName: string;
   phone: string;
+  countryCode: string;
   purpose: string;
   visitingType: VisitingType;
   visitStartDate: string;
@@ -44,6 +47,7 @@ function createEmptyDraft(): VisitorDraft {
     firstName: "",
     lastName: "",
     phone: "",
+    countryCode: DEFAULT_COUNTRY_CODE,
     purpose: "",
     visitingType: "SHORT_VISIT",
     visitStartDate: "",
@@ -108,6 +112,8 @@ export default function AdminVisitorForm({
       return;
     }
 
+    const e164ByDraftId = new Map<string, string>();
+
     for (let i = 0; i < drafts.length; i++) {
       const row = drafts[i];
       const label = `visitor ${i + 1}`;
@@ -117,20 +123,46 @@ export default function AdminVisitorForm({
         return;
       }
 
+      if (!row.countryCode.trim()) {
+        toast.error(`Please select a country code for ${label}.`);
+        return;
+      }
+
+      const e164Phone = toE164PhoneNumber(row.phone, row.countryCode);
+      if (!e164Phone) {
+        toast.error(
+          `${label}: ${getPhoneValidationError(row.phone, row.countryCode)}`,
+        );
+        return;
+      }
+      e164ByDraftId.set(row.id, e164Phone);
+
       if (row.visitingType === "LONG_VISIT") {
         if (!row.visitStartDate || !row.visitEndDate) {
           toast.error(
-            `Start and end dates are required for ${label}'s long visit.`,
+            `Start and end date/time are required for ${label}'s long visit.`,
           );
           return;
         }
-        if (row.visitEndDate < row.visitStartDate) {
+        const startAt = parseIsoToDate(row.visitStartDate);
+        const endAt = parseIsoToDate(row.visitEndDate);
+        if (!startAt || !endAt) {
+          toast.error(`Enter a valid start and end date/time for ${label}.`);
+          return;
+        }
+        if (endAt.getTime() < startAt.getTime()) {
           toast.error(
-            `End date must be on or after the start date for ${label}.`,
+            `End date/time must be on or after the start for ${label}.`,
           );
           return;
         }
-        if (row.visitStartDate < visitStartMinDate) {
+        if (startAt.getTime() < Date.now() - 60_000) {
+          toast.error(
+            `Visit start for ${label} must be the current date and time or later.`,
+          );
+          return;
+        }
+        if (row.visitStartDate.slice(0, 10) < visitStartMinDate) {
           toast.error(`Visit start date for ${label} must be today or later.`);
           return;
         }
@@ -142,15 +174,17 @@ export default function AdminVisitorForm({
       return {
         firstName: row.firstName.trim(),
         lastName: row.lastName.trim(),
-        phone: row.phone.trim(),
+        phone: e164ByDraftId.get(row.id)!,
         purpose: row.purpose.trim(),
         residentId: null,
         estateId,
         addressId: null,
         visitingType: row.visitingType,
-        visitStartDate: isLongVisit ? toIsoOrNull(row.visitStartDate) : null,
+        visitStartDate: isLongVisit
+          ? localPickerValueToApiIso(row.visitStartDate)
+          : null,
         visitEndDate: isLongVisit
-          ? toIsoOrNull(row.visitEndDate, true)
+          ? localPickerValueToApiIso(row.visitEndDate)
           : null,
       };
     });
@@ -256,18 +290,21 @@ export default function AdminVisitorForm({
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor={`phone-${row.id}`}>Phone *</Label>
-                <Input
-                  id={`phone-${row.id}`}
-                  type="tel"
-                  value={row.phone}
-                  onChange={(e) => updateDraft(row.id, "phone", e.target.value)}
-                  placeholder="e.g. 0810000000"
-                  required
-                  className="mt-1"
-                />
-              </div>
+              <InvitePhoneNumberField
+                id={`phone-${row.id}`}
+                label="Phone number"
+                showWhatsAppHint={false}
+                name="phone"
+                countryCode={row.countryCode}
+                phoneNumber={row.phone}
+                onCountryCodeChange={(countryCode) =>
+                  updateDraft(row.id, "countryCode", countryCode)
+                }
+                onPhoneNumberChange={(e) =>
+                  updateDraft(row.id, "phone", e.target.value)
+                }
+                disabled={submitting}
+              />
 
               <div>
                 <Label htmlFor={`purpose-${row.id}`}>Purpose of visit *</Label>
@@ -302,15 +339,15 @@ export default function AdminVisitorForm({
                 <p className="text-xs text-gray-500 mt-1">
                   {row.visitingType === "SHORT_VISIT"
                     ? "Short visits are valid for a maximum of 24 hours from creation."
-                    : "Long visits require a start and end date."}
+                    : "Long visits require a start and end date and time."}
                 </p>
               </div>
 
               {row.visitingType === "LONG_VISIT" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="min-w-0">
                     <Label htmlFor={`visitStartDate-${row.id}`}>
-                      Visit Start Date *
+                      Visit start *
                     </Label>
                     <div className="mt-1">
                       <IsoLinkedRangeStart
@@ -318,31 +355,33 @@ export default function AdminVisitorForm({
                         startDate={row.visitStartDate}
                         endDate={row.visitEndDate}
                         minDate={visitStartMinDate}
+                        includeTime
                         onStartChange={(iso) =>
                           updateDraft(row.id, "visitStartDate", iso)
                         }
                         onEndChange={(iso) =>
                           updateDraft(row.id, "visitEndDate", iso)
                         }
-                        placeholder="Select start date"
-                        ariaLabel={`Visit start date for visitor ${idx + 1}`}
+                        placeholder="Start — date then time"
+                        ariaLabel={`Visit start for visitor ${idx + 1}`}
                       />
                     </div>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <Label htmlFor={`visitEndDate-${row.id}`}>
-                      Visit End Date *
+                      Visit end *
                     </Label>
                     <div className="mt-1">
                       <IsoLinkedRangeEnd
                         id={`visitEndDate-${row.id}`}
                         startDate={row.visitStartDate}
                         endDate={row.visitEndDate}
+                        includeTime
                         onEndChange={(iso) =>
                           updateDraft(row.id, "visitEndDate", iso)
                         }
-                        placeholder="Select end date"
-                        ariaLabel={`Visit end date for visitor ${idx + 1}`}
+                        placeholder="End — date then time"
+                        ariaLabel={`Visit end for visitor ${idx + 1}`}
                       />
                     </div>
                   </div>

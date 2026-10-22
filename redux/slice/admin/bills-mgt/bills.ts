@@ -64,6 +64,7 @@ interface BillData {
   frequency: BillFrequency;
   isServiceCharge?: boolean;
   compulsory?: boolean;
+  collectionDate?: string;
   accrueInterest?: boolean;
   interestRatePercent?: number;
   interestStartsAt?: string;
@@ -78,6 +79,7 @@ export interface CreateBillForAddressPayload {
   frequency: BillFrequency;
   isServiceCharge?: boolean;
   compulsory?: boolean;
+  collectionDate?: string;
   accrueInterest?: boolean;
   interestRatePercent?: number;
   interestStartsAt?: string;
@@ -92,6 +94,7 @@ export interface UpdateBillPayload {
   frequency: BillFrequency;
   isServiceCharge?: boolean;
   compulsory?: boolean;
+  collectionDate?: string;
   accrueInterest?: boolean;
   interestRatePercent?: number;
   interestStartsAt?: string;
@@ -104,6 +107,7 @@ export interface UpdateBillForAddressPayload {
   frequency?: BillFrequency;
   isServiceCharge?: boolean;
   compulsory?: boolean;
+  collectionDate?: string;
   accrueInterest?: boolean;
   interestRatePercent?: number;
   interestStartsAt?: string;
@@ -130,6 +134,11 @@ function billInterestFields(data: {
   };
 }
 
+function billCollectionDate(data: { collectionDate?: string }) {
+  const collectionDate = String(data.collectionDate ?? "").trim().slice(0, 10);
+  return collectionDate ? { collectionDate } : {};
+}
+
 // Create estate bill
 export const createBill = createAsyncThunk(
   "bills/createBill",
@@ -145,6 +154,7 @@ export const createBill = createAsyncThunk(
           ? { isServiceCharge: data.isServiceCharge }
           : {}),
         compulsory: data.compulsory ?? false,
+        ...billCollectionDate(data),
         ...billInterestFields(data),
       });
       return res.data;
@@ -176,6 +186,7 @@ export const updateBill = createAsyncThunk(
           ? { isServiceCharge: data.isServiceCharge }
           : {}),
         compulsory: data.compulsory ?? false,
+        ...billCollectionDate(data),
         ...billInterestFields(data),
       });
       return res.data;
@@ -211,6 +222,7 @@ export const updateBillForAddress = createAsyncThunk(
             ? { isServiceCharge: data.isServiceCharge }
             : {}),
           compulsory: data.compulsory ?? false,
+          ...billCollectionDate(data),
           ...billInterestFields(data),
         },
       );
@@ -396,6 +408,7 @@ export const createBillForAddress = createAsyncThunk(
             ? { isServiceCharge: data.isServiceCharge }
             : {}),
           compulsory: data.compulsory ?? false,
+          ...billCollectionDate(data),
           ...billInterestFields(data),
         },
       );

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { absoluteUrl, getSiteUrl } from "@/lib/site-url";
-import { LANDING_FAQ_ITEMS } from "@/lib/landing/content";
+import {
+  LAGOS_ESTATE_SEO_PHRASES,
+  LANDING_FAQ_ITEMS,
+} from "@/lib/landing/content";
 
 const SITE_NAME = "Bertahub";
 const LANDING_TITLE = "Bertahub | Digital Companion for Smart Living";
@@ -39,6 +42,7 @@ const LANDING_KEYWORDS = [
   "Bertahub property management companies in Lagos, Nigeria",
   "Bertahub Operating system for real estate",
   "Bertahub Real Estate Property Management",
+  ...LAGOS_ESTATE_SEO_PHRASES,
 ];
 
 function resolveOgImage() {
@@ -50,12 +54,22 @@ function resolveOgImage() {
   };
 }
 
+const ORGANIZATION_ID = `${getSiteUrl()}/#organization`;
+const WEBSITE_ID = `${getSiteUrl()}/#website`;
+const APP_ID = `${getSiteUrl()}/#app`;
+const FAQ_ID = `${getSiteUrl()}/#faq`;
+const WEBPAGE_ID = `${getSiteUrl()}/#webpage`;
+
+const APP_STORE_URL = "https://apps.apple.com/ng/app/berta-hub/id6756385415";
+const PLAY_STORE_URL =
+  "https://play.google.com/store/apps/details?id=com.bertahub.com";
+
 export function createLandingMetadata(): Metadata {
   const canonical = absoluteUrl("/");
   const ogImage = resolveOgImage();
 
   return {
-    title: LANDING_TITLE,
+    title: { absolute: LANDING_TITLE },
     description: LANDING_DESCRIPTION,
     keywords: LANDING_KEYWORDS,
     alternates: { canonical },
@@ -87,70 +101,110 @@ export function createLandingMetadata(): Metadata {
   };
 }
 
-export function createLandingOrganizationJsonLd() {
+export function createLandingJsonLdGraph() {
   return {
     "@context": "https://schema.org",
-    "@type": "Organization",
-    name: SITE_NAME,
-    url: getSiteUrl(),
-    logo: absoluteUrl("/assets/Logo.svg"),
-    description: LANDING_DESCRIPTION,
-    sameAs: [],
-  };
-}
-
-export function createLandingWebSiteJsonLd() {
-  return {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    name: SITE_NAME,
-    url: getSiteUrl(),
-    description: LANDING_DESCRIPTION,
-    publisher: {
-      "@type": "Organization",
-      name: SITE_NAME,
-      url: getSiteUrl(),
-    },
-  };
-}
-
-export function createLandingSoftwareApplicationJsonLd() {
-  return {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: SITE_NAME,
-    applicationCategory: "BusinessApplication",
-    operatingSystem: "Web, iOS, Android",
-    description: LANDING_DESCRIPTION,
-    url: getSiteUrl(),
-    offers: {
-      "@type": "Offer",
-      price: "0",
-      priceCurrency: "NGN",
-      description: "Contact Bertahub for estate management pricing",
-    },
-    featureList: [
-      "Smart metering and energy intelligence",
-      "Rent and service charge billing",
-      "Resident and visitor management",
-      "Maintenance request tracking",
-      "Electricity token vending",
-      "Announcements and resident communication",
-    ],
-  };
-}
-
-export function createLandingFaqJsonLd() {
-  return {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: LANDING_FAQ_ITEMS.map((item) => ({
-      "@type": "Question",
-      name: item.question,
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: item.answer,
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": ORGANIZATION_ID,
+        name: SITE_NAME,
+        legalName: "BertAndre Consulting Limited",
+        alternateName: ["Berta Hub", "BertaHub"],
+        url: getSiteUrl(),
+        logo: absoluteUrl("/assets/Logo.svg"),
+        description: LANDING_DESCRIPTION,
+        email: "info@bertandregroup.com",
+        telephone: "+2349138667927",
+        areaServed: {
+          "@type": "Country",
+          name: "Nigeria",
+        },
+        contactPoint: {
+          "@type": "ContactPoint",
+          contactType: "customer support",
+          email: "info@bertandregroup.com",
+          telephone: "+2349138667927",
+          areaServed: "NG",
+          availableLanguage: ["English"],
+        },
+        sameAs: [
+          "https://www.instagram.com/bertandregroup",
+          "https://youtube.com/bertandregroup",
+        ],
       },
-    })),
+      {
+        "@type": "WebSite",
+        "@id": WEBSITE_ID,
+        name: SITE_NAME,
+        url: getSiteUrl(),
+        description: LANDING_DESCRIPTION,
+        inLanguage: "en-NG",
+        publisher: { "@id": ORGANIZATION_ID },
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": APP_ID,
+        name: SITE_NAME,
+        alternateName: "Berta Hub",
+        applicationCategory: "BusinessApplication",
+        applicationSubCategory: "Estate management software",
+        operatingSystem: "Web, iOS, Android",
+        description: LANDING_DESCRIPTION,
+        url: getSiteUrl(),
+        installUrl: [APP_STORE_URL, PLAY_STORE_URL],
+        downloadUrl: [APP_STORE_URL, PLAY_STORE_URL],
+        provider: { "@id": ORGANIZATION_ID },
+        featureList: [
+          "Smart metering and energy intelligence",
+          "Rent and service charge billing",
+          "Resident and visitor management",
+          "Maintenance request tracking",
+          "Electricity token vending",
+          "Announcements and resident communication",
+        ],
+        offers: {
+          "@type": "Offer",
+          priceCurrency: "NGN",
+          availability: "https://schema.org/OnlineOnly",
+          description:
+            "Bertahub prices each estate separately. Book a demo for a quote.",
+        },
+      },
+      {
+        "@type": "FAQPage",
+        "@id": FAQ_ID,
+        url: absoluteUrl("/#faq"),
+        isPartOf: { "@id": WEBPAGE_ID },
+        mainEntity: LANDING_FAQ_ITEMS.map((item) => ({
+          "@type": "Question",
+          name: item.question,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: item.answer,
+          },
+        })),
+      },
+      {
+        "@type": "WebPage",
+        "@id": WEBPAGE_ID,
+        url: absoluteUrl("/"),
+        name: LANDING_TITLE,
+        description: LANDING_DESCRIPTION,
+        inLanguage: "en-NG",
+        isPartOf: { "@id": WEBSITE_ID },
+        about: { "@id": APP_ID },
+        publisher: { "@id": ORGANIZATION_ID },
+        primaryImageOfPage: {
+          "@type": "ImageObject",
+          ...resolveOgImage(),
+          caption: resolveOgImage().alt,
+        },
+        speakable: {
+          "@type": "SpeakableSpecification",
+          cssSelector: ["#faq-what-is-bertahub", "#faq-what-is-bertahub-answer"],
+        },
+      },
+    ],
   };
 }

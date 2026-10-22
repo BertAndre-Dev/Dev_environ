@@ -23,6 +23,12 @@ export const ESTATE_MODULE_LABELS: Record<string, string> = {
   "operations-reporting": "Operations Reporting",
   "asset-maintenance": "Asset Maintenance",
   assets: "Asset Management",
+  estate: "Estate Management",
+  support: "Support",
+  requests: "Requests",
+  rates: "Rates",
+  "bill-interest": "Bill Interest",
+  designation: "Staff Designations",
 };
 
 /** Normalize module lists from estate list rows or `/estate-mgt/{id}/modules` API payloads. */

@@ -1,11 +1,13 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalPageHeader } from "@/components/legal-pages/legal-page-header";
+import { createPublicPageMetadata } from "@/lib/seo/public-metadata";
 
-export const metadata: Metadata = {
-  title: "Privacy Notice | BertAndre Estate Management",
-  description: "Privacy notice and data protection policy - BertAndre Consulting Limited",
-};
+export const metadata = createPublicPageMetadata({
+  title: "Privacy Notice | Bertahub",
+  description:
+    "Privacy notice for Bertahub, the estate management product of BertAndre Consulting Limited, including how personal data is handled under the Nigeria Data Protection Act 2023.",
+  path: "/privacy-notice",
+});
 
 export default function PrivacyNoticePage() {
   return (

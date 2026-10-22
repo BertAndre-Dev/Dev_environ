@@ -1,13 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ChevronDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import {
-  IsoLinkedRangeEnd,
-  IsoLinkedRangeStart,
-} from "@/components/ui/iso-date-picker";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
 import { cn } from "@/lib/utils";
 
 export type PlatformFeeFilterState = {
@@ -31,14 +27,8 @@ type PlatformFeeFiltersProps = Readonly<{
   companiesLoading?: boolean;
 }>;
 
-const dateInputClassName =
-  "h-9 w-full min-w-0 cursor-pointer border-0 bg-transparent px-2 text-[13px] shadow-none ring-0 focus:ring-0";
-
 const selectClassName =
   "h-9 w-full min-w-42 cursor-pointer appearance-none border-0 bg-transparent pr-8 text-[13px] shadow-none ring-0 focus:ring-0 active:scale-[0.99] motion-reduce:active:scale-100";
-
-const fieldWellClassName =
-  "flex flex-col gap-1.5 rounded-xl bg-black/4 p-2.5 dark:bg-white/6";
 
 const scopeWellClassName =
   "grid grid-cols-1 gap-3 rounded-xl bg-black/4 p-2.5 sm:grid-cols-2 dark:bg-white/6";
@@ -51,18 +41,6 @@ export function PlatformFeeFilters({
   estatesLoading = false,
   companiesLoading = false,
 }: PlatformFeeFiltersProps) {
-  const [draftStartDate, setDraftStartDate] = useState(filters.startDate);
-  const [draftEndDate, setDraftEndDate] = useState(filters.endDate);
-
-  useEffect(() => {
-    setDraftStartDate(filters.startDate);
-    setDraftEndDate(filters.endDate);
-  }, [filters.startDate, filters.endDate]);
-
-  const datesDirty =
-    draftStartDate !== filters.startDate || draftEndDate !== filters.endDate;
-  const canApply = Boolean(draftStartDate && draftEndDate) && datesDirty;
-
   const estateSelectOptions = useMemo(() => {
     if (estatesLoading) {
       return [{ label: "Loading…", value: "" }];
@@ -76,15 +54,6 @@ export function PlatformFeeFilters({
     }
     return [{ label: "All companies", value: "" }, ...companyOptions];
   }, [companyOptions, companiesLoading]);
-
-  const handleApplyDates = () => {
-    if (!canApply) return;
-    onFiltersChange({
-      ...filters,
-      startDate: draftStartDate,
-      endDate: draftEndDate,
-    });
-  };
 
   return (
     <div
@@ -100,61 +69,16 @@ export function PlatformFeeFilters({
           <legend className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
             Period
           </legend>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
-            <div className={fieldWellClassName}>
-              <label
-                htmlFor="platform-fee-start-date"
-                className="px-0.5 text-xs font-medium text-foreground"
-              >
-                Start date
-              </label>
-              <IsoLinkedRangeStart
-                id="platform-fee-start-date"
-                startDate={draftStartDate}
-                endDate={draftEndDate}
-                onStartChange={setDraftStartDate}
-                onEndChange={setDraftEndDate}
-                ariaLabel="Start date"
-                placeholder="Select start date"
-                className={dateInputClassName}
-                withPortal={false}
-              />
-            </div>
-
-            <div className={fieldWellClassName}>
-              <label
-                htmlFor="platform-fee-end-date"
-                className="px-0.5 text-xs font-medium text-foreground"
-              >
-                End date
-              </label>
-              <IsoLinkedRangeEnd
-                id="platform-fee-end-date"
-                startDate={draftStartDate}
-                endDate={draftEndDate}
-                onEndChange={setDraftEndDate}
-                ariaLabel="End date"
-                placeholder="Select end date"
-                className={dateInputClassName}
-                withPortal={false}
-              />
-            </div>
-
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleApplyDates}
-              disabled={!canApply}
-              className={cn(
-                "h-9 w-full cursor-pointer rounded-lg px-4 text-[13px] font-medium lg:w-auto lg:min-w-[5.5rem]",
-                "transition-[transform,opacity] duration-100 ease-out",
-                "active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100",
-                canApply ? "opacity-100" : "opacity-40",
-              )}
-            >
-              Apply
-            </Button>
-          </div>
+          <DateRangeFilter
+            startId="platform-fee-start-date"
+            endId="platform-fee-end-date"
+            startDate={filters.startDate}
+            endDate={filters.endDate}
+            onStartChange={(startDate) =>
+              onFiltersChange({ ...filters, startDate })
+            }
+            onEndChange={(endDate) => onFiltersChange({ ...filters, endDate })}
+          />
         </fieldset>
 
         <fieldset className="min-w-0">

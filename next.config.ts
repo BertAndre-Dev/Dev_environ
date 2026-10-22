@@ -24,6 +24,15 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async headers() {
+    const noindex = [{ key: "X-Robots-Tag", value: "noindex, nofollow" }];
+    return [
+      { source: "/dashboard", headers: noindex },
+      { source: "/dashboard/:path*", headers: noindex },
+      { source: "/auth", headers: noindex },
+      { source: "/auth/:path*", headers: noindex },
+    ];
+  },
   async rewrites() {
     return [
       {

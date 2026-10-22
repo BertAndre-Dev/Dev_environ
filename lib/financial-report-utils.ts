@@ -1,4 +1,7 @@
 export type FinancialReportRevenueByHead = {
+  _id?: string;
+  id?: string;
+  headId?: string;
   headName: string;
   value: number;
 };
@@ -43,6 +46,7 @@ export type FinancialReportTableRow = {
   key: string;
   label: string;
   amount: number;
+  headId?: string;
 };
 
 export function revenueHeadFilterKey(headName: string): string {
@@ -65,9 +69,10 @@ export function buildRevenueTableRows(
       amount: Number(revenue?.vendingRevenue ?? 0),
     },
     ...(revenue?.byHead ?? []).map((h) => ({
-      key: revenueHeadFilterKey(h.headName),
+      key: h._id || h.id || h.headId || revenueHeadFilterKey(h.headName),
       label: h.headName,
       amount: Number(h.value ?? 0),
+      headId: h._id || h.id || h.headId,
     })),
   ];
 

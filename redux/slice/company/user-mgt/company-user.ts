@@ -180,6 +180,7 @@ export type UpdateCompanyUserPayload = {
     role?: string;
     image?: string;
     residentType?: string | null;
+    designationId?: string;
   };
 };
 

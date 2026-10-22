@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
@@ -23,7 +23,9 @@ import {
   fetchExpenseEntries,
   updateExpenseEntry,
   type ExpenseEntry,
+  type ExpenseEntryListResponse,
 } from "@/redux/slice/admin/expense-entry/expense-entry";
+import axiosInstance from "@/utils/axiosInstance";
 import {
   selectExpenseEntries,
   selectExpenseEntriesLoading,
@@ -103,7 +105,7 @@ export default function ExpenseHeadDetailPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
-  const limit = 10;
+  const [pageSize, setPageSize] = useState(10);
 
   const [addOpen, setAddOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -170,7 +172,7 @@ export default function ExpenseHeadDetailPage() {
       fetchExpenseEntries({
         headId,
         page,
-        limit,
+        limit: pageSize,
         startDate: toIsoIfPresent(startDate),
         endDate: toIsoIfPresent(endDate),
       }),
@@ -180,7 +182,7 @@ export default function ExpenseHeadDetailPage() {
         const message = getApiErrorMessage(err);
         if (message) toast.error(message);
       });
-  }, [dispatch, headId, page, startDate, endDate]);
+  }, [dispatch, headId, page, pageSize, startDate, endDate]);
 
   const filteredEntries = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -195,6 +197,46 @@ export default function ExpenseHeadDetailPage() {
   const totalExpenses = useMemo(() => {
     return (filteredEntries ?? []).reduce((sum, e) => sum + (e.amount ?? 0), 0);
   }, [filteredEntries]);
+
+  const exportEntries = useCallback(async () => {
+    if (!headId) return [];
+    const limit = 100;
+    let pageNum = 1;
+    let pages = 1;
+    const all: ExpenseEntry[] = [];
+
+    while (pageNum <= pages) {
+      const params = new URLSearchParams();
+      params.set("page", String(pageNum));
+      params.set("limit", String(limit));
+      const start = toIsoIfPresent(startDate);
+      const end = toIsoIfPresent(endDate);
+      if (start) params.set("startDate", start);
+      if (end) params.set("endDate", end);
+
+      const res = await axiosInstance.get<ExpenseEntryListResponse>(
+        `/api/v1/expense-entry/head/${headId}?${params.toString()}`,
+      );
+      const rows = Array.isArray(res.data?.data) ? res.data.data : [];
+      all.push(
+        ...rows.map((item) => ({
+          ...item,
+          id: item.id || item._id,
+        })),
+      );
+      pages = res.data?.pagination?.pages ?? 1;
+      if (rows.length === 0) break;
+      pageNum += 1;
+    }
+
+    const q = search.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter((entry) => {
+      const doc = (entry.documentNumber ?? "").toLowerCase();
+      const desc = (entry.description ?? "").toLowerCase();
+      return doc.includes(q) || desc.includes(q);
+    });
+  }, [endDate, headId, search, startDate]);
 
   const createDraftEntry = (): AddExpenseDraftEntry => ({
     id:
@@ -284,7 +326,7 @@ export default function ExpenseHeadDetailPage() {
         fetchExpenseEntries({
           headId,
           page: 1,
-          limit,
+          limit: pageSize,
           startDate: toIsoIfPresent(startDate),
           endDate: toIsoIfPresent(endDate),
         }),
@@ -419,11 +461,17 @@ export default function ExpenseHeadDetailPage() {
           loading={pageLoading ? false : entriesLoading}
           total={pagination?.total ?? filteredEntries.length ?? 0}
           currentPage={pagination?.currentPage ?? page}
-          pageSize={pagination?.pageSize ?? limit}
+          pageSize={pageSize}
           onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
           onView={handleView}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onExportRequest={exportEntries}
+          exportFileName={`expenses-${headName}`}
         />
 
         <AddExpenseModal

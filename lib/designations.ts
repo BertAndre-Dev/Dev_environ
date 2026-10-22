@@ -225,6 +225,17 @@ export function userHasDesignationModule(user: unknown): boolean {
   return false;
 }
 
+/** True when the signed-in user or estate modules include designation. */
+export function canUseDesignationModule(
+  user: unknown,
+  estateModules: string[] = [],
+): boolean {
+  if (userHasDesignationModule(user)) return true;
+  return estateModules.some(
+    (key) => key.trim().toLowerCase() === DESIGNATION_MODULE_KEY,
+  );
+}
+
 export function getDesignationScope(item: Designation): DesignationScope {
   return item.estateId ? "estate" : "company";
 }
@@ -264,22 +275,26 @@ export function isStaffAssignmentDeleteError(message: string | undefined): boole
 }
 
 export function userDesignationId(user: {
-  designationId?: string | null;
+  designationId?: unknown;
   memberships?: Array<{
-    designationId?: string | null;
+    designationId?: unknown;
     isCurrent?: boolean;
   }>;
 }): string {
-  const top = user.designationId?.trim();
+  const top = normalizeEntityId(user.designationId);
   if (top) return top;
   const memberships = user.memberships ?? [];
   const current = memberships.find(
-    (membership) => membership.isCurrent && membership.designationId?.trim(),
+    (membership) =>
+      membership.isCurrent && normalizeEntityId(membership.designationId),
   );
   return (
-    current?.designationId?.trim() ||
-    memberships.find((membership) => membership.designationId?.trim())
-      ?.designationId?.trim() ||
+    normalizeEntityId(current?.designationId) ||
+    normalizeEntityId(
+      memberships.find((membership) =>
+        normalizeEntityId(membership.designationId),
+      )?.designationId,
+    ) ||
     ""
   );
 }
@@ -296,9 +311,9 @@ export function designationNamesById(
 
 export function designationLabelForUser(
   user: {
-    designationId?: string | null;
+    designationId?: unknown;
     memberships?: Array<{
-      designationId?: string | null;
+      designationId?: unknown;
       isCurrent?: boolean;
     }>;
   },

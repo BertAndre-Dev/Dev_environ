@@ -1,17 +1,15 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
-import { Calendar, ChevronDown, Download } from "lucide-react";
-import {
-  IsoLinkedRangeEnd,
-  IsoLinkedRangeStart,
-} from "@/components/ui/iso-date-picker";
-import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Download } from "lucide-react";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
 
 export interface ReportTableRow {
   key: string;
   label: string;
   amount: number;
+  href?: string;
 }
 
 export interface ReportTableSummaryRow {
@@ -43,158 +41,11 @@ function formatNaira(n: number): string {
   return `₦${Number(n ?? 0).toLocaleString()}`;
 }
 
-function ordinal(n: number): string {
-  const s = ["th", "st", "nd", "rd"];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
-}
-
-const MONTH_SHORT = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-
-function formatDatePill(iso: string): string {
-  if (!iso) return "";
-  const d = new Date(`${iso}T00:00:00.000Z`);
-  if (isNaN(d.getTime())) return iso;
-  return `${ordinal(d.getUTCDate())} ${MONTH_SHORT[d.getUTCMonth()]}`;
-}
-
-function toOrdinalRange(start: string, end: string): string {
-  if (!start && !end) return "All dates";
-  if (!start) return `Until ${formatDatePill(end)}`;
-  if (!end) return `From ${formatDatePill(start)}`;
-  return `${formatDatePill(start)} – ${formatDatePill(end)}`;
-}
-
 function csvEscape(value: string | number): string {
   const s = String(value ?? "");
   if (s.includes('"') || s.includes(",") || s.includes("\n"))
     return `"${s.replaceAll('"', '""')}"`;
   return s;
-}
-
-function PillDropdown({
-  icon,
-  label,
-  children,
-}: {
-  icon?: React.ReactNode;
-  label: string;
-  children: (close: () => void) => React.ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node))
-        setOpen(false);
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-sm font-medium shadow-sm transition hover:bg-muted/40 cursor-pointer"
-      >
-        {icon}
-        <span>{label}</span>
-        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 top-full z-50 mt-2">
-          {children(() => setOpen(false))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DateRangeDropdown({
-  startDate,
-  endDate,
-  onChange,
-}: {
-  startDate: string;
-  endDate: string;
-  onChange: (range: { startDate: string; endDate: string }) => void;
-}) {
-  const [localStart, setLocalStart] = useState(startDate);
-  const [localEnd, setLocalEnd] = useState(endDate);
-  const datePlaceholders = useMemo(() => getDateRangePlaceholders(), []);
-
-  return (
-    <PillDropdown
-      icon={<Calendar className="h-4 w-4 text-muted-foreground" />}
-      label={toOrdinalRange(startDate, endDate)}
-    >
-      {(close) => (
-        <div className="w-72 rounded-xl border border-border bg-white p-4 shadow-xl">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Date Range
-          </p>
-
-          <div className="space-y-3">
-            <IsoLinkedRangeStart
-              startDate={localStart}
-              endDate={localEnd}
-              onStartChange={setLocalStart}
-              placeholder={datePlaceholders.start}
-              className="w-full"
-            />
-            <IsoLinkedRangeEnd
-              startDate={localStart}
-              endDate={localEnd}
-              onEndChange={setLocalEnd}
-              placeholder={datePlaceholders.end}
-              className="w-full"
-            />
-          </div>
-
-          <div className="mt-4 flex gap-2">
-            <button
-              onClick={() => {
-                setLocalStart("");
-                setLocalEnd("");
-                onChange({ startDate: "", endDate: "" });
-                close();
-              }}
-              className="flex-1 rounded-md border border-border py-1.5 text-sm hover:bg-muted/40 cursor-pointer"
-            >
-              Reset
-            </button>
-
-            <button
-              onClick={() => {
-                onChange({ startDate: localStart, endDate: localEnd });
-                close();
-              }}
-              className="flex-1 rounded-md bg-primary py-1.5 text-sm font-semibold text-white hover:opacity-90 cursor-pointer"
-            >
-              Apply
-            </button>
-          </div>
-        </div>
-      )}
-    </PillDropdown>
-  );
 }
 
 export function ReportTable({
@@ -207,6 +58,7 @@ export function ReportTable({
   onDateRangeChange,
   exportFileName = "report",
 }: ReportTableProps) {
+  const router = useRouter();
   function handleExport() {
     if (!rows.length) return;
 
@@ -231,11 +83,16 @@ export function ReportTable({
   return (
     <div className="rounded-lg border border-border bg-white">
       {/* Controls */}
-      <div className="flex justify-end gap-2 border-b p-4">
-        <DateRangeDropdown
+      <div className="flex w-full min-w-0 flex-col gap-2 border-b p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+        <DateRangeFilter
           startDate={startDate}
           endDate={endDate}
-          onChange={onDateRangeChange}
+          onStartChange={(value) =>
+            onDateRangeChange({ startDate: value, endDate })
+          }
+          onEndChange={(value) =>
+            onDateRangeChange({ startDate, endDate: value })
+          }
         />
 
         <button
@@ -259,8 +116,41 @@ export function ReportTable({
 
         <tbody>
           {rows.map((row) => (
-            <tr key={row.key} className="hover:bg-muted/20">
-              <td className="px-6 py-4 capitalize">{row.label}</td>
+            <tr
+              key={row.key}
+              className={
+                row.href
+                  ? "cursor-pointer hover:bg-muted/40"
+                  : "hover:bg-muted/20"
+              }
+              onClick={
+                row.href ? () => router.push(row.href as string) : undefined
+              }
+              onKeyDown={
+                row.href
+                  ? (event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        router.push(row.href as string);
+                      }
+                    }
+                  : undefined
+              }
+              tabIndex={row.href ? 0 : undefined}
+            >
+              <td className="px-6 py-4 capitalize">
+                {row.href ? (
+                  <Link
+                    href={row.href}
+                    className="hover:underline"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    {row.label}
+                  </Link>
+                ) : (
+                  row.label
+                )}
+              </td>
               <td className="px-6 py-4 text-right">
                 {formatNaira(row.amount)}
               </td>

@@ -16,6 +16,7 @@ import {
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/tooltip";
 import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import Loader from "@/components/ui/Loader";
@@ -72,17 +73,16 @@ export default function CompanyEstatePage() {
     };
   });
 
-  const pageSize = Number(pagination?.pageSize) || 10;
+  const [pageSize, setPageSize] = useState(10);
 
-  const fetchEstates = (page = 1) => {
-    const shouldApplyDate = Boolean(startDate && endDate);
+  const fetchEstates = (page = 1, limit = pageSize) => {
     return dispatch(
       getCompanyEstates({
         page,
-        limit: pageSize,
+        limit,
         search: search.trim() || undefined,
-        startDate: shouldApplyDate ? startDate : undefined,
-        endDate: shouldApplyDate ? endDate : undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       }),
     ).unwrap();
   };
@@ -271,16 +271,18 @@ export default function CompanyEstatePage() {
       exportable: false,
       render: (item: EstateTableRow) => (
         <DropdownMenu.Root>
-          <DropdownMenu.Trigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              title="Actions"
-              className="cursor-pointer"
-            >
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-          </DropdownMenu.Trigger>
+          <IconTooltip label="Actions">
+            <DropdownMenu.Trigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Actions"
+                className="cursor-pointer"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+            </DropdownMenu.Trigger>
+          </IconTooltip>
           <DropdownMenu.Portal>
             <DropdownMenu.Content
               align="end"
@@ -431,17 +433,23 @@ export default function CompanyEstatePage() {
                 if (message) toast.error(message);
               });
             }}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              fetchEstates(1, size).catch((err: unknown) => {
+                const message = getApiErrorMessage(err);
+                if (message) toast.error(message);
+              });
+            }}
             enableExport
             exportFileName="company-estates"
             onExportRequest={async () => {
-              const shouldApplyDate = Boolean(startDate && endDate);
               const res = await dispatch(
                 getCompanyEstates({
                   page: 1,
                   limit: 50000,
                   search: search.trim() || undefined,
-                  startDate: shouldApplyDate ? startDate : undefined,
-                  endDate: shouldApplyDate ? endDate : undefined,
+                  startDate: startDate || undefined,
+                  endDate: endDate || undefined,
                 }),
               ).unwrap();
               return res?.data ?? [];

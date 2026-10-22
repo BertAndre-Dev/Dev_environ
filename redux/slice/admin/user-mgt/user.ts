@@ -173,6 +173,7 @@ export type UpdateAdminUserPayload = {
     role?: string;
     image?: string;
     residentType?: string | null;
+    designationId?: string;
   };
 };
 

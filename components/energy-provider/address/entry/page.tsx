@@ -2,6 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/tooltip";
 import { Plus, Edit2, Trash2, MapPin, MapPinHouse } from "lucide-react";
 import Table from "@/components/tables/list/page";
 import { getEnergyProviderFieldByEstate } from "@/redux/slice/energy-provider/address-mgt/fields/energy-provider-fields";
@@ -49,11 +50,16 @@ export default function EnergyProviderFieldEntry() {
   const [estateId, setEstateId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<EntryData | null>(null);
-  const [itemToDelete, setItemToDelete] = useState<{ id: string; name?: string } | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{
+    id: string;
+    name?: string;
+  } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [entries, setEntries] = useState<EntryData[]>([]);
   const [fields, setFields] = useState<FieldDefinition[]>([]);
-  const [stats, setStats] = useState<Record<string, Record<string, unknown>>>({});
+  const [stats, setStats] = useState<Record<string, Record<string, unknown>>>(
+    {},
+  );
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
     total: 0,
@@ -62,6 +68,7 @@ export default function EnergyProviderFieldEntry() {
     totalPages: 1,
   });
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -116,20 +123,21 @@ export default function EnergyProviderFieldEntry() {
         return;
       }
 
-      const shouldApplyDate = Boolean(startDate && endDate);
       const entryRes = await dispatch(
         getEnergyProviderEntriesByField({
           fieldId,
           page: 1,
-          limit: PAGE_SIZE,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
+          limit: pageSize,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         }),
       ).unwrap();
 
       applyEntries(entryRes, 1);
 
-      const statsRes = await dispatch(getEnergyProviderEntryStats(fieldId)).unwrap();
+      const statsRes = await dispatch(
+        getEnergyProviderEntryStats(fieldId),
+      ).unwrap();
       setStats({ [fieldId]: statsRes?.data || {} });
     } catch {
       toast.error("Failed to fetch entries or stats.");
@@ -145,16 +153,15 @@ export default function EnergyProviderFieldEntry() {
   useEffect(() => {
     const fieldId = fields[0]?.id || fields[0]?._id;
     if (!fieldId) return;
-    const shouldApplyDate = Boolean(startDate && endDate);
 
     setLoading(true);
     dispatch(
       getEnergyProviderEntriesByField({
         fieldId,
         page: 1,
-        limit: PAGE_SIZE,
-        startDate: shouldApplyDate ? startDate : undefined,
-        endDate: shouldApplyDate ? endDate : undefined,
+        limit: pageSize,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       }),
     )
       .unwrap()
@@ -234,27 +241,30 @@ export default function EnergyProviderFieldEntry() {
       header: "Actions",
       render: (item: EntryTableRow) => (
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleOpenModal(item)}
-           className="text-blue-600 hover:text-blue-700"
-           >
-            <Edit2 className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() =>
-              handleDeleteEntry(
-                item.id,
-                String(item.data?.name ?? "entry"),
-              )
-            }
-           className="text-red-600 hover:text-red-700"
-           >
-            <Trash2 className="w-4 h-4" />
-          </Button>
+          <IconTooltip label="Edit">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleOpenModal(item)}
+              className="text-blue-600 hover:text-blue-700"
+              aria-label="Edit"
+            >
+              <Edit2 className="w-4 h-4" />
+            </Button>
+          </IconTooltip>
+          <IconTooltip label="Delete">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                handleDeleteEntry(item.id, String(item.data?.name ?? "entry"))
+              }
+              className="text-red-600 hover:text-red-700"
+              aria-label="Delete"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </IconTooltip>
         </div>
       ),
     },
@@ -300,7 +310,10 @@ export default function EnergyProviderFieldEntry() {
                     {String(stat.value)}
                   </p>
                 </div>
-                <div className="p-3 rounded-lg" style={{ background: stat.color }}>
+                <div
+                  className="p-3 rounded-lg"
+                  style={{ background: stat.color }}
+                >
                   <Icon className="w-6 h-6" />
                 </div>
               </div>
@@ -351,25 +364,44 @@ export default function EnergyProviderFieldEntry() {
           paginationInfo={{
             total: pagination.total,
             current: pagination.currentPage || currentPage,
-            pageSize: pagination.pageSize || PAGE_SIZE,
+            pageSize,
           }}
           onPageChange={(page) => {
             const fieldId = fields[0]?.id || fields[0]?._id;
             if (!fieldId) return;
-            const shouldApplyDate = Boolean(startDate && endDate);
 
             setLoading(true);
             dispatch(
               getEnergyProviderEntriesByField({
                 fieldId,
                 page,
-                limit: pagination.pageSize || PAGE_SIZE,
-                startDate: shouldApplyDate ? startDate : undefined,
-                endDate: shouldApplyDate ? endDate : undefined,
+                limit: pageSize,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
               }),
             )
               .unwrap()
               .then((res) => applyEntries(res, page))
+              .catch(() => toast.error("Failed to change page"))
+              .finally(() => setLoading(false));
+          }}
+          onPageSizeChange={(size) => {
+            const fieldId = fields[0]?.id || fields[0]?._id;
+            if (!fieldId) return;
+            setPageSize(size);
+            setCurrentPage(1);
+            setLoading(true);
+            dispatch(
+              getEnergyProviderEntriesByField({
+                fieldId,
+                page: 1,
+                limit: size,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
+              }),
+            )
+              .unwrap()
+              .then((res) => applyEntries(res, 1))
               .catch(() => toast.error("Failed to change page"))
               .finally(() => setLoading(false));
           }}
@@ -380,14 +412,13 @@ export default function EnergyProviderFieldEntry() {
               ? async () => {
                   const fieldId = fields[0]?.id || fields[0]?._id;
                   if (!fieldId) return [];
-                  const shouldApplyDate = Boolean(startDate && endDate);
                   const res = await dispatch(
                     getEnergyProviderEntriesByField({
                       fieldId,
                       page: 1,
                       limit: 50000,
-                      startDate: shouldApplyDate ? startDate : undefined,
-                      endDate: shouldApplyDate ? endDate : undefined,
+                      startDate: startDate || undefined,
+                      endDate: endDate || undefined,
                     }),
                   ).unwrap();
                   return res?.data ?? [];
@@ -401,7 +432,9 @@ export default function EnergyProviderFieldEntry() {
         <Modal visible={open} onClose={handleCloseModal}>
           <EnergyProviderEntryForm
             estateId={estateId}
-            fieldId={selectedEntry?.fieldId || fields[0]?.id || fields[0]?._id || ""}
+            fieldId={
+              selectedEntry?.fieldId || fields[0]?.id || fields[0]?._id || ""
+            }
             fields={fields.map((field) => ({
               id: field.id || field._id || "",
               key: field.key,
@@ -413,7 +446,7 @@ export default function EnergyProviderFieldEntry() {
           />
         </Modal>
       )}
-    
+
       <DeleteModal
         visible={Boolean(itemToDelete)}
         onClose={() => setItemToDelete(null)}

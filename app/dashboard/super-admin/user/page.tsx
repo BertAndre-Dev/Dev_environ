@@ -2,6 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/tooltip";
 import {
   // Building2,
   // Users,
@@ -247,18 +248,17 @@ export default function SuperAdminUserPage() {
   const selectedFilterEntity =
     filterScope === "estate" ? selectedEstate : selectedCompany;
 
-  const pageSize = Number(userPagination?.pageSize) || 10;
+  const [pageSize, setPageSize] = useState(10);
 
   const fetchUsers = useCallback(
-    (page = 1) => {
+    (page = 1, limit = pageSize) => {
       if (!selectedFilterEntity?.value) return Promise.resolve();
-      const shouldApplyDate = Boolean(startDate && endDate);
       const common = {
         page,
-        limit: pageSize,
+        limit,
         role: roleFilter,
-        startDate: shouldApplyDate ? startDate : undefined,
-        endDate: shouldApplyDate ? endDate : undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       };
 
       const request =
@@ -493,14 +493,18 @@ export default function SuperAdminUserPage() {
       render: (item: SuperAdminUserData) => item.phoneNumber?.trim() || "—",
       exportValue: (item: SuperAdminUserData) => item.phoneNumber?.trim() || "",
     },
-    {
-      key: "address",
-      header: "Address",
-      render: (item: SuperAdminUserData) =>
-        formatUserAddresses(item.addressIds) || "—",
-      exportValue: (item: SuperAdminUserData) =>
-        formatUserAddresses(item.addressIds),
-    },
+    ...(showResidentColumns
+      ? [
+          {
+            key: "address",
+            header: "Address",
+            render: (item: SuperAdminUserData) =>
+              formatUserAddresses(item.addressIds) || "—",
+            exportValue: (item: SuperAdminUserData) =>
+              formatUserAddresses(item.addressIds),
+          },
+        ]
+      : []),
     ...(showResidentColumns
       ? [
           {
@@ -610,57 +614,68 @@ export default function SuperAdminUserPage() {
       header: "Actions",
       render: (item: SuperAdminUserData) => (
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            className="text-[#0150AC] hover:text-[#01408A] cursor-pointer"
-            size="sm"
-            onClick={() => {
-              const id = item.id || (item as { _id?: string })._id;
-              if (id) router.push(`/dashboard/super-admin/user/${id}`);
-            }}
-            title="View user details"
-            disabled={!item.id && !(item as { _id?: string })._id}
-          >
-            <Eye className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            className="text-blue-600 hover:text-blue-700 cursor-pointer"
-            size="sm"
-            onClick={() => handleEditUser(item)}
-            title="Edit user details"
-          >
-            <Edit className="w-4 h-4" />
-          </Button>
+          <IconTooltip label="View user details">
+            <Button
+              variant="ghost"
+              className="text-[#0150AC] hover:text-[#01408A] cursor-pointer"
+              size="sm"
+              onClick={() => {
+                const id = item.id || (item as { _id?: string })._id;
+                if (id) router.push(`/dashboard/super-admin/user/${id}`);
+              }}
+              aria-label="View user details"
+              disabled={!item.id && !(item as { _id?: string })._id}
+            >
+              <Eye className="w-4 h-4" />
+            </Button>
+          </IconTooltip>
+          <IconTooltip label="Edit user details">
+            <Button
+              variant="ghost"
+              className="text-blue-600 hover:text-blue-700 cursor-pointer"
+              size="sm"
+              onClick={() => handleEditUser(item)}
+              aria-label="Edit user details"
+            >
+              <Edit className="w-4 h-4" />
+            </Button>
+          </IconTooltip>
           {item.isActive ? (
+            <IconTooltip label="Suspend user">
+              <Button
+                variant="ghost"
+                className="text-red-600 hover:text-red-700 cursor-pointer"
+                size="sm"
+                onClick={() => openSuspendModal(item)}
+                aria-label="Suspend user"
+              >
+                <PowerOff className="w-4 h-4" />
+              </Button>
+            </IconTooltip>
+          ) : (
+            <IconTooltip label="Activate user">
+              <Button
+                variant="ghost"
+                className="text-green-600 hover:text-green-700 cursor-pointer"
+                size="sm"
+                onClick={() => openActivateModal(item)}
+                aria-label="Activate user"
+              >
+                <Power className="w-4 h-4" />
+              </Button>
+            </IconTooltip>
+          )}
+          <IconTooltip label="Delete user">
             <Button
               variant="ghost"
               className="text-red-600 hover:text-red-700 cursor-pointer"
               size="sm"
-              onClick={() => openSuspendModal(item)}
-              title="Suspend user"
+              onClick={() => handleDeleteUser(item.id, item.firstName)}
+              aria-label="Delete user"
             >
-              <PowerOff className="w-4 h-4" />
+              <Trash2 className="w-4 h-4" />
             </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              className="text-green-600 hover:text-green-700 cursor-pointer"
-              size="sm"
-              onClick={() => openActivateModal(item)}
-              title="Activate user"
-            >
-              <Power className="w-4 h-4" />
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            className="text-red-600 hover:text-red-700 cursor-pointer"
-            size="sm"
-            onClick={() => handleDeleteUser(item.id, item.firstName)}
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
+          </IconTooltip>
         </div>
       ),
     },
@@ -835,10 +850,18 @@ export default function SuperAdminUserPage() {
             paginationInfo={{
               total: userPagination?.total || 0,
               current: currentPage,
-              pageSize: Number(userPagination?.pageSize) || 10,
+              pageSize,
             }}
             onPageChange={(page) => {
               fetchUsers(page).catch((err: unknown) => {
+                const message = getApiErrorMessage(err);
+                if (message) toast.error(message);
+              });
+            }}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+              fetchUsers(1, size).catch((err: unknown) => {
                 const message = getApiErrorMessage(err);
                 if (message) toast.error(message);
               });
@@ -848,13 +871,12 @@ export default function SuperAdminUserPage() {
             onExportRequest={
               selectedFilterEntity?.value
                 ? async () => {
-                    const shouldApplyDate = Boolean(startDate && endDate);
                     const common = {
                       page: 1,
                       limit: 50000,
                       role: roleFilter,
-                      startDate: shouldApplyDate ? startDate : undefined,
-                      endDate: shouldApplyDate ? endDate : undefined,
+                      startDate: startDate || undefined,
+                      endDate: endDate || undefined,
                     };
                     const res =
                       filterScope === "company"

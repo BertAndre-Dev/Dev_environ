@@ -1,11 +1,13 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalPageHeader } from "@/components/legal-pages/legal-page-header";
+import { createPublicPageMetadata } from "@/lib/seo/public-metadata";
 
-export const metadata: Metadata = {
-  title: "Cookie Notice & Policy | BertAndre Estate Management",
-  description: "Cookie notice and policy for BertAndre Consulting Limited",
-};
+export const metadata = createPublicPageMetadata({
+  title: "Cookie Policy | Bertahub",
+  description:
+    "Cookie notice for the Bertahub website, operated by BertAndre Consulting Limited.",
+  path: "/cookie-policy",
+});
 
 export default function CookiePolicyPage() {
   return (

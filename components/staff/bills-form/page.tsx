@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch } from "@/redux/store";
+import { selectIsPremiumPlan } from "@/redux/slice/auth-mgt/auth-mgt-slice";
 import {
   billFrequencyOptions,
   coerceFrequencyForServiceCharge,
@@ -15,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { IsoDatePicker } from "@/components/ui/iso-date-picker";
 import { toast } from "react-toastify";
 import { getApiErrorMessage } from "@/lib/api-error";
 import {
@@ -37,6 +39,7 @@ interface BillFormState {
   frequency: BillFrequency;
   isServiceCharge: boolean;
   compulsory: boolean;
+  collectionDate: string;
   accrueInterest: boolean;
   interestRatePercent: string;
   interestStartsAt: string;
@@ -52,6 +55,7 @@ export interface BillSubmitData {
   frequency: BillFrequency;
   isServiceCharge?: boolean;
   compulsory?: boolean;
+  collectionDate?: string;
   accrueInterest?: boolean;
   interestRatePercent?: number;
   interestStartsAt?: string;
@@ -64,6 +68,7 @@ interface BillsFormProps {
     | (Partial<Omit<BillSubmitData, "frequency">> & {
         frequency?: string;
         amount?: number;
+        collectionDate?: string;
       })
     | null;
   onSubmit: (data: BillSubmitData) => void | Promise<void>;
@@ -79,6 +84,7 @@ function amountFromBill(data?: {
 }
 
 export default function BillsForm({ estateId, initialData, onSubmit }: BillsFormProps) {
+  const isPremiumPlan = useSelector(selectIsPremiumPlan);
   const seededAmount = amountFromBill(initialData);
   const [formData, setFormData] = useState<BillFormState>({
     estateId,
@@ -94,6 +100,7 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
     ),
     isServiceCharge: Boolean(initialData?.isServiceCharge),
     compulsory: Boolean(initialData?.compulsory),
+    collectionDate: toInterestStartDate(initialData?.collectionDate),
     accrueInterest: Boolean(initialData?.accrueInterest),
     interestRatePercent:
       initialData?.interestRatePercent != null
@@ -134,6 +141,7 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
             ),
             isServiceCharge: Boolean(fetchData.isServiceCharge),
             compulsory: Boolean(fetchData.compulsory),
+            collectionDate: toInterestStartDate(fetchData.collectionDate),
             accrueInterest: Boolean(fetchData.accrueInterest),
             interestRatePercent:
               fetchData.interestRatePercent != null
@@ -184,6 +192,13 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
     isServiceChargeBill,
   );
 
+  const collectionDateRequired =
+    isPremiumPlan &&
+    coerceFrequencyForServiceCharge(
+      formData.frequency,
+      isServiceChargeBill,
+    ) !== "oneoff";
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const interestRate = formData.accrueInterest
@@ -204,6 +219,10 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       toast.error("Please select when interest should start.");
       return;
     }
+    if (collectionDateRequired && !formData.collectionDate) {
+      toast.error("Please select a collection date.");
+      return;
+    }
     const payload: BillSubmitData = {
       estateId: formData.estateId,
       name: formData.name,
@@ -215,6 +234,9 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
       ),
       isServiceCharge: formData.isServiceCharge,
       compulsory: isServiceChargeBill ? false : formData.compulsory,
+      ...(isPremiumPlan && formData.collectionDate
+        ? { collectionDate: formData.collectionDate }
+        : {}),
       accrueInterest: formData.accrueInterest,
       interestRatePercent: interestRate,
       interestStartsAt:
@@ -313,6 +335,29 @@ export default function BillsForm({ estateId, initialData, onSubmit }: BillsForm
                 required
               />
             </div>
+
+            {isPremiumPlan ? (
+              <div>
+                <Label htmlFor="estate-bill-collection-date">
+                  Collection date
+                  {collectionDateRequired ? (
+                    <span className="text-destructive"> *</span>
+                  ) : (
+                    <span className="font-normal text-muted-foreground">
+                      {" "}
+                      (optional)
+                    </span>
+                  )}
+                </Label>
+                <IsoDatePicker
+                  id="estate-bill-collection-date"
+                  value={formData.collectionDate}
+                  onChange={(iso) => handleChange("collectionDate", iso)}
+                  placeholder="Select collection date"
+                  withPortal={false}
+                />
+              </div>
+            ) : null}
 
             <AccrueInterestFields
               idPrefix="estate-bill"

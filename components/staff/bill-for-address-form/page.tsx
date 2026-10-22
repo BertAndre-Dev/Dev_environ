@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { IsoDatePicker } from "@/components/ui/iso-date-picker";
 import { toast } from "react-toastify";
 import { getApiErrorMessage } from "@/lib/api-error";
 import {
@@ -24,7 +25,10 @@ import {
 } from "@/components/admin/bills-form/accrue-interest-fields";
 import { cn } from "@/lib/utils";
 import { canUseBillInterest } from "@/lib/user-modules";
-import { selectEstateModules } from "@/redux/slice/auth-mgt/auth-mgt-slice";
+import {
+  selectEstateModules,
+  selectIsPremiumPlan,
+} from "@/redux/slice/auth-mgt/auth-mgt-slice";
 
 export interface BillForAddressFormData {
   addressId: string;
@@ -32,7 +36,9 @@ export interface BillForAddressFormData {
   description: string;
   amount: number;
   frequency: "oneoff";
+  isServiceCharge?: boolean;
   compulsory: boolean;
+  collectionDate?: string;
   accrueInterest?: boolean;
   interestRatePercent?: number;
   interestStartsAt?: string;
@@ -45,7 +51,9 @@ export interface BillForAddressInitialData {
   name?: string;
   description?: string;
   amount?: number;
+  isServiceCharge?: boolean;
   compulsory?: boolean;
+  collectionDate?: string;
   accrueInterest?: boolean;
   interestRatePercent?: number;
   interestStartsAt?: string;
@@ -92,6 +100,7 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
   const dispatch = useDispatch<AppDispatch>();
   const authUser = useSelector((state: RootState) => state.auth.user);
   const estateModules = useSelector(selectEstateModules);
+  const isPremiumPlan = useSelector(selectIsPremiumPlan);
   const canAccrueInterest = canUseBillInterest(authUser, estateModules);
   const isEditing = Boolean(initialData?.id || initialData?.billId);
 
@@ -112,6 +121,7 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
         ? formatAmountInput(String(initialData.amount))
         : "",
     compulsory: Boolean(initialData?.compulsory),
+    collectionDate: toInterestStartDate(initialData?.collectionDate),
     accrueInterest: Boolean(initialData?.accrueInterest),
     interestRatePercent:
       initialData?.interestRatePercent != null
@@ -230,6 +240,10 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
           compulsory: Boolean(
             fetchData.compulsory ?? initialData?.compulsory ?? prev.compulsory,
           ),
+          collectionDate:
+            toInterestStartDate(fetchData.collectionDate) ||
+            toInterestStartDate(initialData?.collectionDate) ||
+            prev.collectionDate,
           accrueInterest: Boolean(
             fetchData.accrueInterest ??
               initialData?.accrueInterest ??
@@ -301,7 +315,6 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
       toast.error("Please select when interest should start.");
       return;
     }
-
     try {
       setSubmitting(true);
       await onSubmit({
@@ -311,6 +324,9 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
         amount,
         frequency: "oneoff",
         compulsory: form.compulsory,
+        ...(isPremiumPlan && form.collectionDate
+          ? { collectionDate: form.collectionDate }
+          : {}),
         ...(canAccrueInterest
           ? {
               accrueInterest: form.accrueInterest,
@@ -338,24 +354,6 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
           <p className="text-gray-500 italic">Loading bill...</p>
         ) : (
           <>
-            {canAccrueInterest ? (
-            <AccrueInterestFields
-              idPrefix="address-bill"
-              accrueInterest={form.accrueInterest}
-              interestRatePercent={form.interestRatePercent}
-              interestStartsAt={form.interestStartsAt}
-              onAccrueInterestChange={(value) =>
-                handleChange("accrueInterest", value)
-              }
-              onInterestRateChange={(value) =>
-                handleChange("interestRatePercent", value)
-              }
-              onInterestStartsAtChange={(value) =>
-                handleChange("interestStartsAt", value)
-              }
-            />
-            ) : null}
-
             <div className="space-y-2">
               <Label htmlFor="addressId">Address</Label>
               <select
@@ -437,6 +435,42 @@ export default function BillForAddressForm(props: BillForAddressFormProps) {
                 placeholder="25,000"
               />
             </div>
+
+            {canAccrueInterest ? (
+              <AccrueInterestFields
+                idPrefix="address-bill"
+                accrueInterest={form.accrueInterest}
+                interestRatePercent={form.interestRatePercent}
+                interestStartsAt={form.interestStartsAt}
+                onAccrueInterestChange={(value) =>
+                  handleChange("accrueInterest", value)
+                }
+                onInterestRateChange={(value) =>
+                  handleChange("interestRatePercent", value)
+                }
+                onInterestStartsAtChange={(value) =>
+                  handleChange("interestStartsAt", value)
+                }
+              />
+            ) : null}
+
+            {isPremiumPlan ? (
+              <div>
+                <Label htmlFor="address-bill-collection-date">
+                  Collection date{" "}
+                  <span className="font-normal text-muted-foreground">
+                    (optional)
+                  </span>
+                </Label>
+                <IsoDatePicker
+                  id="address-bill-collection-date"
+                  value={form.collectionDate}
+                  onChange={(iso) => handleChange("collectionDate", iso)}
+                  placeholder="Select collection date"
+                  withPortal={false}
+                />
+              </div>
+            ) : null}
 
             <div className="flex items-center justify-between gap-3">
               <Label htmlFor="address-bill-compulsory" className="font-medium">

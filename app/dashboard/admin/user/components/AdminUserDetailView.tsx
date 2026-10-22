@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/tooltip";
 import Loader from "@/components/ui/Loader";
 import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
@@ -49,6 +50,7 @@ import type { AsyncThunk } from "@reduxjs/toolkit";
 import type { AppDispatch, RootState } from "@/redux/store";
 import type { DashboardUserDetails } from "@/lib/dashboard-user-details";
 import { getResidentBills } from "@/redux/slice/resident/bill-mgt/bills-mgt";
+import { getUserTransactionHistory } from "@/redux/slice/super-admin/super-admin-transactions-mgt/super-admin-transactions";
 import { getBillsForAddress } from "@/redux/slice/admin/bills-mgt/bills";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getMeterByAddress } from "@/redux/slice/resident/meter-mgt/meter-mgt";
@@ -59,6 +61,17 @@ import { getVisitorsByResident } from "@/redux/slice/resident/visitor/visitor";
 import { UserWalletBalanceCard } from "@/components/user-mgt/UserWalletBalanceCard";
 
 type DetailTab = "bills" | "complaints" | "visitors";
+
+interface PaymentHistoryRow {
+  id: string;
+  createdAt?: string;
+  type?: string;
+  amount?: number;
+  serviceCharge?: number;
+  paymentStatus?: string;
+  description?: string;
+  tx_ref?: string;
+}
 
 interface UserBillRow {
   id: string;
@@ -437,6 +450,8 @@ export interface UserDetailViewProps {
   listPath: string;
   actions: UserMgtActions;
   showWalletBalance?: boolean;
+  /** Super-admin payment history reads transaction-mgt instead of resident bills. */
+  paymentHistory?: "bills" | "transactions";
 }
 
 export default function UserDetailView({
@@ -446,6 +461,7 @@ export default function UserDetailView({
   listPath,
   actions,
   showWalletBalance = false,
+  paymentHistory = "bills",
 }: UserDetailViewProps) {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
@@ -457,6 +473,7 @@ export default function UserDetailView({
   const [activeTab, setActiveTab] = useState<DetailTab>("bills");
   const [relatedLoading, setRelatedLoading] = useState(true);
   const [bills, setBills] = useState<UserBillRow[]>([]);
+  const [payments, setPayments] = useState<PaymentHistoryRow[]>([]);
   const [assignedBills, setAssignedBills] = useState<AssignedBillRow[]>([]);
   const [estateId, setEstateId] = useState(authEstateId);
   const [complaints, setComplaints] = useState<ResidentComplaintItem[]>([]);
@@ -540,18 +557,34 @@ export default function UserDetailView({
 
     setRelatedLoading(true);
     try {
-      const billPromise = uid
-        ? dispatch(
-            getResidentBills({
-              residentId: uid,
-              page: 1,
-              limit: 100,
-              estateId: resolvedEstateId || undefined,
-            }),
-          )
-            .unwrap()
-            .catch(() => ({ data: [] }))
-        : Promise.resolve({ data: [] });
+      const billPromise =
+        paymentHistory === "transactions"
+          ? Promise.resolve({ data: [] })
+          : uid
+            ? dispatch(
+                getResidentBills({
+                  residentId: uid,
+                  page: 1,
+                  limit: 100,
+                  estateId: resolvedEstateId || undefined,
+                }),
+              )
+                .unwrap()
+                .catch(() => ({ data: [] }))
+            : Promise.resolve({ data: [] });
+
+      const paymentPromise =
+        paymentHistory === "transactions" && uid
+          ? dispatch(
+              getUserTransactionHistory({
+                userId: uid,
+                page: 1,
+                limit: 100,
+              }),
+            )
+              .unwrap()
+              .catch(() => ({ data: [] }))
+          : Promise.resolve({ data: [] });
 
       const assignedBillPromises =
         resolvedEstateId && addresses.length > 0
@@ -630,17 +663,34 @@ export default function UserDetailView({
 
       const [
         billsRes,
+        paymentsRes,
         assignedGroups,
         complaintGroups,
         meterEntries,
         visitorRes,
       ] = await Promise.all([
         billPromise,
+        paymentPromise,
         Promise.all(assignedBillPromises),
         Promise.all(complaintPromises),
         Promise.all(meterPromises),
         visitorPromise,
       ]);
+
+      setPayments(
+        ((paymentsRes?.data ?? []) as Record<string, unknown>[]).map(
+          (item, index) => ({
+            id: String(item.id ?? item._id ?? index),
+            createdAt: item.createdAt as string | undefined,
+            type: item.type as string | undefined,
+            amount: item.amount as number | undefined,
+            serviceCharge: item.serviceCharge as number | undefined,
+            paymentStatus: item.paymentStatus as string | undefined,
+            description: item.description as string | undefined,
+            tx_ref: item.tx_ref as string | undefined,
+          }),
+        ),
+      );
 
       setBills(
         (billsRes?.data ?? []).map(
@@ -711,7 +761,7 @@ export default function UserDetailView({
     } finally {
       setRelatedLoading(false);
     }
-  }, [dispatch, estateId, user]);
+  }, [dispatch, estateId, paymentHistory, user]);
 
   useEffect(() => {
     fetchRelatedData().catch(() => {});
@@ -843,7 +893,7 @@ export default function UserDetailView({
     },
     {
       key: "nextDueDate",
-      header: "Next Due",
+      header: "Next Payment Date",
       render: (item: AssignedBillRow) => formatDateTime(item.nextDueDate),
     },
   ];
@@ -899,7 +949,7 @@ export default function UserDetailView({
     },
     {
       key: "nextDueDate",
-      header: "Next Due",
+      header: "Next Payment Date",
       render: (item: UserBillRow) => formatDateTime(item.nextDueDate),
     },
     {
@@ -907,6 +957,56 @@ export default function UserDetailView({
       header: "Last Payment",
       render: (item: UserBillRow) =>
         formatDateTime(item.lastPaymentDate ?? undefined),
+    },
+  ];
+
+  const paymentColumns = [
+    {
+      key: "createdAt",
+      header: "Date",
+      render: (item: PaymentHistoryRow) => formatDateTime(item.createdAt),
+    },
+    {
+      key: "type",
+      header: "Type",
+      render: (item: PaymentHistoryRow) => formatLabel(item.type),
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      render: (item: PaymentHistoryRow) =>
+        `₦${Number(item.amount ?? 0).toLocaleString()}`,
+    },
+    {
+      key: "serviceCharge",
+      header: "Service Charge",
+      render: (item: PaymentHistoryRow) =>
+        `₦${Number(item.serviceCharge ?? 0).toLocaleString()}`,
+    },
+    {
+      key: "paymentStatus",
+      header: "Status",
+      render: (item: PaymentHistoryRow) => {
+        const status = (item.paymentStatus ?? "").toLowerCase();
+        const paid = status === "paid" || status === "success";
+        return (
+          <StatusPill tone={paid ? "green" : status === "failed" ? "red" : "amber"}>
+            {formatLabel(item.paymentStatus) || "—"}
+          </StatusPill>
+        );
+      },
+    },
+    {
+      key: "description",
+      header: "Description",
+      render: (item: PaymentHistoryRow) => item.description || "—",
+    },
+    {
+      key: "tx_ref",
+      header: "Reference",
+      render: (item: PaymentHistoryRow) => (
+        <span className="font-mono text-xs">{item.tx_ref || "—"}</span>
+      ),
     },
   ];
 
@@ -1040,48 +1140,59 @@ export default function UserDetailView({
                     </Button>
 
                     {updateUser ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                        disabled={actionLoading}
-                        onClick={() => setEditing(true)}
-                        title="Edit user details"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      <IconTooltip label="Edit user details">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          disabled={actionLoading}
+                          onClick={() => setEditing(true)}
+                          aria-label="Edit user details"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </IconTooltip>
                     ) : null}
 
                     {user.isActive ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                        disabled={actionLoading}
-                        onClick={() => setSuspendOpen(true)}
-                      >
-                        <PowerOff className="h-4 w-4" />
-                      </Button>
+                      <IconTooltip label="Suspend user">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          disabled={actionLoading}
+                          onClick={() => setSuspendOpen(true)}
+                          aria-label="Suspend user"
+                        >
+                          <PowerOff className="h-4 w-4" />
+                        </Button>
+                      </IconTooltip>
                     ) : (
+                      <IconTooltip label="Activate user">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          disabled={actionLoading}
+                          onClick={() => setActivateOpen(true)}
+                          aria-label="Activate user"
+                        >
+                          <Power className="h-4 w-4" />
+                        </Button>
+                      </IconTooltip>
+                    )}
+                    <IconTooltip label="Delete user">
                       <Button
-                        variant="outline"
+                        variant="destructive"
                         size="sm"
                         className="gap-2"
                         disabled={actionLoading}
-                        onClick={() => setActivateOpen(true)}
+                        onClick={handleDelete}
+                        aria-label="Delete user"
                       >
-                        <Power className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                    )}
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="gap-2"
-                      disabled={actionLoading}
-                      onClick={handleDelete}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    </IconTooltip>
                   </div>
 
                   {profileOpen ? (
@@ -1186,11 +1297,19 @@ export default function UserDetailView({
                 </Card>
                 <Card className="p-4">
                   <h3 className="mb-3 text-sm font-semibold">Payment History</h3>
-                  <Table
-                    columns={billColumns}
-                    data={bills}
-                    emptyMessage="No paid bills found for this user."
-                  />
+                  {paymentHistory === "transactions" ? (
+                    <Table
+                      columns={paymentColumns}
+                      data={payments}
+                      emptyMessage="No transactions found for this user."
+                    />
+                  ) : (
+                    <Table
+                      columns={billColumns}
+                      data={bills}
+                      emptyMessage="No paid bills found for this user."
+                    />
+                  )}
                 </Card>
               </div>
             ) : null}

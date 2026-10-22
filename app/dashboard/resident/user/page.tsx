@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/tooltip";
 import { Plus, Power, PowerOff, Trash2 } from "lucide-react";
 import Modal from "@/components/modal/page";
 import Table from "@/components/tables/list/page";
@@ -55,6 +56,7 @@ export default function ResidentUserPage() {
   const dispatch = useDispatch<AppDispatch>();
   const [open, setOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [tenantToDelete, setTenantToDelete] = useState<InvitedTenantItem | null>(null);
   const [tenantToSuspend, setTenantToSuspend] =
     useState<InvitedTenantItem | null>(null);
@@ -98,7 +100,7 @@ export default function ResidentUserPage() {
           router.replace("/dashboard/resident/dashboard");
           return;
         }
-        await dispatch(getInvitedTenants({ page: 1, limit: PAGE_SIZE })).unwrap();
+        await dispatch(getInvitedTenants({ page: 1, limit: pageSize })).unwrap();
       } catch (err: unknown) {
         const message = getApiErrorMessage(err);
         if (message) toast.error(message);
@@ -107,14 +109,13 @@ export default function ResidentUserPage() {
   }, [dispatch, router]);
 
   useEffect(() => {
-    const shouldApplyDate = Boolean(startDate && endDate);
     setCurrentPage(1);
     dispatch(
       getInvitedTenants({
         page: 1,
-        limit: PAGE_SIZE,
-        startDate: shouldApplyDate ? startDate : undefined,
-        endDate: shouldApplyDate ? endDate : undefined,
+        limit: pageSize,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       }),
     )
       .unwrap()
@@ -122,16 +123,16 @@ export default function ResidentUserPage() {
         const message = getApiErrorMessage(err);
         if (message) toast.error(message);
       });
-  }, [dispatch, startDate, endDate]);
+  }, [dispatch, startDate, endDate, pageSize]);
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
     dispatch(
       getInvitedTenants({
         page: newPage,
-        limit: PAGE_SIZE,
-        startDate: startDate && endDate ? startDate : undefined,
-        endDate: startDate && endDate ? endDate : undefined,
+        limit: pageSize,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       }),
     )
       .unwrap()
@@ -146,13 +147,12 @@ export default function ResidentUserPage() {
 
   const refreshTenants = useCallback(
     async (page = currentPage) => {
-      const shouldApplyDate = Boolean(startDate && endDate);
       await dispatch(
         getInvitedTenants({
           page,
-          limit: PAGE_SIZE,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
+          limit: pageSize,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         }),
       ).unwrap();
     },
@@ -289,37 +289,42 @@ export default function ResidentUserPage() {
       render: (t: InvitedTenantItem) => (
         <div className="flex items-center gap-1">
           {t.isActive !== false ? (
+            <IconTooltip label="Suspend tenant">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => openSuspendModal(t)}
+                aria-label="Suspend tenant"
+                className="text-red-600 hover:text-red-700"
+              >
+                <PowerOff className="w-4 h-4" />
+              </Button>
+            </IconTooltip>
+          ) : (
+            <IconTooltip label="Activate tenant">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => openActivateModal(t)}
+                aria-label="Activate tenant"
+                className="text-green-600 hover:text-green-700"
+              >
+                <Power className="w-4 h-4" />
+              </Button>
+            </IconTooltip>
+          )}
+          <IconTooltip label="Delete tenant">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => openSuspendModal(t)}
-              title="Suspend tenant"
+              onClick={() => handleOpenDeleteModal(t)}
+              disabled={deleteUserState === "isLoading"}
+              aria-label={`Delete ${tenantDisplayName(t)}`}
               className="text-red-600 hover:text-red-700"
             >
-              <PowerOff className="w-4 h-4" />
+              <Trash2 className="w-4 h-4" />
             </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => openActivateModal(t)}
-              title="Activate tenant"
-              className="text-green-600 hover:text-green-700"
-            >
-              <Power className="w-4 h-4" />
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleOpenDeleteModal(t)}
-            disabled={deleteUserState === "isLoading"}
-            title="Delete tenant"
-            aria-label={`Delete ${tenantDisplayName(t)}`}
-            className="text-red-600 hover:text-red-700"
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
+          </IconTooltip>
         </div>
       ),
     },
@@ -369,19 +374,23 @@ export default function ResidentUserPage() {
           paginationInfo={{
             total: pagination?.total ?? 0,
             current: pagination?.page ?? currentPage,
-            pageSize: pagination?.limit ?? PAGE_SIZE,
+            pageSize,
           }}
           onPageChange={handlePageChange}
+
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setCurrentPage(1);
+          }}
           enableExport
           exportFileName="tenants"
           onExportRequest={async () => {
-            const shouldApplyDate = Boolean(startDate && endDate);
             const res = await dispatch(
               getInvitedTenants({
                 page: 1,
                 limit: 50000,
-                startDate: shouldApplyDate ? startDate : undefined,
-                endDate: shouldApplyDate ? endDate : undefined,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
               }),
             ).unwrap();
             return (res?.data ?? []) as InvitedTenantItem[];

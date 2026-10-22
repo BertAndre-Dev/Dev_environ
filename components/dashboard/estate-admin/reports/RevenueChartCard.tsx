@@ -31,10 +31,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import {
-  IsoLinkedRangeEnd,
-  IsoLinkedRangeStart,
-} from "@/components/ui/iso-date-picker";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 import { RevenueChartBarChart } from "./RevenueChartBarChart";
 import { buildRevenueChartSeries } from "./revenue-chart-series";
@@ -163,40 +160,17 @@ export function RevenueChartCard({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2">
-            <label
-              className="text-sm text-muted-foreground"
-              htmlFor={`${idPrefix}revenue-chart-start`}
-            >
-              From
-            </label>
-            <IsoLinkedRangeStart
-              id={`${idPrefix}revenue-chart-start`}
-              startDate={startDate}
-              endDate={endDate}
-              onStartChange={setStartDate}
-              placeholder={datePlaceholders.start}
-              className="cursor-pointer"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label
-              className="text-sm text-muted-foreground"
-              htmlFor={`${idPrefix}revenue-chart-end`}
-            >
-              To
-            </label>
-            <IsoLinkedRangeEnd
-              id={`${idPrefix}revenue-chart-end`}
-              startDate={startDate}
-              endDate={endDate}
-              onEndChange={setEndDate}
-              placeholder={datePlaceholders.end}
-              className="cursor-pointer"
-            />
-          </div>
+        <div className="flex w-full min-w-0 flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
+          <DateRangeFilter
+            startId={`${idPrefix}revenue-chart-start`}
+            endId={`${idPrefix}revenue-chart-end`}
+            startDate={startDate}
+            endDate={endDate}
+            onStartChange={setStartDate}
+            onEndChange={setEndDate}
+            startPlaceholder={datePlaceholders.start}
+            endPlaceholder={datePlaceholders.end}
+          />
 
           <Select
             value={period}

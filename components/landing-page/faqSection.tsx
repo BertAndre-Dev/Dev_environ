@@ -24,7 +24,10 @@ function FaqItem({ item, index, isOpen, onToggle }: FaqItemProps) {
         }`}
         onClick={() => onToggle(index)}
       >
-        <span className="text-base md:text-[17px] font-bold text-black leading-snug">
+        <span
+          id={index === 0 ? "faq-what-is-bertahub" : undefined}
+          className="text-base md:text-[17px] font-bold text-black leading-snug"
+        >
           {item.question}
         </span>
         <span
@@ -42,7 +45,10 @@ function FaqItem({ item, index, isOpen, onToggle }: FaqItemProps) {
             : "max-h-0 opacity-0 pb-0"
         }`}
       >
-        <p className="text-sm sm:text-base font-normal text-[#4C4C4C] leading-relaxed">
+        <p
+          id={index === 0 ? "faq-what-is-bertahub-answer" : undefined}
+          className="text-sm sm:text-base font-normal text-[#4C4C4C] leading-relaxed"
+        >
           {item.answer}
         </p>
       </div>
@@ -51,7 +57,7 @@ function FaqItem({ item, index, isOpen, onToggle }: FaqItemProps) {
 }
 
 export default function FAQSection() {
-  const [openIndex, setOpenIndex] = useState<number>(-1);
+  const [openIndex, setOpenIndex] = useState(0);
 
   const handleToggle = (idx: number) => {
     setOpenIndex((current) => (current === idx ? -1 : idx));

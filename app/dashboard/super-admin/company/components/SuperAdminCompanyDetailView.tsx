@@ -15,6 +15,7 @@ import { labelForEstateModule } from "@/lib/estate-module-labels";
 import { labelForPlan } from "@/lib/plans";
 import type { AppDispatch } from "@/redux/store";
 import { getCompanyById } from "@/redux/slice/super-admin/company-mgt/company";
+import { getEstatesByCompany } from "@/redux/slice/super-admin/super-admin-est-mgt/super-admin-est-mgt";
 import {
   getCompanyCredits,
   getCompanyWallet,
@@ -46,7 +47,19 @@ type CompanyDetailData = {
   updatedAt?: string;
 };
 
-type DetailTab = "overview" | "wallet" | "users";
+type DetailTab = "overview" | "wallet" | "users" | "estates";
+
+type CompanyEstateRow = {
+  id: string;
+  name?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  plan?: string;
+  isActive?: boolean;
+  createdAt?: string;
+};
 
 type CompanyUserRow = {
   id: string;
@@ -63,6 +76,7 @@ const TABS: { id: DetailTab; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "wallet", label: "Wallet" },
   { id: "users", label: "Users" },
+  { id: "estates", label: "Estates" },
 ];
 
 type Props = Readonly<{
@@ -104,6 +118,7 @@ export function SuperAdminCompanyDetailView({
   const [credits, setCredits] = useState<SuperAdminWalletCreditRow[]>([]);
   const [creditsLoading, setCreditsLoading] = useState(false);
   const [creditsPage, setCreditsPage] = useState(1);
+  const [creditsPageSize, setCreditsPageSize] = useState(10);
   const [creditsPagination, setCreditsPagination] = useState<{
     total: number;
     page: number;
@@ -114,8 +129,22 @@ export function SuperAdminCompanyDetailView({
   const [users, setUsers] = useState<CompanyUserRow[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersPage, setUsersPage] = useState(1);
+  const [usersPageSize, setUsersPageSize] = useState(10);
   const [usersRoleFilter, setUsersRoleFilter] =
     useState<EstateUserRoleFilter>(DEFAULT_ESTATE_USER_ROLE);
+  const [estates, setEstates] = useState<CompanyEstateRow[]>([]);
+  const [estatesLoading, setEstatesLoading] = useState(false);
+  const [estatesPage, setEstatesPage] = useState(1);
+  const [estatesPageSize, setEstatesPageSize] = useState(10);
+  const [estatesStartDate, setEstatesStartDate] = useState("");
+  const [estatesEndDate, setEstatesEndDate] = useState("");
+  const [estatesPagination, setEstatesPagination] = useState<{
+    total: number;
+    page: number;
+    limit: number;
+    pages?: number;
+  } | null>(null);
+
   const [usersPagination, setUsersPagination] = useState<{
     total: number;
     page: number;
@@ -141,7 +170,7 @@ export function SuperAdminCompanyDetailView({
   }, [dispatch, companyId]);
 
   const fetchWalletData = useCallback(
-    async (page = 1) => {
+    async (page = 1, limit = creditsPageSize) => {
       if (!companyId) return;
       setWalletLoading(page === 1);
       setCreditsLoading(true);
@@ -150,7 +179,7 @@ export function SuperAdminCompanyDetailView({
         const [walletRes, creditsRes] = await Promise.all([
           dispatch(getCompanyWallet(companyId)).unwrap(),
           dispatch(
-            getCompanyCredits({ companyId, page, limit: 10 }),
+            getCompanyCredits({ companyId, page, limit }),
           ).unwrap(),
         ]);
 
@@ -199,11 +228,15 @@ export function SuperAdminCompanyDetailView({
         setCreditsLoading(false);
       }
     },
-    [dispatch, companyId],
+    [dispatch, companyId, creditsPageSize],
   );
 
   const fetchUsers = useCallback(
-    async (page = 1, role: EstateUserRoleFilter = usersRoleFilter) => {
+    async (
+      page = 1,
+      role: EstateUserRoleFilter = usersRoleFilter,
+      limit = usersPageSize,
+    ) => {
       if (!companyId) return;
       setUsersLoading(true);
       try {
@@ -211,7 +244,7 @@ export function SuperAdminCompanyDetailView({
           getAllUsersByCompany({
             companyId,
             page,
-            limit: 10,
+            limit,
             role,
           }),
         ).unwrap();
@@ -238,7 +271,53 @@ export function SuperAdminCompanyDetailView({
         setUsersLoading(false);
       }
     },
-    [dispatch, companyId, usersRoleFilter],
+    [dispatch, companyId, usersRoleFilter, usersPageSize],
+  );
+
+  const fetchEstates = useCallback(
+    async (
+      page = 1,
+      limit = estatesPageSize,
+      startDate = estatesStartDate,
+      endDate = estatesEndDate,
+    ) => {
+      if (!companyId) return;
+      setEstatesLoading(true);
+      try {
+        const res = await dispatch(
+          getEstatesByCompany({
+            companyId,
+            page,
+            limit,
+            startDate: startDate || undefined,
+            endDate: endDate || undefined,
+          }),
+        ).unwrap();
+        const rows = Array.isArray(res?.data) ? res.data : [];
+        setEstates(
+          rows.map((item: Record<string, unknown>, index: number) => ({
+            id: String(item.id ?? item._id ?? index),
+            name: String(item.name ?? ""),
+            address: String(item.address ?? ""),
+            city: String(item.city ?? ""),
+            state: String(item.state ?? ""),
+            country: String(item.country ?? ""),
+            plan: typeof item.plan === "string" ? item.plan : "",
+            isActive: Boolean(item.isActive),
+            createdAt: String(item.createdAt ?? ""),
+          })),
+        );
+        setEstatesPagination(res?.pagination ?? null);
+        setEstatesPage(page);
+      } catch (err: unknown) {
+        const message = getApiErrorMessage(err);
+        setEstates([]);
+        if (message) toast.error(message);
+      } finally {
+        setEstatesLoading(false);
+      }
+    },
+    [dispatch, companyId, estatesPageSize, estatesStartDate, estatesEndDate],
   );
 
   useEffect(() => {
@@ -252,7 +331,10 @@ export function SuperAdminCompanyDetailView({
     if (activeTab === "users") {
       fetchUsers(1, usersRoleFilter).catch(() => {});
     }
-  }, [activeTab, fetchWalletData, fetchUsers, usersRoleFilter]);
+    if (activeTab === "estates") {
+      fetchEstates(1).catch(() => {});
+    }
+  }, [activeTab, fetchWalletData, fetchUsers, fetchEstates, usersRoleFilter]);
 
   const modules = Array.isArray(company?.modules) ? company.modules : [];
 
@@ -298,6 +380,57 @@ export function SuperAdminCompanyDetailView({
         key: "createdAt",
         header: "Joined",
         render: (item: CompanyUserRow) => formatDateTime(item.createdAt),
+      },
+    ],
+    [],
+  );
+
+  const estateColumns = useMemo(
+    () => [
+      {
+        key: "name",
+        header: "Estate",
+        render: (item: CompanyEstateRow) => item.name || "—",
+      },
+      {
+        key: "address",
+        header: "Address",
+        render: (item: CompanyEstateRow) => item.address || "—",
+      },
+      {
+        key: "city",
+        header: "City",
+        render: (item: CompanyEstateRow) => item.city || "—",
+      },
+      {
+        key: "state",
+        header: "State",
+        render: (item: CompanyEstateRow) => item.state || "—",
+      },
+      {
+        key: "plan",
+        header: "Plan",
+        render: (item: CompanyEstateRow) => labelForPlan(item.plan),
+      },
+      {
+        key: "status",
+        header: "Status",
+        render: (item: CompanyEstateRow) => (
+          <span
+            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+              item.isActive
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
+            }`}
+          >
+            {item.isActive ? "Active" : "Inactive"}
+          </span>
+        ),
+      },
+      {
+        key: "createdAt",
+        header: "Created",
+        render: (item: CompanyEstateRow) => formatDateTime(item.createdAt),
       },
     ],
     [],
@@ -428,10 +561,74 @@ export function SuperAdminCompanyDetailView({
               walletError={walletError}
               creditsLoading={creditsLoading}
               creditsPagination={creditsPagination}
+              creditsPageSize={creditsPageSize}
               onCreditsPageChange={(page) => {
                 fetchWalletData(page).catch(() => {});
               }}
+              onCreditsPageSizeChange={(size) => {
+                setCreditsPageSize(size);
+              }}
             />
+          </Card>
+        ) : null}
+
+        {activeTab === "estates" ? (
+          <Card className="gap-0 overflow-hidden rounded-xl border border-border p-0 shadow-sm">
+            <div className="border-b border-border px-5 py-4">
+              <h3 className="font-heading text-base font-bold text-foreground">
+                Company estates
+              </h3>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                Estates linked to this company
+              </p>
+            </div>
+            <div className="p-4">
+              {estatesLoading && estates.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  Loading estates...
+                </p>
+              ) : (
+                <Table
+                  columns={estateColumns}
+                  data={estates}
+                  emptyMessage="No estates found for this company."
+                  enableDateRangeFilter
+                  startDate={estatesStartDate}
+                  endDate={estatesEndDate}
+                  onDateRangeChange={({ startDate, endDate }) => {
+                    setEstatesStartDate(startDate);
+                    setEstatesEndDate(endDate);
+                    fetchEstates(1, estatesPageSize, startDate, endDate).catch(
+                      () => {},
+                    );
+                  }}
+                  onRowClick={(item) => {
+                    if (item.id) {
+                      router.push(`/dashboard/super-admin/estate/${item.id}`);
+                    }
+                  }}
+                  showPagination={Boolean(
+                    estatesPagination && estatesPagination.total > 0,
+                  )}
+                  paginationInfo={
+                    estatesPagination
+                      ? {
+                          total: estatesPagination.total,
+                          current: estatesPage,
+                          pageSize: estatesPageSize,
+                        }
+                      : undefined
+                  }
+                  onPageChange={(page) => {
+                    fetchEstates(page).catch(() => {});
+                  }}
+                  onPageSizeChange={(size) => {
+                    setEstatesPageSize(size);
+                    fetchEstates(1, size).catch(() => {});
+                  }}
+                />
+              )}
+            </div>
           </Card>
         ) : null}
 
@@ -492,12 +689,15 @@ export function SuperAdminCompanyDetailView({
                       ? {
                           total: usersPagination.total,
                           current: usersPage,
-                          pageSize: usersPagination.limit,
+                          pageSize: usersPageSize,
                         }
                       : undefined
                   }
                   onPageChange={(page) => {
                     fetchUsers(page, usersRoleFilter).catch(() => {});
+                  }}
+                  onPageSizeChange={(size) => {
+                    setUsersPageSize(size);
                   }}
                 />
               )}

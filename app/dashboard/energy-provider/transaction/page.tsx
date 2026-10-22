@@ -23,6 +23,7 @@ export default function EnergyProviderTransactionPage() {
   const [estateName, setEstateName] = useState("Estate");
   const [loadingUser, setLoadingUser] = useState(true);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -58,18 +59,17 @@ export default function EnergyProviderTransactionPage() {
   const fetchVends = useCallback(
     (nextPage = 1) => {
       if (!estateId) return Promise.resolve();
-      const shouldApplyDate = Boolean(startDate && endDate);
       return dispatch(
         getEnergyProviderTransactionVends({
           estateId,
           page: nextPage,
-          limit: PAGE_SIZE,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
+          limit: pageSize,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         }),
       ).unwrap();
     },
-    [dispatch, estateId, startDate, endDate],
+    [dispatch, estateId, pageSize, startDate, endDate],
   );
 
   useEffect(() => {
@@ -111,19 +111,23 @@ export default function EnergyProviderTransactionPage() {
             paginationInfo={{
               total: pagination?.total ?? 0,
               current: pagination?.currentPage ?? 1,
-              pageSize: pagination?.pageSize ?? PAGE_SIZE,
+              pageSize,
             }}
             onPageChange={setPage}
+
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(1);
+            }}
             onExportRequest={async () => {
               if (!estateId) return [];
-              const shouldApplyDate = Boolean(startDate && endDate);
               const res = await dispatch(
                 getEnergyProviderTransactionVends({
                   estateId,
                   page: 1,
                   limit: 50000,
-                  startDate: shouldApplyDate ? startDate : undefined,
-                  endDate: shouldApplyDate ? endDate : undefined,
+                  startDate: startDate || undefined,
+                  endDate: endDate || undefined,
                 }),
               ).unwrap();
               return res.data;

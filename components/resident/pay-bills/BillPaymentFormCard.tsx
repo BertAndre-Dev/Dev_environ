@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import type {
   BillsCategory,
@@ -13,8 +14,20 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { PinInputRow } from "@/components/resident/pay-bills/SetUpPinCard";
+import { cn } from "@/lib/utils";
 
-// ─── resolver helpers ────────────────────────────────────────────────────────
+const STEP_SPRING = { type: "spring" as const, bounce: 0, duration: 0.35 };
+
+const COUNTRY_OPTIONS = [
+  { label: "Nigeria", value: "NG" },
+  { label: "Ghana", value: "GH" },
+  { label: "Kenya", value: "KE" },
+  { label: "Uganda", value: "UG" },
+] as const;
+
+function countryLabel(code: string) {
+  return COUNTRY_OPTIONS.find((c) => c.value === code)?.label ?? code;
+}
 
 function resolveCategoryCode(c: BillsCategory) {
   return (
@@ -74,8 +87,6 @@ function dedupeByResolvedCode<T>(items: T[], codeFn: (row: T) => string): T[] {
   return out;
 }
 
-// ─── types ───────────────────────────────────────────────────────────────────
-
 export type BillPaymentFormCardProps = Readonly<{
   billsPayment: ResidentBillsPaymentState;
   country: string;
@@ -97,75 +108,59 @@ export type BillPaymentFormCardProps = Readonly<{
   onPay: () => void;
 }>;
 
-// ─── step config ─────────────────────────────────────────────────────────────
-
 const STEPS = [
   {
     id: 1,
     label: "Service",
-    description: "Choose a bill category and provider",
+    title: "What are you paying?",
+    description: "Choose a category, provider, and plan.",
   },
   {
     id: 2,
     label: "Details",
-    description: "Enter your account details and amount",
+    title: "Account and amount",
+    description: "Enter the ID this payment is for.",
   },
-  { id: 3, label: "Confirm", description: "Review and authorise payment" },
-];
+  {
+    id: 3,
+    label: "Pay",
+    title: "Confirm and pay",
+    description: "Check the details, then authorise with your PIN.",
+  },
+] as const;
 
-// ─── sub-components ──────────────────────────────────────────────────────────
-
-function StepIndicator({ current }: { current: number }) {
+function StepRail({
+  current,
+  onGoTo,
+}: {
+  current: number;
+  onGoTo: (id: number) => void;
+}) {
   return (
-    <div className="flex items-center gap-0 mb-8">
-      {STEPS.map((step, idx) => {
+    <div
+      className="flex items-center gap-1.5"
+      role="navigation"
+      aria-label="Payment steps"
+    >
+      {STEPS.map((step) => {
         const done = current > step.id;
         const active = current === step.id;
+        const reachable = step.id <= current;
         return (
-          <React.Fragment key={step.id}>
-            <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
-              <div
-                className={[
-                  "w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300",
-                  done
-                    ? "bg-emerald-500 text-white"
-                    : active
-                      ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
-                      : "bg-muted text-muted-foreground",
-                ].join(" ")}
-              >
-                {done ? (
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path
-                      d="M3 8l3.5 3.5L13 4.5"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                ) : (
-                  step.id
-                )}
-              </div>
-              <span
-                className={[
-                  "text-xs font-medium whitespace-nowrap",
-                  active ? "text-foreground" : "text-muted-foreground",
-                ].join(" ")}
-              >
-                {step.label}
-              </span>
-            </div>
-            {idx < STEPS.length - 1 && (
-              <div
-                className={[
-                  "h-px flex-1 mx-2 mb-5 transition-colors duration-500",
-                  done ? "bg-emerald-400" : "bg-border",
-                ].join(" ")}
-              />
+          <button
+            key={step.id}
+            type="button"
+            disabled={!reachable}
+            onClick={() => reachable && onGoTo(step.id)}
+            aria-current={active ? "step" : undefined}
+            aria-label={`${step.label}${active ? ", current" : done ? ", completed" : ""}`}
+            className={cn(
+              "h-1 flex-1 rounded-full transition-[background-color,transform] duration-100 ease-out",
+              "active:scale-[0.98] disabled:active:scale-100",
+              done || active ? "bg-primary" : "bg-border",
+              reachable ? "cursor-pointer" : "cursor-default",
             )}
-          </React.Fragment>
+          />
         );
       })}
     </div>
@@ -182,7 +177,7 @@ function FieldLabel({
   return (
     <label
       htmlFor={htmlFor}
-      className="text-sm font-medium text-foreground block mb-1.5"
+      className="mb-1.5 block text-sm font-medium text-foreground"
     >
       {children}
     </label>
@@ -190,7 +185,11 @@ function FieldLabel({
 }
 
 function FieldHint({ children }: { children: React.ReactNode }) {
-  return <p className="text-xs text-muted-foreground mt-1">{children}</p>;
+  return (
+    <p className="mt-1.5 text-sm leading-snug text-muted-foreground">
+      {children}
+    </p>
+  );
 }
 
 function SummaryRow({
@@ -203,21 +202,20 @@ function SummaryRow({
   highlight?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
+    <div className="flex items-baseline justify-between gap-4 py-2.5">
       <span className="text-sm text-muted-foreground">{label}</span>
       <span
-        className={[
-          "text-sm font-medium",
-          highlight ? "text-primary text-base" : "text-foreground",
-        ].join(" ")}
+        className={cn(
+          "text-right text-sm font-medium text-foreground",
+          highlight &&
+            "text-[1.35rem] font-semibold tracking-[-0.02em] text-foreground",
+        )}
       >
         {value}
       </span>
     </div>
   );
 }
-
-// ─── main component ──────────────────────────────────────────────────────────
 
 export function BillPaymentFormCard({
   billsPayment,
@@ -231,21 +229,25 @@ export function BillPaymentFormCard({
   onItemChange,
   customerId,
   onCustomerIdChange,
-  billRef,
-  onBillRefChange,
   amount,
   onAmountChange,
   pin,
   onPinChange,
   onPay,
 }: BillPaymentFormCardProps) {
+  const reduceMotion = useReducedMotion();
   const [step, setStep] = useState(1);
+  const [direction, setDirection] = useState(1);
+  const [countryOpen, setCountryOpen] = useState(country !== "NG");
+
+  const current = STEPS.find((s) => s.id === step) ?? STEPS[0];
 
   const categoriesUnique = useMemo(
     () =>
-      dedupeByResolvedCode(billsPayment.categories ?? [], resolveCategoryCode)
-        // Hide Utility Bills from the dropdown (API may still return it)
-        .filter((c) => resolveCategoryCode(c) !== "UTILITYBILLS"),
+      dedupeByResolvedCode(
+        billsPayment.categories ?? [],
+        resolveCategoryCode,
+      ).filter((c) => resolveCategoryCode(c) !== "UTILITYBILLS"),
     [billsPayment.categories],
   );
   const billersUnique = useMemo(
@@ -272,28 +274,58 @@ export function BillPaymentFormCard({
 
   const step1Valid = Boolean(categoryCode && billerCode && itemCode);
   const step2Valid = Boolean(customerId.trim() && amount && Number(amount) > 0);
+  const paying = billsPayment.payStatus === "isLoading";
+  const amountLabel = `₦${Number(amount || 0).toLocaleString()}`;
 
-  // ── step 1: service selection ──
+  function goTo(next: number) {
+    if (next === step) return;
+    setDirection(next > step ? 1 : -1);
+    setStep(next);
+  }
+
+  const stepMotion = reduceMotion
+    ? {
+        initial: { opacity: 0 },
+        animate: { opacity: 1 },
+        exit: { opacity: 0 },
+      }
+    : {
+        initial: { opacity: 0, x: direction * 28 },
+        animate: { opacity: 1, x: 0 },
+        exit: { opacity: 0, x: direction * -28 },
+      };
+
+  const actionClass =
+    "h-12 active:scale-[0.97] motion-reduce:active:scale-100";
+
   const renderStep1 = () => (
     <div className="space-y-5">
-      <div>
-        <FieldLabel htmlFor="bills-country">Country</FieldLabel>
-        <Select
-          id="bills-country"
-          value={country}
-          onChange={(e) => onCountryChange(e.target.value)}
-          options={[
-            { label: "Nigeria (NG)", value: "NG" },
-            { label: "Ghana (GH)", value: "GH" },
-            { label: "Kenya (KE)", value: "KE" },
-            { label: "Uganda (UG)", value: "UG" },
-          ]}
-        />
-        <FieldHint>Select the country your biller operates in.</FieldHint>
-      </div>
+      {countryOpen ? (
+        <div>
+          <FieldLabel htmlFor="bills-country">Country</FieldLabel>
+          <Select
+            id="bills-country"
+            value={country}
+            onChange={(e) => onCountryChange(e.target.value)}
+            options={COUNTRY_OPTIONS.map((opt) => ({
+              label: opt.label,
+              value: opt.value,
+            }))}
+          />
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setCountryOpen(true)}
+          className="text-sm text-muted-foreground transition-opacity duration-100 hover:text-foreground active:scale-[0.99]"
+        >
+          Paying in {countryLabel(country)}
+          <span className="ml-1.5 font-medium text-primary">Change</span>
+        </button>
+      )}
 
       <div>
-        <FieldLabel htmlFor="bills-category">Bill Category</FieldLabel>
+        <FieldLabel htmlFor="bills-category">Category</FieldLabel>
         <Select
           id="bills-category"
           value={categoryCode}
@@ -316,7 +348,7 @@ export function BillPaymentFormCard({
       </div>
 
       <div>
-        <FieldLabel htmlFor="bills-biller">Provider / Biller</FieldLabel>
+        <FieldLabel htmlFor="bills-biller">Provider</FieldLabel>
         <Select
           id="bills-biller"
           value={billerCode}
@@ -329,7 +361,7 @@ export function BillPaymentFormCard({
               label: !categoryCode
                 ? "Select a category first"
                 : billsPayment.getBillersStatus === "isLoading"
-                  ? "Loading billers…"
+                  ? "Loading providers…"
                   : "Select a provider",
               value: "",
             },
@@ -342,7 +374,7 @@ export function BillPaymentFormCard({
       </div>
 
       <div>
-        <FieldLabel htmlFor="bills-item">Package / Plan</FieldLabel>
+        <FieldLabel htmlFor="bills-item">Plan</FieldLabel>
         <Select
           id="bills-item"
           value={itemCode}
@@ -373,92 +405,54 @@ export function BillPaymentFormCard({
             })),
           ]}
         />
-        {selectedItem?.fee != null && (
-          <FieldHint>
-            Service fee: {selectedItem.currency ?? "₦"}
-            {Number(selectedItem.fee).toLocaleString()}
-          </FieldHint>
-        )}
       </div>
 
-      <div className="pt-2">
-        <Button
-          type="button"
-          className="w-full"
-          disabled={!step1Valid}
-          onClick={() => setStep(2)}
-        >
-          Continue
-          <svg className="ml-2 w-4 h-4" viewBox="0 0 16 16" fill="none">
-            <path
-              d="M3 8h10M9 4l4 4-4 4"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </Button>
-      </div>
+      <Button
+        type="button"
+        className={cn("w-full", actionClass)}
+        disabled={!step1Valid}
+        onClick={() => goTo(2)}
+      >
+        Continue
+      </Button>
     </div>
   );
 
-  // ── step 2: customer details ──
   const renderStep2 = () => (
     <div className="space-y-5">
-      {/* selected service summary pill */}
-      <div className="flex flex-wrap gap-2 p-3 rounded-xl bg-muted/50 border border-border text-sm">
-        <span className="font-medium">
-          {resolveCategoryName(selectedCategory!)}{" "}
+      <button
+        type="button"
+        onClick={() => goTo(1)}
+        className="flex w-full items-center gap-2 rounded-2xl bg-muted/60 px-3.5 py-3 text-left text-sm transition-transform duration-100 ease-out active:scale-[0.99]"
+      >
+        <span className="min-w-0 flex-1 truncate font-medium">
+          {selectedCategory ? resolveCategoryName(selectedCategory) : "Service"}
+          <span className="font-normal text-muted-foreground">
+            {selectedBiller ? ` · ${resolveBillerName(selectedBiller)}` : ""}
+            {selectedItem ? ` · ${resolveItemName(selectedItem)}` : ""}
+          </span>
         </span>
-        <span className="text-muted-foreground">·</span>
-        <span className="text-muted-foreground">
-          {resolveBillerName(selectedBiller!)}
-        </span>
-        <span className="text-muted-foreground">·</span>
-        <span className="text-muted-foreground">
-          {resolveItemName(selectedItem!)}
-        </span>
-        <button
-          type="button"
-          className="ml-auto text-xs text-primary underline-offset-2 hover:underline"
-          onClick={() => setStep(1)}
-        >
-          Change
-        </button>
-      </div>
+        <span className="shrink-0 text-sm font-medium text-primary">Edit</span>
+      </button>
 
       <div>
-        <FieldLabel htmlFor="bills-customer-id">Customer Identifier</FieldLabel>
+        <FieldLabel htmlFor="bills-customer-id">Customer ID</FieldLabel>
         <Input
           id="bills-customer-id"
           value={customerId}
           onChange={(e) => onCustomerIdChange(e.target.value)}
-          placeholder="Phone / Meter number / Decoder number"
+          placeholder="Phone, meter, or decoder number"
+          className="h-11"
         />
         <FieldHint>
-          Enter the unique ID linked to your account with this provider.
+          The ID this payment is for.
         </FieldHint>
       </div>
-
-      {/* <div>
-        <FieldLabel htmlFor="bills-ref">
-          Bill Reference{" "}
-          <span className="text-muted-foreground font-normal">(optional)</span>
-        </FieldLabel>
-        <Input
-          id="bills-ref"
-          value={billRef}
-          onChange={(e) => onBillRefChange(e.target.value)}
-          placeholder="e.g. 0025401100"
-        />
-        <FieldHint>Used for validation — leave blank if unsure.</FieldHint>
-      </div> */}
 
       <div>
         <FieldLabel htmlFor="bills-amount">Amount</FieldLabel>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm select-none">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
             ₦
           </span>
           <Input
@@ -467,130 +461,136 @@ export function BillPaymentFormCard({
             onChange={(e) => onAmountChange(e.target.value)}
             inputMode="numeric"
             placeholder="0.00"
-            className="pl-7"
+            className="h-11 pl-7"
           />
         </div>
         {selectedItem?.amount != null && (
           <FieldHint>
-            Preset amount: ₦{Number(selectedItem.amount).toLocaleString()} — you
-            can adjust if needed.
+            Plan amount is ₦{Number(selectedItem.amount).toLocaleString()}. You
+            can change it if you need to.
           </FieldHint>
         )}
       </div>
 
-      <div className="flex gap-3 pt-2">
+      <div className="flex gap-3">
         <Button
           type="button"
           variant="outline"
-          className="flex-1"
-          onClick={() => setStep(1)}
+          className={cn("flex-1", actionClass)}
+          onClick={() => goTo(1)}
         >
           Back
         </Button>
         <Button
           type="button"
-          className="flex-1"
+          className={cn("flex-1", actionClass)}
           disabled={!step2Valid}
-          onClick={() => setStep(3)}
+          onClick={() => goTo(3)}
         >
-          Review Payment
+          Review
         </Button>
       </div>
     </div>
   );
 
-  // ── step 3: confirm + pin ──
   const renderStep3 = () => (
-    <div className="space-y-5">
-      {/* summary card */}
-      <div className="rounded-xl border border-border bg-muted/30 p-4">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-          Payment Summary
-        </p>
+    <div className="space-y-6">
+      <div className="rounded-2xl bg-muted/50 px-4 py-3">
         <SummaryRow
           label="Category"
-          value={resolveCategoryName(selectedCategory!)}
+          value={
+            selectedCategory ? resolveCategoryName(selectedCategory) : "—"
+          }
         />
         <SummaryRow
           label="Provider"
-          value={resolveBillerName(selectedBiller!)}
+          value={selectedBiller ? resolveBillerName(selectedBiller) : "—"}
         />
-        <SummaryRow label="Package" value={resolveItemName(selectedItem!)} />
+        <SummaryRow
+          label="Plan"
+          value={selectedItem ? resolveItemName(selectedItem) : "—"}
+        />
         <SummaryRow label="Customer ID" value={customerId} />
-        {billRef && <SummaryRow label="Bill Reference" value={billRef} />}
         {selectedItem?.fee != null && (
           <SummaryRow
-            label="Service Fee"
+            label="Service fee"
             value={`${selectedItem.currency ?? "₦"}${Number(selectedItem.fee).toLocaleString()}`}
           />
         )}
-        <SummaryRow
-          label="Amount"
-          value={`₦${Number(amount).toLocaleString()}`}
-          highlight
-        />
+        <div className="mt-1 border-t border-border/80 pt-1">
+          <SummaryRow label="Total" value={amountLabel} highlight />
+        </div>
       </div>
 
-      {/* PIN — one digit per box */}
       <div>
-        <p className="text-sm font-medium text-foreground block mb-1.5">
-          Enter your 4-digit PIN to authorise
+        <p className="mb-2.5 text-sm font-medium text-foreground">
+          Enter your PIN
         </p>
-          <PinInputRow
-            label="PIN"
-            hideLabel
-            digits={pinDigits}
-            onChange={(next) => onPinChange(next.join(""))}
-            autoFocusFirst
-          />
-        <FieldHint>This is the PIN you set up for bill payments.</FieldHint>
+        <PinInputRow
+          label="PIN"
+          hideLabel
+          digits={pinDigits}
+          onChange={(next) => onPinChange(next.join(""))}
+          autoFocusFirst
+          disabled={paying}
+        />
+        <FieldHint>The 4-digit PIN you created for payments.</FieldHint>
       </div>
 
-      <div className="flex gap-3 pt-2">
+      <div className="flex gap-3">
         <Button
           type="button"
           variant="outline"
-          className="flex-1"
-          onClick={() => setStep(2)}
+          className={cn("flex-1", actionClass)}
+          onClick={() => goTo(2)}
+          disabled={paying}
         >
           Back
         </Button>
         <Button
           type="button"
-          className="flex-1"
+          className={cn("flex-1", actionClass)}
           onClick={onPay}
-          disabled={
-            billsPayment.payStatus === "isLoading" || pin.trim().length !== 4
-          }
+          disabled={paying || pin.trim().length !== 4}
         >
-          {billsPayment.payStatus === "isLoading" ? (
-            <span className="flex items-center gap-2">
-              <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-              Processing…
-            </span>
-          ) : (
-            <>Pay ₦{Number(amount).toLocaleString()}</>
-          )}
+          {paying ? "Paying…" : `Pay ${amountLabel}`}
         </Button>
       </div>
     </div>
   );
 
   return (
-    <Card className="p-6">
-      <CardHeader className="px-0 md:px-0 pb-2">
-        <CardTitle className="text-xl">Pay a Bill</CardTitle>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          {STEPS.find((s) => s.id === step)?.description}
-        </p>
+    <Card className="p-6 sm:p-7">
+      <CardHeader className="space-y-4 px-0 pb-0">
+        <div>
+          <p className="text-sm text-muted-foreground">
+            {step} of {STEPS.length}
+          </p>
+          <CardTitle className="mt-1 text-[1.65rem] font-semibold leading-tight tracking-[-0.02em]">
+            {current.title}
+          </CardTitle>
+          <p className="mt-1.5 text-[15px] leading-relaxed text-muted-foreground">
+            {current.description}
+          </p>
+        </div>
+        <StepRail current={step} onGoTo={goTo} />
       </CardHeader>
 
-      <CardContent className="px-0 md:px-0 pt-6">
-        <StepIndicator current={step} />
-
-        {step === 1 && renderStep1()}
-        {step === 2 && renderStep2()}
-        {step === 3 && renderStep3()}
+      <CardContent className="overflow-hidden px-0 pt-6">
+        <AnimatePresence mode="wait" initial={false} custom={direction}>
+          <motion.div
+            key={step}
+            initial={stepMotion.initial}
+            animate={stepMotion.animate}
+            exit={stepMotion.exit}
+            transition={STEP_SPRING}
+            className="will-change-transform"
+          >
+            {step === 1 && renderStep1()}
+            {step === 2 && renderStep2()}
+            {step === 3 && renderStep3()}
+          </motion.div>
+        </AnimatePresence>
       </CardContent>
     </Card>
   );

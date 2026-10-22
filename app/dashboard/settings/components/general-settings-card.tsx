@@ -24,7 +24,7 @@ import {
   splitPhoneFields,
   toE164PhoneNumber,
 } from "@/lib/phone-e164";
-import { isBase64Image } from "@/lib/uploads/fileToDataUri";
+import { isHostedHttpsUrl } from "@/lib/uploads/constants";
 
 type UserFormState = {
   firstName: string;
@@ -166,7 +166,7 @@ export function GeneralSettingsCard() {
             gender: formData.gender,
             phoneNumber: e164Phone ?? "",
             role: formData.role || undefined,
-            ...(isBase64Image(formData.image)
+            ...(isHostedHttpsUrl(formData.image)
               ? { image: formData.image }
               : {}),
           },
@@ -196,7 +196,7 @@ export function GeneralSettingsCard() {
 
   return (
     <div className="space-y-6">
-      <Card className="pt-6 md:pt-8 px-8 md:px-16 pb-12 md:pb-18 w-full md:w-3/4 lg:w-2/3 mx-auto">
+      <Card className="pt-6 md:pt-8 px-4 xl:px-12 pb-12 md:pb-18 w-full md:w-3/4 lg:w-2/3 mx-auto">
         <h2 className="font-heading text-xl font-bold text-center tracking-tight">
           Update Profile
         </h2>

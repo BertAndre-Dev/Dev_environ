@@ -1,15 +1,11 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React from "react";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  IsoLinkedRangeEnd,
-  IsoLinkedRangeStart,
-} from "@/components/ui/iso-date-picker";
-import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
 
 export interface ExpensesFiltersBarProps {
   startDate: string;
@@ -30,36 +26,18 @@ export function ExpensesFiltersBar({
   onResetDates,
   onSearchChange,
 }: Readonly<ExpensesFiltersBarProps>) {
-  const datePlaceholders = useMemo(() => getDateRangePlaceholders(), []);
-
   return (
     <Card className="mt-0 p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-muted-foreground" htmlFor="eh-start-date">
-              From
-            </label>
-            <IsoLinkedRangeStart
-              id="eh-start-date"
-              startDate={startDate}
-              endDate={endDate}
-              onStartChange={onStartDateChange}
-              placeholder={datePlaceholders.start}
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-muted-foreground" htmlFor="eh-end-date">
-              To
-            </label>
-            <IsoLinkedRangeEnd
-              id="eh-end-date"
-              startDate={startDate}
-              endDate={endDate}
-              onEndChange={onEndDateChange}
-              placeholder={datePlaceholders.end}
-            />
-          </div>
+        <div className="flex w-full min-w-0 flex-col gap-2 md:w-auto md:flex-row md:flex-wrap md:items-center">
+          <DateRangeFilter
+            startId="eh-start-date"
+            endId="eh-end-date"
+            startDate={startDate}
+            endDate={endDate}
+            onStartChange={onStartDateChange}
+            onEndChange={onEndDateChange}
+          />
           {startDate && endDate && (
             <Button type="button" size="sm" variant="outline" onClick={onResetDates}>
               Reset

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { absoluteUrl, getSiteUrl } from "@/lib/site-url";
 import type { BlogPostMeta } from "@/lib/blog/posts";
+import { LAGOS_ESTATE_SEO_PHRASES } from "@/lib/landing/content";
 
 const SITE_NAME = "Bertahub";
 const PUBLISHER_NAME = "Bertahub";
@@ -28,6 +29,7 @@ const BLOG_INDEX_KEYWORDS = [
   "Estate management app",
   "Estate management service",
   "Estate management company",
+  ...LAGOS_ESTATE_SEO_PHRASES,
 ];
 
 function truncateDescription(text: string, maxLength = 160): string {
@@ -62,7 +64,7 @@ export function createBlogIndexMetadata(): Metadata {
   const ogImage = resolveOgImage("/assets/blog/blogHero.png");
 
   return {
-    title,
+    title: { absolute: title },
     description,
     keywords: BLOG_INDEX_KEYWORDS,
     alternates: { canonical },
@@ -91,7 +93,7 @@ export function createBlogPostMetadata(post: BlogPostMeta): Metadata {
   const ogImage = resolveOgImage(post.featuredImage);
 
   return {
-    title,
+    title: { absolute: title },
     description,
     keywords: post.keywords,
     alternates: { canonical },
@@ -156,6 +158,11 @@ export function createBlogArticleJsonLd(post: BlogPostMeta) {
     wordCount: post.wordCount,
     timeRequired: `PT${post.readTimeMinutes}M`,
     inLanguage: "en-NG",
+    isAccessibleForFree: true,
+    speakable: {
+      "@type": "SpeakableSpecification",
+      cssSelector: ["#article-title", "#article-summary"],
+    },
   };
 }
 

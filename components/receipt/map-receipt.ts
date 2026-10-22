@@ -60,6 +60,8 @@ export function mapBillReceipt(
   const source = bill as PaidBillReceiptSource & Record<string, unknown>;
   const transactionId = extraString(source, ["tx_ref", "transactionId"]);
   const paymentDate =
+    formatReceiptDateTime(bill.paidDate) ??
+    formatReceiptDate(bill.paidDate) ??
     formatReceiptDateTime(bill.lastPaymentDate) ??
     formatReceiptDate(bill.lastPaymentDate) ??
     formatReceiptDateTime(bill.createdAt) ??
@@ -78,7 +80,7 @@ export function mapBillReceipt(
   pushField(detailRows, "Bill Paid For", billName);
   pushField(detailRows, "Frequency of Payment", formatFrequencyLabel(bill.frequency));
   pushField(detailRows, "Start Date", formatReceiptDate(bill.startDate) ?? formatReceiptDateTime(bill.startDate));
-  pushField(detailRows, "Next Due Date", formatReceiptDate(bill.nextDueDate) ?? formatReceiptDateTime(bill.nextDueDate));
+  pushField(detailRows, "Next Payment Date", formatReceiptDate(bill.nextDueDate) ?? formatReceiptDateTime(bill.nextDueDate));
   pushField(detailRows, "Payment Date", paymentDate);
   pushField(detailRows, "Transaction ID", transactionId);
 

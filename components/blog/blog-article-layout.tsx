@@ -51,11 +51,17 @@ export default function BlogArticleLayout({
               {post.category}
             </span>
 
-            <h1 className="text-3xl sm:text-4xl lg:text-[44px] leading-tight font-semibold mb-6">
+            <h1
+              id="article-title"
+              className="text-3xl sm:text-4xl lg:text-[44px] leading-tight font-semibold mb-6"
+            >
               {post.title}
             </h1>
 
-            <p className="text-lg sm:text-xl text-[#FA8128] font-medium leading-relaxed mb-8 italic">
+            <p
+              id="article-summary"
+              className="text-lg sm:text-xl text-[#FA8128] font-medium leading-relaxed mb-8 italic"
+            >
               {post.hook}
             </p>
 

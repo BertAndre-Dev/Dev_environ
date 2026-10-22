@@ -27,6 +27,14 @@ import { formatAddressEntryLabel, normalizeAddresses } from "@/lib/address";
 import { getSignedInUser } from "@/redux/slice/auth-mgt/auth-mgt";
 import { getFieldByEstate } from "@/redux/slice/admin/address-mgt/fields/fields";
 import { getEntriesByField } from "@/redux/slice/admin/address-mgt/entry/entry";
+import { getDesignations } from "@/redux/slice/designations/designations";
+import {
+  DESIGNATIONS_PAGE_SIZE,
+  isCompanyScopedDesignation,
+  userDesignationId,
+} from "@/lib/designations";
+import { extractEstateNameFromUser } from "@/lib/user-id";
+import { parseCompanyFromUser } from "@/app/dashboard/company/lib/company";
 import type { AppDispatch } from "@/redux/store";
 
 type AddressSelectOption = { label: string; value: string };
@@ -50,7 +58,22 @@ export type EditableUser = {
   address?: string;
   role?: string;
   residentType?: string | null;
-  estateId?: string | { id?: string; _id?: string };
+  estateId?: string | { id?: string; _id?: string; name?: string };
+  estate?: { id?: string; _id?: string; name?: string };
+  estateName?: string;
+  designationId?:
+    | string
+    | null
+    | { id?: string; _id?: string; name?: string };
+  designation?: { id?: string; _id?: string; name?: string } | string | null;
+  memberships?: Array<{
+    designationId?:
+      | string
+      | null
+      | { id?: string; _id?: string; name?: string };
+    isCurrent?: boolean;
+    estateId?: string | { id?: string; _id?: string; name?: string };
+  }>;
   addressId?: string | { id?: string; _id?: string; data?: Record<string, string> };
   addressIds?: (
     | string
@@ -70,6 +93,7 @@ export type UpdateUserDetailsData = {
   addressIds?: string[];
   role?: string;
   residentType?: string | null;
+  designationId?: string;
 };
 
 type EditUserFormData = {
@@ -87,6 +111,8 @@ export type EditUserFormProps = {
   userId: string;
   close: () => void;
   onUpdated?: () => void;
+  /** Estate admin lists designations with this estate, not the company. */
+  designationEstateId?: string;
   fetchUser: (id: string) => Promise<unknown>;
   saveUser: (id: string, data: UpdateUserDetailsData) => Promise<unknown>;
 };
@@ -146,6 +172,10 @@ function isResidentRole(role?: string | null) {
   return (role ?? "").trim().toLowerCase() === "resident";
 }
 
+function isStaffRole(role?: string | null) {
+  return (role ?? "").trim().toLowerCase() === "staff";
+}
+
 function optionsFromUserAddresses(user: EditableUser): AddressSelectOption[] {
   const raw = user.addressIds ?? (user.addressId != null ? [user.addressId] : []);
   if (!Array.isArray(raw)) return [];
@@ -179,6 +209,7 @@ export default function EditUserForm({
   userId,
   close,
   onUpdated,
+  designationEstateId,
   fetchUser,
   saveUser,
 }: EditUserFormProps) {
@@ -190,6 +221,12 @@ export default function EditUserForm({
   const [residentType, setResidentType] = useState<string | null | undefined>();
   const [addressIds, setAddressIds] = useState<string[]>([]);
   const [entryOptions, setEntryOptions] = useState<AddressSelectOption[]>([]);
+  const [designationId, setDesignationId] = useState("");
+  const [designationOptions, setDesignationOptions] = useState<
+    AddressSelectOption[]
+  >([]);
+  const [designationLoading, setDesignationLoading] = useState(false);
+  const [estateLabel, setEstateLabel] = useState("");
   const [formData, setFormData] = useState<EditUserFormData>(emptyForm);
   const fetchUserRef = useRef(fetchUser);
   const closeRef = useRef(close);
@@ -221,6 +258,102 @@ export default function EditUserForm({
           user as Record<string, unknown>,
         ).map((addr) => addr.id);
         setAddressIds(selectedIds);
+
+        if (isStaffRole(user.role)) {
+          const currentDesignationId = userDesignationId(user);
+          const populatedDesignation =
+            user.designation && typeof user.designation === "object"
+              ? user.designation
+              : user.designationId && typeof user.designationId === "object"
+                ? user.designationId
+                : null;
+          const designationName = populatedDesignation?.name?.trim() ?? "";
+          setDesignationId(currentDesignationId);
+          if (currentDesignationId && designationName) {
+            setDesignationOptions([
+              { value: currentDesignationId, label: designationName },
+            ]);
+          }
+          const companyId =
+            parseCompanyFromUser(user as Record<string, unknown>)?.id ?? "";
+          const staffEstateId =
+            designationEstateId?.trim() ||
+            resolveEstateId(user.estateId) ||
+            resolveEstateId(user.estate) ||
+            resolveEstateId(
+              user.memberships?.find((membership) => membership.isCurrent)
+                ?.estateId,
+            );
+          const listByEstate = Boolean(designationEstateId?.trim());
+          const namedEstate = extractEstateNameFromUser(
+            user as Record<string, unknown>,
+          );
+          setEstateLabel(namedEstate || "");
+          setEntryOptions([]);
+
+          if ((!listByEstate && companyId) || staffEstateId) {
+            setDesignationLoading(true);
+            try {
+              const designationRes = await dispatch(
+                getDesignations({
+                  ...(listByEstate
+                    ? { estateId: staffEstateId }
+                    : companyId
+                      ? { companyId }
+                      : { estateId: staffEstateId }),
+                  page: 1,
+                  limit: DESIGNATIONS_PAGE_SIZE,
+                }),
+              ).unwrap();
+              if (cancelled) return;
+              const items = (designationRes.items ?? []).filter(
+                (item) => item.isActive,
+              );
+              const options = (
+                !listByEstate && companyId
+                  ? items.filter(isCompanyScopedDesignation)
+                  : items
+              ).map((item) => ({ value: item.id, label: item.name }));
+              if (
+                currentDesignationId &&
+                !options.some((option) => option.value === currentDesignationId)
+              ) {
+                options.unshift({
+                  value: currentDesignationId,
+                  label: designationName || "Current designation",
+                });
+              }
+              setDesignationOptions(options);
+            } catch (err: unknown) {
+              if (!cancelled) {
+                const message = getApiErrorMessage(err);
+                if (message) toast.error(message);
+              }
+            } finally {
+              if (!cancelled) setDesignationLoading(false);
+            }
+          }
+
+          if (!namedEstate) {
+            try {
+              const signedIn = await dispatch(getSignedInUser()).unwrap();
+              const data =
+                signedIn?.data ?? (signedIn as Record<string, unknown>);
+              const signedInName = extractEstateNameFromUser(
+                data as Record<string, unknown>,
+              );
+              if (!cancelled && signedInName) setEstateLabel(signedInName);
+            } catch {
+              // estate label stays empty
+            }
+          }
+          return;
+        }
+
+        if (!isResidentRole(user.role)) {
+          setEntryOptions([]);
+          return;
+        }
 
         const userAddressOptions = optionsFromUserAddresses(user);
         let estateId = resolveEstateId(user.estateId);
@@ -291,7 +424,7 @@ export default function EditUserForm({
     return () => {
       cancelled = true;
     };
-  }, [dispatch, userId]);
+  }, [designationEstateId, dispatch, userId]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -324,6 +457,11 @@ export default function EditUserForm({
     }
 
     const resident = isResidentRole(role);
+    const staff = isStaffRole(role);
+    if (staff && !designationId.trim()) {
+      toast.error("Please select a designation.");
+      return;
+    }
     const cleanedAddressIds = addressIds.map((id) => id.trim()).filter(Boolean);
 
     if (resident && cleanedAddressIds.length === 0) {
@@ -342,13 +480,15 @@ export default function EditUserForm({
         lastName: formData.lastName.trim(),
         email: formData.email.trim(),
         countryCode: formData.countryCode.trim(),
-        dateOfBirth: formData.dateOfBirth,
-        gender: formData.gender,
+        ...(staff
+          ? {}
+          : { dateOfBirth: formData.dateOfBirth, gender: formData.gender }),
         phoneNumber: e164Phone || undefined,
-        address: formData.address.trim(),
+        address: staff ? undefined : formData.address.trim(),
         addressIds: resident ? cleanedAddressIds : [],
         role,
         residentType: resident ? (residentType ?? undefined) : undefined,
+        ...(staff ? { designationId: designationId.trim() } : {}),
       });
       toast.success(
         getApiSuccessMessage(res) || "User details updated successfully",
@@ -364,6 +504,10 @@ export default function EditUserForm({
   };
 
   const showResidentFields = isResidentRole(role);
+  const showStaffFields = isStaffRole(role);
+  const selectedDesignation =
+    designationOptions.find((option) => option.value === designationId) ??
+    null;
   const selectedAddressOptions = entryOptions.filter((opt) =>
     addressIds.includes(opt.value),
   );
@@ -436,6 +580,42 @@ export default function EditUserForm({
               disabled={submitting}
             />
 
+            {showStaffFields ? (
+              <>
+                <div>
+                  <Label htmlFor="edit-designation">Designation</Label>
+                  <Select
+                    inputId="edit-designation"
+                    options={designationOptions}
+                    value={selectedDesignation}
+                    onChange={(opt) => setDesignationId(opt?.value ?? "")}
+                    placeholder={
+                      designationLoading
+                        ? "Loading designations..."
+                        : "Select designation"
+                    }
+                    isLoading={designationLoading}
+                    isDisabled={submitting || designationLoading}
+                    className="mt-1 cursor-pointer"
+                    styles={{
+                      control: (base) => ({ ...base, cursor: "pointer" }),
+                      option: (base) => ({ ...base, cursor: "pointer" }),
+                    }}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-estate">Estate</Label>
+                  <Input
+                    id="edit-estate"
+                    value={estateLabel || "—"}
+                    readOnly
+                    className="mt-1 bg-muted/40"
+                  />
+                </div>
+              </>
+            ) : null}
+
+            {showStaffFields ? null : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="edit-dateOfBirth">Date of Birth</Label>
@@ -466,6 +646,7 @@ export default function EditUserForm({
                 </select>
               </div>
             </div>
+            )}
 
             {showResidentFields ? (
               <>

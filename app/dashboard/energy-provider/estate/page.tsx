@@ -16,6 +16,7 @@ import {
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/tooltip";
 import Table from "@/components/tables/list/page";
 import Modal from "@/components/modal/page";
 import Loader from "@/components/ui/Loader";
@@ -84,17 +85,16 @@ export default function EnergyProviderEstatePage() {
     };
   });
 
-  const pageSize = Number(pagination?.pageSize) || 10;
+  const [pageSize, setPageSize] = useState(10);
 
-  const fetchEstates = (page = 1) => {
-    const shouldApplyDate = Boolean(startDate && endDate);
+  const fetchEstates = (page = 1, limit = pageSize) => {
     return dispatch(
       getEnergyProviderEstates({
         page,
-        limit: pageSize,
+        limit,
         search: search.trim() || undefined,
-        startDate: shouldApplyDate ? startDate : undefined,
-        endDate: shouldApplyDate ? endDate : undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       }),
     ).unwrap();
   };
@@ -279,16 +279,18 @@ export default function EnergyProviderEstatePage() {
       exportable: false,
       render: (item: EstateTableRow) => (
         <DropdownMenu.Root>
-          <DropdownMenu.Trigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              title="Actions"
-              className="cursor-pointer"
-            >
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-          </DropdownMenu.Trigger>
+          <IconTooltip label="Actions">
+            <DropdownMenu.Trigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Actions"
+                className="cursor-pointer"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+            </DropdownMenu.Trigger>
+          </IconTooltip>
           <DropdownMenu.Portal>
             <DropdownMenu.Content
               align="end"
@@ -436,17 +438,22 @@ export default function EnergyProviderEstatePage() {
             onPageChange={(page) => {
               fetchEstates(page).catch(() => toast.error("Failed to fetch estates"));
             }}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              fetchEstates(1, size).catch(() =>
+                toast.error("Failed to fetch estates"),
+              );
+            }}
             enableExport
             exportFileName="energy-provider-estates"
             onExportRequest={async () => {
-              const shouldApplyDate = Boolean(startDate && endDate);
               const res = await dispatch(
                 getEnergyProviderEstates({
                   page: 1,
                   limit: 50000,
                   search: search.trim() || undefined,
-                  startDate: shouldApplyDate ? startDate : undefined,
-                  endDate: shouldApplyDate ? endDate : undefined,
+                  startDate: startDate || undefined,
+                  endDate: endDate || undefined,
                 }),
               ).unwrap();
               return res?.data ?? [];

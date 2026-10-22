@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: BlogPostPageProps) {
   const post = getBlogPost(slug);
 
   if (!post) {
-    return { title: "Blog | Bertahub" };
+    return { title: { absolute: "Blog | Bertahub" } };
   }
 
   return createBlogPostMetadata(post);

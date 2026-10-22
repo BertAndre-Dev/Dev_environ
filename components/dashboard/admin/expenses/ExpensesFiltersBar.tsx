@@ -6,10 +6,7 @@ import { Card } from "@/components/ui/card";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  IsoLinkedRangeEnd,
-  IsoLinkedRangeStart,
-} from "@/components/ui/iso-date-picker";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
 
 export interface ExpensesFiltersBarProps {
   startDate: string;
@@ -68,35 +65,21 @@ export function ExpensesFiltersBar({
   return (
     <Card className="mt-0 p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-muted-foreground" htmlFor="eh-start-date">
-              From
-            </label>
-            <IsoLinkedRangeStart
-              id="eh-start-date"
-              startDate={startDate}
-              endDate={endDate}
-              onStartChange={onStartDateChange}
-              placeholder={
-                showExamplePlaceholders ? exampleDateRange.start : undefined
-              }
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-muted-foreground" htmlFor="eh-end-date">
-              To
-            </label>
-            <IsoLinkedRangeEnd
-              id="eh-end-date"
-              startDate={startDate}
-              endDate={endDate}
-              onEndChange={onEndDateChange}
-              placeholder={
-                showExamplePlaceholders ? exampleDateRange.end : undefined
-              }
-            />
-          </div>
+        <div className="flex w-full min-w-0 flex-col gap-2 md:w-auto md:flex-row md:flex-wrap md:items-center">
+          <DateRangeFilter
+            startId="eh-start-date"
+            endId="eh-end-date"
+            startDate={startDate}
+            endDate={endDate}
+            onStartChange={onStartDateChange}
+            onEndChange={onEndDateChange}
+            startPlaceholder={
+              showExamplePlaceholders ? exampleDateRange.start : undefined
+            }
+            endPlaceholder={
+              showExamplePlaceholders ? exampleDateRange.end : undefined
+            }
+          />
           {startDate && endDate && (
             <Button type="button" size="sm" variant="outline" onClick={onResetDates}>
               Reset

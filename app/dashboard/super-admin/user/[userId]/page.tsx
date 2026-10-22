@@ -56,6 +56,7 @@ export default function SuperAdminUserDetailPage() {
       listPath="/dashboard/super-admin/user"
       actions={SUPER_ADMIN_USER_ACTIONS}
       showWalletBalance
+      paymentHistory="transactions"
     />
   );
 }

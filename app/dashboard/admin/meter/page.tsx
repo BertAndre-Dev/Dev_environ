@@ -2,6 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/tooltip";
 import Modal from "@/components/modal/page";
 import Table from "@/components/tables/list/page";
 import { toast } from "react-toastify";
@@ -43,6 +44,8 @@ import { resolveEstateDisplayName } from "@/lib/user-id";
 import { formatAddressRecordCreatedAt, formatAddressEntryLabel } from "@/lib/address";
 import { ViewVendLimitModal } from "./components/ViewVendLimitModal";
 import { SetVendLimitModal } from "./components/SetVendLimitModal";
+import { ViewAddressVendLimitModal } from "./components/ViewAddressVendLimitModal";
+import { SetAddressVendLimitModal } from "./components/SetAddressVendLimitModal";
 
 interface VendorData {
   name: string;
@@ -87,6 +90,7 @@ export default function AdminMeterManagement() {
   );
   const [searchInput, setSearchInput] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
+  const [pageSize, setPageSize] = useState(PAGE_LIMIT);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [usageRange, setUsageRange] = useState<EstateEnergyUsageRange>("weekly");
   const [usageRefreshing, setUsageRefreshing] = useState(false);
@@ -98,6 +102,10 @@ export default function AdminMeterManagement() {
     useState<MeterUsageRange>("weekly");
   const [viewVendLimitOpen, setViewVendLimitOpen] = useState(false);
   const [setVendLimitOpen, setSetVendLimitOpen] = useState(false);
+  const [viewAddressVendLimitOpen, setViewAddressVendLimitOpen] =
+    useState(false);
+  const [setAddressVendLimitOpen, setSetAddressVendLimitOpen] =
+    useState(false);
   const [meterToUnassign, setMeterToUnassign] = useState<AdminMeterData | null>(
     null,
   );
@@ -172,18 +180,18 @@ export default function AdminMeterManagement() {
   }));
 
   const fetchMeters = useCallback(
-    async (page = 1, searchTerm = appliedSearch) => {
+    async (page = 1, searchTerm = appliedSearch, limit = pageSize) => {
       if (!estateId) return;
       await dispatch(
         getAllEstateMeter({
           estateId,
           page,
-          limit: PAGE_LIMIT,
+          limit,
           search: searchTerm || undefined,
         }),
       ).unwrap();
     },
-    [dispatch, estateId, appliedSearch],
+    [dispatch, estateId, appliedSearch, pageSize],
   );
 
   const handleSearchSubmit = () => {
@@ -203,7 +211,7 @@ export default function AdminMeterManagement() {
       getAllEstateMeter({
         estateId,
         page: 1,
-        limit: PAGE_LIMIT,
+        limit: pageSize,
       }),
     )
       .unwrap()
@@ -261,7 +269,7 @@ export default function AdminMeterManagement() {
       getAllEstateMeter({
         estateId,
         page: 1,
-        limit: PAGE_LIMIT,
+        limit: pageSize,
       }),
     )
       .unwrap()
@@ -513,25 +521,29 @@ export default function AdminMeterManagement() {
       exportable: false,
       render: (item: AdminMeterData) =>
         item.isAssigned ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => openUnassignConfirm(item)}
-            className="text-amber-600 hover:text-amber-700 hover:bg-amber-100"
-            title="Unassign meter"
-          >
-            <Unlink className="w-4 h-4" />
-          </Button>
+          <IconTooltip label="Unassign meter">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => openUnassignConfirm(item)}
+              className="text-amber-600 hover:text-amber-700 hover:bg-amber-100"
+              aria-label="Unassign meter"
+            >
+              <Unlink className="w-4 h-4" />
+            </Button>
+          </IconTooltip>
         ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleOpenModal(item)}
-            className="text-blue-600 hover:text-blue-700 hover:bg-blue-100"
-            title="Assign meter"
-          >
-            <Link className="w-4 h-4" />
-          </Button>
+          <IconTooltip label="Assign meter">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleOpenModal(item)}
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+              aria-label="Assign meter"
+            >
+              <Link className="w-4 h-4" />
+            </Button>
+          </IconTooltip>
         ),
     },
     {
@@ -539,15 +551,17 @@ export default function AdminMeterManagement() {
       header: "Energy Usage",
       exportable: false,
       render: (item: AdminMeterData) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => handleOpenUsageModal(item)}
-          className="text-emerald-600 hover:text-emerald-700 cursor-pointer hover:bg-emerald-100"
-          title="View energy usage"
-        >
-          <Eye className="w-4 h-4" />
-        </Button>
+        <IconTooltip label="View energy usage">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleOpenUsageModal(item)}
+            className="text-emerald-600 hover:text-emerald-700 cursor-pointer hover:bg-emerald-100"
+            aria-label="View energy usage"
+          >
+            <Eye className="w-4 h-4" />
+          </Button>
+        </IconTooltip>
       ),
     },
     {
@@ -555,16 +569,18 @@ export default function AdminMeterManagement() {
       header: "Clear Tamper",
       exportable: false,
       render: (item: AdminMeterData) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => handleClearTamper(item)}
-          className="text-orange-600 hover:text-orange-700 cursor-pointer hover:bg-orange-100"
-          title="Generate clear-tamper token"
-          disabled={clearTamperLoadingMeter === item.meterNumber}
-        >
-          <KeyRound className="w-4 h-4" />
-        </Button>
+        <IconTooltip label="Generate clear-tamper token">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleClearTamper(item)}
+            className="text-orange-600 hover:text-orange-700 cursor-pointer hover:bg-orange-100"
+            aria-label="Generate clear-tamper token"
+            disabled={clearTamperLoadingMeter === item.meterNumber}
+          >
+            <KeyRound className="w-4 h-4" />
+          </Button>
+        </IconTooltip>
       ),
     },
   ];
@@ -606,7 +622,7 @@ export default function AdminMeterManagement() {
             <DropdownMenu.Content
               align="end"
               sideOffset={8}
-              className="z-50 min-w-[200px] rounded-md border bg-white p-1 shadow-md"
+              className="z-50 min-w-60 rounded-md border bg-white p-1 shadow-md"
             >
               <DropdownMenu.Item
                 onSelect={() => setViewVendLimitOpen(true)}
@@ -619,6 +635,19 @@ export default function AdminMeterManagement() {
                 className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100"
               >
                 Set / update vend limit
+              </DropdownMenu.Item>
+              <DropdownMenu.Separator className="my-1 h-px bg-gray-200" />
+              <DropdownMenu.Item
+                onSelect={() => setViewAddressVendLimitOpen(true)}
+                className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100"
+              >
+                Vend limit for address
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                onSelect={() => setSetAddressVendLimitOpen(true)}
+                className="cursor-pointer select-none rounded px-3 py-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100"
+              >
+                Set / update vend limit for address
               </DropdownMenu.Item>
             </DropdownMenu.Content>
           </DropdownMenu.Portal>
@@ -739,13 +768,22 @@ export default function AdminMeterManagement() {
                       paginationInfo={{
                         total: pagination?.total || 0,
                         current: Number(pagination?.currentPage) || 1,
-                        pageSize: Number(pagination?.pageSize) || 10,
+                        pageSize,
                       }}
                       onPageChange={(page) => {
                         fetchMeters(page).catch((err: unknown) => {
                           const message = getApiErrorMessage(err);
                           if (message) toast.error(message);
                         });
+                      }}
+                      onPageSizeChange={(size) => {
+                        setPageSize(size);
+                        fetchMeters(1, appliedSearch, size).catch(
+                          (err: unknown) => {
+                            const message = getApiErrorMessage(err);
+                            if (message) toast.error(message);
+                          },
+                        );
                       }}
                       enableExport
                       exportFileName="meters"
@@ -826,6 +864,16 @@ export default function AdminMeterManagement() {
             open={setVendLimitOpen}
             estateId={estateId}
             onClose={() => setSetVendLimitOpen(false)}
+          />
+          <ViewAddressVendLimitModal
+            open={viewAddressVendLimitOpen}
+            estateId={estateId}
+            onClose={() => setViewAddressVendLimitOpen(false)}
+          />
+          <SetAddressVendLimitModal
+            open={setAddressVendLimitOpen}
+            estateId={estateId}
+            onClose={() => setSetAddressVendLimitOpen(false)}
           />
         </>
       ) : null}

@@ -2,6 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/tooltip";
 import { Plus, Edit2, Trash2, MapPin, MapPinHouse } from "lucide-react";
 import Table from "@/components/tables/list/page";
 import { getFieldByEstate } from "@/redux/slice/staff/address-mgt/fields/fields";
@@ -54,6 +55,7 @@ export default function EntryPage() {
     totalPages: 1,
   });
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -113,14 +115,13 @@ export default function EntryPage() {
         return;
       }
 
-      const shouldApplyDate = Boolean(startDate && endDate);
       const entryRes = await dispatch(
         getEntriesByField({
           fieldId,
           page: 1,
-          limit: PAGE_SIZE,
-          startDate: shouldApplyDate ? startDate : undefined,
-          endDate: shouldApplyDate ? endDate : undefined,
+          limit: pageSize,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         }),
       ).unwrap();
 
@@ -145,16 +146,15 @@ export default function EntryPage() {
   useEffect(() => {
     const fieldId = fields[0]?.id || fields[0]?._id;
     if (!fieldId) return;
-    const shouldApplyDate = Boolean(startDate && endDate);
 
     setLoading(true);
     dispatch(
       getEntriesByField({
         fieldId,
         page: 1,
-        limit: PAGE_SIZE,
-        startDate: shouldApplyDate ? startDate : undefined,
-        endDate: shouldApplyDate ? endDate : undefined,
+        limit: pageSize,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       }),
     )
       .unwrap()
@@ -239,24 +239,30 @@ export default function EntryPage() {
       header: "Actions",
       render: (item: any) => (
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleOpenModal(item)}
-           className="text-blue-600 hover:text-blue-700"
-           >
-            <Edit2 className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() =>
-              handleDeleteEntry(item.id, item.data?.name || "entry")
-            }
-           className="text-red-600 hover:text-red-700"
-           >
-            <Trash2 className="w-4 h-4" />
-          </Button>
+          <IconTooltip label="Edit">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleOpenModal(item)}
+             className="text-blue-600 hover:text-blue-700"
+             aria-label="Edit"
+             >
+              <Edit2 className="w-4 h-4" />
+            </Button>
+          </IconTooltip>
+          <IconTooltip label="Delete">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                handleDeleteEntry(item.id, item.data?.name || "entry")
+              }
+             className="text-red-600 hover:text-red-700"
+             aria-label="Delete"
+             >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </IconTooltip>
         </div>
       ),
     },
@@ -426,25 +432,47 @@ export default function EntryPage() {
           paginationInfo={{
             total: pagination.total,
             current: pagination.currentPage || currentPage,
-            pageSize: pagination.pageSize || PAGE_SIZE,
+            pageSize,
           }}
           onPageChange={(page) => {
             const fieldId = fields[0]?.id || fields[0]?._id;
             if (!fieldId) return;
-            const shouldApplyDate = Boolean(startDate && endDate);
 
             setLoading(true);
             dispatch(
               getEntriesByField({
                 fieldId,
                 page,
-                limit: pagination.pageSize || PAGE_SIZE,
-                startDate: shouldApplyDate ? startDate : undefined,
-                endDate: shouldApplyDate ? endDate : undefined,
+                limit: pageSize,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
               }),
             )
               .unwrap()
               .then((res) => applyEntries(res, page))
+              .catch((err: unknown) => {
+                const message = getApiErrorMessage(err);
+                if (message) toast.error(message);
+              })
+              .finally(() => setLoading(false));
+          }}
+          onPageSizeChange={(size) => {
+            const fieldId = fields[0]?.id || fields[0]?._id;
+            if (!fieldId) return;
+            setPageSize(size);
+            setCurrentPage(1);
+            setLoading(true);
+            dispatch(
+              getEntriesByField({
+                fieldId,
+                page: 1,
+                limit: size,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
+              }),
+            )
+              .unwrap()
+              .then((res) => applyEntries(res, 1))
               .catch((err: unknown) => {
                 const message = getApiErrorMessage(err);
                 if (message) toast.error(message);
@@ -458,14 +486,13 @@ export default function EntryPage() {
               ? async () => {
                   const fieldId = fields[0]?.id || fields[0]?._id;
                   if (!fieldId) return [];
-                  const shouldApplyDate = Boolean(startDate && endDate);
                   const res = await dispatch(
                     getEntriesByField({
                       fieldId,
                       page: 1,
                       limit: 50000,
-                      startDate: shouldApplyDate ? startDate : undefined,
-                      endDate: shouldApplyDate ? endDate : undefined,
+                      startDate: startDate || undefined,
+                      endDate: endDate || undefined,
                     }),
                   ).unwrap();
                   return res?.data ?? [];

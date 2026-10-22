@@ -28,10 +28,7 @@ import {
   type FinancialChartPoint,
 } from "@/components/dashboard/estate-admin/reports/financial-report-chart-utils";
 import { ReportTable } from "@/components/estate-admin/expense-report/expense-report-table";
-import {
-  IsoLinkedRangeEnd,
-  IsoLinkedRangeStart,
-} from "@/components/ui/iso-date-picker";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
 import { getDateRangePlaceholders } from "@/lib/date-range-placeholders";
 import {
   buildRevenueFilterOptions,
@@ -40,6 +37,8 @@ import {
 } from "@/lib/financial-report-utils";
 import { RevenueChartCard } from "@/components/dashboard/estate-admin/reports/RevenueChartCard";
 import { ExpenseChartCard } from "@/components/dashboard/estate-admin/reports/ExpenseChartCard";
+import { fetchRevenueHeads } from "@/redux/slice/admin/revenue-head/revenue-head";
+import { selectRevenueHeads } from "@/redux/slice/admin/revenue-head/revenue-head-slice";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -52,6 +51,31 @@ function toIsoIfPresent(dateInputValue: string): string | undefined {
 
 function formatNaira(n: number): string {
   return `₦${Number(n ?? 0).toLocaleString()}`;
+}
+
+function reportHeadHref(
+  kind: "expenses" | "revenue",
+  headId: string,
+  name: string,
+  startDate: string,
+  endDate: string,
+) {
+  const params = new URLSearchParams();
+  params.set("name", name);
+  if (startDate) params.set("startDate", startDate);
+  if (endDate) params.set("endDate", endDate);
+  return `/dashboard/estate-admin/reports/${kind}/${encodeURIComponent(headId)}?${params.toString()}`;
+}
+
+function revenueHeadIdByName(
+  heads: ReadonlyArray<{ id?: string; _id?: string; name?: string }>,
+  name: string,
+) {
+  const target = name.trim().toLowerCase();
+  const match = heads.find(
+    (head) => (head.name ?? "").trim().toLowerCase() === target,
+  );
+  return match?.id || match?._id || "";
 }
 
 function normalizeEstate(user: any): { estateId: string; estateName: string } {
@@ -173,6 +197,7 @@ export default function ReportsPage() {
   });
   const chartLoading = isPending(chartStatus);
   const error = useSelector((s: RootState) => selectFinancialReportError(s));
+  const revenueHeads = useSelector((s: RootState) => selectRevenueHeads(s));
 
   // Resolve current user → estateId
   useEffect(() => {
@@ -195,6 +220,13 @@ export default function ReportsPage() {
   useEffect(() => {
     if (error) toast.error(error);
   }, [error]);
+
+  useEffect(() => {
+    if (!estateId) return;
+    dispatch(fetchRevenueHeads({ estateId, page: 1, limit: 500 })).catch(
+      () => undefined,
+    );
+  }, [estateId, dispatch]);
 
   // Chart data fetch — isolated
   useEffect(() => {
@@ -315,12 +347,43 @@ export default function ReportsPage() {
       key: h._id,
       label: h.headName,
       amount: h.totalAmount,
+      href: h._id
+        ? reportHeadHref(
+            "expenses",
+            h._id,
+            h.headName,
+            expensesStartDate,
+            expensesEndDate,
+          )
+        : undefined,
     }));
 
   const revenueTableRows = useMemo(
     () =>
-      buildRevenueTableRows(revenueReport?.revenue, revenueFilter),
-    [revenueReport?.revenue, revenueFilter],
+      buildRevenueTableRows(revenueReport?.revenue, revenueFilter).map(
+        (row) => {
+          const headId =
+            row.headId || revenueHeadIdByName(revenueHeads, row.label);
+          if (!headId) return row;
+          return {
+            ...row,
+            href: reportHeadHref(
+              "revenue",
+              headId,
+              row.label,
+              revenueStartDate,
+              revenueEndDate,
+            ),
+          };
+        },
+      ),
+    [
+      revenueReport?.revenue,
+      revenueFilter,
+      revenueHeads,
+      revenueStartDate,
+      revenueEndDate,
+    ],
   );
 
   const revenueFilterOptions = useMemo(
@@ -394,40 +457,17 @@ export default function ReportsPage() {
             <p className="text-sm text-muted-foreground">Revenue vs Expense</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2">
-              <label
-                className="text-sm text-muted-foreground"
-                htmlFor="chart-start"
-              >
-                From
-              </label>
-              <IsoLinkedRangeStart
-                id="chart-start"
-                startDate={chartStartDate}
-                endDate={chartEndDate}
-                onStartChange={setChartStartDate}
-                placeholder={datePlaceholders.start}
-                className="cursor-pointer"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <label
-                className="text-sm text-muted-foreground"
-                htmlFor="chart-end"
-              >
-                To
-              </label>
-              <IsoLinkedRangeEnd
-                id="chart-end"
-                startDate={chartStartDate}
-                endDate={chartEndDate}
-                onEndChange={setChartEndDate}
-                placeholder={datePlaceholders.end}
-                className="cursor-pointer"
-              />
-            </div>
+          <div className="flex w-full min-w-0 flex-col gap-2 xl:w-auto xl:flex-row xl:flex-wrap xl:items-center">
+            <DateRangeFilter
+              startId="chart-start"
+              endId="chart-end"
+              startDate={chartStartDate}
+              endDate={chartEndDate}
+              onStartChange={setChartStartDate}
+              onEndChange={setChartEndDate}
+              startPlaceholder={datePlaceholders.start}
+              endPlaceholder={datePlaceholders.end}
+            />
 
             <Select
               value={chartRevenueCategory}

@@ -6,6 +6,7 @@ export const NAV_ALWAYS_VISIBLE_LABELS = new Set([
   "Energy Provider Management",
   "Notifications",
   "Map",
+  "Audit",
 ]);
 
 /** Security role pages that are not estate modules. */
@@ -66,6 +67,12 @@ export function filterNavItemsByEstateModules<T extends NavItemWithModule>(
     for (const label of NAV_SECURITY_STATIC_LABELS) {
       alwaysVisible.add(label);
     }
+  }
+  if (
+    options?.role === "company" ||
+    options?.role === "energy provider"
+  ) {
+    alwaysVisible.add("Marketplace");
   }
 
   if (!Array.isArray(estateModules) || estateModules.length === 0) {

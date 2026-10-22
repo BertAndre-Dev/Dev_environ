@@ -693,18 +693,6 @@ export default function TransactionPage() {
 
   const paidBillsColumns = [
     {
-      key: "createdAt",
-      header: "Created",
-      render: (item: any) => formatDateTime(item.createdAt, "-"),
-      exportValue: (item: any) => formatDateTime(item.createdAt, ""),
-    },
-    {
-      key: "lastPaymentDate",
-      header: "Last Payment",
-      render: (item: any) => formatDateTime(item.lastPaymentDate, "-"),
-      exportValue: (item: any) => formatDateTime(item.lastPaymentDate, ""),
-    },
-    {
       key: "user",
       header: "Resident",
       render: (item: any) => <PaidBillResidentCell user={item.user} />,
@@ -716,6 +704,12 @@ export default function TransactionPage() {
       render: (item: any) => item.bill?.name ?? item.billName ?? "-",
       exportValue: (item: any) =>
         String(item.bill?.name ?? item.billName ?? ""),
+    },
+      {
+      key: "lastPaymentDate",
+      header: "Last Payment",
+      render: (item: any) => formatDateTime(item.lastPaymentDate, "-"),
+      exportValue: (item: any) => formatDateTime(item.lastPaymentDate, ""),
     },
     {
       key: "frequency",

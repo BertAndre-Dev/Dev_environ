@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Download } from "lucide-react";
 import { DateRangeFilter } from "@/components/ui/date-range-filter";
 
@@ -7,6 +9,7 @@ export interface ReportTableRow {
   key: string;
   label: string;
   amount: number;
+  href?: string;
 }
 
 export interface ReportTableSummaryRow {
@@ -55,6 +58,7 @@ export function ReportTable({
   onDateRangeChange,
   exportFileName = "report",
 }: ReportTableProps) {
+  const router = useRouter();
   function handleExport() {
     if (!rows.length) return;
 
@@ -112,8 +116,41 @@ export function ReportTable({
 
         <tbody>
           {rows.map((row) => (
-            <tr key={row.key} className="hover:bg-muted/20">
-              <td className="px-6 py-4 capitalize">{row.label}</td>
+            <tr
+              key={row.key}
+              className={
+                row.href
+                  ? "cursor-pointer hover:bg-muted/40"
+                  : "hover:bg-muted/20"
+              }
+              onClick={
+                row.href ? () => router.push(row.href as string) : undefined
+              }
+              onKeyDown={
+                row.href
+                  ? (event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        router.push(row.href as string);
+                      }
+                    }
+                  : undefined
+              }
+              tabIndex={row.href ? 0 : undefined}
+            >
+              <td className="px-6 py-4 capitalize">
+                {row.href ? (
+                  <Link
+                    href={row.href}
+                    className="hover:underline"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    {row.label}
+                  </Link>
+                ) : (
+                  row.label
+                )}
+              </td>
               <td className="px-6 py-4 text-right">
                 {formatNaira(row.amount)}
               </td>

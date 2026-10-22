@@ -153,6 +153,9 @@ export function SetAddressVendLimitModal({
           <h2 className="font-heading text-lg font-bold text-foreground">
             Set / update vend limit for address
           </h2>
+          <p className="text-sm text-muted-foreground">
+            Select an address to set or update the vend limit for that address.
+          </p>
         </div>
 
         <div className="space-y-1.5">

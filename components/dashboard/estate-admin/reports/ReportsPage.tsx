@@ -464,6 +464,7 @@ export default function ReportsPage() {
               endPlaceholder={datePlaceholders.end}
             />
 
+            <div className="flex items-center gap-2 ">
             <Select
               value={chartRevenueCategory}
               onChange={(e) =>
@@ -497,6 +498,8 @@ export default function ReportsPage() {
             >
               Export
             </Button>
+            </div>
+
           </div>
         </div>
 

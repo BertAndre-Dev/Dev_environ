@@ -1367,6 +1367,32 @@ export default function UserDetailView({
             </div>
 
             {/* Tab content */}
+
+            {activeTab === "transactions" ? (
+              <Card className="p-4">
+                <Table
+                  columns={paymentColumns}
+                  data={transactions}
+                  emptyMessage={
+                    transactionsLoading
+                      ? "Loading transactions..."
+                      : "No transactions found for this user."
+                  }
+                  showPagination
+                  paginationInfo={{
+                    total: transactionsTotal,
+                    current: transactionsPage,
+                    pageSize: transactionsPageSize,
+                  }}
+                  onPageChange={setTransactionsPage}
+                  onPageSizeChange={(size) => {
+                    setTransactionsPageSize(size);
+                    setTransactionsPage(1);
+                  }}
+                />
+              </Card>
+            ) : null}
+            
             {activeTab === "bills" ? (
               <div className="space-y-4">
                 <Card className="p-4">
@@ -1432,30 +1458,6 @@ export default function UserDetailView({
               </Card>
             ) : null}
 
-            {activeTab === "transactions" ? (
-              <Card className="p-4">
-                <Table
-                  columns={paymentColumns}
-                  data={transactions}
-                  emptyMessage={
-                    transactionsLoading
-                      ? "Loading transactions..."
-                      : "No transactions found for this user."
-                  }
-                  showPagination
-                  paginationInfo={{
-                    total: transactionsTotal,
-                    current: transactionsPage,
-                    pageSize: transactionsPageSize,
-                  }}
-                  onPageChange={setTransactionsPage}
-                  onPageSizeChange={(size) => {
-                    setTransactionsPageSize(size);
-                    setTransactionsPage(1);
-                  }}
-                />
-              </Card>
-            ) : null}
           </>
         ) : null}
       </div>

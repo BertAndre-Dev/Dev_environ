@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import Loader from "@/components/ui/Loader";
 import Modal from "@/components/modal/page";
 import Pagination from "@/components/pagination/page";
@@ -366,31 +367,25 @@ export function MarketplaceWorkspace() {
               className="h-11 rounded-xl pl-9"
             />
           </div>
+          {tab === "discover" ? (
+            <Select
+              aria-label="Category"
+              value={category}
+              onChange={(e) => {
+                setCategory(e.target.value);
+                setPage(1);
+              }}
+              options={[
+                { label: "All categories", value: "All" },
+                ...MARKETPLACE_CATEGORIES.map((item) => ({
+                  label: item,
+                  value: item,
+                })),
+              ]}
+              className="h-11 w-full cursor-pointer rounded-xl sm:w-52"
+            />
+          ) : null}
         </div>
-
-        {tab === "discover" ? (
-          <div className="flex flex-wrap gap-2">
-            {["All", ...MARKETPLACE_CATEGORIES].map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => {
-                  setCategory(item);
-                  setPage(1);
-                }}
-                className={cn(
-                  "rounded-full px-3 py-1.5 text-sm",
-                  PRESS,
-                  category === item
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted/70 text-muted-foreground hover:bg-muted",
-                )}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-        ) : null}
 
         {listings.length === 0 && isSettled(listStatus) ? (
           <Card className="p-12 text-center">

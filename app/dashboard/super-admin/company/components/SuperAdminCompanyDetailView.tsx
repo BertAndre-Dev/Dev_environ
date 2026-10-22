@@ -336,7 +336,8 @@ export function SuperAdminCompanyDetailView({
     }
   }, [activeTab, fetchWalletData, fetchUsers, fetchEstates, usersRoleFilter]);
 
-  const modules = Array.isArray(company?.modules) ? company.modules : [];
+  const companyModules = company?.modules;
+  const modules = Array.isArray(companyModules) ? companyModules : [];
 
   const userColumns = useMemo(
     () => [
